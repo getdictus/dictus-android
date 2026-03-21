@@ -51,11 +51,32 @@ Ce fichier est lisible via les outils MCP Pencil (`batch_get`, `get_screenshot`,
 - Bords (barres 1-11, 19-30): blanc opacity 15% -> 90%
 - Etats: idle (plat 2px), recording (energie live), transcribing (sinusoidal)
 
+## Clavier Custom (IME)
+
+Maquettes dans `dictus-keyboard-design.pen` (fichier separe, theme clair).
+
+| Ecran | Frame ID | Description |
+|-------|----------|-------------|
+| Keyboard Idle | `RTyxV` | Clavier AZERTY complet, bouton micro bleu pill, gear settings |
+| Keyboard Recording | `WwpNL` | Waveform 30 barres dynamique, boutons X/check, timer "00:03", "En ecoute..." |
+| Keyboard Transcribing | `XfNKh` | Waveform sinusoidale, label "Transcription...", pas de boutons action |
+
+### Couleurs clavier (theme clair)
+- Fond: `#D1D3D9` | Touches: `#FFFFFF` | Touches speciales: `#AEB3BE`
+- Waveform centre: gradient `#6BA3FF` -> `#2563EB`
+- Waveform bords: `#B0B5C0` degrade opacite
+- Bouton mic: `#3D7EFF` | Check: `#22C55E` | Cancel: `#6B6B70`
+
 ## Utilisation
 
-Pour consulter un ecran pendant le developpement :
+Pour consulter un ecran de l'app :
 ```
 get_screenshot(filePath: "design/dictus-android-design.pen", nodeId: "wrqi0")
+```
+
+Pour consulter un ecran du clavier :
+```
+get_screenshot(filePath: "design/dictus-keyboard-design.pen", nodeId: "RTyxV")
 ```
 
 Pour lire la structure d'un composant :
