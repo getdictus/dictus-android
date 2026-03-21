@@ -31,12 +31,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can see typed text appear in any app's text field (Gmail, WhatsApp, Chrome, etc.) via InputConnection
   4. Keyboard renders with the branded Dictus dark theme
   5. Structured logs are written via Timber and can be observed in Logcat
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Multi-module Gradle project, version catalog, Hilt, Timber, Dictus dark theme
+- [ ] 01-02-PLAN.md — IME service with Compose lifecycle, keyboard data models, accent map
+- [ ] 01-03-PLAN.md — Compose keyboard UI, key interactions, InputConnection text insertion
 
 ### Phase 2: Audio Recording + Service Architecture
 **Goal**: Users can tap the mic button on the keyboard to record audio, with the recording managed by a foreground service
