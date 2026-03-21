@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Keyboard (IME)
 
-- [ ] **KBD-01**: User can type on a full AZERTY keyboard layout with shift, caps lock, numbers, and symbols
-- [ ] **KBD-02**: User can switch between AZERTY and QWERTY layouts
-- [ ] **KBD-03**: User can access accented characters via long-press (e, e, e, a, u, c, etc.)
+- [x] **KBD-01**: User can type on a full AZERTY keyboard layout with shift, caps lock, numbers, and symbols
+- [x] **KBD-02**: User can switch between AZERTY and QWERTY layouts
+- [x] **KBD-03**: User can access accented characters via long-press (e, e, e, a, u, c, etc.)
 - [ ] **KBD-04**: User can see 3 text suggestions above the keyboard and tap to insert
 - [ ] **KBD-05**: User can open an emoji picker with categories and recent emojis
 - [ ] **KBD-06**: User can insert text into any app via InputConnection
@@ -80,9 +80,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KBD-01 | Phase 1 | Pending |
-| KBD-02 | Phase 1 | Pending |
-| KBD-03 | Phase 1 | Pending |
+| KBD-01 | Phase 1 | Complete |
+| KBD-02 | Phase 1 | Complete |
+| KBD-03 | Phase 1 | Complete |
 | KBD-04 | Phase 5 | Pending |
 | KBD-05 | Phase 5 | Pending |
 | KBD-06 | Phase 1 | Pending |
