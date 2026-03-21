@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dictus</string>
+    <string name="ime_name">Dictus Keyboard</string>
+    <string name="subtype_azerty">AZERTY (French)</string>
+    <string name="subtype_qwerty">QWERTY (English)</string>
+    <string name="enable_ime_instructions">Enable Dictus Keyboard in Settings &gt; System &gt; Languages &amp; Input &gt; On-screen keyboard</string>
+</resources>
