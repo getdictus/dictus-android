@@ -39,7 +39,7 @@ created: 2026-03-21
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
 | 01-01-01 | 01 | 1 | KBD-01 | unit | `./gradlew :ime:testDebugUnitTest --tests "*KeyboardLayoutTest*"` | ❌ W0 | ⬜ pending |
-| 01-01-02 | 01 | 1 | KBD-02 | unit | `./gradlew :ime:testDebugUnitTest --tests "*LayoutSwitchTest*"` | ❌ W0 | ⬜ pending |
+| 01-01-02 | 01 | 1 | KBD-02 | unit | `./gradlew :ime:testDebugUnitTest --tests "*KeyboardLayoutTest*"` | ❌ W0 | ⬜ pending |
 | 01-01-03 | 01 | 1 | KBD-03 | unit | `./gradlew :ime:testDebugUnitTest --tests "*AccentMapTest*"` | ❌ W0 | ⬜ pending |
 | 01-02-01 | 02 | 2 | KBD-06 | manual-only | Manual: type in emulator, verify text appears | N/A | ⬜ pending |
 | 01-03-01 | 03 | 1 | DSG-01 | unit | `./gradlew :core:testDebugUnitTest --tests "*DictusColorsTest*"` | ❌ W0 | ⬜ pending |
