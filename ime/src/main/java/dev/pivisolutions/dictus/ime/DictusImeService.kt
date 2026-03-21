@@ -1,18 +1,9 @@
 package dev.pivisolutions.dictus.ime
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import dagger.hilt.android.EntryPointAccessors
-import dev.pivisolutions.dictus.core.theme.DictusColors
-import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
+import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import timber.log.Timber
 
 /**
@@ -40,20 +31,15 @@ class DictusImeService : LifecycleInputMethodService() {
 
     @Composable
     override fun KeyboardContent() {
-        DictusTheme {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(336.dp)
-                    .background(DictusColors.Background),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Dictus Keyboard",
-                    color = DictusColors.OnBackground,
-                )
-            }
-        }
+        KeyboardScreen(
+            onCommitText = { text -> commitText(text) },
+            onDeleteBackward = { deleteBackward() },
+            onSendReturn = { sendReturnKey() },
+            onSwitchKeyboard = {
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.showInputMethodPicker()
+            },
+        )
     }
 
     /**
