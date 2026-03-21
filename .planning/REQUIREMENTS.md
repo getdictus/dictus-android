@@ -1,7 +1,7 @@
 # Requirements: Dictus Android
 
 **Defined:** 2026-03-21
-**Core Value:** La dictée vocale on-device qui fonctionne comme clavier système — gratuite, privée, sans cloud.
+**Core Value:** La dictee vocale on-device qui fonctionne comme clavier systeme -- gratuite, privee, sans cloud.
 
 ## v1 Requirements
 
@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **KBD-01**: User can type on a full AZERTY keyboard layout with shift, caps lock, numbers, and symbols
 - [ ] **KBD-02**: User can switch between AZERTY and QWERTY layouts
-- [ ] **KBD-03**: User can access accented characters via long-press (é, è, ê, à, ù, ç, etc.)
+- [ ] **KBD-03**: User can access accented characters via long-press (e, e, e, a, u, c, etc.)
 - [ ] **KBD-04**: User can see 3 text suggestions above the keyboard and tap to insert
 - [ ] **KBD-05**: User can open an emoji picker with categories and recent emojis
 - [ ] **KBD-06**: User can insert text into any app via InputConnection
@@ -71,7 +71,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | ML-powered autocorrect | Requires training data and large language models. Not core to voice dictation value |
 | Live Activity / Dynamic Island | iOS-specific concept, no Android equivalent |
 | Auto-return to source app | Less relevant on Android (keyboard stays in-process) |
-| Cloud-based STT | Breaks core privacy promise — 100% on-device is non-negotiable |
+| Cloud-based STT | Breaks core privacy promise -- 100% on-device is non-negotiable |
 | Multi-device testing (Samsung, Xiaomi) | Focus on Pixel 4 for MVP, expand in v1.1 |
 
 ## Traceability
@@ -80,35 +80,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KBD-01 | — | Pending |
-| KBD-02 | — | Pending |
-| KBD-03 | — | Pending |
-| KBD-04 | — | Pending |
-| KBD-05 | — | Pending |
-| KBD-06 | — | Pending |
-| DICT-01 | — | Pending |
-| DICT-02 | — | Pending |
-| DICT-03 | — | Pending |
-| DICT-04 | — | Pending |
-| DICT-05 | — | Pending |
-| DICT-06 | — | Pending |
-| DICT-07 | — | Pending |
-| DICT-08 | — | Pending |
-| APP-01 | — | Pending |
-| APP-02 | — | Pending |
-| APP-03 | — | Pending |
-| APP-04 | — | Pending |
-| APP-05 | — | Pending |
-| APP-06 | — | Pending |
-| DSG-01 | — | Pending |
-| DSG-02 | — | Pending |
-| DSG-03 | — | Pending |
+| KBD-01 | Phase 1 | Pending |
+| KBD-02 | Phase 1 | Pending |
+| KBD-03 | Phase 1 | Pending |
+| KBD-04 | Phase 5 | Pending |
+| KBD-05 | Phase 5 | Pending |
+| KBD-06 | Phase 1 | Pending |
+| DICT-01 | Phase 2 | Pending |
+| DICT-02 | Phase 2 | Pending |
+| DICT-03 | Phase 3 | Pending |
+| DICT-04 | Phase 3 | Pending |
+| DICT-05 | Phase 5 | Pending |
+| DICT-06 | Phase 5 | Pending |
+| DICT-07 | Phase 2 | Pending |
+| DICT-08 | Phase 2 | Pending |
+| APP-01 | Phase 4 | Pending |
+| APP-02 | Phase 4 | Pending |
+| APP-03 | Phase 4 | Pending |
+| APP-04 | Phase 4 | Pending |
+| APP-05 | Phase 4 | Pending |
+| APP-06 | Phase 1 | Pending |
+| DSG-01 | Phase 1 | Pending |
+| DSG-02 | Phase 6 | Pending |
+| DSG-03 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-21 after initial definition*
+*Last updated: 2026-03-21 after roadmap creation*
