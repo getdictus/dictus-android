@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 01-core-foundation-keyboard-shell
 source: [01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md]
 started: 2026-03-22T14:00:00Z
-updated: 2026-03-22T14:20:00Z
+updated: 2026-03-22T14:35:00Z
 ---
 
 ## Current Test
@@ -55,7 +55,7 @@ skipped: 0
 ## Gaps
 
 - truth: "Shift key should have a distinct visual indicator differentiating single-shift from caps lock state"
-  status: failed
+  status: resolved
   reason: "User reported: Il n'y a aucune différence visuelle entre shift simple et caps lock. Pas de différence visuelle entre les deux états."
   severity: minor
   test: 3
@@ -74,7 +74,7 @@ skipped: 0
   debug_session: ".planning/debug/shift-caps-no-visual-diff.md"
 
 - truth: "Mic button row should be positioned above the keyboard and match the design mockups"
-  status: failed
+  status: resolved
   reason: "User reported: Le bouton mic est en dessous du clavier au lieu d'être au-dessus. Le design ne correspond pas du tout aux maquettes. Mais c'est peut-être prévu pour les phases suivantes quand les mockups seront appliqués."
   severity: cosmetic
   test: 7
