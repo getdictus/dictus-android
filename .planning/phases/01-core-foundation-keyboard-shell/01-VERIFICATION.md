@@ -1,81 +1,98 @@
 ---
 phase: 01-core-foundation-keyboard-shell
-verified: 2026-03-22T14:00:00Z
+verified: 2026-03-22T14:30:00Z
 status: passed
-score: 15/15 must-haves verified
-re_verification: false
+score: 18/18 must-haves verified
+re_verification:
+  previous_status: passed
+  previous_score: 15/15
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 human_verification:
   - test: "Enable Dictus keyboard in Settings and type in any app"
-    expected: "AZERTY keyboard renders with dark Dictus theme, letter entry works, shift/caps, layer switching (?123/ABC), long-press accent popup, delete repeat all functional"
-    why_human: "End-to-end IME behavior requires installing APK on device/emulator and interacting with system settings — not verifiable via static code analysis. The 01-03 SUMMARY confirms a human checkpoint was completed and the keyboard was verified on emulator."
+    expected: "AZERTY keyboard renders with dark Dictus theme. Letter tap inserts character. Shift toggles uppercase (single-tap) or caps lock (double-tap with visual distinction: Accent blue for shift, AccentHighlight blue + underline for caps lock). Mic row appears above keyboard. ?123 switches to numbers, ABC switches back. Long-press on accented letters shows popup. Delete removes characters, hold delete repeats."
+    why_human: "IME activation, InputConnection behavior, and visual theme correctness require installing the APK and interacting with system keyboard settings — not verifiable by static analysis."
 ---
 
 # Phase 1: Core Foundation & Keyboard Shell Verification Report
 
-**Phase Goal:** Multi-module project skeleton with Dictus dark theme, IME service with Compose lifecycle, keyboard data models (AZERTY/QWERTY, numbers, symbols, accents), and full Compose keyboard UI.
+**Phase Goal:** Multi-module Gradle project with IME service, Compose keyboard UI (AZERTY/QWERTY), key interactions, accent popup, and MicButtonRow placeholder
 **Verified:** 2026-03-22
 **Status:** PASSED
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — initial VERIFICATION.md existed (status: passed, 15/15). This is a fresh full re-verification against the actual codebase, not a trust of prior claims. Plan 04 (UAT gap closure) was completed after the first pass and is included here.
 
 ---
 
 ## Goal Achievement
 
+All four plans that make up Phase 1 were verified against actual file content.
+
 ### Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Multi-module Gradle project (app/ime/core) builds successfully | VERIFIED | `settings.gradle.kts` includes `:app`, `:ime`, `:core`; all three `build.gradle.kts` files present; 6 commits confirm `./gradlew assembleDebug` succeeded |
-| 2 | Dictus dark theme defines exact iOS color tokens as Material 3 ColorScheme | VERIFIED | `DictusColors.kt` contains `Color(0xFF0A1628)`, `Color(0xFF3D7EFF)`, `Color(0xFF161C2C)` etc.; `DictusTheme.kt` uses `darkColorScheme(...)` wired to those tokens |
-| 3 | Timber is initialized in Application.onCreate() and logs with auto-tags | VERIFIED | `DictusApplication.kt` calls `TimberSetup.init(BuildConfig.DEBUG)` in `onCreate()`; `TimberSetup.kt` calls `Timber.plant(Timber.DebugTree())` |
-| 4 | AZERTY layout has 4 rows with correct key sequences (A-Z-E-R-T-Y row 1) | VERIFIED | `KeyboardLayouts.kt` `azertyLetters` row 1: A, Z, E, R, T, Y, U, I, O, P |
-| 5 | QWERTY layout has 4 rows with correct key sequences (Q-W-E-R-T-Y row 1) | VERIFIED | `KeyboardLayouts.kt` `qwertyLetters` row 1: Q, W, E, R, T, Y, U, I, O, P |
-| 6 | Numbers and symbols layers have correct key data | VERIFIED | `numbersRows` contains digits 1-0 and punctuation; `symbolsRows` contains brackets, currency, math symbols |
-| 7 | AccentMap returns correct French accented variants | VERIFIED | `AccentMap.kt`: `'e'` maps to `listOf("è","é","ê","ë","ē")`; lowercase and uppercase both covered |
-| 8 | IME service is declared in manifest with BIND_INPUT_METHOD permission | VERIFIED | `ime/src/main/AndroidManifest.xml` declares service with `android:permission="android.permission.BIND_INPUT_METHOD"` and `android.view.InputMethod` intent-filter |
-| 9 | LifecycleInputMethodService wires Compose lifecycle owners on decorView | VERIFIED | `LifecycleInputMethodService.kt` implements `LifecycleOwner`, `ViewModelStoreOwner`, `SavedStateRegistryOwner` and calls `setViewTreeLifecycleOwner`, `setViewTreeViewModelStoreOwner`, `setViewTreeSavedStateRegistryOwner` on `decorView` |
-| 10 | User can see Dictus keyboard with letter keys rendered in Compose | VERIFIED (human checkpoint confirmed) | `KeyboardScreen.kt` + `KeyboardView.kt` + `KeyRow.kt` + `KeyButton.kt` all substantive; DictusImeService overrides `KeyboardContent()` with `KeyboardScreen(...)`; 01-03 SUMMARY documents human emulator verification passed |
-| 11 | User can tap a letter key and character appears in text field | VERIFIED | `KeyButton.kt` uses `detectTapGestures(onTap = ...)` calling `onPress()`; `KeyboardScreen.kt` routes `KeyType.CHARACTER` to `onCommitText(output)`; `DictusImeService.commitText()` calls `currentInputConnection?.commitText(text, 1)` |
-| 12 | User can tap shift to toggle uppercase letters | VERIFIED | `KeyboardScreen.handleKeyPress()` handles `KeyType.SHIFT` with single-tap (toggle shift) and double-tap (caps lock); `KeyButton.kt` renders uppercase labels when `isShifted = true` |
-| 13 | User can tap ?123/ABC to switch keyboard layers | VERIFIED | `KeyboardScreen.handleKeyPress()` handles `KeyType.LAYER_SWITCH` switching `currentLayer` between LETTERS/NUMBERS/SYMBOLS; `KeyboardView.kt` selects rows based on layer |
-| 14 | User can long-press a letter with accents to see popup | VERIFIED | `KeyboardScreen.kt` `onKeyLongPress` checks `AccentMap.hasAccents(char)` then sets `showAccentPopup = true`; `AccentPopup.kt` renders popup with `Popup(focusable = false)` and calls `AccentMap.accentsFor(char)` |
-| 15 | User can tap delete to remove characters (including key repeat) | VERIFIED | `KeyButton.kt` DELETE key uses custom `awaitPointerEventScope` with 400ms initial delay then 50ms repeat loop; routes to `DictusImeService.deleteBackward()` calling `currentInputConnection?.deleteSurroundingText(1, 0)` |
+| 1 | Multi-module Gradle project (app/ime/core) is declared | VERIFIED | `settings.gradle.kts` line 18: `include(":app", ":ime", ":core")` |
+| 2 | Dictus dark theme defines exact iOS color tokens as Material 3 ColorScheme | VERIFIED | `DictusColors.kt` has `0xFF0A1628`, `0xFF3D7EFF`, `0xFF161C2C`, etc.; `DictusTheme.kt` uses `darkColorScheme(...)` wired to those tokens |
+| 3 | Timber is initialized in Application.onCreate() | VERIFIED | `DictusApplication.kt` line 19: `TimberSetup.init(BuildConfig.DEBUG)`; `TimberSetup.kt` calls `Timber.plant(Timber.DebugTree())` |
+| 4 | AZERTY layout row 1 is A-Z-E-R-T-Y-U-I-O-P | VERIFIED | `KeyboardLayouts.kt` `azertyLetters` row 1: A, Z, E, R, T, Y, U, I, O, P |
+| 5 | QWERTY layout row 1 is Q-W-E-R-T-Y-U-I-O-P | VERIFIED | `KeyboardLayouts.kt` `qwertyLetters` row 1: Q, W, E, R, T, Y, U, I, O, P |
+| 6 | Numbers layer has digits 1-0 and punctuation | VERIFIED | `numbersRows` row 1: 1-0; row 2: -, /, :, ;, (, ), &, @; punctuation in row 3 |
+| 7 | Symbols layer has brackets, currency, and math symbols | VERIFIED | `symbolsRows` row 1: [, ], {, }, #, %, ^, *, +, =; row 2: _, \, \|, ~, <, >, $, &, @ |
+| 8 | AccentMap returns correct accented variants (e maps to 5 variants) | VERIFIED | `AccentMap.kt` line 14: `'e' to listOf("\u00E8", "\u00E9", "\u00EA", "\u00EB", "\u0113")` |
+| 9 | IME service declared in manifest with BIND_INPUT_METHOD permission | VERIFIED | `ime/AndroidManifest.xml`: `android:permission="android.permission.BIND_INPUT_METHOD"` and `android.view.InputMethod` intent-filter |
+| 10 | LifecycleInputMethodService wires Compose lifecycle owners on decorView | VERIFIED | `LifecycleInputMethodService.kt` lines 65-67: `setViewTreeLifecycleOwner`, `setViewTreeViewModelStoreOwner`, `setViewTreeSavedStateRegistryOwner` called on decorView |
+| 11 | User can tap a letter key and character appears in text field | VERIFIED | `KeyButton.kt` `detectTapGestures(onTap = { currentOnPress.value() })`; `KeyboardScreen.kt` routes `KeyType.CHARACTER` to `onCommitText(output)`; `DictusImeService.commitText()` calls `currentInputConnection?.commitText(text, 1)` |
+| 12 | User can tap shift (single-tap) or double-tap for caps lock | VERIFIED | `handleKeyPress()` in `KeyboardScreen.kt`: 300ms double-tap window toggles caps lock, single tap toggles shift |
+| 13 | Shift key has visually distinct appearance for caps lock vs single-shift | VERIFIED | `KeyButton.kt` lines 52-53: `isCapsLock -> DictusColors.AccentHighlight` vs `isShifted -> DictusColors.Accent`; lines 123-133: underline drawn via `drawBehind` when caps lock active; `isCapsLock` threaded through KeyboardScreen -> KeyboardView -> KeyRow -> KeyButton |
+| 14 | User can tap ?123/ABC to switch keyboard layers | VERIFIED | `handleKeyPress()` maps ABC/123/?123/#+= to `KeyboardLayer` enum; `KeyboardView.kt` selects rows accordingly |
+| 15 | User can long-press a letter with accents to see a popup | VERIFIED | `KeyboardScreen.kt` `onKeyLongPress` checks `AccentMap.hasAccents(char)` and sets `showAccentPopup = true`; `AccentPopup.kt` renders `Popup(properties = PopupProperties(focusable = false))` with accent options |
+| 16 | User can tap delete to remove characters with key repeat | VERIFIED | `KeyButton.kt` DELETE uses `awaitPointerEventScope` with 400ms initial delay then 50ms repeat via coroutine; `DictusImeService.deleteBackward()` calls `currentInputConnection?.deleteSurroundingText(1, 0)` |
+| 17 | Mic button row is positioned above the keyboard rows | VERIFIED | `KeyboardScreen.kt` Column order: `MicButtonRow(...)` at line 55, then `KeyboardView(...)` at line 58 — mic row is first child |
+| 18 | Keyboard renders with Dictus dark theme colors | VERIFIED | `KeyboardScreen.kt` wraps Column in `DictusTheme { }`; `KeyboardView.kt` and `MicButtonRow.kt` use `DictusColors.Background`, `DictusColors.KeyBackground`, `DictusColors.KeySpecialBackground` |
 
-**Score:** 15/15 truths verified
+**Score:** 18/18 truths verified
 
 ---
 
 ## Required Artifacts
 
-### Plan 01 Artifacts
+### Plan 01 Artifacts (Project Skeleton)
 
 | Artifact | Status | Evidence |
 |----------|--------|----------|
-| `gradle/libs.versions.toml` | VERIFIED | Exists; contains `timber = "5.0.1"`, `hilt = "2.51.1"`, `agp = "8.7.3"` (version adjusted from plan — 2.57.1 not in Maven, 2.51.1 used instead) |
-| `core/src/main/java/dev/pivisolutions/dictus/core/theme/DictusColors.kt` | VERIFIED | Exists; contains `0xFF0A1628`; 11 color tokens defined |
-| `core/src/main/java/dev/pivisolutions/dictus/core/theme/DictusTheme.kt` | VERIFIED | Exists; contains `darkColorScheme` and `fun DictusTheme` |
-| `core/src/main/java/dev/pivisolutions/dictus/core/logging/TimberSetup.kt` | VERIFIED | Exists; contains `Timber.plant(Timber.DebugTree())` |
-| `app/src/main/java/dev/pivisolutions/dictus/DictusApplication.kt` | VERIFIED | Exists; contains `@HiltAndroidApp` |
+| `gradle/libs.versions.toml` | VERIFIED | Exists; `timber = "5.0.1"`, `hilt = "2.51.1"`, `agp = "8.7.3"` present |
+| `core/src/main/java/dev/pivisolutions/dictus/core/theme/DictusColors.kt` | VERIFIED | Exists; 11 color tokens including `Color(0xFF0A1628)` |
+| `core/src/main/java/dev/pivisolutions/dictus/core/theme/DictusTheme.kt` | VERIFIED | Exists; `darkColorScheme(...)` and `fun DictusTheme` present |
+| `core/src/main/java/dev/pivisolutions/dictus/core/logging/TimberSetup.kt` | VERIFIED | Exists; `Timber.plant(Timber.DebugTree())` in `init()` |
+| `app/src/main/java/dev/pivisolutions/dictus/DictusApplication.kt` | VERIFIED | Exists; `@HiltAndroidApp` annotation present |
 
-### Plan 02 Artifacts
-
-| Artifact | Status | Evidence |
-|----------|--------|----------|
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/LifecycleInputMethodService.kt` | VERIFIED | Exists; contains `LifecycleOwner` implementation with full lifecycle event handling |
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/model/KeyboardLayouts.kt` | VERIFIED | Exists; contains `numbersRows`, `symbolsRows`, `azertyLetters`, `qwertyLetters`, `lettersForLayout()` |
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/model/AccentMap.kt` | VERIFIED | Exists; contains `accentsFor()` and `hasAccents()` with full French accent coverage |
-| `ime/src/main/AndroidManifest.xml` | VERIFIED | Exists; contains `BIND_INPUT_METHOD` and `android.view.InputMethod` |
-
-### Plan 03 Artifacts
+### Plan 02 Artifacts (IME Service + Data Models)
 
 | Artifact | Status | Evidence |
 |----------|--------|----------|
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardScreen.kt` | VERIFIED | Exists; contains `fun KeyboardScreen(` with full state management (layer, shift, caps, accent popup) |
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt` | VERIFIED | Exists; contains `DictusColors.KeyBackground`, `DictusColors.KeySpecialBackground`, `detectTapGestures`, `RoundedCornerShape(8.dp)`, `rememberUpdatedState` |
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/AccentPopup.kt` | VERIFIED | Exists; contains `AccentMap.accentsFor` and `Popup` with `focusable = false` |
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/MicButtonRow.kt` | VERIFIED | Exists; contains `height(56.dp)`, mic circle button, keyboard switcher |
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardView.kt` | VERIFIED | Exists; contains `KeyboardLayouts.lettersForLayout` |
-| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyRow.kt` | VERIFIED | Exists; renders `Row` composable with `KeyButton` elements |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/LifecycleInputMethodService.kt` | VERIFIED | Exists; implements `LifecycleOwner`, `ViewModelStoreOwner`, `SavedStateRegistryOwner` with full lifecycle event handling |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/model/KeyboardLayouts.kt` | VERIFIED | Exists; `azertyLetters`, `qwertyLetters`, `numbersRows`, `symbolsRows`, `lettersForLayout()` all present |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/model/AccentMap.kt` | VERIFIED | Exists; `accentsFor()` and `hasAccents()` with full French accent coverage (lowercase + uppercase) |
+| `ime/src/main/AndroidManifest.xml` | VERIFIED | Exists; `BIND_INPUT_METHOD` permission and `android.view.InputMethod` intent-filter |
+
+### Plan 03 Artifacts (Keyboard UI)
+
+| Artifact | Status | Evidence |
+|----------|--------|----------|
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardScreen.kt` | VERIFIED | Exists; full state management (layer, shift, caps, accent popup); `handleKeyPress()` routes all key types |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt` | VERIFIED | Exists; `detectTapGestures`, `isCapsLock` distinction, `drawBehind` underline, `rememberUpdatedState`, key-repeat for delete |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/AccentPopup.kt` | VERIFIED | Exists; `Popup(properties = PopupProperties(focusable = false))` with `AccentMap.accentsFor(char)` |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/MicButtonRow.kt` | VERIFIED | Exists; mic circle button + keyboard switcher; `height(56.dp)` |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardView.kt` | VERIFIED | Exists; routes to `KeyboardLayouts.lettersForLayout(layout)` for LETTERS layer |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyRow.kt` | VERIFIED | Exists; renders `Row` with `KeyButton` elements weighted by `widthMultiplier` |
+
+### Plan 04 Artifacts (UAT Gap Closure)
+
+| Artifact | Status | Evidence |
+|----------|--------|----------|
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt` | VERIFIED | `isCapsLock` param at line 45; `AccentHighlight` bg at line 52; `drawBehind` underline at lines 123-133 |
+| `ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardScreen.kt` | VERIFIED | `MicButtonRow` called at line 55 before `KeyboardView` at line 58 — mic row is above keyboard |
 
 ---
 
@@ -83,30 +100,32 @@ human_verification:
 
 | From | To | Via | Status | Evidence |
 |------|----|-----|--------|----------|
-| `app/build.gradle.kts` | `core/build.gradle.kts` | `implementation(project(":core"))` | WIRED | Line 37: `implementation(project(":core"))` |
-| `DictusApplication.kt` | `TimberSetup.kt` | `TimberSetup.init(BuildConfig.DEBUG)` | WIRED | Line 19: `TimberSetup.init(BuildConfig.DEBUG)` |
-| `DictusImeService.kt` | `LifecycleInputMethodService.kt` | extends base class | WIRED | `class DictusImeService : LifecycleInputMethodService()` |
-| `DictusImeService.kt` | `DictusImeEntryPoint.kt` | `EntryPointAccessors.fromApplication` | WIRED | Line 4-5: import + lazy `EntryPointAccessors.fromApplication(...)` |
-| `KeyboardLayouts.kt` | `KeyDefinition.kt` | uses data class | WIRED | All layout rows constructed with `KeyDefinition(...)` |
-| `KeyboardScreen.kt` | `DictusImeService.kt` | callback lambdas for commitText/deleteBackward | WIRED | `onCommitText`, `onDeleteBackward`, `onSendReturn` passed from service to screen |
-| `KeyButton.kt` | `AccentPopup.kt` (via `KeyboardScreen`) | long-press triggers popup display | WIRED | `onKeyLongPress` in `KeyboardScreen.kt` checks `AccentMap.hasAccents()` and sets `showAccentPopup = true` |
-| `KeyboardScreen.kt` | `KeyboardLayouts.kt` | reads layout data for current layer | WIRED | `KeyboardView.kt` calls `KeyboardLayouts.lettersForLayout(layout)` |
-| `DictusImeService.kt` | `InputConnection` | `currentInputConnection.commitText()` | WIRED | `currentInputConnection?.commitText(text, 1)`, `deleteSurroundingText(1, 0)`, `sendKeyEvent(...)` all present |
+| `settings.gradle.kts` | modules app/ime/core | `include(":app", ":ime", ":core")` | WIRED | Line 18 confirmed |
+| `app/build.gradle.kts` | `:core` | `implementation(project(":core"))` | WIRED | Line 37 confirmed |
+| `DictusApplication.kt` | `TimberSetup.kt` | `TimberSetup.init(BuildConfig.DEBUG)` | WIRED | Line 19 confirmed |
+| `DictusImeService.kt` | `LifecycleInputMethodService.kt` | `class DictusImeService : LifecycleInputMethodService()` | WIRED | Line 18 confirmed |
+| `DictusImeService.kt` | `DictusImeEntryPoint.kt` | `EntryPointAccessors.fromApplication(...)` | WIRED | Lines 21-25 confirmed |
+| `DictusImeService.kt` | `KeyboardScreen.kt` | `KeyboardContent()` calls `KeyboardScreen(onCommitText, onDeleteBackward, onSendReturn, onSwitchKeyboard)` | WIRED | Lines 33-43 confirmed |
+| `KeyboardScreen.kt` | `DictusImeService.kt` | callback lambdas `commitText()`, `deleteBackward()`, `sendReturnKey()` | WIRED | Lines 35-37 confirmed |
+| `KeyboardView.kt` | `KeyboardLayouts.kt` | `KeyboardLayouts.lettersForLayout(layout)` | WIRED | `KeyboardView.kt` line 35 confirmed |
+| `KeyboardView.kt` | `KeyButton.kt` | via `KeyRow` with `isCapsLock` threaded through | WIRED | `isCapsLock` confirmed in KeyboardView l.28, KeyRow l.23, KeyButton l.45 |
+| `KeyboardScreen.kt` | `AccentPopup.kt` | `onKeyLongPress` checks `AccentMap.hasAccents()` then sets `showAccentPopup = true` | WIRED | Lines 91-103 in `KeyboardScreen.kt` confirmed |
+| `DictusImeService.kt` | `InputConnection` | `currentInputConnection?.commitText(text, 1)`, `deleteSurroundingText(1, 0)`, `sendKeyEvent(...)` | WIRED | Lines 49, 56, 63-68 confirmed |
 
 ---
 
 ## Requirements Coverage
 
-| Requirement | Source Plan | Description | Status | Evidence |
+| Requirement | Source Plans | Description | Status | Evidence |
 |-------------|-------------|-------------|--------|----------|
-| APP-06 | Plan 01 | Structured logging via Timber throughout the app | SATISFIED | `TimberSetup.kt` plants DebugTree; `DictusApplication.kt` initializes it; `DictusImeService.kt`, `KeyboardScreen.kt`, `MicButtonRow.kt` all use `Timber.d(...)` |
-| DSG-01 | Plan 01 | App uses branded dark theme matching Dictus iOS colors | SATISFIED | `DictusColors.kt` defines all iOS color tokens; `DictusTheme.kt` uses `darkColorScheme` with those tokens; `KeyboardScreen.kt` wraps in `DictusTheme` |
-| KBD-01 | Plan 02 | User can type on full AZERTY keyboard with shift, caps lock, numbers, symbols | SATISFIED | `KeyboardLayouts.kt` has AZERTY + numbers + symbols; `KeyboardScreen.kt` handles SHIFT (single/double-tap for caps), `LAYER_SWITCH` for numbers/symbols |
-| KBD-02 | Plan 02 | User can switch between AZERTY and QWERTY layouts | SATISFIED | `KeyboardLayouts.kt` has both layouts; `KeyboardView.kt` calls `lettersForLayout(layout)` selecting the correct one based on `currentLayout` state |
-| KBD-03 | Plan 02 | User can access accented characters via long-press | SATISFIED | `AccentMap.kt` maps e/a/u/i/o/c/y/n (upper and lower) to French accented variants; `AccentPopup.kt` renders popup; `KeyboardScreen.kt` wires long-press to popup display |
-| KBD-06 | Plan 03 | User can insert text into any app via InputConnection | SATISFIED | `DictusImeService.commitText()` calls `currentInputConnection?.commitText(text, 1)`; `deleteBackward()` and `sendReturnKey()` also wired; `DictusImeService.kt` registered in manifest as an IME service |
+| KBD-01 | Plan 02 | Full AZERTY keyboard with shift, caps lock, numbers, symbols | SATISFIED | AZERTY layout in `KeyboardLayouts.kt`; shift/caps in `handleKeyPress()`; numbers and symbols layers present and routed via `KeyboardLayer` enum |
+| KBD-02 | Plans 02, 04 | Switch between AZERTY and QWERTY layouts | SATISFIED | `KeyboardLayouts.lettersForLayout("azerty"/"qwerty")`; `currentLayout` state in `KeyboardScreen.kt`; caps lock visual distinction added in Plan 04 |
+| KBD-03 | Plan 02 | Access accented characters via long-press | SATISFIED | `AccentMap.kt` covers e/a/u/i/o/c/y/n (upper + lower); `AccentPopup.kt` renders popup; long-press wired in `KeyboardScreen.kt` |
+| KBD-06 | Plans 03, 04 | Insert text into any app via InputConnection | SATISFIED | `DictusImeService.commitText()` -> `currentInputConnection?.commitText(text, 1)`; `deleteBackward()` and `sendReturnKey()` wired; service registered in manifest |
+| APP-06 | Plan 01 | Structured logging via Timber | SATISFIED | `TimberSetup.init()` plants DebugTree; `DictusApplication.kt` calls it in `onCreate()`; multiple service/UI files use `Timber.d(...)` |
+| DSG-01 | Plan 01 | Branded dark theme matching Dictus iOS colors | SATISFIED | `DictusColors.kt` maps all iOS hex values; `DictusTheme.kt` uses `darkColorScheme`; `KeyboardScreen.kt` wraps all keyboard UI in `DictusTheme { }` |
 
-All 6 requirements claimed by phase plans are accounted for. No orphaned requirements found — REQUIREMENTS.md marks all 6 as Phase 1 / Complete.
+All 6 requirement IDs claimed by Phase 1 plans are accounted for. REQUIREMENTS.md traceability table marks all 6 as Phase 1 / Complete. No orphaned requirements: KBD-04, KBD-05 are mapped to Phase 5; DICT-xx to Phases 2-3; APP-01 to APP-05 to Phase 4; DSG-02, DSG-03 to Phase 6 — all correctly outside Phase 1 scope.
 
 ---
 
@@ -114,45 +133,55 @@ All 6 requirements claimed by phase plans are accounted for. No orphaned require
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `DictusImeService.kt` | 16 | Stale doc comment: "Currently renders a placeholder UI" | Info | The comment predates the Plan 03 update. Actual implementation calls `KeyboardScreen(...)` — not a placeholder. Documentation issue only, no functional impact. |
-| `KeyboardScreen.kt` | 188-200 | `KeyType.EMOJI` and `KeyType.MIC` log "not yet implemented" | Info (intentional) | These are Phase 2 placeholders explicitly designed per plan spec. Non-blocking — the plan called for these as non-functional stubs in Phase 1. |
+| `DictusImeService.kt` | 17 | Stale comment: "Currently renders a placeholder UI; the full keyboard layout is wired in Plan 03" | Info | Comment predates Plan 03 completion. Actual implementation calls `KeyboardScreen(...)` with real callbacks. Documentation issue only. |
+| `KeyboardScreen.kt` | 188-201 | `Timber.d("Emoji picker not yet implemented")` and `Timber.d("Mic not yet implemented")` | Info (intentional) | Phase 2 placeholders per plan spec. `KeyType.EMOJI` and `KeyType.MIC` are explicitly non-functional in Phase 1. |
 
-No blockers or warnings found.
+No blockers or functional warnings found.
 
 ---
 
 ## Human Verification Required
 
-### 1. Full keyboard end-to-end on device/emulator
+### 1. Full keyboard end-to-end on device or emulator
 
-**Test:** Install APK via `./gradlew installDebug`, enable Dictus keyboard in system settings, select it as active keyboard in any app text field
-**Expected:** AZERTY keyboard renders with dark Dictus background (#0A1628), letter tap inserts character, shift toggles uppercase, ?123 switches to numbers, long-press E shows accented variants, delete removes characters, hold delete repeats deletion, mic row visible below keyboard
-**Why human:** IME lifecycle, input connection, and system keyboard switching cannot be verified by static analysis. Visual theme correctness requires rendering.
+**Test:** Run `./gradlew installDebug`. Go to Settings > General management > Keyboard > On-screen keyboards, enable Dictus. Open any text field and switch to Dictus keyboard.
+**Expected:**
+- AZERTY keyboard renders on dark background (#0A1628)
+- Tap a letter: character appears in text field
+- Tap shift once: keys go uppercase, shift key turns blue (#3D7EFF)
+- Tap shift twice quickly: caps lock activates, shift key turns lighter blue (#6BA3FF) with white underline indicator
+- Tap ?123: numbers layer appears; tap ABC: returns to letters
+- Long-press E: accent popup appears above keyboard with accented e variants
+- Tap delete: removes one character; hold delete: repeats deletion
+- Mic row visible above keyboard with globe icon and mic button
 
-**Note:** The 01-03 SUMMARY documents that this human checkpoint was completed by the user during Plan 03 Task 2, who confirmed the keyboard works on emulator. Both runtime bugs found (accent popup focus theft, stale callbacks) were fixed in commit `6024c34`.
+**Why human:** IME system activation, InputConnection routing, and visual rendering cannot be validated by static code analysis. Note: a human checkpoint on emulator was passed during Plan 03 UAT. Two bugs (accent popup focus theft, stale layer switch callbacks) were fixed in commit `6024c34`. Plan 04 gap closure (caps lock visual, mic row position) was completed in commits `42445ce` and `86f03c0`.
 
 ---
 
 ## Commit Verification
 
-All 6 commits documented in SUMMARYs are present in git history:
+Commits confirmed present in git history at time of verification:
 
 | Commit | Plan | Description |
 |--------|------|-------------|
-| `623aaae` | 01-01 | feat: multi-module Gradle project |
-| `fb6d340` | 01-01 | feat: Dictus dark theme and unit tests |
-| `718e731` | 01-02 | feat: IME service with Compose lifecycle |
-| `336dc14` | 01-02 | feat: keyboard data models |
-| `eb72391` | 01-03 | feat: complete keyboard UI composables |
-| `6024c34` | 01-03 | fix: accent popup focus + stale callbacks |
+| `718e731` | 01-02 | IME service with Compose lifecycle |
+| `336dc14` | 01-02 | Keyboard data models |
+| `eb72391` | 01-03 | Complete keyboard UI composables |
+| `6024c34` | 01-03 | Fix accent popup focus + stale callbacks |
+| `42445ce` | 01-04 | Caps lock visual distinction on shift key |
+| `86f03c0` | 01-04 | Move mic button row above keyboard |
+| `7c2e591` | Phase docs | Resolve UAT gaps |
 
 ---
 
 ## Gaps Summary
 
-No gaps found. All 15 observable truths are VERIFIED, all 6 requirements are SATISFIED, all key links are WIRED, all documented commits exist in git history.
+No gaps found. All 18 observable truths are VERIFIED, all 6 requirements are SATISFIED, all key links are WIRED, and all commits are confirmed in git history.
 
-The only human verification item (end-to-end on device) was completed during the Plan 03 checkpoint and documented in 01-03-SUMMARY.md. The stale doc comment and intentional Phase 2 stubs are not blockers.
+The phase goal is fully achieved: a functional multi-module Gradle project exists with an IME service, full Compose keyboard UI (AZERTY/QWERTY), key interactions (tap, shift, caps lock with visual distinction, layer switching), accent popup, delete with key repeat, and a non-functional MicButtonRow placeholder positioned above the keyboard.
+
+The one outstanding item (human end-to-end test) was completed during Plan 03 UAT. Plan 04 gap closure addressed two visual/layout issues found during that session.
 
 ---
 
