@@ -25,6 +25,7 @@ import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
 fun KeyboardView(
     layer: KeyboardLayer,
     isShifted: Boolean,
+    isCapsLock: Boolean = false,
     layout: String,
     onKeyPress: (KeyDefinition) -> Unit,
     onKeyLongPress: (KeyDefinition, Offset) -> Unit,
@@ -46,6 +47,7 @@ fun KeyboardView(
             KeyRow(
                 keys = rowKeys,
                 isShifted = isShifted,
+                isCapsLock = isCapsLock,
                 onKeyPress = onKeyPress,
                 onKeyLongPress = onKeyLongPress,
             )

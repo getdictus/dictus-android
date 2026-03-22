@@ -55,6 +55,7 @@ fun KeyboardScreen(
             KeyboardView(
                 layer = currentLayer,
                 isShifted = isShifted,
+                isCapsLock = isCapsLock,
                 layout = currentLayout,
                 onKeyPress = { key ->
                     handleKeyPress(

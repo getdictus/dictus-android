@@ -20,6 +20,7 @@ import dev.pivisolutions.dictus.ime.model.KeyDefinition
 fun KeyRow(
     keys: List<KeyDefinition>,
     isShifted: Boolean,
+    isCapsLock: Boolean = false,
     onKeyPress: (KeyDefinition) -> Unit,
     onKeyLongPress: (KeyDefinition, Offset) -> Unit,
     modifier: Modifier = Modifier,
@@ -34,6 +35,7 @@ fun KeyRow(
             KeyButton(
                 key = key,
                 isShifted = isShifted,
+                isCapsLock = isCapsLock,
                 onPress = { onKeyPress(key) },
                 onLongPress = { offset -> onKeyLongPress(key, offset) },
                 modifier = Modifier.weight(key.widthMultiplier),
