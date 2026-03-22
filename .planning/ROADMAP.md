@@ -12,7 +12,7 @@ Dictus Android delivers a free, private, on-device voice dictation keyboard for 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core Foundation + Keyboard Shell** - Multi-module project with Compose-based IME rendering AZERTY/QWERTY, text insertion, dark theme, and structured logging
+- [x] **Phase 1: Core Foundation + Keyboard Shell** - Multi-module project with Compose-based IME rendering AZERTY/QWERTY, text insertion, dark theme, and structured logging (completed 2026-03-22)
 - [ ] **Phase 2: Audio Recording + Service Architecture** - Foreground service with AudioRecord, IME-to-service binding via local Binder + StateFlow, mic button and haptic feedback
 - [ ] **Phase 3: Whisper Integration** - whisper.cpp native build via NDK/CMake, JNI bridge, end-to-end dictation pipeline (record -> transcribe -> insert)
 - [ ] **Phase 4: Model Management + Onboarding** - Model download/deletion from HuggingFace, storage indicators, onboarding flow, settings screen, debug log export
@@ -119,7 +119,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Foundation + Keyboard Shell | 0/3 | Not started | - |
+| 1. Core Foundation + Keyboard Shell | 3/3 | Complete   | 2026-03-22 |
 | 2. Audio Recording + Service Architecture | 0/2 | Not started | - |
 | 3. Whisper Integration | 0/2 | Not started | - |
 | 4. Model Management + Onboarding | 0/3 | Not started | - |
