@@ -20,7 +20,7 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import timber.log.Timber
 
 /**
- * Placeholder row below the keyboard with a centered mic button and
+ * Placeholder row above the keyboard with a centered mic button and
  * a keyboard-switcher icon on the left.
  *
  * The mic button is non-functional in Phase 1 -- tapping it only logs

@@ -25,7 +25,7 @@ import timber.log.Timber
  * routes key press events to the appropriate InputConnection callbacks
  * provided by DictusImeService.
  *
- * Total height: 280.dp (keyboard) + 56.dp (mic row) = 336.dp.
+ * Total height: 56.dp (mic row) + 280.dp (keyboard) = 336.dp.
  */
 @Composable
 fun KeyboardScreen(
@@ -51,6 +51,9 @@ fun KeyboardScreen(
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
+            // Mic button row above keyboard (56.dp)
+            MicButtonRow(onSwitchKeyboard = onSwitchKeyboard)
+
             // Keyboard area (280.dp)
             KeyboardView(
                 layer = currentLayer,
@@ -122,9 +125,6 @@ fun KeyboardScreen(
                     },
                 )
             }
-
-            // Mic button row (56.dp)
-            MicButtonRow(onSwitchKeyboard = onSwitchKeyboard)
         }
     }
 }
