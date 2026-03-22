@@ -40,7 +40,7 @@ fun AccentPopup(
         alignment = Alignment.TopCenter,
         offset = IntOffset(0, -60),
         onDismissRequest = onDismiss,
-        properties = PopupProperties(focusable = true),
+        properties = PopupProperties(focusable = false),
     ) {
         val shape = RoundedCornerShape(12.dp)
         Row(

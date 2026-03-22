@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,37 +65,33 @@ fun KeyButton(
 
     val shape = RoundedCornerShape(8.dp)
 
+    // rememberUpdatedState ensures that pointerInput always calls the latest
+    // callbacks even though the coroutine launched by pointerInput(Unit) is
+    // long-lived and would otherwise capture stale references.
+    val currentOnPress = rememberUpdatedState(onPress)
+    val currentOnLongPress = rememberUpdatedState(onLongPress)
+
     // Choose the right gesture modifier based on key type.
     // DELETE uses custom key-repeat logic; other keys use detectTapGestures.
     val gestureModifier = if (key.type == KeyType.DELETE) {
-        // For DELETE: detect press/release and repeat while held.
-        // We use awaitPointerEventScope directly inside pointerInput's
-        // coroutine scope so we can launch a repeat job alongside pointer tracking.
         Modifier.pointerInput(Unit) {
-            // Use coroutineScope to get access to launch() for the repeat job.
-            // pointerInput's lambda is a suspend function, so coroutineScope
-            // creates a proper CoroutineScope inside it.
             coroutineScope {
                 while (isActive) {
                     awaitPointerEventScope {
-                        // Wait for a press event
                         val event = awaitPointerEvent()
                         if (event.type != PointerEventType.Press) return@awaitPointerEventScope
                     }
 
-                    // Fire once immediately on press
-                    onPress()
+                    currentOnPress.value()
 
-                    // Launch repeat job: after 400ms initial delay, fire every 50ms
                     val repeatJob = launch {
                         delay(400L)
                         while (isActive) {
-                            onPress()
+                            currentOnPress.value()
                             delay(50L)
                         }
                     }
 
-                    // Wait for finger release
                     awaitPointerEventScope {
                         var released = false
                         while (!released) {
@@ -112,8 +109,8 @@ fun KeyButton(
     } else {
         Modifier.pointerInput(Unit) {
             detectTapGestures(
-                onTap = { onPress() },
-                onLongPress = { offset -> onLongPress?.invoke(offset) },
+                onTap = { currentOnPress.value() },
+                onLongPress = { offset -> currentOnLongPress.value?.invoke(offset) },
             )
         }
     }
