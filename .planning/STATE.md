@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 01-03-PLAN.md (Phase 1 complete)
-last_updated: "2026-03-22T12:33:15.667Z"
-last_activity: 2026-03-22 -- Plan 01-03 complete (Keyboard UI with Compose)
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-03-22T13:09:34.043Z"
+last_activity: "2026-03-22 -- Plan 01-04 complete (UAT gap closure: caps lock visual + mic row position)"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-21)
 ## Current Position
 
 Phase: 1 of 6 (Core Foundation + Keyboard Shell) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase 1 Complete
-Last activity: 2026-03-22 -- Plan 01-03 complete (Keyboard UI with Compose)
+Plan: 4 of 4 in current phase
+Status: Phase 1 Complete (with UAT gap closure)
+Last activity: 2026-03-22 -- Plan 01-04 complete (UAT gap closure: caps lock visual + mic row position)
 
 Progress: [██████████] 100%
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 | Phase 01 P01 | 13min | 3 tasks | 21 files |
 | Phase 01 P02 | 2min | 2 tasks | 12 files |
 | Phase 01 P03 | ~22h (2 sessions) | 2 tasks | 7 files |
+| Phase 01 P04 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Recent decisions affecting current work:
 - [Phase 01-02]: Used Unicode escapes for special key labels for cross-platform source compatibility
 - [Phase 01-03]: Used rememberUpdatedState for KeyButton callbacks to avoid stale closures with layer switching
 - [Phase 01-03]: Set AccentPopup focusable=false to prevent stealing IME focus
+- [Phase 01-04]: Used AccentHighlight for caps lock vs Accent for single-shift; added drawBehind underline for accessibility
 
 ### Pending Todos
 
@@ -85,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:30:00Z
-Stopped at: Completed 01-03-PLAN.md (Phase 1 complete)
+Last session: 2026-03-22T13:09:34.041Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
