@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-core-foundation-keyboard-shell
 source: [01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md]
 started: 2026-03-22T14:00:00Z
-updated: 2026-03-22T14:15:00Z
+updated: 2026-03-22T14:20:00Z
 ---
 
 ## Current Test
@@ -59,17 +59,32 @@ skipped: 0
   reason: "User reported: Il n'y a aucune différence visuelle entre shift simple et caps lock. Pas de différence visuelle entre les deux états."
   severity: minor
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "isCapsLock state in KeyboardScreen is never propagated to KeyButton. The rendering chain (KeyboardScreen > KeyboardView > KeyRow > KeyButton) only passes isShifted: Boolean. Both single-shift and caps-lock set isShifted=true, so the shift key renders identically. KeyButton.kt line 49 has only one visual branch for shift."
+  artifacts:
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardScreen.kt"
+      issue: "isCapsLock state exists (line 40) but is not passed to KeyboardView (line 57)"
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardView.kt"
+      issue: "Missing isCapsLock parameter in signature"
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt"
+      issue: "Missing isCapsLock parameter; line 49 only checks isShifted for shift key color"
+  missing:
+    - "Add isCapsLock: Boolean parameter to KeyboardView, KeyRow, and KeyButton"
+    - "Pass isCapsLock from KeyboardScreen through the composable chain"
+    - "Add distinct visual for caps lock in KeyButton (e.g., different icon or underline indicator)"
+  debug_session: ".planning/debug/shift-caps-no-visual-diff.md"
 
 - truth: "Mic button row should be positioned above the keyboard and match the design mockups"
   status: failed
   reason: "User reported: Le bouton mic est en dessous du clavier au lieu d'être au-dessus. Le design ne correspond pas du tout aux maquettes. Mais c'est peut-être prévu pour les phases suivantes quand les mockups seront appliqués."
   severity: cosmetic
   test: 7
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "In KeyboardScreen.kt Column composable, MicButtonRow (line 126) is placed after KeyboardView (line 55). Compose Column lays out children top-to-bottom, so MicButtonRow renders below the keyboard. MicButtonRow.kt KDoc (line 23) explicitly says 'below the keyboard'."
+  artifacts:
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardScreen.kt"
+      issue: "MicButtonRow at line 126 placed after KeyboardView at line 55 in Column"
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/ui/MicButtonRow.kt"
+      issue: "KDoc says 'below the keyboard' instead of 'above'"
+  missing:
+    - "Move MicButtonRow call before KeyboardView in the Column"
+    - "Update KDoc comments to reflect 'above' positioning"
+  debug_session: ".planning/debug/mic-button-row-position.md"
