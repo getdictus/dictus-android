@@ -31,12 +31,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can see typed text appear in any app's text field (Gmail, WhatsApp, Chrome, etc.) via InputConnection
   4. Keyboard renders with the branded Dictus dark theme
   5. Structured logs are written via Timber and can be observed in Logcat
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Multi-module Gradle project, version catalog, Hilt, Timber, Dictus dark theme
-- [ ] 01-02-PLAN.md — IME service with Compose lifecycle, keyboard data models, accent map
-- [ ] 01-03-PLAN.md — Compose keyboard UI, key interactions, InputConnection text insertion
+- [x] 01-01-PLAN.md — Multi-module Gradle project, version catalog, Hilt, Timber, Dictus dark theme
+- [x] 01-02-PLAN.md — IME service with Compose lifecycle, keyboard data models, accent map
+- [x] 01-03-PLAN.md — Compose keyboard UI, key interactions, InputConnection text insertion
+- [ ] 01-04-PLAN.md — UAT gap closure: caps lock visual indicator, mic row positioning
 
 ### Phase 2: Audio Recording + Service Architecture
 **Goal**: Users can tap the mic button on the keyboard to record audio, with the recording managed by a foreground service
@@ -119,7 +120,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Foundation + Keyboard Shell | 3/3 | Complete   | 2026-03-22 |
+| 1. Core Foundation + Keyboard Shell | 3/4 | Gap closure | 2026-03-22 |
 | 2. Audio Recording + Service Architecture | 0/2 | Not started | - |
 | 3. Whisper Integration | 0/2 | Not started | - |
 | 4. Model Management + Onboarding | 0/3 | Not started | - |
