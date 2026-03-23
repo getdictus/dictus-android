@@ -48,11 +48,11 @@ Plans:
   2. User sees a notification while recording is active (foreground service)
   3. User feels haptic feedback on key presses and mic button taps (configurable)
   4. Dictation state machine transitions are observable: idle -> recording -> idle
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — DictationState, AudioCaptureManager, DictationService foreground service with notification
+- [ ] 02-02-PLAN.md — RecordingScreen UI, WaveformBars, HapticHelper, IME-to-service wiring
 
 ### Phase 3: Whisper Integration
 **Goal**: Users can dictate text that is transcribed on-device and inserted at the cursor position
