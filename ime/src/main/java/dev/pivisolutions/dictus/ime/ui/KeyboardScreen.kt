@@ -33,6 +33,7 @@ fun KeyboardScreen(
     onDeleteBackward: () -> Unit,
     onSendReturn: () -> Unit,
     onSwitchKeyboard: () -> Unit,
+    onMicTap: () -> Unit = {},
 ) {
     // Keyboard state
     var currentLayer by remember { mutableStateOf(KeyboardLayer.LETTERS) }
@@ -52,7 +53,11 @@ fun KeyboardScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             // Mic button row above keyboard (56.dp)
-            MicButtonRow(onSwitchKeyboard = onSwitchKeyboard)
+            MicButtonRow(
+                onSwitchKeyboard = onSwitchKeyboard,
+                onMicTap = onMicTap,
+                isRecording = false,
+            )
 
             // Keyboard area (280.dp)
             KeyboardView(

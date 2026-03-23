@@ -12,6 +12,8 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import dev.pivisolutions.dictus.R
+import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,7 +43,7 @@ import timber.log.Timber
  * WHY LocalBinder (not AIDL): The IME and this service run in the same process.
  * Local binding gives direct object access without IPC serialization overhead.
  */
-class DictationService : Service() {
+class DictationService : Service(), DictationController {
 
     companion object {
         const val CHANNEL_ID = "dictus_recording"
@@ -75,7 +77,7 @@ class DictationService : Service() {
     private val _state = MutableStateFlow<DictationState>(DictationState.Idle)
 
     /** Observable state for the IME to collect. */
-    val state: StateFlow<DictationState> = _state.asStateFlow()
+    override val state: StateFlow<DictationState> = _state.asStateFlow()
 
     override fun onBind(intent: Intent): IBinder = binder
 
@@ -113,7 +115,7 @@ class DictationService : Service() {
      * This sends ACTION_START to the service, which triggers foreground
      * promotion and audio capture initialization.
      */
-    fun startRecording() {
+    override fun startRecording() {
         val intent = Intent(this, DictationService::class.java).apply {
             action = ACTION_START
         }
@@ -128,7 +130,7 @@ class DictationService : Service() {
      *
      * @return FloatArray of captured audio samples, or empty array if not recording.
      */
-    fun stopRecording(): FloatArray {
+    override fun stopRecording(): FloatArray {
         val samples = audioCaptureManager?.stop() ?: FloatArray(0)
         timerJob?.cancel()
         timerJob = null
@@ -146,7 +148,7 @@ class DictationService : Service() {
      * Used when the user taps the X button during recording.
      * Returns to idle state without producing any audio output.
      */
-    fun cancelRecording() {
+    override fun cancelRecording() {
         stopRecordingInternal(discard = true)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

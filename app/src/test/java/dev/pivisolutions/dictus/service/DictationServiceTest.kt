@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.service
 
+import dev.pivisolutions.dictus.core.service.DictationState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
