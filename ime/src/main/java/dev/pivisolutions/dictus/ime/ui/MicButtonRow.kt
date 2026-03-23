@@ -14,24 +14,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
-import timber.log.Timber
+import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 
 /**
- * Placeholder row above the keyboard with a centered mic button and
+ * Row above the keyboard with a centered mic button and
  * a keyboard-switcher icon on the left.
  *
- * The mic button is non-functional in Phase 1 -- tapping it only logs
- * a message. The keyboard-switcher triggers the system InputMethodPicker
- * via the provided callback.
+ * The mic button triggers recording start/stop via onMicTap and
+ * changes to red background when isRecording is true. Both the mic
+ * button and globe button provide haptic feedback on tap.
  */
 @Composable
 fun MicButtonRow(
     onSwitchKeyboard: () -> Unit,
+    onMicTap: () -> Unit = {},
+    isRecording: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val view = LocalView.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -46,7 +51,10 @@ fun MicButtonRow(
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(DictusColors.KeySpecialBackground)
-                .clickable { onSwitchKeyboard() },
+                .clickable {
+                    HapticHelper.performKeyHaptic(view)
+                    onSwitchKeyboard()
+                },
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -55,14 +63,15 @@ fun MicButtonRow(
             )
         }
 
-        // Mic button (non-functional in Phase 1)
+        // Mic button - triggers recording start/stop
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(DictusColors.Accent)
+                .background(if (isRecording) DictusColors.Recording else DictusColors.Accent)
                 .clickable {
-                    Timber.d("Mic pressed (not yet implemented)")
+                    HapticHelper.performMicHaptic(view)
+                    onMicTap()
                 },
             contentAlignment = Alignment.Center,
         ) {

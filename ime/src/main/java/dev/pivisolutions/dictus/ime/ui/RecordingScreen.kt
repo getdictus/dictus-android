@@ -121,11 +121,11 @@ fun RecordingScreen(
             }
         }
 
-        // Bottom: MicButtonRow (56.dp) - persists in recording state
-        // Note: onMicTap and isRecording parameters are added in Task 2 when
-        // MicButtonRow is updated. For now, use the current signature.
+        // Bottom: MicButtonRow (56.dp) - persists in recording state with red mic button
         MicButtonRow(
             onSwitchKeyboard = onSwitchKeyboard,
+            onMicTap = onMicTap,
+            isRecording = true,
         )
     }
 }

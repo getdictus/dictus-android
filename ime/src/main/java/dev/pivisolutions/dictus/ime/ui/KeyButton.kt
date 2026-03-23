@@ -20,7 +20,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalView
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
 import kotlinx.coroutines.coroutineScope
@@ -47,6 +49,8 @@ fun KeyButton(
     onLongPress: ((Offset) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val view = LocalView.current
+
     // Caps lock check must come before isShifted since caps lock also sets isShifted=true
     val backgroundColor = when {
         key.type == KeyType.SHIFT && isCapsLock -> DictusColors.AccentHighlight
@@ -86,11 +90,13 @@ fun KeyButton(
                         if (event.type != PointerEventType.Press) return@awaitPointerEventScope
                     }
 
+                    HapticHelper.performKeyHaptic(view)
                     currentOnPress.value()
 
                     val repeatJob = launch {
                         delay(400L)
                         while (isActive) {
+                            HapticHelper.performKeyHaptic(view)
                             currentOnPress.value()
                             delay(50L)
                         }
@@ -113,8 +119,14 @@ fun KeyButton(
     } else {
         Modifier.pointerInput(Unit) {
             detectTapGestures(
-                onTap = { currentOnPress.value() },
-                onLongPress = { offset -> currentOnLongPress.value?.invoke(offset) },
+                onTap = {
+                    HapticHelper.performKeyHaptic(view)
+                    currentOnPress.value()
+                },
+                onLongPress = { offset ->
+                    HapticHelper.performKeyHaptic(view)
+                    currentOnLongPress.value?.invoke(offset)
+                },
             )
         }
     }
