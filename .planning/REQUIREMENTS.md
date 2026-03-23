@@ -18,14 +18,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Dictation
 
-- [ ] **DICT-01**: User can tap the mic button to start voice recording
-- [ ] **DICT-02**: User can tap again to stop recording and trigger transcription
+- [x] **DICT-01**: User can tap the mic button to start voice recording
+- [x] **DICT-02**: User can tap again to stop recording and trigger transcription
 - [ ] **DICT-03**: Transcription runs on-device via whisper.cpp with GGML models
 - [ ] **DICT-04**: Transcribed text is inserted at cursor position in the active text field
 - [ ] **DICT-05**: User sees a real-time waveform animation during recording
 - [ ] **DICT-06**: User hears a sound when recording starts and stops (configurable)
 - [ ] **DICT-07**: User feels haptic feedback on key press and mic button (configurable)
-- [ ] **DICT-08**: Recording runs in a foreground Service with visible notification
+- [x] **DICT-08**: Recording runs in a foreground Service with visible notification
 
 ### App
 
@@ -86,14 +86,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | KBD-04 | Phase 5 | Pending |
 | KBD-05 | Phase 5 | Pending |
 | KBD-06 | Phase 1 | Complete |
-| DICT-01 | Phase 2 | Pending |
-| DICT-02 | Phase 2 | Pending |
+| DICT-01 | Phase 2 | Complete |
+| DICT-02 | Phase 2 | Complete |
 | DICT-03 | Phase 3 | Pending |
 | DICT-04 | Phase 3 | Pending |
 | DICT-05 | Phase 5 | Pending |
 | DICT-06 | Phase 5 | Pending |
 | DICT-07 | Phase 2 | Pending |
-| DICT-08 | Phase 2 | Pending |
+| DICT-08 | Phase 2 | Complete |
 | APP-01 | Phase 4 | Pending |
 | APP-02 | Phase 4 | Pending |
 | APP-03 | Phase 4 | Pending |

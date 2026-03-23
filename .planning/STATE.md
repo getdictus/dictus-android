@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-23T13:00:21.878Z"
-last_activity: "2026-03-22 -- Plan 01-04 complete (UAT gap closure: caps lock visual + mic row position)"
+status: in-progress
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-23T17:53:16.915Z"
+last_activity: "2026-03-23 -- Plan 02-01 complete (audio recording service: DictationState, AudioCaptureManager, DictationService)"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** La dictee vocale on-device qui fonctionne comme clavier systeme -- gratuite, privee, sans cloud.
-**Current focus:** Phase 1: Core Foundation + Keyboard Shell
+**Current focus:** Phase 2: Audio Recording + Service Architecture
 
 ## Current Position
 
-Phase: 1 of 6 (Core Foundation + Keyboard Shell) -- COMPLETE
-Plan: 4 of 4 in current phase
-Status: Phase 1 Complete (with UAT gap closure)
-Last activity: 2026-03-22 -- Plan 01-04 complete (UAT gap closure: caps lock visual + mic row position)
+Phase: 2 of 6 (Audio Recording + Service Architecture)
+Plan: 1 of 2 in current phase -- COMPLETE
+Status: Plan 02-01 complete, Plan 02-02 pending
+Last activity: 2026-03-23 -- Plan 02-01 complete (audio recording service: DictationState, AudioCaptureManager, DictationService)
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██████████] 100%
 | Phase 01 P02 | 2min | 2 tasks | 12 files |
 | Phase 01 P03 | ~22h (2 sessions) | 2 tasks | 7 files |
 | Phase 01 P04 | 2min | 2 tasks | 5 files |
+| Phase 02 P01 | 4min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [Phase 01-03]: Used rememberUpdatedState for KeyButton callbacks to avoid stale closures with layer switching
 - [Phase 01-03]: Set AccentPopup focusable=false to prevent stealing IME focus
 - [Phase 01-04]: Used AccentHighlight for caps lock vs Accent for single-shift; added drawBehind underline for accessibility
+- [02-01]: Made AudioCaptureManager energy methods public for testability
+- [02-01]: Used START_NOT_STICKY for DictationService -- recording state is transient
 
 ### Pending Todos
 
@@ -87,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:00:21.870Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-audio-recording-service-architecture/02-CONTEXT.md
+Last session: 2026-03-23T17:08:18Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-audio-recording-service-architecture/02-02-PLAN.md
