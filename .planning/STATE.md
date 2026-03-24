@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed phase 02 (all plans)
-last_updated: "2026-03-24T22:00:00.000Z"
-last_activity: "2026-03-24 -- Phase 02 complete (recording UI, haptics, IME-service wiring, keyboard polish)"
+status: completed
+stopped_at: Phase 02.1 context gathered
+last_updated: "2026-03-24T21:38:44.975Z"
+last_activity: 2026-03-24 -- Phase 02 complete (recording UI, haptics, IME-service wiring, keyboard polish on Pixel 4)
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 2
   total_plans: 6
   completed_plans: 6
@@ -79,6 +79,10 @@ Recent decisions affecting current work:
 - [02-01]: Made AudioCaptureManager energy methods public for testability
 - [02-01]: Used START_NOT_STICKY for DictationService -- recording state is transient
 
+### Roadmap Evolution
+
+- Phase 02.1 inserted after Phase 2: App Shell + Testability (URGENT) — Cannot test recording/waveform/haptics without a minimal app activity that handles mic permission and service binding. Must be testable before Whisper integration.
+
 ### Pending Todos
 
 None yet.
@@ -91,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T22:00:00Z
-Stopped at: Phase 02 complete
-Resume file: .planning/ROADMAP.md (plan phase 03)
+Last session: 2026-03-24T21:38:44.968Z
+Stopped at: Phase 02.1 context gathered
+Resume file: .planning/phases/02.1-app-shell-testability/02.1-CONTEXT.md
