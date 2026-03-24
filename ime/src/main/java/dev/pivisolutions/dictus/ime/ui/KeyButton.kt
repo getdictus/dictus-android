@@ -278,7 +278,7 @@ fun KeyButton(
         if (showAccentPopup && !accentChars.isNullOrEmpty()) {
             Popup(
                 alignment = Alignment.TopCenter,
-                offset = IntOffset(0, -84),
+                offset = IntOffset(0, -100),
                 properties = PopupProperties(clippingEnabled = false),
             ) {
                 AccentPopup(

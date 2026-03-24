@@ -31,11 +31,11 @@ fun AccentPopup(
 ) {
     if (accents.isEmpty()) return
 
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(10.dp)
 
     Row(
         modifier = modifier
-            .shadow(elevation = 6.dp, shape = shape)
+            .shadow(elevation = 8.dp, shape = shape)
             .clip(shape)
             .background(DictusColors.KeyBackground),
     ) {
