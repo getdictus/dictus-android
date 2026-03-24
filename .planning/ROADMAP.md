@@ -65,7 +65,7 @@ Plans:
   3. Permission denial shows Snackbar with Settings action
   4. FakeDictationController provides controllable test doubles for both app and ime module tests
   5. ./gradlew testAll runs all unit tests across all 3 modules
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 02.1-01-PLAN.md — Test infrastructure, FakeDictationController, WaveformBars extraction, testAll task

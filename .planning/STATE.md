@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 02.1-01-PLAN.md
-last_updated: "2026-03-24T22:11:01.745Z"
-last_activity: 2026-03-24 -- Phase 02 complete (recording UI, haptics, IME-service wiring, keyboard polish on Pixel 4)
+status: completed
+stopped_at: Completed 02.1-02-PLAN.md
+last_updated: "2026-03-24T22:27:12.473Z"
+last_activity: 2026-03-24 -- Phase 02.1 complete (app test surface, ImeStatusCard, RecordingTestArea, permissions, MainActivity rewrite)
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
-  percent: 100
+  completed_plans: 8
+  percent: 88
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** La dictee vocale on-device qui fonctionne comme clavier systeme -- gratuite, privee, sans cloud.
-**Current focus:** Phase 02.1 — App Shell + Testability (plan 01 complete, plan 02 next)
+**Current focus:** Phase 02.1 complete. Next: Phase 3 (Whisper Integration)
 
 ## Current Position
 
-Phase: 02.1 of 6 (App Shell + Testability)
-Plan: 1 of 2 in current phase -- COMPLETE
-Status: Plan 01 (test infra) done, Plan 02 (app shell) next
-Last activity: 2026-03-24 -- Phase 02.1 Plan 01 complete (test deps, FakeDictationController, WaveformBars extraction, testAll)
+Phase: 02.1 of 6 (App Shell + Testability) -- COMPLETE
+Plan: 2 of 2 in current phase -- COMPLETE
+Status: Phase 02.1 fully complete (test infra + app test surface)
+Last activity: 2026-03-24 -- Phase 02.1 Plan 02 complete (TestSurfaceScreen, ImeStatusCard, RecordingTestArea, permissions, MainActivity rewrite, verified on Pixel 4)
 
-Progress: [█████████░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████████░] 88%
 | Phase 02 P01 | 4min | 2 tasks | 9 files |
 | Phase 02 P02 | ~45min | 4 tasks | 10 files |
 | Phase 02.1 P01 | 4min | 2 tasks | 13 files |
+| Phase 02.1 P02 | 25min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [02-01]: Used START_NOT_STICKY for DictationService -- recording state is transient
 - [02.1-01]: Moved WaveformBarTest from ime to core after WaveformBars extraction (internal visibility)
 - [02.1-01]: ime WaveformBars.kt becomes thin wrapper delegating to core for backward compatibility
+- [02.1-02]: Service binding in Activity lifecycle (onCreate/onDestroy), not Composable -- avoids lifecycle mismatch
+- [02.1-02]: IME status checked in onResume so it refreshes when user returns from system Settings
 
 ### Roadmap Evolution
 
@@ -98,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T22:10:03Z
-Stopped at: Completed 02.1-01-PLAN.md
-Resume file: .planning/phases/02.1-app-shell-testability/02.1-01-SUMMARY.md
+Last session: 2026-03-24T22:26:08Z
+Stopped at: Completed 02.1-02-PLAN.md
+Resume file: .planning/phases/02.1-app-shell-testability/02.1-02-SUMMARY.md
