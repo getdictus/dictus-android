@@ -7,3 +7,13 @@ plugins {
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.ksp) apply false
 }
+
+tasks.register("testAll") {
+    description = "Run all unit tests across all modules"
+    group = "verification"
+    dependsOn(
+        ":app:testDebugUnitTest",
+        ":core:testDebugUnitTest",
+        ":ime:testDebugUnitTest",
+    )
+}

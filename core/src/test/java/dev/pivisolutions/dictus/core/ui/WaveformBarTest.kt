@@ -1,4 +1,4 @@
-package dev.pivisolutions.dictus.ime.ui
+package dev.pivisolutions.dictus.core.ui
 
 import androidx.compose.ui.graphics.Color
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -11,6 +11,9 @@ import org.junit.Test
  *
  * Tests energy padding logic (padEnergy) and color assignment (barColor)
  * to ensure the waveform visualization behaves correctly at boundaries.
+ *
+ * Moved from ime module to core after WaveformBars extraction, since
+ * padEnergy and barColor are internal to the core.ui package.
  */
 class WaveformBarTest {
 
