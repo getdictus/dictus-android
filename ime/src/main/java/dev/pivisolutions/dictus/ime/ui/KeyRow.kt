@@ -6,9 +6,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
+import dev.pivisolutions.dictus.ime.model.AccentMap
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
+import dev.pivisolutions.dictus.ime.model.KeyType
 
 /**
  * Renders a single horizontal row of keyboard keys.
@@ -22,7 +23,7 @@ fun KeyRow(
     isShifted: Boolean,
     isCapsLock: Boolean = false,
     onKeyPress: (KeyDefinition) -> Unit,
-    onKeyLongPress: (KeyDefinition, Offset) -> Unit,
+    onAccentSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -32,12 +33,26 @@ fun KeyRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         keys.forEach { key ->
+            val displayChar = when (key.type) {
+                KeyType.CHARACTER -> {
+                    val baseChar = key.output.firstOrNull()
+                    if (baseChar != null) {
+                        if (isShifted) baseChar.uppercaseChar() else baseChar.lowercaseChar()
+                    } else {
+                        null
+                    }
+                }
+                else -> null
+            }
+            val accentChars = key.accents ?: displayChar?.let(AccentMap::accentsFor)
+
             KeyButton(
                 key = key,
                 isShifted = isShifted,
                 isCapsLock = isCapsLock,
                 onPress = { onKeyPress(key) },
-                onLongPress = { offset -> onKeyLongPress(key, offset) },
+                accentChars = accentChars,
+                onAccentSelected = onAccentSelected,
                 modifier = Modifier.weight(key.widthMultiplier),
             )
         }

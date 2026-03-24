@@ -9,23 +9,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusTheme
-import dev.pivisolutions.dictus.ime.model.AccentMap
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
-import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
+import dev.pivisolutions.dictus.ime.model.KeyType
 import timber.log.Timber
 
 /**
  * Root composable for the Dictus keyboard.
  *
- * Manages all keyboard state (layer, shift, caps lock, accent popup) and
+ * Manages all keyboard state (layer, shift, caps lock) and
  * routes key press events to the appropriate InputConnection callbacks
  * provided by DictusImeService.
  *
- * Total height: 56.dp (mic row) + 280.dp (keyboard) = 336.dp.
+ * Total height: 46.dp (mic row) + 264.dp (keyboard) = 310.dp.
  */
 @Composable
 fun KeyboardScreen(
@@ -41,10 +39,6 @@ fun KeyboardScreen(
     var isCapsLock by remember { mutableStateOf(false) }
     var currentLayout by remember { mutableStateOf("azerty") }
 
-    // Accent popup state
-    var showAccentPopup by remember { mutableStateOf(false) }
-    var accentChar by remember { mutableStateOf<Char?>(null) }
-
     // Track last tap time for double-tap shift detection
     var lastShiftTapTime by remember { mutableStateOf(0L) }
 
@@ -52,14 +46,14 @@ fun KeyboardScreen(
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            // Mic button row above keyboard (56.dp)
+            // Mic button row above keyboard (46.dp)
             MicButtonRow(
                 onSwitchKeyboard = onSwitchKeyboard,
                 onMicTap = onMicTap,
                 isRecording = false,
             )
 
-            // Keyboard area (280.dp)
+            // Keyboard area (264.dp) for 48.dp keys with existing row spacing.
             KeyboardView(
                 layer = currentLayer,
                 isShifted = isShifted,
@@ -93,43 +87,15 @@ fun KeyboardScreen(
                         },
                     )
                 },
-                onKeyLongPress = { key, _ ->
-                    if (key.type == KeyType.CHARACTER) {
-                        val char = if (isShifted) {
-                            key.label.uppercase().firstOrNull()
-                        } else {
-                            key.label.lowercase().firstOrNull()
-                        }
-                        if (char != null && AccentMap.hasAccents(char)) {
-                            accentChar = char
-                            showAccentPopup = true
-                            Timber.d("Accent popup opened for: %s", char)
-                        }
+                onAccentSelected = { accent ->
+                    onCommitText(accent)
+                    if (isShifted && !isCapsLock) {
+                        isShifted = false
                     }
+                    Timber.d("Accent selected: %s", accent)
                 },
-                modifier = Modifier.height(280.dp),
+                modifier = Modifier.height(264.dp),
             )
-
-            // Accent popup overlay
-            if (showAccentPopup && accentChar != null) {
-                AccentPopup(
-                    char = accentChar!!,
-                    onAccentSelected = { accent ->
-                        onCommitText(accent)
-                        showAccentPopup = false
-                        accentChar = null
-                        // Turn off shift after accent selection (unless caps lock)
-                        if (isShifted && !isCapsLock) {
-                            isShifted = false
-                        }
-                        Timber.d("Accent selected: %s", accent)
-                    },
-                    onDismiss = {
-                        showAccentPopup = false
-                        accentChar = null
-                    },
-                )
-            }
         }
     }
 }

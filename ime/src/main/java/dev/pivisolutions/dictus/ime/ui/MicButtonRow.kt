@@ -7,26 +7,29 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 
 /**
- * Row above the keyboard with a centered mic button and
- * a keyboard-switcher icon on the left.
+ * Top bar above the keyboard: settings gear on the left, mic pill button on the right.
  *
- * The mic button triggers recording start/stop via onMicTap and
- * changes to red background when isRecording is true. Both the mic
- * button and globe button provide haptic feedback on tap.
+ * No globe icon — Android provides its own language switcher in the system navigation bar.
+ * Mic pill matches the mockup: 56x40dp, cornerRadius 20, accent blue with glow shadow.
  */
 @Composable
 fun MicButtonRow(
@@ -40,34 +43,44 @@ fun MicButtonRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .background(DictusColors.Background),
+            .height(46.dp)
+            .background(DictusColors.Background)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // Keyboard switcher (globe icon placeholder)
+        // Settings gear button (left)
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(DictusColors.KeySpecialBackground)
+                .size(32.dp)
                 .clickable {
                     HapticHelper.performKeyHaptic(view)
                     onSwitchKeyboard()
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "\uD83C\uDF10", // Globe emoji as placeholder
-                fontSize = 18.sp,
+            Icon(
+                painter = painterResource(R.drawable.ic_settings),
+                contentDescription = "Settings",
+                tint = DictusColors.OnSurface.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp),
             )
         }
 
-        // Mic button - triggers recording start/stop
+        // Mic pill button (right) — mockup spec: 56x40dp, corner 20, accent + glow
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
+                .width(56.dp)
+                .height(40.dp)
+                .shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(20.dp),
+                    ambientColor = if (isRecording) DictusColors.Recording.copy(alpha = 0.25f)
+                        else DictusColors.Accent.copy(alpha = 0.25f),
+                    spotColor = if (isRecording) DictusColors.Recording.copy(alpha = 0.4f)
+                        else DictusColors.Accent.copy(alpha = 0.4f),
+                )
+                .clip(RoundedCornerShape(20.dp))
                 .background(if (isRecording) DictusColors.Recording else DictusColors.Accent)
                 .clickable {
                     HapticHelper.performMicHaptic(view)
@@ -75,13 +88,12 @@ fun MicButtonRow(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "\uD83C\uDFA4", // Microphone emoji as placeholder
-                fontSize = 20.sp,
+            Icon(
+                painter = painterResource(R.drawable.ic_mic),
+                contentDescription = "Microphone",
+                tint = Color.White,
+                modifier = Modifier.size(22.dp),
             )
         }
-
-        // Spacer for symmetry
-        Box(modifier = Modifier.size(40.dp))
     }
 }

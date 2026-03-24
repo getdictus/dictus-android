@@ -12,58 +12,52 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import dev.pivisolutions.dictus.core.theme.DictusColors
-import dev.pivisolutions.dictus.ime.model.AccentMap
 
 /**
- * Popup overlay showing accented character variants for a given base character.
+ * Accent strip content shown above a long-pressed key.
  *
- * Appears above the long-pressed key as a horizontal row of selectable accent
- * options. Dismisses when an accent is selected or when tapping outside.
- *
- * Uses AccentMap to look up available accents for the character.
+ * This composable only renders the strip. Positioning is handled by the caller so
+ * the popup can stay anchored to the pressed key.
  */
 @Composable
 fun AccentPopup(
-    char: Char,
+    accents: List<String>,
+    highlightedIndex: Int?,
     onAccentSelected: (String) -> Unit,
-    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val accents = AccentMap.accentsFor(char) ?: return
+    if (accents.isEmpty()) return
 
-    Popup(
-        alignment = Alignment.TopCenter,
-        offset = IntOffset(0, -60),
-        onDismissRequest = onDismiss,
-        properties = PopupProperties(focusable = false),
+    val shape = RoundedCornerShape(8.dp)
+
+    Row(
+        modifier = modifier
+            .shadow(elevation = 6.dp, shape = shape)
+            .clip(shape)
+            .background(DictusColors.KeyBackground),
     ) {
-        val shape = RoundedCornerShape(12.dp)
-        Row(
-            modifier = Modifier
-                .shadow(elevation = 4.dp, shape = shape)
-                .clip(shape)
-                .background(DictusColors.Surface),
-        ) {
-            accents.forEach { accent ->
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clickable {
-                            onAccentSelected(accent)
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = accent,
-                        color = DictusColors.KeyText,
-                        fontSize = 20.sp,
+        accents.forEachIndexed { index, accent ->
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        if (highlightedIndex == index) {
+                            DictusColors.AccentHighlight.copy(alpha = 0.35f)
+                        } else {
+                            DictusColors.KeyBackground
+                        }
                     )
-                }
+                    .clickable { onAccentSelected(accent) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = accent,
+                    color = DictusColors.KeyText,
+                    fontSize = 22.sp,
+                )
             }
         }
     }

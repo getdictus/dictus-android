@@ -25,7 +25,7 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 /**
  * Recording overlay that replaces the keyboard during active dictation.
  *
- * Takes the same total height as KeyboardScreen (336.dp = 56.dp mic row + 280.dp content)
+ * Takes the same total height as KeyboardScreen (310.dp = 46.dp mic row + 264.dp content)
  * so the transition is seamless. Shows a waveform visualization, elapsed timer,
  * and cancel/confirm control buttons.
  *
@@ -45,11 +45,11 @@ fun RecordingScreen(
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
-        // Top area (280.dp) - recording content, vertically centered
+        // Top area (264.dp) - recording content, vertically centered
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
+                .height(264.dp)
                 .background(DictusColors.Background),
             contentAlignment = Alignment.Center,
         ) {

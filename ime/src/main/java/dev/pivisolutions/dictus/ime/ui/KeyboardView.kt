@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
@@ -28,7 +27,7 @@ fun KeyboardView(
     isCapsLock: Boolean = false,
     layout: String,
     onKeyPress: (KeyDefinition) -> Unit,
-    onKeyLongPress: (KeyDefinition, Offset) -> Unit,
+    onAccentSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rows = when (layer) {
@@ -41,7 +40,7 @@ fun KeyboardView(
         modifier = modifier
             .fillMaxWidth()
             .background(DictusColors.Background)
-            .padding(top = 4.dp, bottom = 2.dp),
+            .padding(top = 2.dp, bottom = 2.dp),
     ) {
         rows.forEach { rowKeys ->
             KeyRow(
@@ -49,7 +48,7 @@ fun KeyboardView(
                 isShifted = isShifted,
                 isCapsLock = isCapsLock,
                 onKeyPress = onKeyPress,
-                onKeyLongPress = onKeyLongPress,
+                onAccentSelected = onAccentSelected,
             )
         }
     }
