@@ -54,6 +54,23 @@ Plans:
 - [ ] 02-01-PLAN.md — DictationState, AudioCaptureManager, DictationService foreground service with notification
 - [ ] 02-02-PLAN.md — RecordingScreen UI, WaveformBars, HapticHelper, IME-to-service wiring
 
+### Phase 02.1: App Shell + Testability (INSERTED)
+
+**Goal:** Minimal app activity with IME status card, recording test surface, mic permission handling, and Compose UI test infrastructure across all modules
+**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05
+**Depends on:** Phase 2
+**Success Criteria** (what must be TRUE):
+  1. User opens the app and sees an IME status card showing whether Dictus keyboard is enabled/selected
+  2. User taps Test Recording, grants mic permission, and sees real-time waveform + timer
+  3. Permission denial shows Snackbar with Settings action
+  4. FakeDictationController provides controllable test doubles for both app and ime module tests
+  5. ./gradlew testAll runs all unit tests across all 3 modules
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02.1-01-PLAN.md — Test infrastructure, FakeDictationController, WaveformBars extraction, testAll task
+- [ ] 02.1-02-PLAN.md — App test surface UI (ImeStatusCard, RecordingTestArea, permissions, MainActivity rewrite)
+
 ### Phase 3: Whisper Integration
 **Goal**: Users can dictate text that is transcribed on-device and inserted at the cursor position
 **Depends on**: Phase 2
