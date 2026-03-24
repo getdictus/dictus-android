@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 02.1 context gathered
-last_updated: "2026-03-24T21:38:44.975Z"
+status: in-progress
+stopped_at: Completed 02.1-01-PLAN.md
+last_updated: "2026-03-24T22:11:01.745Z"
 last_activity: 2026-03-24 -- Phase 02 complete (recording UI, haptics, IME-service wiring, keyboard polish on Pixel 4)
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** La dictee vocale on-device qui fonctionne comme clavier systeme -- gratuite, privee, sans cloud.
-**Current focus:** Phase 2 complete — ready for Phase 3
+**Current focus:** Phase 02.1 — App Shell + Testability (plan 01 complete, plan 02 next)
 
 ## Current Position
 
-Phase: 2 of 6 (Audio Recording + Service Architecture) -- COMPLETE
-Plan: 2 of 2 in current phase -- COMPLETE
-Status: Phase 02 fully complete, ready for Phase 03
-Last activity: 2026-03-24 -- Phase 02 complete (recording UI, haptics, IME-service wiring, keyboard polish on Pixel 4)
+Phase: 02.1 of 6 (App Shell + Testability)
+Plan: 1 of 2 in current phase -- COMPLETE
+Status: Plan 01 (test infra) done, Plan 02 (app shell) next
+Last activity: 2026-03-24 -- Phase 02.1 Plan 01 complete (test deps, FakeDictationController, WaveformBars extraction, testAll)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 01 P04 | 2min | 2 tasks | 5 files |
 | Phase 02 P01 | 4min | 2 tasks | 9 files |
 | Phase 02 P02 | ~45min | 4 tasks | 10 files |
+| Phase 02.1 P01 | 4min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 01-04]: Used AccentHighlight for caps lock vs Accent for single-shift; added drawBehind underline for accessibility
 - [02-01]: Made AudioCaptureManager energy methods public for testability
 - [02-01]: Used START_NOT_STICKY for DictationService -- recording state is transient
+- [02.1-01]: Moved WaveformBarTest from ime to core after WaveformBars extraction (internal visibility)
+- [02.1-01]: ime WaveformBars.kt becomes thin wrapper delegating to core for backward compatibility
 
 ### Roadmap Evolution
 
@@ -95,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T21:38:44.968Z
-Stopped at: Phase 02.1 context gathered
-Resume file: .planning/phases/02.1-app-shell-testability/02.1-CONTEXT.md
+Last session: 2026-03-24T22:10:03Z
+Stopped at: Completed 02.1-01-PLAN.md
+Resume file: .planning/phases/02.1-app-shell-testability/02.1-01-SUMMARY.md
