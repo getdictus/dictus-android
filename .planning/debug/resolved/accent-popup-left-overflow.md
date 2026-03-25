@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: resolved
 trigger: "accent popup for 'a' key overflows off the left edge of the screen"
 created: 2026-03-25T00:00:00Z
 updated: 2026-03-25T00:00:00Z

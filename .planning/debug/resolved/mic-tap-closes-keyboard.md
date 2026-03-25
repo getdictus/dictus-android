@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: resolved
 trigger: "Investigate why tapping the mic button in the Dictus keyboard closes the keyboard instead of showing the recording overlay."
 created: 2026-03-25T00:00:00Z
 updated: 2026-03-25T00:00:00Z
