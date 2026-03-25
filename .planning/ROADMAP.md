@@ -83,9 +83,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — whisper.cpp git submodule, whisper/ Android library module with NDK/CMake, JNI bridge, Kotlin wrapper
-- [ ] 03-02-PLAN.md — DictationState.Transcribing, TranscriptionEngine interface, TextPostProcessor, ModelManager with TDD
-- [ ] 03-03-PLAN.md — End-to-end pipeline: DictationService orchestration, IME text insertion, TranscribingScreen UI
+- [x] 03-01-PLAN.md — whisper.cpp git submodule, whisper/ Android library module with NDK/CMake, JNI bridge, Kotlin wrapper
+- [x] 03-02-PLAN.md — DictationState.Transcribing, TranscriptionEngine interface, TextPostProcessor, ModelManager with TDD
+- [x] 03-03-PLAN.md — End-to-end pipeline: DictationService orchestration, IME text insertion, TranscribingScreen UI
 
 ### Phase 4: Model Management + Onboarding
 **Goal**: Users can set up Dictus from scratch and manage Whisper models
