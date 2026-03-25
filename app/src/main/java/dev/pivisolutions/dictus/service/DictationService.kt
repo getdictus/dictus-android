@@ -25,6 +25,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
+import dev.pivisolutions.dictus.model.ModelManager
 import timber.log.Timber
 
 /**
@@ -50,7 +53,13 @@ class DictationService : Service(), DictationController {
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
+        private const val TRANSCRIPTION_TIMEOUT_MS = 30_000L
+        private const val LANGUAGE = "fr" // Hard-coded for Phase 3; Phase 4 adds settings
     }
+
+    private val transcriptionEngine = WhisperTranscriptionEngine()
+    private val modelManager by lazy { ModelManager(applicationContext) }
+    private val modelDownloader by lazy { ModelDownloader(modelManager) }
 
     /**
      * Local binder for same-process binding.
@@ -158,15 +167,84 @@ class DictationService : Service(), DictationController {
     /**
      * Stop recording, transcribe audio, and return processed text.
      *
-     * TODO(Phase 3 Plan 03): Wire TranscriptionEngine and implement real transcription.
-     * This stub transitions through Transcribing state and returns null (no-op)
-     * so the project compiles while Plan 02 defines the contracts.
+     * Full pipeline: stop recording -> ensure model downloaded -> init engine ->
+     * transcribe with 30s timeout -> post-process -> return text.
+     *
+     * WHY 30s timeout: On Pixel 4 with tiny model, transcription takes 2-5s for
+     * typical dictation (5-30s audio). 30s covers worst-case long recordings.
+     * A stuck JNI call should not block the UI indefinitely.
      */
     override suspend fun confirmAndTranscribe(): String? {
+        // 1. Stop recording and get audio samples
+        val samples = audioCaptureManager?.stop() ?: FloatArray(0)
+        timerJob?.cancel()
+        timerJob = null
+        elapsedMs = 0L
+        audioCaptureManager = null
+
+        if (samples.isEmpty()) {
+            Timber.w("confirmAndTranscribe: no audio samples captured")
+            _state.value = DictationState.Idle
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return null
+        }
+
+        Timber.d("confirmAndTranscribe: %d samples captured, transitioning to Transcribing", samples.size)
         _state.value = DictationState.Transcribing
-        Timber.w("confirmAndTranscribe() stub called -- Plan 03 will implement")
-        _state.value = DictationState.Idle
-        return null
+
+        return try {
+            // 2. Ensure model is available (download on first use)
+            val modelPath = modelDownloader.ensureModelAvailable(ModelManager.DEFAULT_MODEL_KEY)
+            if (modelPath == null) {
+                Timber.e("Model not available, cannot transcribe")
+                _state.value = DictationState.Idle
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return null
+            }
+
+            // 3. Initialize engine if needed
+            if (!transcriptionEngine.isReady) {
+                val initialized = transcriptionEngine.initialize(modelPath)
+                if (!initialized) {
+                    Timber.e("Failed to initialize transcription engine")
+                    _state.value = DictationState.Idle
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    return null
+                }
+            }
+
+            // 4. Transcribe with timeout
+            val rawText = withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
+                transcriptionEngine.transcribe(samples, LANGUAGE)
+            }
+
+            if (rawText == null) {
+                Timber.e("Transcription timed out after %d ms", TRANSCRIPTION_TIMEOUT_MS)
+                _state.value = DictationState.Idle
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return null
+            }
+
+            // 5. Post-process (trim + punctuation)
+            val processedText = TextPostProcessor.process(rawText)
+            Timber.d("Transcription result: raw='%s', processed='%s'", rawText, processedText)
+
+            _state.value = DictationState.Idle
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+
+            if (processedText.isEmpty()) null else processedText
+        } catch (e: Exception) {
+            Timber.e(e, "Transcription failed")
+            _state.value = DictationState.Idle
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            null
+        }
     }
 
     /**
@@ -266,6 +344,9 @@ class DictationService : Service(), DictationController {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.launch {
+            transcriptionEngine.release()
+        }
         serviceScope.cancel()
         Timber.d("DictationService destroyed")
     }

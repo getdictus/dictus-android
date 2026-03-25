@@ -42,6 +42,8 @@ android {
 dependencies {
     implementation(project(":core"))
     implementation(project(":ime"))
+    implementation(project(":whisper"))
+    implementation(libs.okhttp)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
