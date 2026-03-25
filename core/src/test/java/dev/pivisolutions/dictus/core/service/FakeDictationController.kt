@@ -37,6 +37,17 @@ class FakeDictationController : DictationController {
         _state.value = DictationState.Idle
     }
 
+    var confirmAndTranscribeCallCount = 0; private set
+    var transcriptionResult: String? = "Fake transcription result. "
+
+    override suspend fun confirmAndTranscribe(): String? {
+        confirmAndTranscribeCallCount++
+        _state.value = DictationState.Transcribing
+        val result = transcriptionResult
+        _state.value = DictationState.Idle
+        return result
+    }
+
     /** Emit an arbitrary state for test scenarios. */
     fun emitState(state: DictationState) {
         _state.value = state

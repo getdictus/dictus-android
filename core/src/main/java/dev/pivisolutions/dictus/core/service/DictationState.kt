@@ -10,7 +10,9 @@ package dev.pivisolutions.dictus.core.service
  *
  * State transitions:
  *   Idle -> Recording (when user taps mic)
- *   Recording -> Idle (when user confirms or cancels)
+ *   Recording -> Transcribing (when user confirms)
+ *   Recording -> Idle (when user cancels)
+ *   Transcribing -> Idle (when transcription completes or fails)
  */
 sealed class DictationState {
 
@@ -28,4 +30,7 @@ sealed class DictationState {
         val elapsedMs: Long = 0L,
         val energy: List<Float> = emptyList(),
     ) : DictationState()
+
+    /** Transcription is in progress. No user action possible -- wait for result. */
+    data object Transcribing : DictationState()
 }

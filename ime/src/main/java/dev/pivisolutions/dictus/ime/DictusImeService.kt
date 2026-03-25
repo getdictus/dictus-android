@@ -202,6 +202,18 @@ class DictusImeService : LifecycleInputMethodService() {
                     onMicTap = { handleMicTap() },
                 )
             }
+            is DictationState.Transcribing -> {
+                // Plan 03 will wire this to the transcribing UI (sinusoidal waveform).
+                // For now, show the recording screen in a static state to avoid a blank screen.
+                RecordingScreen(
+                    elapsedMs = 0L,
+                    energy = emptyList(),
+                    onCancel = {},
+                    onConfirm = {},
+                    onSwitchKeyboard = switchKeyboard,
+                    onMicTap = {},
+                )
+            }
         }
     }
 

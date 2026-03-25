@@ -15,4 +15,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "dictus-android"
-include(":app", ":ime", ":core", ":whisper")
+include(":app", ":ime", ":core")
+// ":whisper" excluded temporarily -- NDK 25.2.9519653 not installed (Plan 03 will fix)

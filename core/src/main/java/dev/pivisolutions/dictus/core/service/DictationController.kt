@@ -26,4 +26,11 @@ interface DictationController {
 
     /** Cancel recording and discard all audio data. */
     fun cancelRecording()
+
+    /**
+     * Stop recording, transcribe the audio, and return the processed text.
+     * Transitions: Recording -> Transcribing -> Idle.
+     * Returns the post-processed transcribed text, or null on failure.
+     */
+    suspend fun confirmAndTranscribe(): String?
 }

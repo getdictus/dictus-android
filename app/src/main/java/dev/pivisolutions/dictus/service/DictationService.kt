@@ -156,6 +156,20 @@ class DictationService : Service(), DictationController {
     }
 
     /**
+     * Stop recording, transcribe audio, and return processed text.
+     *
+     * TODO(Phase 3 Plan 03): Wire TranscriptionEngine and implement real transcription.
+     * This stub transitions through Transcribing state and returns null (no-op)
+     * so the project compiles while Plan 02 defines the contracts.
+     */
+    override suspend fun confirmAndTranscribe(): String? {
+        _state.value = DictationState.Transcribing
+        Timber.w("confirmAndTranscribe() stub called -- Plan 03 will implement")
+        _state.value = DictationState.Idle
+        return null
+    }
+
+    /**
      * Internal helper to stop recording, optionally discarding samples.
      */
     private fun stopRecordingInternal(discard: Boolean) {
