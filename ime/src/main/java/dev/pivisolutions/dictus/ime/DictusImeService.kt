@@ -46,7 +46,6 @@ class DictusImeService : LifecycleInputMethodService() {
         /** Fully-qualified class name of DictationService in the app module. */
         private const val DICTATION_SERVICE_CLASS =
             "dev.pivisolutions.dictus.service.DictationService"
-
     }
 
     private val entryPoint: DictusImeEntryPoint by lazy {
@@ -136,10 +135,12 @@ class DictusImeService : LifecycleInputMethodService() {
     /**
      * Handle mic button tap: start or stop recording.
      *
-     * When idle, checks RECORD_AUDIO permission and starts the foreground
-     * service. When recording, stops and returns to idle.
+     * When idle, checks RECORD_AUDIO permission and delegates to the bound
+     * controller which starts the foreground service and audio capture.
+     * When recording, stops and returns to idle.
      */
     private fun handleMicTap() {
+        Timber.d("handleMicTap called, state=%s, bound=%s", _serviceState.value, isBound)
         val controller = dictationController
         if (controller == null) {
             Timber.w("DictationService not bound, cannot toggle recording")
@@ -148,15 +149,12 @@ class DictusImeService : LifecycleInputMethodService() {
 
         when (_serviceState.value) {
             is DictationState.Idle -> {
-                // Check RECORD_AUDIO permission before starting
                 if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
                     != PackageManager.PERMISSION_GRANTED
                 ) {
                     Timber.w("RECORD_AUDIO permission not granted")
                     return
                 }
-                // Delegate to the bound controller — it calls startForegroundService
-                // from the service's own context, which does NOT dismiss the keyboard.
                 controller.startRecording()
                 Timber.d("Recording started via mic tap")
             }

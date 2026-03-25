@@ -37,7 +37,11 @@ class AudioCaptureManager {
     private var recorder: AudioRecord? = null
     private var captureJob: Job? = null
     private val samples = ArrayList<Float>()
-    private val energyHistory = ArrayDeque<Float>(MAX_ENERGY_HISTORY)
+    private val energyHistory = ArrayDeque<Float>(MAX_ENERGY_HISTORY).apply {
+        // Pre-fill with zeros so the waveform renders all 30 bars immediately.
+        // Without this, bars appear to "slide in" from the left as the history fills up.
+        repeat(MAX_ENERGY_HISTORY) { addLast(0f) }
+    }
 
     /** Callback invoked on each energy update with a normalized 0.0-1.0 value. */
     var onEnergyUpdate: ((Float) -> Unit)? = null
@@ -119,7 +123,7 @@ class AudioCaptureManager {
             result = samples.toFloatArray()
             samples.clear()
         }
-        energyHistory.clear()
+        resetEnergyHistory()
         return result
     }
 
@@ -135,7 +139,7 @@ class AudioCaptureManager {
         synchronized(samples) {
             samples.clear()
         }
-        energyHistory.clear()
+        resetEnergyHistory()
         Timber.d("AudioRecord cancelled, samples discarded")
     }
 
@@ -163,15 +167,17 @@ class AudioCaptureManager {
     /**
      * Normalize a raw RMS energy value to the 0.0-1.0 range for display.
      *
-     * Typical speech RMS ranges from ~0.01 to ~0.3. Multiplying by 5 maps this
-     * to roughly 0.05-1.0 which gives a good visual range for the waveform bars.
-     * Values above 1.0 are clamped.
+     * Uses a power curve (sqrt) for better perceptual mapping: quiet speech
+     * still produces visible bar movement, while loud speech reaches full height.
+     * The 20x multiplier maps typical speech RMS (0.005-0.15) to ~0.3-1.0
+     * after the sqrt curve, giving responsive visual feedback.
      *
      * @param rms Raw RMS energy value.
      * @return Normalized value in [0.0, 1.0].
      */
     fun normalizeEnergy(rms: Float): Float {
-        return (rms * 5f).coerceIn(0f, 1f)
+        val amplified = (rms * 20f).coerceIn(0f, 1f)
+        return sqrt(amplified) // sqrt curve: boosts quiet sounds, compresses loud
     }
 
     /**
@@ -194,4 +200,14 @@ class AudioCaptureManager {
      * @return Immutable list of up to 30 normalized energy values.
      */
     fun getEnergyHistory(): List<Float> = energyHistory.toList()
+
+    /**
+     * Reset energy history to 30 zero entries.
+     * Ensures the next recording starts with a full-width flat waveform
+     * instead of bars sliding in from the left.
+     */
+    private fun resetEnergyHistory() {
+        energyHistory.clear()
+        repeat(MAX_ENERGY_HISTORY) { energyHistory.addLast(0f) }
+    }
 }

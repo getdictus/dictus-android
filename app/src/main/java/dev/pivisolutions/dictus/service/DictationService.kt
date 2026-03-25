@@ -110,10 +110,10 @@ class DictationService : Service(), DictationController {
     }
 
     /**
-     * Start recording via an intent (for external callers like the IME).
+     * Start recording via foreground service promotion.
      *
-     * This sends ACTION_START to the service, which triggers foreground
-     * promotion and audio capture initialization.
+     * Sends ACTION_START to self, which triggers onStartCommand to call
+     * startForeground() (required for microphone access) then startAudioCapture().
      */
     override fun startRecording() {
         val intent = Intent(this, DictationService::class.java).apply {
