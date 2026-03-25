@@ -1,10 +1,5 @@
 package dev.pivisolutions.dictus.ime.haptics
 
-import android.content.Context
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.HapticFeedbackConstants
 import android.view.View
 
@@ -13,8 +8,7 @@ import android.view.View
  *
  * Two intensity levels:
  * - performKeyHaptic: light feedback for regular key presses (KEYBOARD_TAP)
- * - performMicHaptic: heavy feedback for mic button using Vibrator API for
- *   a clearly perceptible difference on all devices (including Pixel 4)
+ * - performMicHaptic: stronger feedback for mic button (LONG_PRESS)
  */
 object HapticHelper {
 
@@ -28,41 +22,11 @@ object HapticHelper {
 
     /**
      * Stronger haptic for mic button and recording control actions.
-     * Uses Vibrator API with EFFECT_HEAVY_CLICK (API 29+) for a clearly
-     * stronger vibration than KEYBOARD_TAP. Falls back to a short 30ms
-     * vibration on older devices.
+     * Uses LONG_PRESS haptic constant for a clearly perceptible difference
+     * from KEYBOARD_TAP. This is permission-free (uses View.performHapticFeedback)
+     * and respects the user's system haptic preferences.
      */
     fun performMicHaptic(view: View) {
-        val context = view.context
-        val vibrator = getVibrator(context)
-
-        if (vibrator != null && vibrator.hasVibrator()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                vibrator.vibrate(
-                    VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
-                )
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(
-                    VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE)
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(30)
-            }
-        } else {
-            // Fallback to view haptic
-            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-        }
-    }
-
-    private fun getVibrator(context: Context): Vibrator? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-            manager?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        }
+        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
     }
 }
