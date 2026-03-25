@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "dictus-android"
-include(":app", ":ime", ":core")
+include(":app", ":ime", ":core", ":whisper")

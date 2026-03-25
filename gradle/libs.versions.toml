@@ -15,6 +15,8 @@ robolectric = "4.14.1"
 coroutines-test = "1.8.1"
 androidx-test-core = "1.6.1"
 androidx-test-ext-junit = "1.2.1"
+ndk = "25.2.9519653"
+cmake = "3.22.1"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
