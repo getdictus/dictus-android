@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-03-25T21:45:26Z"
-last_activity: 2026-03-25 -- Phase 03 Plan 02 complete (whisper contracts - DictationState.Transcribing, TranscriptionEngine, TextPostProcessor, ModelManager, 17 TDD tests)
+status: completed
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-25T21:47:54.192Z"
+last_activity: 2026-03-25 -- Phase 03 Plan 02 complete (whisper contracts - 17 TDD tests green)
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 83
 ---
 
@@ -60,6 +60,7 @@ Progress: [████████░░] 83%
 | Phase 02.1 P02 | 25min | 3 tasks | 8 files |
 | Phase 02 P03 (gap) | ~45min | 3 tasks + UAT | 5 files |
 | Phase 03 P02 | 14min | 2 tasks (TDD) | 12 files |
+| Phase 03 P01 | 15min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [02.1-02]: IME status checked in onResume so it refreshes when user returns from system Settings
 - [03-02]: Used q5_1 instead of q5_0 for small model -- HuggingFace provides pre-built q5_1
 - [03-02]: NDK updated from 25.2.9519653 to 27.2.12479018 to fix missing source.properties
+- [Phase 03]: Used NDK 27.2.12479018 instead of planned 25.2.9519653 (corrupted install)
+- [Phase 03]: Added kotlinx-coroutines-android as explicit whisper module dependency
 
 ### Roadmap Evolution
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T21:45:26Z
-Stopped at: Completed 03-02-PLAN.md
-Resume file: .planning/phases/03-whisper-integration/03-02-SUMMARY.md
+Last session: 2026-03-25T21:47:54.190Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
