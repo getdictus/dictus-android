@@ -15,8 +15,9 @@ robolectric = "4.14.1"
 coroutines-test = "1.8.1"
 androidx-test-core = "1.6.1"
 androidx-test-ext-junit = "1.2.1"
-ndk = "25.2.9519653"
+ndk = "27.2.12479018"
 cmake = "3.22.1"
+okhttp = "4.12.0"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -42,6 +43,7 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines-test" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidx-test-core" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
