@@ -21,7 +21,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -65,11 +67,27 @@ fun KeyButton(
     val density = LocalDensity.current
     var isPressed by remember { mutableStateOf(false) }
     var keyWidthPx by remember { mutableStateOf(0) }
+    var keyPositionXPx by remember { mutableStateOf(0f) }
     var showAccentPopup by remember { mutableStateOf(false) }
     var highlightedAccentIndex by remember { mutableStateOf<Int?>(null) }
     val showPreviewPopup = isPressed && key.type == KeyType.CHARACTER && !showAccentPopup
     val accentCellWidthPx = with(density) { 44.dp.toPx() }
     val selectionSlopPx = with(density) { 8.dp.toPx() }
+
+    // Horizontal shift (px) needed to keep the accent popup within screen bounds.
+    // Computed once and shared between the Popup offset and resolveAccentIndex().
+    val accentShiftPx = remember(keyWidthPx, keyPositionXPx, accentChars) {
+        val accents = accentChars ?: return@remember 0
+        if (accents.isEmpty() || keyWidthPx <= 0) return@remember 0
+        val popupWidthPx = accents.size * accentCellWidthPx
+        val naturalLeftPx = keyPositionXPx + (keyWidthPx - popupWidthPx) / 2f
+        val screenWidthPx = view.rootView.width.toFloat()
+        val clampedLeftPx = naturalLeftPx.coerceIn(
+            0f,
+            (screenWidthPx - popupWidthPx).coerceAtLeast(0f),
+        )
+        (clampedLeftPx - naturalLeftPx).toInt()
+    }
 
     // Caps lock check must come before isShifted since caps lock also sets isShifted=true
     val backgroundColor = when {
@@ -104,7 +122,8 @@ fun KeyButton(
         if (accents.isEmpty() || keyWidthPx <= 0) return null
 
         val popupWidthPx = accents.size * accentCellWidthPx
-        val popupLeftPx = (keyWidthPx - popupWidthPx) / 2f
+        // Natural centered offset + clamping shift to match the popup's actual position
+        val popupLeftPx = (keyWidthPx - popupWidthPx) / 2f + accentShiftPx
         val index = ((pointerX - popupLeftPx) / accentCellWidthPx).toInt()
         return index.takeIf { it in accents.indices }
     }
@@ -235,6 +254,9 @@ fun KeyButton(
             .height(48.dp)
             .padding(vertical = 2.dp)
             .onSizeChanged { keyWidthPx = it.width }
+            .onGloballyPositioned { coordinates ->
+                keyPositionXPx = coordinates.positionInWindow().x
+            }
             .shadow(elevation = 1.dp, shape = shape)
             .clip(shape)
             .background(backgroundColor)
@@ -278,7 +300,7 @@ fun KeyButton(
         if (showAccentPopup && !accentChars.isNullOrEmpty()) {
             Popup(
                 alignment = Alignment.TopCenter,
-                offset = IntOffset(0, -100),
+                offset = IntOffset(accentShiftPx, -100),
                 properties = PopupProperties(clippingEnabled = false),
             ) {
                 AccentPopup(
