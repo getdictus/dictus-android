@@ -35,4 +35,5 @@ android {
 
 dependencies {
     implementation(libs.timber)
+    implementation(libs.coroutines.android)
 }
