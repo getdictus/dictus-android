@@ -128,6 +128,14 @@ fun RecordingTestArea(
                         }
                     }
                 }
+
+                is DictationState.Transcribing -> {
+                    Text(
+                        text = "State: Transcribing...",
+                        color = DictusColors.OnSurface,
+                        fontSize = 14.sp,
+                    )
+                }
             }
         }
     }

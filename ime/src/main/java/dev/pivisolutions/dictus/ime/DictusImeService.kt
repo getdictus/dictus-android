@@ -162,6 +162,10 @@ class DictusImeService : LifecycleInputMethodService() {
                 controller.stopRecording()
                 Timber.d("Recording stopped via mic tap")
             }
+            is DictationState.Transcribing -> {
+                // Ignore mic taps during transcription -- user must wait.
+                Timber.d("Mic tap ignored during transcription")
+            }
         }
     }
 
