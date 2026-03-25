@@ -47,8 +47,6 @@ class DictusImeService : LifecycleInputMethodService() {
         private const val DICTATION_SERVICE_CLASS =
             "dev.pivisolutions.dictus.service.DictationService"
 
-        /** Action to start recording via the foreground service. */
-        private const val ACTION_START = "dev.pivisolutions.dictus.action.START"
     }
 
     private val entryPoint: DictusImeEntryPoint by lazy {
@@ -157,12 +155,9 @@ class DictusImeService : LifecycleInputMethodService() {
                     Timber.w("RECORD_AUDIO permission not granted")
                     return
                 }
-                // Start foreground service via intent (required for foreground promotion)
-                val startIntent = Intent().apply {
-                    component = ComponentName(packageName, DICTATION_SERVICE_CLASS)
-                    action = ACTION_START
-                }
-                startForegroundService(startIntent)
+                // Delegate to the bound controller — it calls startForegroundService
+                // from the service's own context, which does NOT dismiss the keyboard.
+                controller.startRecording()
                 Timber.d("Recording started via mic tap")
             }
             is DictationState.Recording -> {
