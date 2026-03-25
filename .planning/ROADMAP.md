@@ -80,11 +80,12 @@ Plans:
   1. User can record speech and see transcribed text appear at the cursor in the active text field
   2. Transcription runs entirely on-device with no network requests
   3. Transcription of 10 seconds of audio completes in under 8 seconds on Pixel 4 (small-q5_0 model)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — whisper.cpp git submodule, whisper/ Android library module with NDK/CMake, JNI bridge, Kotlin wrapper
+- [ ] 03-02-PLAN.md — DictationState.Transcribing, TranscriptionEngine interface, TextPostProcessor, ModelManager with TDD
+- [ ] 03-03-PLAN.md — End-to-end pipeline: DictationService orchestration, IME text insertion, TranscribingScreen UI
 
 ### Phase 4: Model Management + Onboarding
 **Goal**: Users can set up Dictus from scratch and manage Whisper models
@@ -140,7 +141,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 |-------|----------------|--------|-----------|
 | 1. Core Foundation + Keyboard Shell | 3/4 | Gap closure | 2026-03-22 |
 | 2. Audio Recording + Service Architecture | 3/3 | Complete | 2026-03-25 |
-| 3. Whisper Integration | 0/2 | Not started | - |
+| 3. Whisper Integration | 0/3 | Planned | - |
 | 4. Model Management + Onboarding | 0/3 | Not started | - |
 | 5. Polish + Differentiators | 0/2 | Not started | - |
 | 6. Release Readiness | 0/1 | Not started | - |
