@@ -48,11 +48,12 @@ Plans:
   2. User sees a notification while recording is active (foreground service)
   3. User feels haptic feedback on key presses and mic button taps (configurable)
   4. Dictation state machine transitions are observable: idle -> recording -> idle
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 - [ ] 02-01-PLAN.md — DictationState, AudioCaptureManager, DictationService foreground service with notification
 - [ ] 02-02-PLAN.md — RecordingScreen UI, WaveformBars, HapticHelper, IME-to-service wiring
+- [ ] 02-03-PLAN.md — UAT gap closure: mic tap keyboard dismiss, mic haptic, accent popup edge overflow
 
 ### Phase 02.1: App Shell + Testability (INSERTED)
 
