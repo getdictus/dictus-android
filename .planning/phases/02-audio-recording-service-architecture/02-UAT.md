@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-audio-recording-service-architecture
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md]
 started: 2026-03-25T22:00:00Z
@@ -68,27 +68,36 @@ skipped: 3
   reason: "User reported: Quand je clique sur le micro, ca me ferme le clavier. Je ne peux pas voir si ca lance l'enregistrement."
   severity: blocker
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "DictusImeService.handleMicTap() at line 165 calls startForegroundService() directly instead of using the already-bound dictationController.startRecording(). Starting a foreground service from an IME context causes Android to dismiss the keyboard window."
+  artifacts:
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
+      issue: "handleMicTap() calls startForegroundService() instead of controller.startRecording()"
+  missing:
+    - "Replace startForegroundService(startIntent) with dictationController.startRecording() — the controller already handles foreground promotion internally"
+  debug_session: ".planning/debug/mic-tap-closes-keyboard.md"
 
 - truth: "Mic button produces stronger haptic feedback than regular keys"
   status: failed
   reason: "User reported: Les touches marchent bien sauf le micro : pas d'haptic et le clavier disparait"
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same root cause as test 1 — handleMicTap() crashes the keyboard before haptic fires. The haptic call is likely after the startForegroundService() call, or the keyboard dismissal prevents it from executing."
+  artifacts:
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
+      issue: "handleMicTap() flow breaks before haptic feedback executes"
+  missing:
+    - "Fix test 1 (use controller.startRecording()), then ensure haptic fires before recording starts"
+  debug_session: ".planning/debug/mic-tap-closes-keyboard.md"
 
 - truth: "Accent popup for edge keys (like 'a') stays within screen bounds showing all accent variants"
   status: failed
   reason: "User reported: Pour la lettre a, on ne voit pas tous les caracteres car le popup deborde de l'ecran sur la droite"
   severity: minor
   test: 7
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "KeyButton.kt Popup at line 279 uses Alignment.TopCenter with x-offset hardcoded to 0. No screen-edge clamping. For leftmost key 'a', the popup (6 accents x 44dp = 264dp) extends past the left screen edge. resolveAccentIndex() at line 107 also uses unclamped centered math."
+  artifacts:
+    - path: "ime/src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt"
+      issue: "Popup positioning at lines 279-281 has no edge clamping; resolveAccentIndex() at line 107 uses naive centered math"
+  missing:
+    - "Get key absolute X via onGloballyPositioned, clamp popup offset to screen bounds, sync resolveAccentIndex() with clamped position"
+  debug_session: ".planning/debug/accent-popup-left-overflow.md"
