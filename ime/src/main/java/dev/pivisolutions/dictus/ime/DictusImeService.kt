@@ -15,6 +15,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
+import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -199,24 +200,25 @@ class DictusImeService : LifecycleInputMethodService() {
                         Timber.d("Recording cancelled")
                     },
                     onConfirm = {
-                        dictationController?.stopRecording()
-                        Timber.d("Recording confirmed (transcription placeholder)")
+                        val controller = dictationController
+                        if (controller != null) {
+                            bindingScope.launch {
+                                val text = controller.confirmAndTranscribe()
+                                if (text != null) {
+                                    commitText(text)
+                                    Timber.d("Transcribed text inserted: '%s'", text)
+                                } else {
+                                    Timber.w("Transcription returned null (failed or empty)")
+                                }
+                            }
+                        }
                     },
                     onSwitchKeyboard = switchKeyboard,
                     onMicTap = { handleMicTap() },
                 )
             }
             is DictationState.Transcribing -> {
-                // Plan 03 will wire this to the transcribing UI (sinusoidal waveform).
-                // For now, show the recording screen in a static state to avoid a blank screen.
-                RecordingScreen(
-                    elapsedMs = 0L,
-                    energy = emptyList(),
-                    onCancel = {},
-                    onConfirm = {},
-                    onSwitchKeyboard = switchKeyboard,
-                    onMicTap = {},
-                )
+                TranscribingScreen()
             }
         }
     }
