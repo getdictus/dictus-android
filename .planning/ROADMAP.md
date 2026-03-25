@@ -51,9 +51,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — DictationState, AudioCaptureManager, DictationService foreground service with notification
-- [ ] 02-02-PLAN.md — RecordingScreen UI, WaveformBars, HapticHelper, IME-to-service wiring
-- [ ] 02-03-PLAN.md — UAT gap closure: mic tap keyboard dismiss, mic haptic, accent popup edge overflow
+- [x] 02-01-PLAN.md — DictationState, AudioCaptureManager, DictationService foreground service with notification
+- [x] 02-02-PLAN.md — RecordingScreen UI, WaveformBars, HapticHelper, IME-to-service wiring
+- [x] 02-03-PLAN.md — UAT gap closure: haptic crash fix, recording UI redesign, waveform improvements, accent popup clamping
 
 ### Phase 02.1: App Shell + Testability (INSERTED)
 
@@ -139,7 +139,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Foundation + Keyboard Shell | 3/4 | Gap closure | 2026-03-22 |
-| 2. Audio Recording + Service Architecture | 0/2 | Not started | - |
+| 2. Audio Recording + Service Architecture | 3/3 | Complete | 2026-03-25 |
 | 3. Whisper Integration | 0/2 | Not started | - |
 | 4. Model Management + Onboarding | 0/3 | Not started | - |
 | 5. Polish + Differentiators | 0/2 | Not started | - |

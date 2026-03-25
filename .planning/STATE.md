@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 02.1-02-PLAN.md
-last_updated: "2026-03-25T10:12:47.389Z"
-last_activity: 2026-03-24 -- Phase 02.1 Plan 02 complete (TestSurfaceScreen, ImeStatusCard, RecordingTestArea, permissions, MainActivity rewrite, verified on Pixel 4)
+stopped_at: Completed 02-03-PLAN.md (gap closure)
+last_updated: "2026-03-25T15:00:00.000Z"
+last_activity: 2026-03-25 -- Phase 02 Plan 03 complete (gap closure - haptic crash fix, recording UI redesign, waveform improvements, accent popup clamping, verified on Pixel 4)
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 9
+  completed_plans: 9
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** La dictee vocale on-device qui fonctionne comme clavier systeme -- gratuite, privee, sans cloud.
-**Current focus:** Phase 02.1 complete. Next: Phase 3 (Whisper Integration)
+**Current focus:** Phase 02 gap closure complete. Next: Phase 3 (Whisper Integration)
 
 ## Current Position
 
-Phase: 02.1 of 6 (App Shell + Testability) -- COMPLETE
-Plan: 2 of 2 in current phase -- COMPLETE
-Status: Phase 02.1 fully complete (test infra + app test surface)
-Last activity: 2026-03-24 -- Phase 02.1 Plan 02 complete (TestSurfaceScreen, ImeStatusCard, RecordingTestArea, permissions, MainActivity rewrite, verified on Pixel 4)
+Phase: 02 of 6 (Audio Recording + Service Architecture) -- GAP CLOSURE COMPLETE
+Plan: 3 of 3 in current phase -- COMPLETE
+Status: Phase 02 all plans complete including gap closure
+Last activity: 2026-03-25 -- Phase 02 Plan 03 complete (gap closure - haptic crash fix, recording UI redesign, waveform improvements, accent popup clamping, verified on Pixel 4)
 
 Progress: [██████████] 100%
 
@@ -58,6 +58,7 @@ Progress: [██████████] 100%
 | Phase 02 P02 | ~45min | 4 tasks | 10 files |
 | Phase 02.1 P01 | 4min | 2 tasks | 13 files |
 | Phase 02.1 P02 | 25min | 3 tasks | 8 files |
+| Phase 02 P03 (gap) | ~45min | 3 tasks + UAT | 5 files |
 
 ## Accumulated Context
 
