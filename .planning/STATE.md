@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-25T21:04:31.628Z"
-last_activity: 2026-03-25 -- Phase 02 Plan 03 complete (gap closure - haptic crash fix, recording UI redesign, waveform improvements, accent popup clamping, verified on Pixel 4)
+status: in-progress
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-03-25T21:45:26Z"
+last_activity: 2026-03-25 -- Phase 03 Plan 02 complete (whisper contracts - DictationState.Transcribing, TranscriptionEngine, TextPostProcessor, ModelManager, 17 TDD tests)
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_plans: 12
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** La dictee vocale on-device qui fonctionne comme clavier systeme -- gratuite, privee, sans cloud.
-**Current focus:** Phase 02 gap closure complete. Next: Phase 3 (Whisper Integration)
+**Current focus:** Phase 03 Whisper Integration -- contracts defined, wiring next
 
 ## Current Position
 
-Phase: 02 of 6 (Audio Recording + Service Architecture) -- GAP CLOSURE COMPLETE
-Plan: 3 of 3 in current phase -- COMPLETE
-Status: Phase 02 all plans complete including gap closure
-Last activity: 2026-03-25 -- Phase 02 Plan 03 complete (gap closure - haptic crash fix, recording UI redesign, waveform improvements, accent popup clamping, verified on Pixel 4)
+Phase: 03 of 7 (Whisper Integration)
+Plan: 2 of 3 in current phase -- COMPLETE
+Status: Plan 02 complete, Plan 03 (wiring) next
+Last activity: 2026-03-25 -- Phase 03 Plan 02 complete (whisper contracts - 17 TDD tests green)
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P01 | 4min | 2 tasks | 13 files |
 | Phase 02.1 P02 | 25min | 3 tasks | 8 files |
 | Phase 02 P03 (gap) | ~45min | 3 tasks + UAT | 5 files |
+| Phase 03 P02 | 14min | 2 tasks (TDD) | 12 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [02.1-01]: ime WaveformBars.kt becomes thin wrapper delegating to core for backward compatibility
 - [02.1-02]: Service binding in Activity lifecycle (onCreate/onDestroy), not Composable -- avoids lifecycle mismatch
 - [02.1-02]: IME status checked in onResume so it refreshes when user returns from system Settings
+- [03-02]: Used q5_1 instead of q5_0 for small model -- HuggingFace provides pre-built q5_1
+- [03-02]: NDK updated from 25.2.9519653 to 27.2.12479018 to fix missing source.properties
 
 ### Roadmap Evolution
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T21:04:31.622Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-whisper-integration/03-CONTEXT.md
+Last session: 2026-03-25T21:45:26Z
+Stopped at: Completed 03-02-PLAN.md
+Resume file: .planning/phases/03-whisper-integration/03-02-SUMMARY.md
