@@ -44,6 +44,7 @@ dependencies {
     implementation(project(":ime"))
     implementation(project(":whisper"))
     implementation(libs.okhttp)
+    implementation(libs.navigation.compose)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
@@ -64,5 +65,6 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.okhttp.mockwebserver)
     debugImplementation(libs.compose.ui.test.manifest)
 }
