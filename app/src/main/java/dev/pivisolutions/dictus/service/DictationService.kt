@@ -53,7 +53,7 @@ class DictationService : Service(), DictationController {
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
-        private const val TRANSCRIPTION_TIMEOUT_MS = 30_000L
+        private const val TRANSCRIPTION_TIMEOUT_MS = 120_000L
         private const val LANGUAGE = "fr" // Hard-coded for Phase 3; Phase 4 adds settings
     }
 

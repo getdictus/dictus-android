@@ -30,7 +30,7 @@ class ModelManager(context: Context) {
          * Performance difference is negligible; q5_1 is slightly more accurate.
          */
         val MODELS = mapOf(
-            "tiny" to ModelInfo("ggml-tiny.bin", 77_691_456L),
+            "tiny" to ModelInfo("ggml-tiny.bin", 77_691_713L),
             "small-q5_1" to ModelInfo("ggml-small-q5_1.bin", 190_031_232L),
         )
     }

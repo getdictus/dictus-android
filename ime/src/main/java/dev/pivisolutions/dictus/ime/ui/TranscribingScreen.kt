@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,31 +18,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.ui.WaveformBars
 import kotlin.math.sin
 
 /**
  * Transcribing overlay shown while whisper.cpp processes audio.
  *
- * Per CONTEXT.md decisions:
- * - Sinusoidal waveform animation (not bar waveform used during recording)
- * - "Transcription..." label
- * - No action buttons (no cancel -- transcription is fast enough)
- * - No timer (processing time is indeterminate)
+ * Reuses the same 30-bar WaveformBars as RecordingScreen, but feeds it
+ * a sine-wave-generated energy list instead of live audio. This creates
+ * a smooth traveling wave animation consistent with the design system.
  *
  * Total height: 310.dp (matching RecordingScreen and KeyboardScreen)
- * Layout: empty top row (46.dp) + center with sine wave + label (218.dp) + empty bottom row (46.dp)
+ * Layout: empty top row (46.dp) + center with waveform + label (218.dp) + empty bottom row (46.dp)
  */
 @Composable
 fun TranscribingScreen(
     modifier: Modifier = Modifier,
 ) {
-    // Animate phase offset for sine wave movement
+    // Animate phase offset for sine wave traveling across bars
     val infiniteTransition = rememberInfiniteTransition(label = "transcribingSine")
     val phase by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -54,6 +49,12 @@ fun TranscribingScreen(
         ),
         label = "sinePhase",
     )
+
+    // Generate 30 energy values from sine wave (iOS formula from BrandWaveformDriver)
+    val sineEnergy = List(30) { i ->
+        val normalizedIndex = i / 30f
+        0.2f + 0.25f * (sin(2f * Math.PI.toFloat() * (normalizedIndex + phase / (2f * Math.PI.toFloat()))) + 1f)
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -66,7 +67,7 @@ fun TranscribingScreen(
                 .background(DictusColors.Background),
         )
 
-        // Center (218.dp) — sinusoidal waveform + label
+        // Center (218.dp) — animated waveform bars + label
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -75,38 +76,14 @@ fun TranscribingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            // Sinusoidal waveform
-            Canvas(
+            // Animated waveform bars (same component as RecordingScreen)
+            WaveformBars(
+                energyLevels = sineEnergy,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
-                    .height(60.dp),
-            ) {
-                val width = size.width
-                val height = size.height
-                val centerY = height / 2f
-                val amplitude = height * 0.35f
-                val wavelength = width / 2f // Two full cycles across the canvas
-
-                val path = Path()
-                val steps = 200
-                for (i in 0..steps) {
-                    val x = (i.toFloat() / steps) * width
-                    val y = centerY + amplitude * sin(
-                        (x / wavelength) * 2f * Math.PI.toFloat() + phase
-                    ).toFloat()
-                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                }
-
-                drawPath(
-                    path = path,
-                    color = DictusColors.Accent,
-                    style = Stroke(
-                        width = 3.dp.toPx(),
-                        cap = StrokeCap.Round,
-                    ),
-                )
-            }
+                    .padding(horizontal = 16.dp)
+                    .height(100.dp),
+            )
 
             // "Transcription..." label
             Text(
