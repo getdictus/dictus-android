@@ -47,7 +47,7 @@ Exceptions:
 - Touch targets for all tappable elements: minimum 48dp (Android accessibility minimum)
 - Bottom navigation bar height: 80dp (pill nav per mockup frame `d7cJl`)
 - GlassCard corner radius: 16dp (per mockup frame `eKShU`) — not a spacing token
-- Onboarding progress dot size: 8dp diameter, 6dp gap between dots
+- Onboarding progress dot size: 8dp diameter, 8dp gap between dots
 
 ---
 
@@ -62,11 +62,10 @@ Use system default (Roboto) consistently with current implementation.
 | Display | 28sp | Bold (700) | 1.2 (34sp) | `headlineLarge` | Onboarding step titles, success screen heading |
 | Heading | 22sp | Bold (700) | 28sp | `titleLarge` | Screen titles, tab section headers — source: `DictusTypography.kt` |
 | Body | 16sp | Normal (400) | 24sp (1.5) | `bodyLarge` | Card body text, descriptions, settings values — source: `DictusTypography.kt` |
-| Label | 12sp | Medium (500) | 16sp | `labelMedium` | Model badges, storage indicators, nav tab labels |
+| Label | 12sp | Bold (700) | 16sp | `labelMedium` | Model badges, storage indicators, nav tab labels |
 
-**Weights used: Normal (400) + Medium (500) + Bold (700).**
-Note: Three weights are used here because the existing codebase already defines labelSmall at 500
-and titleLarge at Bold. Medium is reserved for labels only; do not use it for body or headings.
+**Weights used: Normal (400) + Bold (700).**
+Label elements (nav tab labels, section headers, badges) use Bold (700) to maintain visual hierarchy distinction from body text at Normal (400).
 
 ---
 
@@ -143,7 +142,7 @@ Success screen (after step 6):
 - 3 tabs: Accueil (Home icon), Modèles (Download icon), Réglages (Settings icon)
 - Active tab: icon tinted `#3D7EFF`, dot indicator below icon `#3D7EFF` 6dp
 - Inactive tab: icon `#6B6B70`
-- Tab label: 12sp Medium below icon
+- Tab label: 12sp Bold below icon
 
 ### Home Tab (Post-onboarding)
 
@@ -181,7 +180,7 @@ Success screen (after step 6):
 - Screen name: `SettingsScreen`
 - Reference: mockup frame `CqKvx`
 - Layout: 3 sections in a scrollable column
-- Section header style: Label 12sp Medium `#6B6B70` uppercase, 16dp top padding
+- Section header style: Label 12sp Bold `#6B6B70` uppercase, 16dp top padding
 - Setting row height: 56dp, 16dp horizontal padding
 - Toggle: Material 3 Switch, thumb `#3D7EFF` when on
 - Picker rows: chevron-right icon at end
