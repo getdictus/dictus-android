@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-26T16:17:25.743Z"
+stopped_at: Completed 04-model-management-onboarding/04-01-PLAN.md
+last_updated: "2026-03-26T17:38:54.230Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 16
+  completed_plans: 13
   percent: 100
 ---
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 03 P02 | 14min | 2 tasks (TDD) | 12 files |
 | Phase 03 P01 | 15min | 2 tasks | 11 files |
 | Phase 03 P03 | 15min | 2 tasks | 7 files |
+| Phase 04-model-management-onboarding P01 | 6min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [03-02]: NDK updated from 25.2.9519653 to 27.2.12479018 to fix missing source.properties
 - [Phase 03]: Used NDK 27.2.12479018 instead of planned 25.2.9519653 (corrupted install)
 - [Phase 03]: Added kotlinx-coroutines-android as explicit whisper module dependency
+- [Phase 04-model-management-onboarding]: ModelCatalog extracted as top-level object so tests can access catalog logic without Android context
+- [Phase 04-model-management-onboarding]: AppDestination uses sealed class instead of enum to allow future data class variants with route parameters
 
 ### Roadmap Evolution
 
@@ -109,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T16:17:25.741Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-model-management-onboarding/04-CONTEXT.md
+Last session: 2026-03-26T17:38:54.227Z
+Stopped at: Completed 04-model-management-onboarding/04-01-PLAN.md
+Resume file: None
