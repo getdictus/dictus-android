@@ -1,6 +1,11 @@
 package dev.pivisolutions.dictus.onboarding
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,31 +13,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
-import kotlin.random.Random
+import kotlin.math.sin
 
 /**
  * Onboarding Step 1 — Welcome screen.
  *
- * Displays the Dictus wordmark with a decorative 15-bar static waveform above it
- * and a tagline below. The waveform uses a fixed Random seed to produce consistent
- * bar heights across recompositions and device configurations.
+ * Displays the Dictus wordmark with an animated 30-bar sine-wave waveform above it
+ * and a tagline below.
  *
- * WHY static waveform (not animated): Step 1 is purely introductory — there is no
- * audio input yet. An animated waveform would imply recording is happening, which
- * it is not. The static version is decorative-only, matching the iOS Dictus design.
+ * WHY sine-wave (not audio-driven): Step 1 has no audio input. The sine wave is the
+ * "transcription waveform" pattern (matching iOS) — a smooth traveling wave that indicates
+ * Dictus's speech capability without implying active recording.
+ *
+ * WHY WaveformBars (not a custom Canvas): WaveformBars is the shared component from core/ui
+ * used throughout the app (TranscribingScreen, recording feedback). Using the same component
+ * ensures visual consistency and avoids duplicating bar rendering logic.
  *
  * @param onNext Called when the user taps "Commencer".
  */
@@ -40,12 +44,21 @@ import kotlin.random.Random
 fun OnboardingWelcomeScreen(
     onNext: () -> Unit,
 ) {
-    // Generate consistent bar heights using a fixed seed (42)
-    // Random is remembered so heights do not change on recomposition
-    val barHeights = remember {
-        val rng = Random(42)
-        // 15 bars with heights between 20% and 100% of container height
-        List(15) { rng.nextFloat() * 0.8f + 0.2f }
+    // Traveling sine-wave animation — same pattern as TranscribingScreen.kt in the IME.
+    // The phase value animates 0 → 2π over 2 seconds, creating a smooth leftward sweep.
+    val infiniteTransition = rememberInfiniteTransition(label = "welcomeSine")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2f * Math.PI.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "sinePhase",
+    )
+    val sineEnergy = List(30) { i ->
+        val normalizedIndex = i / 30f
+        0.2f + 0.25f * (sin(2f * Math.PI.toFloat() * (normalizedIndex + phase / (2f * Math.PI.toFloat()))) + 1f)
     }
 
     OnboardingStepScaffold(
@@ -53,17 +66,17 @@ fun OnboardingWelcomeScreen(
         ctaText = "Commencer",
         onCtaClick = onNext,
     ) {
-        // Decorative waveform: 200dp x 80dp
+        // Animated sine-wave waveform using the shared WaveformBars component from core/ui
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp),
             contentAlignment = Alignment.Center,
         ) {
-            WaveformDecoration(
-                barHeights = barHeights,
+            WaveformBars(
+                energyLevels = sineEnergy,
                 modifier = Modifier
-                    .fillMaxWidth(0.65f) // ~200dp equivalent proportion
+                    .fillMaxWidth(0.65f)
                     .height(80.dp),
             )
         }
@@ -89,67 +102,3 @@ fun OnboardingWelcomeScreen(
         )
     }
 }
-
-/**
- * Canvas-drawn 15-bar decorative waveform for the welcome screen.
- *
- * Bar coloring:
- * - Center 5 bars (indices 5-9): gradient from AccentHighlight (#6BA3FF) to Accent (#3D7EFF)
- * - Edge bars: white with opacity fading from 73% (near center) to 45% (at edges)
- *
- * Each bar is 4dp wide with 3dp gaps and 2dp corner radii.
- */
-@Composable
-private fun WaveformDecoration(
-    barHeights: List<Float>,
-    modifier: Modifier = Modifier,
-) {
-    val barCount = 15
-    val centerStart = 5
-    val centerEnd = 9
-
-    Canvas(modifier = modifier) {
-        val gapPx = 3.dp.toPx()
-        val barWidthPx = 4.dp.toPx()
-        val totalWidth = barCount * barWidthPx + (barCount - 1) * gapPx
-        val startX = (size.width - totalWidth) / 2f
-        val centerY = size.height / 2f
-
-        barHeights.forEachIndexed { index, heightFraction ->
-            val barHeight = heightFraction * size.height
-            val x = startX + index * (barWidthPx + gapPx)
-
-            val color: Color = if (index in centerStart..centerEnd) {
-                // Gradient interpolation from AccentHighlight to Accent
-                val fraction = (index - centerStart).toFloat() / (centerEnd - centerStart)
-                lerp(DictusColors.AccentHighlight, DictusColors.Accent, fraction)
-            } else {
-                // Edge bars: white with fading opacity
-                val distFromCenter = if (index < centerStart) {
-                    (centerStart - index).toFloat() / centerStart
-                } else {
-                    (index - centerEnd).toFloat() / (barCount - 1 - centerEnd)
-                }
-                val alpha = 0.73f - (0.73f - 0.45f) * distFromCenter
-                Color.White.copy(alpha = alpha)
-            }
-
-            drawRoundRect(
-                color = color,
-                topLeft = Offset(x, centerY - barHeight / 2f),
-                size = Size(barWidthPx, barHeight),
-                cornerRadius = CornerRadius(2.dp.toPx()),
-            )
-        }
-    }
-}
-
-/**
- * Linear interpolation between two colors.
- */
-private fun lerp(start: Color, end: Color, fraction: Float): Color = Color(
-    red = start.red + (end.red - start.red) * fraction,
-    green = start.green + (end.green - start.green) * fraction,
-    blue = start.blue + (end.blue - start.blue) * fraction,
-    alpha = start.alpha + (end.alpha - start.alpha) * fraction,
-)
