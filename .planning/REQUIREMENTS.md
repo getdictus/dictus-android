@@ -29,11 +29,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### App
 
-- [ ] **APP-01**: User completes onboarding: welcome slides, mic permission, layout choice, IME activation, model download, test dictation
+- [x] **APP-01**: User completes onboarding: welcome slides, mic permission, layout choice, IME activation, model download, test dictation
 - [x] **APP-02**: User can download/delete Whisper models (tiny, base, small, small-quantized) from the model manager
 - [x] **APP-03**: User sees storage indicator per model and total used
 - [x] **APP-04**: User can configure: active model, transcription language (auto/FR/EN), keyboard layout, haptic, sound, theme
-- [ ] **APP-05**: User can export debug logs from settings
+- [x] **APP-05**: User can export debug logs from settings
 - [x] **APP-06**: Structured logging via Timber throughout the app
 
 ### Design
@@ -94,11 +94,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DICT-06 | Phase 5 | Pending |
 | DICT-07 | Phase 2 | Pending |
 | DICT-08 | Phase 2 | Complete |
-| APP-01 | Phase 4 | Pending |
+| APP-01 | Phase 4 | Complete |
 | APP-02 | Phase 4 | Complete |
 | APP-03 | Phase 4 | Complete |
 | APP-04 | Phase 4 | Complete |
-| APP-05 | Phase 4 | Pending |
+| APP-05 | Phase 4 | Complete |
 | APP-06 | Phase 1 | Complete |
 | DSG-01 | Phase 1 | Complete |
 | DSG-02 | Phase 6 | Pending |
