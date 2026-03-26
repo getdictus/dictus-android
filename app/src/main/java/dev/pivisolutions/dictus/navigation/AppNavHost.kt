@@ -1,16 +1,20 @@
 package dev.pivisolutions.dictus.navigation
 
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,6 +24,13 @@ import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.home.HomeScreen
 import dev.pivisolutions.dictus.models.ModelsScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingMicPermissionScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingModeSelectionScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingModelDownloadScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingSuccessScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingViewModel
+import dev.pivisolutions.dictus.onboarding.OnboardingWelcomeScreen
 import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
 import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import kotlinx.coroutines.flow.map
@@ -71,10 +82,8 @@ fun AppNavHost(
             )
         }
         false -> {
-            // Onboarding not complete — placeholder until Plan 03 implements it
-            OnboardingPlaceholder(
-                dataStore = dataStore,
-            )
+            // Onboarding not complete — show the full 6-step onboarding flow
+            OnboardingScreen()
         }
         true -> {
             MainTabsScreen(
@@ -90,21 +99,86 @@ fun AppNavHost(
 }
 
 /**
- * Temporary onboarding placeholder shown to first-time users.
+ * Full 6-step onboarding flow.
  *
- * Plan 03 will replace this with the full 6-step onboarding flow.
- * For now, a "Skip onboarding" button writes HAS_COMPLETED_ONBOARDING = true
- * so developers can reach the main tabs during Phase 4 development.
+ * Hosts an [OnboardingViewModel] via hiltViewModel() and switches between step screens
+ * using a simple when(currentStep) expression. Each screen receives the ViewModel's
+ * current state and delegates actions back via callbacks.
+ *
+ * Step 6's "Commencer" tap calls viewModel.advanceStep(), which writes
+ * HAS_COMPLETED_ONBOARDING=true to DataStore. AppNavHost's collectAsState() on that
+ * key triggers recomposition and switches to MainTabsScreen automatically.
+ *
+ * WHY when(step) (not AnimatedContent or NavHost): The step count is small (6) and
+ * the transitions are purely sequential. A simple when keeps the code easy to read and
+ * avoids navigation graph complexity for a one-time, non-navigable flow.
+ *
+ * WHY LaunchedEffect for IME check: IME status must be re-checked when the user returns
+ * from system settings. The context and imeEnabled/imeSelected values from MainActivity
+ * are not directly available here, so we check via the Settings.Secure API on step 3.
  */
 @Composable
-private fun OnboardingPlaceholder(
-    dataStore: DataStore<Preferences>,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DictusColors.Background)
-    )
+private fun OnboardingScreen() {
+    val viewModel: OnboardingViewModel = hiltViewModel()
+    val context = LocalContext.current
+
+    val currentStep by viewModel.currentStep.collectAsState()
+    val micGranted by viewModel.micPermissionGranted.collectAsState()
+    val imeActivated by viewModel.imeActivated.collectAsState()
+    val selectedLayout by viewModel.selectedLayout.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
+    val downloadComplete by viewModel.modelDownloadComplete.collectAsState()
+    val downloadError by viewModel.downloadError.collectAsState()
+
+    // Re-check IME status whenever we are on step 3 so returning from Settings
+    // updates the imeActivated flag without needing a button tap.
+    LaunchedEffect(currentStep) {
+        if (currentStep == 3) {
+            val enabledInputMethods = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_INPUT_METHODS,
+            ) ?: ""
+            val dictusPackage = context.packageName
+            val isEnabled = enabledInputMethods.contains(dictusPackage)
+            viewModel.setImeActivated(isEnabled)
+        }
+    }
+
+    when (currentStep) {
+        1 -> OnboardingWelcomeScreen(
+            onNext = { viewModel.advanceStep() },
+        )
+        2 -> OnboardingMicPermissionScreen(
+            micGranted = micGranted,
+            onPermissionResult = { viewModel.setMicPermissionGranted(it) },
+            onNext = { viewModel.advanceStep() },
+        )
+        3 -> OnboardingKeyboardSetupScreen(
+            imeActivated = imeActivated,
+            onOpenSettings = {
+                val intent = android.content.Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            },
+            onNext = { viewModel.advanceStep() },
+        )
+        4 -> OnboardingModeSelectionScreen(
+            selectedLayout = selectedLayout,
+            onSelectLayout = { viewModel.setLayout(it) },
+            onNext = { viewModel.advanceStep() },
+        )
+        5 -> OnboardingModelDownloadScreen(
+            downloadProgress = downloadProgress,
+            downloadComplete = downloadComplete,
+            downloadError = downloadError,
+            onStartDownload = { viewModel.startModelDownload() },
+            onRetry = { viewModel.retryDownload() },
+            onNext = { viewModel.advanceStep() },
+        )
+        6 -> OnboardingSuccessScreen(
+            onComplete = { viewModel.advanceStep() },
+        )
+    }
 }
 
 /**
