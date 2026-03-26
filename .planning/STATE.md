@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 04-model-management-onboarding/04-05-PLAN.md
-last_updated: "2026-03-26T21:34:59.485Z"
+stopped_at: Completed 04-model-management-onboarding/04-06-PLAN.md
+last_updated: "2026-03-26T22:35:58.436Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 18
+  completed_plans: 18
   percent: 100
 ---
 
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 04-model-management-onboarding P03 | 10min | 2 tasks | 16 files |
 | Phase 04-model-management-onboarding P04 | 10min | 2 tasks | 13 files |
 | Phase 04-model-management-onboarding P05 | 5min | 2 tasks | 3 files |
+| Phase 04-model-management-onboarding P06 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,9 @@ Recent decisions affecting current work:
 - [Phase 04-model-management-onboarding]: DictationServiceEntryPoint (EntryPointAccessors) for DataStore access — preserves LocalBinder pattern
 - [Phase 04-model-management-onboarding]: LogExporter.createZip() split from exportLogs() — FileProvider cannot be tested in Robolectric unit tests
 - [Phase 04-model-management-onboarding]: Phase 4 theme picker has single dark option; Phase 6 DSG-02 adds system/Automatique when Material You is implemented
+- [Phase 04-model-management-onboarding]: savedStateHandle.getStateFlow() for currentStep/micPermissionGranted/imeActivated — survives mic permission dialog process death
+- [Phase 04-model-management-onboarding]: DictationService binding deferred to LaunchedEffect(hasCompletedOnboarding) — reduces memory pressure during onboarding
+- [Phase 04-model-management-onboarding]: Static WaveformDecoration replaced with shared WaveformBars + sine-wave animation for iOS parity on welcome screen
 
 ### Roadmap Evolution
 
@@ -125,6 +129,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T21:31:17.168Z
-Stopped at: Completed 04-model-management-onboarding/04-05-PLAN.md
+Last session: 2026-03-26T22:35:58.434Z
+Stopped at: Completed 04-model-management-onboarding/04-06-PLAN.md
 Resume file: None
