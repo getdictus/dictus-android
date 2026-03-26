@@ -74,6 +74,7 @@ fun SettingsScreen(
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val soundEnabled by viewModel.soundEnabled.collectAsState()
     val keyboardLayout by viewModel.keyboardLayout.collectAsState()
+    val theme by viewModel.theme.collectAsState()
     val downloadedModels by viewModel.downloadedModels.collectAsState()
 
     val context = LocalContext.current
@@ -82,6 +83,7 @@ fun SettingsScreen(
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showModelPicker by remember { mutableStateOf(false) }
     var showKeyboardPicker by remember { mutableStateOf(false) }
+    var showThemePicker by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -140,6 +142,18 @@ fun SettingsScreen(
             label = "Son de dict\u00e9e",
             checked = soundEnabled,
             onToggle = { viewModel.toggleSound() },
+        )
+
+        // ---------- SECTION: APPARENCE ----------
+        SectionHeader(text = "APPARENCE")
+
+        SettingPickerRow(
+            label = "Th\u00e8me",
+            value = when (theme) {
+                "dark" -> "Sombre"
+                else -> "Sombre"
+            },
+            onClick = { showThemePicker = true },
         )
 
         // ---------- SECTION: A PROPOS ----------
@@ -235,6 +249,18 @@ fun SettingsScreen(
             selected = keyboardLayout,
             onSelect = { viewModel.setKeyboardLayout(it) },
             onDismiss = { showKeyboardPicker = false },
+        )
+    }
+
+    if (showThemePicker) {
+        PickerBottomSheet(
+            title = "Th\u00e8me de l'application",
+            options = listOf(
+                "dark" to "Sombre",
+            ),
+            selected = theme,
+            onSelect = { viewModel.setTheme(it) },
+            onDismiss = { showThemePicker = false },
         )
     }
 }
