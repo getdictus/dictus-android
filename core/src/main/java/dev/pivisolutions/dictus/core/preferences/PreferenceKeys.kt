@@ -27,4 +27,7 @@ object PreferenceKeys {
     // --- Audio feedback settings (Phase 4) ---
     val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
     val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
+
+    // --- Appearance settings (Phase 4) ---
+    val THEME = stringPreferencesKey("theme")
 }

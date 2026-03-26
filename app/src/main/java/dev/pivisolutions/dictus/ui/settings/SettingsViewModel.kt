@@ -118,4 +118,16 @@ class SettingsViewModel @Inject constructor(
             dataStore.edit { it[PreferenceKeys.KEYBOARD_LAYOUT] = layout }
         }
     }
+
+    /** Currently selected theme key ("dark"). Phase 6 adds "system" for Material You. */
+    val theme: StateFlow<String> = dataStore.data
+        .map { it[PreferenceKeys.THEME] ?: "dark" }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "dark")
+
+    /** Persist the selected theme key to DataStore. */
+    fun setTheme(themeKey: String) {
+        viewModelScope.launch {
+            dataStore.edit { it[PreferenceKeys.THEME] = themeKey }
+        }
+    }
 }
