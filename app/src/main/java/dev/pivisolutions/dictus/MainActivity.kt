@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,11 +19,13 @@ import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.AndroidEntryPoint
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.navigation.AppNavHost
 import dev.pivisolutions.dictus.service.DictationService
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -88,10 +91,26 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        bindDictationService()
         setContent {
             DictusTheme {
                 val controller by _controllerState.collectAsState()
+
+                // Defer DictationService binding until onboarding is complete.
+                // WHY deferred: Binding the service during onboarding increases memory pressure
+                // while the system is already managing the mic permission dialog process.
+                // Eager binding raises the likelihood of the app process being killed (LMKD
+                // targets foreground service processes under low-memory conditions). Deferring
+                // binding to after onboarding completion eliminates this risk.
+                val hasCompletedOnboarding by dataStore.data
+                    .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
+                    .collectAsState(initial = false)
+
+                LaunchedEffect(hasCompletedOnboarding) {
+                    if (hasCompletedOnboarding && !isBound) {
+                        bindDictationService()
+                    }
+                }
+
                 AppNavHost(
                     dataStore = dataStore,
                     dictationController = controller,

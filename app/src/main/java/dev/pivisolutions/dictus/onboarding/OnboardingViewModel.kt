@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.onboarding
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,46 +30,55 @@ import javax.inject.Inject
  * (e.g. screen rotation during download). The ViewModel holds the download coroutine so a
  * rotation does not cancel an in-progress download.
  *
+ * WHY SavedStateHandle for currentStep/micPermissionGranted/imeActivated: The system can kill
+ * the app process when showing a system dialog (e.g. the mic permission prompt on step 2).
+ * SavedStateHandle persists these values in the Activity's saved instance state bundle so that
+ * when the user returns to the app, the onboarding resumes at the correct step instead of
+ * resetting to step 1.
+ *
+ * WHY regular MutableStateFlow for selectedLayout/downloadProgress/modelDownloadComplete/downloadError:
+ * These are transient: layout can be re-chosen, and a partial download restarts anyway on process
+ * death. Persisting them would add complexity with no user-visible benefit.
+ *
  * WHY DataStore write at step 6 (not step 5): The user has completed the flow and seen the
  * success screen — only then is onboarding considered "done". Writing earlier would skip the
  * success screen if the app is killed and relaunched.
  *
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
  * @param modelDownloader Injectable downloader for the default Whisper model.
+ * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists step/flags across
+ *   process death caused by system dialogs (mic permission, etc.).
  */
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val modelDownloader: ModelDownloader,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    // --- Step state machine ---
+    // --- Step state machine (SavedStateHandle-backed for process-death survival) ---
 
-    private val _currentStep = MutableStateFlow(1)
+    /** Current onboarding step (1–6). Survives process death via SavedStateHandle. */
+    val currentStep: StateFlow<Int> = savedStateHandle.getStateFlow("currentStep", 1)
 
-    /** Current onboarding step (1–6). */
-    val currentStep: StateFlow<Int> = _currentStep.asStateFlow()
+    // --- Permission / activation flags (SavedStateHandle-backed) ---
 
-    // --- Permission / activation flags ---
+    /** True once the user has granted RECORD_AUDIO permission. Survives process death. */
+    val micPermissionGranted: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow("micPermissionGranted", false)
 
-    private val _micPermissionGranted = MutableStateFlow(false)
+    /** True once the Dictus IME appears in the system's enabled input method list. Survives process death. */
+    val imeActivated: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow("imeActivated", false)
 
-    /** True once the user has granted RECORD_AUDIO permission. */
-    val micPermissionGranted: StateFlow<Boolean> = _micPermissionGranted.asStateFlow()
-
-    private val _imeActivated = MutableStateFlow(false)
-
-    /** True once the Dictus IME appears in the system's enabled input method list. */
-    val imeActivated: StateFlow<Boolean> = _imeActivated.asStateFlow()
-
-    // --- Keyboard layout selection ---
+    // --- Keyboard layout selection (transient — user can re-select after process death) ---
 
     private val _selectedLayout = MutableStateFlow("azerty")
 
     /** The keyboard layout chosen by the user. Defaults to "azerty". */
     val selectedLayout: StateFlow<String> = _selectedLayout.asStateFlow()
 
-    // --- Model download progress ---
+    // --- Model download progress (transient — download restarts on process death) ---
 
     /** -1 = not started, 0–99 = in progress, 100 = complete. */
     private val _downloadProgress = MutableStateFlow(-1)
@@ -82,14 +92,14 @@ class OnboardingViewModel @Inject constructor(
 
     // --- Public actions ---
 
-    /** Grant or revoke microphone permission state. */
+    /** Grant or revoke microphone permission state. Persisted via SavedStateHandle. */
     fun setMicPermissionGranted(granted: Boolean) {
-        _micPermissionGranted.value = granted
+        savedStateHandle["micPermissionGranted"] = granted
     }
 
-    /** Mark whether the Dictus IME is enabled in system settings. */
+    /** Mark whether the Dictus IME is enabled in system settings. Persisted via SavedStateHandle. */
     fun setImeActivated(activated: Boolean) {
-        _imeActivated.value = activated
+        savedStateHandle["imeActivated"] = activated
     }
 
     /** Change the selected keyboard layout preference. */
@@ -103,11 +113,11 @@ class OnboardingViewModel @Inject constructor(
      * - Step 6: triggers DataStore persistence and completes onboarding.
      */
     fun advanceStep() {
-        val step = _currentStep.value
+        val step = currentStep.value
         when {
             step == 5 && !_modelDownloadComplete.value -> return // Block: download not complete
             step == 6 -> completeOnboarding()
-            step < 6 -> _currentStep.value = step + 1
+            step < 6 -> savedStateHandle["currentStep"] = step + 1
         }
     }
 
@@ -116,7 +126,8 @@ class OnboardingViewModel @Inject constructor(
      * Does nothing when already on step 1.
      */
     fun goBack() {
-        if (_currentStep.value > 1) _currentStep.value -= 1
+        val step = currentStep.value
+        if (step > 1) savedStateHandle["currentStep"] = step - 1
     }
 
     /**

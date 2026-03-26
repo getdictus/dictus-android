@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.onboarding
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.lifecycle.SavedStateHandle
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.service.DownloadProgress
@@ -44,7 +45,7 @@ class OnboardingViewModelTest {
         val context = RuntimeEnvironment.getApplication()
         fakeDataStore = FakeDataStore()
         fakeDownloader = FakeModelDownloader(ModelManager(context))
-        viewModel = OnboardingViewModel(fakeDataStore, fakeDownloader)
+        viewModel = OnboardingViewModel(fakeDataStore, fakeDownloader, SavedStateHandle())
     }
 
     // --- Initial state ---
@@ -77,6 +78,54 @@ class OnboardingViewModelTest {
     @Test
     fun `initial state - modelDownloadComplete is false`() = runTest(testDispatcher) {
         assertFalse(viewModel.modelDownloadComplete.value)
+    }
+
+    // --- SavedStateHandle restoration ---
+
+    @Test
+    fun `savedStateHandle - restores currentStep from saved state`() = runTest(testDispatcher) {
+        val restoredVm = OnboardingViewModel(
+            fakeDataStore,
+            fakeDownloader,
+            SavedStateHandle(mapOf("currentStep" to 3)),
+        )
+        assertEquals(3, restoredVm.currentStep.value)
+    }
+
+    @Test
+    fun `savedStateHandle - restores micPermissionGranted from saved state`() = runTest(testDispatcher) {
+        val restoredVm = OnboardingViewModel(
+            fakeDataStore,
+            fakeDownloader,
+            SavedStateHandle(mapOf("micPermissionGranted" to true)),
+        )
+        assertTrue(restoredVm.micPermissionGranted.value)
+    }
+
+    @Test
+    fun `savedStateHandle - restores imeActivated from saved state`() = runTest(testDispatcher) {
+        val restoredVm = OnboardingViewModel(
+            fakeDataStore,
+            fakeDownloader,
+            SavedStateHandle(mapOf("imeActivated" to true)),
+        )
+        assertTrue(restoredVm.imeActivated.value)
+    }
+
+    @Test
+    fun `savedStateHandle - advanceStep writes to savedStateHandle`() = runTest(testDispatcher) {
+        val ssh = SavedStateHandle()
+        val vm = OnboardingViewModel(fakeDataStore, fakeDownloader, ssh)
+        vm.advanceStep()
+        assertEquals(2, ssh.get<Int>("currentStep"))
+    }
+
+    @Test
+    fun `savedStateHandle - setMicPermissionGranted writes to savedStateHandle`() = runTest(testDispatcher) {
+        val ssh = SavedStateHandle()
+        val vm = OnboardingViewModel(fakeDataStore, fakeDownloader, ssh)
+        vm.setMicPermissionGranted(true)
+        assertEquals(true, ssh.get<Boolean>("micPermissionGranted"))
     }
 
     // --- Step navigation ---
