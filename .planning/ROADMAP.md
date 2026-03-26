@@ -97,7 +97,7 @@ Plans:
   3. User can see storage used per model and total storage consumed
   4. User can configure active model, transcription language, keyboard layout, haptic, sound, and theme from settings
   5. User can export debug logs from the settings screen
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — Foundation: Navigation dep, DM Sans font, GlassCard, DictusColors extension, PreferenceKeys, ModelManager refactor with provider abstraction
@@ -105,6 +105,7 @@ Plans:
 - [ ] 04-03-PLAN.md — 6-step onboarding flow: Welcome, Mic, Keyboard, Mode, Model Download, Success + OnboardingViewModel
 - [ ] 04-04-PLAN.md — SettingsScreen (3 sections), FileLoggingTree, log export ZIP + share sheet, DictationService DataStore wiring
 - [ ] 04-05-PLAN.md — Gap closure: THEME preference key, SettingsViewModel.theme StateFlow, APPARENCE section in SettingsScreen (APP-04 completion)
+- [ ] 04-06-PLAN.md — UAT gap closure: SavedStateHandle for onboarding process death fix, deferred service binding, animated welcome waveform
 
 ### Phase 5: Polish + Differentiators
 **Goal**: Users experience premium feedback and convenience features during dictation and typing
@@ -144,6 +145,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 | 1. Core Foundation + Keyboard Shell | 3/4 | Gap closure | 2026-03-22 |
 | 2. Audio Recording + Service Architecture | 3/3 | Complete | 2026-03-25 |
 | 3. Whisper Integration | 3/3 | Complete | 2026-03-25 |
-| 4. Model Management + Onboarding | 5/5 | Complete   | 2026-03-26 |
+| 4. Model Management + Onboarding | 5/6 | UAT gap closure | 2026-03-26 |
 | 5. Polish + Differentiators | 0/2 | Not started | - |
 | 6. Release Readiness | 0/1 | Not started | - |
