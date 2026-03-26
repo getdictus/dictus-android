@@ -238,13 +238,7 @@ private fun MainTabsScreen(
                 ModelsScreen()
             }
             composable(AppDestination.Settings.route) {
-                SettingsScreen(
-                    dataStore = dataStore,
-                    imeEnabled = imeEnabled,
-                    imeSelected = imeSelected,
-                    onOpenKeyboardSettings = onOpenKeyboardSettings,
-                    onOpenAppSettings = onOpenAppSettings,
-                )
+                SettingsScreen()
             }
         }
     }
