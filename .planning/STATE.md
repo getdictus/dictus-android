@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 04-model-management-onboarding/04-01-PLAN.md
-last_updated: "2026-03-26T17:38:54.230Z"
+stopped_at: Completed 04-model-management-onboarding/04-02-PLAN.md
+last_updated: "2026-03-26T18:04:04.584Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 100
 ---
 
@@ -63,6 +63,7 @@ Progress: [██████████] 100%
 | Phase 03 P01 | 15min | 2 tasks | 11 files |
 | Phase 03 P03 | 15min | 2 tasks | 7 files |
 | Phase 04-model-management-onboarding P01 | 6min | 3 tasks | 14 files |
+| Phase 04 P02 | 60min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Added kotlinx-coroutines-android as explicit whisper module dependency
 - [Phase 04-model-management-onboarding]: ModelCatalog extracted as top-level object so tests can access catalog logic without Android context
 - [Phase 04-model-management-onboarding]: AppDestination uses sealed class instead of enum to allow future data class variants with route parameters
+- [Phase 04]: flow {} + flowOn(Dispatchers.IO) instead of callbackFlow for downloadWithProgress — test-friendly, avoids UncompletedCoroutinesError
+- [Phase 04]: Hilt upgraded 2.51.1 -> 2.54 to fix Kotlin 2.1.x metadata incompatibility in hiltJavaCompileDebug
 
 ### Roadmap Evolution
 
@@ -112,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T17:38:54.227Z
-Stopped at: Completed 04-model-management-onboarding/04-01-PLAN.md
+Last session: 2026-03-26T18:04:04.582Z
+Stopped at: Completed 04-model-management-onboarding/04-02-PLAN.md
 Resume file: None

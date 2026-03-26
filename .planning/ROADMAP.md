@@ -143,6 +143,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 | 1. Core Foundation + Keyboard Shell | 3/4 | Gap closure | 2026-03-22 |
 | 2. Audio Recording + Service Architecture | 3/3 | Complete | 2026-03-25 |
 | 3. Whisper Integration | 3/3 | Complete | 2026-03-25 |
-| 4. Model Management + Onboarding | 0/4 | Planned | - |
+| 4. Model Management + Onboarding | 2/4 | In Progress|  |
 | 5. Polish + Differentiators | 0/2 | Not started | - |
 | 6. Release Readiness | 0/1 | Not started | - |
