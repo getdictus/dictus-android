@@ -56,7 +56,7 @@ sealed class DownloadProgress {
  * @param modelManager Source of model metadata and file path resolution.
  * @param client OkHttpClient used for HTTP requests. Injectable for testability.
  */
-class ModelDownloader(
+open class ModelDownloader(
     private val modelManager: ModelManager,
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -106,7 +106,7 @@ class ModelDownloader(
      *
      * @param modelKey Stable model key from [ModelCatalog] (e.g., "tiny", "base")
      */
-    fun downloadWithProgress(modelKey: String): Flow<DownloadProgress> {
+    open fun downloadWithProgress(modelKey: String): Flow<DownloadProgress> {
         val url = modelManager.downloadUrl(modelKey)
         return downloadWithProgress(modelKey, urlOverride = url)
     }
