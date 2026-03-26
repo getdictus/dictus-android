@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Core Foundation + Keyboard Shell** - Multi-module project with Compose-based IME rendering AZERTY/QWERTY, text insertion, dark theme, and structured logging (completed 2026-03-22)
 - [ ] **Phase 2: Audio Recording + Service Architecture** - Foreground service with AudioRecord, IME-to-service binding via local Binder + StateFlow, mic button and haptic feedback
 - [ ] **Phase 3: Whisper Integration** - whisper.cpp native build via NDK/CMake, JNI bridge, end-to-end dictation pipeline (record -> transcribe -> insert)
-- [ ] **Phase 4: Model Management + Onboarding** - Model download/deletion from HuggingFace, storage indicators, onboarding flow, settings screen, debug log export
+- [x] **Phase 4: Model Management + Onboarding** - Model download/deletion from HuggingFace, storage indicators, onboarding flow, settings screen, debug log export (completed 2026-03-26)
 - [ ] **Phase 5: Polish + Differentiators** - Waveform animation, sound feedback, text suggestion bar, emoji picker
 - [ ] **Phase 6: Release Readiness** - Bilingual UI (FR/EN), Follow System theme, cross-app validation, performance profiling
 
@@ -143,6 +143,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 | 1. Core Foundation + Keyboard Shell | 3/4 | Gap closure | 2026-03-22 |
 | 2. Audio Recording + Service Architecture | 3/3 | Complete | 2026-03-25 |
 | 3. Whisper Integration | 3/3 | Complete | 2026-03-25 |
-| 4. Model Management + Onboarding | 2/4 | In Progress|  |
+| 4. Model Management + Onboarding | 4/4 | Complete   | 2026-03-26 |
 | 5. Polish + Differentiators | 0/2 | Not started | - |
 | 6. Release Readiness | 0/1 | Not started | - |
