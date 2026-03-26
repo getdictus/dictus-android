@@ -16,7 +16,7 @@ import timber.log.Timber
 class DictusApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        TimberSetup.init(BuildConfig.DEBUG)
+        TimberSetup.init(BuildConfig.DEBUG, filesDir)
         Timber.d("Dictus application started")
     }
 }

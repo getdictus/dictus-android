@@ -11,9 +11,17 @@ import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dev.pivisolutions.dictus.R
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.model.ModelCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,6 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -46,6 +55,21 @@ import timber.log.Timber
  * WHY LocalBinder (not AIDL): The IME and this service run in the same process.
  * Local binding gives direct object access without IPC serialization overhead.
  */
+/**
+ * Hilt entry point for DictationService.
+ *
+ * WHY EntryPointAccessors (not @AndroidEntryPoint): DictationService uses a
+ * LocalBinder pattern — the IME holds a direct reference to the service instance.
+ * @AndroidEntryPoint wraps the service class via code generation and can interfere
+ * with the LocalBinder pattern. EntryPointAccessors gives us Hilt-managed
+ * singletons without changing the service's class hierarchy.
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface DictationServiceEntryPoint {
+    fun dataStore(): DataStore<Preferences>
+}
+
 class DictationService : Service(), DictationController {
 
     companion object {
@@ -54,7 +78,17 @@ class DictationService : Service(), DictationController {
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
         private const val TRANSCRIPTION_TIMEOUT_MS = 120_000L
-        private const val LANGUAGE = "fr" // Hard-coded for Phase 3; Phase 4 adds settings
+    }
+
+    /**
+     * DataStore accessed via EntryPoint so that DictationService can read
+     * preferences without being an @AndroidEntryPoint component itself.
+     */
+    private val dataStore: DataStore<Preferences> by lazy {
+        EntryPointAccessors.fromApplication(
+            applicationContext,
+            DictationServiceEntryPoint::class.java,
+        ).dataStore()
     }
 
     private val transcriptionEngine = WhisperTranscriptionEngine()
@@ -194,8 +228,22 @@ class DictationService : Service(), DictationController {
         _state.value = DictationState.Transcribing
 
         return try {
-            // 2. Ensure model is available (download on first use)
-            val modelPath = modelDownloader.ensureModelAvailable(ModelManager.DEFAULT_MODEL_KEY)
+            // 2. Read user preferences at transcription time so changes take effect
+            //    without needing a service restart.
+            val prefs = dataStore.data.first()
+            val activeModelKey = prefs[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY
+            val languagePref = prefs[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto"
+            // "auto" maps to null for whisper.cpp which triggers its own language detection.
+            val whisperLanguage = if (languagePref == "auto") null else languagePref
+
+            Timber.d(
+                "confirmAndTranscribe: model=%s, language=%s",
+                activeModelKey,
+                whisperLanguage ?: "auto",
+            )
+
+            // 3. Ensure model is available (download on first use)
+            val modelPath = modelDownloader.ensureModelAvailable(activeModelKey)
             if (modelPath == null) {
                 Timber.e("Model not available, cannot transcribe")
                 _state.value = DictationState.Idle
@@ -204,7 +252,7 @@ class DictationService : Service(), DictationController {
                 return null
             }
 
-            // 3. Initialize engine if needed
+            // 4. Initialize engine if needed
             if (!transcriptionEngine.isReady) {
                 val initialized = transcriptionEngine.initialize(modelPath)
                 if (!initialized) {
@@ -216,9 +264,11 @@ class DictationService : Service(), DictationController {
                 }
             }
 
-            // 4. Transcribe with timeout
+            // 5. Transcribe with timeout
             val rawText = withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
-                transcriptionEngine.transcribe(samples, LANGUAGE)
+                // Fall back to "fr" when whisperLanguage is null and whisper.cpp
+                // does not support true auto-detection on this model variant.
+                transcriptionEngine.transcribe(samples, whisperLanguage ?: "fr")
             }
 
             if (rawText == null) {
@@ -229,7 +279,7 @@ class DictationService : Service(), DictationController {
                 return null
             }
 
-            // 5. Post-process (trim + punctuation)
+            // 6. Post-process (trim + punctuation)
             val processedText = TextPostProcessor.process(rawText)
             Timber.d("Transcription result: raw='%s', processed='%s'", rawText, processedText)
 

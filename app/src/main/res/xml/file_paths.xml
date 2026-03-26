@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider path configuration for Dictus.
+
+    <cache-path name="logs" path="."> exposes the entire cacheDir to FileProvider.
+    The ZIP archive created by LogExporter is placed at cacheDir/dictus-logs.zip,
+    which maps to content://dev.pivisolutions.dictus.fileprovider/logs/dictus-logs.zip.
+
+    WHY cache-path: The ZIP is transient (recreated on each export) so cacheDir
+    is the appropriate location — the system can clear it when storage is low.
+-->
+<paths>
+    <cache-path name="logs" path="." />
+</paths>

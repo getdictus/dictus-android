@@ -27,6 +27,24 @@
             android:foregroundServiceType="microphone"
             android:exported="false" />
 
+        <!--
+            FileProvider for sharing the debug log ZIP via the Android share sheet.
+
+            WHY android:exported="false": The provider must not be exported to other apps
+            directly — access is granted per-request via FLAG_GRANT_READ_URI_PERMISSION
+            on the share intent. Exported=false with grantUriPermissions=true is the
+            correct combination for a one-shot file share.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>

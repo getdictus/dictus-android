@@ -32,20 +32,33 @@ object LogExporter {
      * @return A FileProvider URI pointing to the ZIP, or null if logFile does not exist.
      */
     fun exportLogs(context: Context, logFile: File): Uri? {
-        if (!logFile.exists()) return null
+        val zipFile = createZip(context, logFile) ?: return null
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            zipFile,
+        )
+    }
 
+    /**
+     * Create a ZIP archive in cacheDir containing the given log file.
+     *
+     * Exposed for testing so that ZIP creation can be verified without
+     * triggering FileProvider (which requires a registered manifest authority).
+     *
+     * @param context Application context — provides cacheDir.
+     * @param logFile The log file to pack into the ZIP.
+     * @return The resulting ZIP File, or null if logFile does not exist.
+     */
+    fun createZip(context: Context, logFile: File): File? {
+        if (!logFile.exists()) return null
         val zipFile = File(context.cacheDir, "dictus-logs.zip")
         ZipOutputStream(FileOutputStream(zipFile)).use { zip ->
             zip.putNextEntry(ZipEntry("dictus.log"))
             logFile.inputStream().use { input -> input.copyTo(zip) }
             zip.closeEntry()
         }
-
-        return FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            zipFile,
-        )
+        return zipFile
     }
 
     /**
