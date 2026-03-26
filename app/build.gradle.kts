@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.coroutines.android)
+    implementation(libs.compose.material.icons.extended)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
