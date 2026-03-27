@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 04-model-management-onboarding/04-07-PLAN.md
-last_updated: "2026-03-27T17:31:50.740Z"
+stopped_at: Completed 04-model-management-onboarding/04-08-PLAN.md
+last_updated: "2026-03-27T17:31:59.286Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
@@ -116,6 +116,9 @@ Recent decisions affecting current work:
 - [Phase 04-model-management-onboarding]: Static WaveformDecoration replaced with shared WaveformBars + sine-wave animation for iOS parity on welcome screen
 - [Phase 04-model-management-onboarding]: Use >= 95% threshold instead of exact size equality in getModelPath() to tolerate HuggingFace CDN mirror size variations
 - [Phase 04-model-management-onboarding]: setActiveModel() added to ModelsViewModel (not SettingsViewModel) since model selection now lives on the Models screen
+- [Phase 04]: FakeSettingsCard uses KeyboardEntryRow (name + subtitle) to match Android Clavier a l'ecran panel instead of iOS breadcrumb
+- [Phase 04]: RecordingScreen in new recording/ package — single responsibility, auto-starts via LaunchedEffect(Unit) for iOS parity
+- [Phase 04]: Bottom nav hidden via conditional if in Scaffold bottomBar when currentRoute is recording
 
 ### Roadmap Evolution
 
@@ -133,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T17:31:42.832Z
-Stopped at: Completed 04-model-management-onboarding/04-07-PLAN.md
+Last session: 2026-03-27T17:31:59.283Z
+Stopped at: Completed 04-model-management-onboarding/04-08-PLAN.md
 Resume file: None
