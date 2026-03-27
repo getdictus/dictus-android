@@ -10,18 +10,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,14 +39,22 @@ import dev.pivisolutions.dictus.model.ModelInfo
 /**
  * Reusable model card for ModelsScreen and the onboarding model download step.
  *
- * Displays model info (name, size, quality) and adapts to the download state:
+ * Displays model info (name, description, precision/speed bars) and adapts to the
+ * download state:
  * - Not downloaded: shows "Télécharger" accent button
  * - Downloading: shows linear progress bar + percentage label
- * - Downloaded: shows "Supprimer" text button (hidden when last model)
+ * - Downloaded: shows Supprimer button + optional active highlight border
  *
  * WHY press animation with spring: The scale + opacity animation on press gives
  * tactile feedback without haptics, matching the iOS Dictus feel. Spring with
  * dampingRatio=0.6 creates a subtle bounce-back that feels natural.
+ *
+ * WHY Precision/Vitesse bars: iOS design uses these to give the user a visual
+ * sense of the quality/speed trade-off for each model without showing raw numbers.
+ *
+ * WHY onSelect callback: The Models screen supports tap-to-select on downloaded
+ * cards. The callback is a no-op by default so callers that don't need it (e.g.
+ * the onboarding model picker) can ignore it.
  *
  * @param model          ModelInfo descriptor from the catalog.
  * @param isDownloaded   True if the model file exists on disk with correct size.
@@ -65,6 +65,7 @@ import dev.pivisolutions.dictus.model.ModelInfo
  * @param onDownload     Callback to start downloading this model.
  * @param onDelete       Callback to request deletion (shows confirmation sheet).
  * @param onRetry        Callback to retry after a download failure.
+ * @param onSelect       Callback when a downloaded, non-active card is tapped to select it.
  */
 @Composable
 fun ModelCard(
@@ -77,6 +78,7 @@ fun ModelCard(
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onRetry: () -> Unit,
+    onSelect: () -> Unit = {},
 ) {
     // Press animation state
     var isPressed by remember { mutableStateOf(false) }
@@ -99,19 +101,26 @@ fun ModelCard(
 
     val isDownloading = downloadProgress != null
 
+    // Active cards get an accent border; others get the default glass border
+    val borderColor = if (isActive) DictusColors.Accent else DictusColors.GlassBorder
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .scale(scale)
             .clip(RoundedCornerShape(16.dp))
             .background(DictusColors.Surface)
-            .border(1.dp, DictusColors.GlassBorder, RoundedCornerShape(16.dp))
-            .pointerInput(Unit) {
+            .border(if (isActive) 2.dp else 1.dp, borderColor, RoundedCornerShape(16.dp))
+            .pointerInput(isDownloaded, isActive) {
                 detectTapGestures(
                     onPress = {
                         isPressed = true
                         tryAwaitRelease()
                         isPressed = false
+                    },
+                    onTap = {
+                        // Tap-to-select only on downloaded, non-active cards
+                        if (isDownloaded && !isActive) onSelect()
                     },
                 )
             }
@@ -120,28 +129,12 @@ fun ModelCard(
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Model header row: icon bg + name/subtitle + active chip
+            // Model header row: name + active chip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                // Icon background
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(DictusColors.IconBackground),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Mic,
-                        contentDescription = null,
-                        tint = DictusColors.Accent,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = model.displayName,
@@ -150,7 +143,6 @@ fun ModelCard(
                         fontWeight = FontWeight.SemiBold,
                     )
                     if (isActive) {
-                        Spacer(modifier = Modifier.height(4.dp))
                         // "Actif" chip
                         Box(
                             modifier = Modifier
@@ -169,44 +161,36 @@ fun ModelCard(
                 }
             }
 
-            // Details row: size + quality
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Storage,
-                        contentDescription = null,
-                        tint = DictusColors.TextSecondary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    val sizeMb = model.expectedSizeBytes / 1_000_000
-                    Text(
-                        text = "~$sizeMb Mo",
-                        color = DictusColors.TextSecondary,
-                        fontSize = 13.sp,
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Download,
-                        contentDescription = null,
-                        tint = DictusColors.TextSecondary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Text(
-                        text = model.qualityLabel,
-                        color = DictusColors.TextSecondary,
-                        fontSize = 13.sp,
-                    )
-                }
+            // Description text
+            if (model.description.isNotBlank()) {
+                Text(
+                    text = model.description,
+                    color = DictusColors.TextSecondary,
+                    fontSize = 14.sp,
+                )
             }
+
+            // Precision bar
+            ModelMetricBar(
+                label = "Precision",
+                value = model.precision,
+                color = DictusColors.Accent,
+            )
+
+            // Vitesse bar
+            ModelMetricBar(
+                label = "Vitesse",
+                value = model.speed,
+                color = DictusColors.AccentHighlight,
+            )
+
+            // Size label
+            val sizeMb = model.expectedSizeBytes / 1_000_000
+            Text(
+                text = "~$sizeMb Mo",
+                color = DictusColors.TextSecondary,
+                fontSize = 12.sp,
+            )
 
             // Download progress or action buttons
             when {
@@ -292,6 +276,52 @@ fun ModelCard(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * A labeled horizontal progress bar for displaying a model metric (Precision or Vitesse).
+ *
+ * WHY custom Box instead of LinearProgressIndicator: LinearProgressIndicator does not
+ * support a static progress value well for decorative use. A Box with fractional width
+ * gives full visual control with zero overhead.
+ *
+ * @param label Short label shown to the left of the bar (e.g. "Precision").
+ * @param value Progress value from 0.0 to 1.0.
+ * @param color Fill color for the bar.
+ */
+@Composable
+private fun ModelMetricBar(
+    label: String,
+    value: Float,
+    color: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = label,
+            color = DictusColors.TextSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(end = 0.dp),
+            // Fixed width so bars are left-aligned
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(DictusColors.Background),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(value.coerceIn(0f, 1f))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(color),
+            )
         }
     }
 }
