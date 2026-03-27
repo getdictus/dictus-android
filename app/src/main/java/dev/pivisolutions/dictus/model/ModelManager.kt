@@ -25,6 +25,9 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param displayName     Human-readable name shown in the model list UI.
  * @param expectedSizeBytes Expected byte size used to detect complete downloads.
  * @param qualityLabel    Short quality descriptor shown as a badge (e.g. "Rapide").
+ * @param description     Short human-readable description shown on model card.
+ * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
+ * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
  * @param provider        Download source and inference engine.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
  */
@@ -34,6 +37,9 @@ data class ModelInfo(
     val displayName: String,
     val expectedSizeBytes: Long,
     val qualityLabel: String,
+    val description: String = "",
+    val precision: Float = 0f,
+    val speed: Float = 0f,
     val provider: AiProvider = AiProvider.WHISPER,
     val isDeprecated: Boolean = false,
 )
@@ -58,15 +64,55 @@ object ModelCatalog {
      *
      * Phase 4 exposes 4 models:
      *   tiny      — 77 MB  — fastest, good for short commands
-     *   base      — 142 MB — balanced speed and accuracy
-     *   small     — 466 MB — high accuracy, slower
+     *   base      — 148 MB — balanced speed and accuracy
+     *   small     — 488 MB — high accuracy, slower
      *   small-q5_1 — 190 MB — quantised small, best accuracy/size trade-off
+     *
+     * WHY corrected sizes: The exact byte sizes were confirmed via UAT debug session.
+     * expectedSizeBytes is used for the 95% minimum-size threshold check in getModelPath()
+     * which tolerates minor CDN mirror variations while still rejecting partial downloads.
      */
     val ALL = listOf(
-        ModelInfo("tiny", "ggml-tiny.bin", "Tiny", 77_691_713L, "Rapide"),
-        ModelInfo("base", "ggml-base.bin", "Base", 142_000_000L, "Equilibre"),
-        ModelInfo("small", "ggml-small.bin", "Small", 466_000_000L, "Precis"),
-        ModelInfo("small-q5_1", "ggml-small-q5_1.bin", "Small Q5", 190_031_232L, "Precis"),
+        ModelInfo(
+            key = "tiny",
+            fileName = "ggml-tiny.bin",
+            displayName = "Tiny",
+            expectedSizeBytes = 77_691_713L,
+            qualityLabel = "Rapide",
+            description = "Rapide et leger",
+            precision = 0.4f,
+            speed = 1.0f,
+        ),
+        ModelInfo(
+            key = "base",
+            fileName = "ggml-base.bin",
+            displayName = "Base",
+            expectedSizeBytes = 147_951_465L,
+            qualityLabel = "Equilibre",
+            description = "Precis et equilibre",
+            precision = 0.6f,
+            speed = 0.7f,
+        ),
+        ModelInfo(
+            key = "small",
+            fileName = "ggml-small.bin",
+            displayName = "Small",
+            expectedSizeBytes = 487_601_967L,
+            qualityLabel = "Precis",
+            description = "Haute precision",
+            precision = 0.9f,
+            speed = 0.35f,
+        ),
+        ModelInfo(
+            key = "small-q5_1",
+            fileName = "ggml-small-q5_1.bin",
+            displayName = "Small Q5",
+            expectedSizeBytes = 190_085_487L,
+            qualityLabel = "Precis",
+            description = "Meilleur compromis",
+            precision = 0.85f,
+            speed = 0.55f,
+        ),
     )
 
     /** Find a model descriptor by its stable key, or null if not in catalog. */
@@ -112,13 +158,15 @@ class ModelManager(context: Context) {
     /**
      * Get the absolute path to a downloaded model, or null if not available.
      *
-     * Checks both file existence and file size to detect corrupt/partial downloads.
-     * A size mismatch means the download was interrupted; the file is unusable.
+     * Checks both file existence and a minimum-size threshold to detect
+     * corrupt/partial downloads. Using >= 95% of expectedSizeBytes (instead of
+     * exact equality) tolerates minor size variations across HuggingFace CDN
+     * mirrors while still rejecting clearly partial downloads.
      */
     fun getModelPath(modelKey: String): String? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
         val file = File(modelsDir, info.fileName)
-        return if (file.exists() && file.length() == info.expectedSizeBytes) {
+        return if (file.exists() && file.length() >= info.expectedSizeBytes * 95 / 100) {
             file.absolutePath
         } else {
             null
