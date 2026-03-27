@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 04-model-management-onboarding/04-06-PLAN.md
-last_updated: "2026-03-26T22:35:58.436Z"
+stopped_at: Completed 04-model-management-onboarding/04-07-PLAN.md
+last_updated: "2026-03-27T17:31:50.740Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 20
+  completed_plans: 20
   percent: 100
 ---
 
@@ -68,6 +68,8 @@ Progress: [██████████] 100%
 | Phase 04-model-management-onboarding P04 | 10min | 2 tasks | 13 files |
 | Phase 04-model-management-onboarding P05 | 5min | 2 tasks | 3 files |
 | Phase 04-model-management-onboarding P06 | 3min | 2 tasks | 4 files |
+| Phase 04-model-management-onboarding P07 | 3min | 3 tasks | 5 files |
+| Phase 04 P08 | 3min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -112,6 +114,8 @@ Recent decisions affecting current work:
 - [Phase 04-model-management-onboarding]: savedStateHandle.getStateFlow() for currentStep/micPermissionGranted/imeActivated — survives mic permission dialog process death
 - [Phase 04-model-management-onboarding]: DictationService binding deferred to LaunchedEffect(hasCompletedOnboarding) — reduces memory pressure during onboarding
 - [Phase 04-model-management-onboarding]: Static WaveformDecoration replaced with shared WaveformBars + sine-wave animation for iOS parity on welcome screen
+- [Phase 04-model-management-onboarding]: Use >= 95% threshold instead of exact size equality in getModelPath() to tolerate HuggingFace CDN mirror size variations
+- [Phase 04-model-management-onboarding]: setActiveModel() added to ModelsViewModel (not SettingsViewModel) since model selection now lives on the Models screen
 
 ### Roadmap Evolution
 
@@ -129,6 +133,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T22:35:58.434Z
-Stopped at: Completed 04-model-management-onboarding/04-06-PLAN.md
+Last session: 2026-03-27T17:31:42.832Z
+Stopped at: Completed 04-model-management-onboarding/04-07-PLAN.md
 Resume file: None
