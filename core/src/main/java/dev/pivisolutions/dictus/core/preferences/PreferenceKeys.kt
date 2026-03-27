@@ -30,4 +30,7 @@ object PreferenceKeys {
 
     // --- Appearance settings (Phase 4) ---
     val THEME = stringPreferencesKey("theme")
+
+    // --- Last transcription (Phase 4) ---
+    val LAST_TRANSCRIPTION = stringPreferencesKey("last_transcription")
 }

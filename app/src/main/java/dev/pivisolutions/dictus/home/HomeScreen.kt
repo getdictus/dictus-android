@@ -1,6 +1,10 @@
 package dev.pivisolutions.dictus.home
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +15,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,15 +46,13 @@ import dev.pivisolutions.dictus.model.ModelCatalog
 import kotlinx.coroutines.flow.map
 
 /**
- * Home tab screen showing active model and last transcription.
+ * Home tab screen showing the Dictus logo, active model, and new dictation CTA.
  *
- * WHY DataStore read here (not ViewModel): The active model key is a single string
- * read from DataStore. For Phase 4, reading it directly in the composable via
- * collectAsState is simpler than creating a dedicated ViewModel. A HomeViewModel
- * will be introduced in Phase 5 when more reactive state is needed.
+ * Layout matches iOS: centered waveform logo + "Dictus" wordmark, active model card,
+ * and "Nouvelle dictée" button. Content is vertically centered.
  *
  * @param dataStore Application DataStore for reading active model preference.
- * @param onNewDictation Callback for the "Nouvelle dictée" CTA (wired in Phase 5).
+ * @param onNewDictation Callback for the "Nouvelle dictée" CTA.
  */
 @Composable
 fun HomeScreen(
@@ -56,90 +63,128 @@ fun HomeScreen(
         .map { it[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY }
         .collectAsState(initial = ModelCatalog.DEFAULT_KEY)
 
+    val lastTranscription by dataStore.data
+        .map { it[PreferenceKeys.LAST_TRANSCRIPTION] }
+        .collectAsState(initial = null)
+
     val activeModel = ModelCatalog.findByKey(activeModelKey)
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DictusColors.Background)
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Wordmark
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Waveform logo (3 bars matching the app icon)
+        DictusWaveformLogo()
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // "Dictus" wordmark in accent blue
         Text(
             text = "Dictus",
-            color = DictusColors.TextPrimary,
-            fontSize = 22.sp,
+            color = DictusColors.Accent,
+            fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         // Active model card
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Mod\u00e8le actif",
-                color = DictusColors.AccentHighlight,
+                color = DictusColors.TextSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                // Status dot (green = active)
+                Column {
+                    Text(
+                        text = activeModel?.displayName ?: activeModelKey,
+                        color = DictusColors.TextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (activeModel != null) {
+                        val sizeMb = activeModel.expectedSizeBytes / 1_000_000
+                        Text(
+                            text = "~$sizeMb Mo",
+                            color = DictusColors.TextSecondary,
+                            fontSize = 13.sp,
+                        )
+                    }
+                }
+                // Green check circle
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(DictusColors.Success),
-                )
-                Text(
-                    text = activeModel?.displayName ?: activeModelKey,
-                    color = DictusColors.TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (activeModel != null) {
-                    val sizeMb = activeModel.expectedSizeBytes / 1_000_000
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
-                        text = "~$sizeMb Mo",
-                        color = DictusColors.TextSecondary,
-                        fontSize = 13.sp,
+                        text = "\u2713",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
         }
 
-        // Last transcription card
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = "Derni\u00e8re dict\u00e9e",
-                color = DictusColors.AccentHighlight,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            // Empty state — no transcription history in Phase 4
-            Text(
-                text = "Aucune dict\u00e9e pour l\u2019instant",
-                color = DictusColors.TextSecondary,
-                fontSize = 16.sp,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Appuyez sur Nouvelle dict\u00e9e pour commencer.",
-                color = DictusColors.TextSecondary,
-                fontSize = 14.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        // Last transcription card (only shown when a transcription exists)
+        if (!lastTranscription.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Derni\u00e8re transcription",
+                        color = DictusColors.TextSecondary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copier",
+                        tint = DictusColors.TextSecondary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable {
+                                val clipboard = context.getSystemService(
+                                    Context.CLIPBOARD_SERVICE,
+                                ) as ClipboardManager
+                                clipboard.setPrimaryClip(
+                                    ClipData.newPlainText("Dictus", lastTranscription),
+                                )
+                            },
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = lastTranscription ?: "",
+                    color = DictusColors.TextPrimary,
+                    fontSize = 16.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Nouvelle dictée CTA
         Box(
@@ -170,5 +215,56 @@ fun HomeScreen(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.weight(1f))
+    }
+}
+
+/**
+ * Dictus waveform logo — 3 rounded vertical bars matching the app icon.
+ *
+ * Bar proportions from the brand kit: short left (opacity 0.45),
+ * tall center (accent gradient), medium right (opacity 0.65).
+ */
+@Composable
+private fun DictusWaveformLogo(
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Bar 1 — short left
+        Box(
+            modifier = Modifier
+                .width(12.dp)
+                .height(32.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color.White.copy(alpha = 0.45f)),
+        )
+        // Bar 2 — tall center (accent gradient)
+        Box(
+            modifier = Modifier
+                .width(12.dp)
+                .height(64.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            DictusColors.AccentHighlight, // #6BA3FF
+                            Color(0xFF2563EB),
+                        ),
+                    )
+                ),
+        )
+        // Bar 3 — medium right
+        Box(
+            modifier = Modifier
+                .width(12.dp)
+                .height(44.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color.White.copy(alpha = 0.65f)),
+        )
     }
 }

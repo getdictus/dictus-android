@@ -50,6 +50,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.WaveformBars
+import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 
@@ -74,6 +75,7 @@ import kotlin.math.sin
 @Composable
 fun RecordingScreen(
     dictationController: DictationController?,
+    dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>? = null,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -297,6 +299,12 @@ fun RecordingScreen(
                                 scope.launch {
                                     val result = dictationController?.confirmAndTranscribe()
                                     transcriptionResult = result ?: "(Aucun r\u00e9sultat)"
+                                    // Persist last transcription to DataStore for HomeScreen
+                                    if (result != null) {
+                                        dataStore?.edit { prefs ->
+                                            prefs[dev.pivisolutions.dictus.core.preferences.PreferenceKeys.LAST_TRANSCRIPTION] = result
+                                        }
+                                    }
                                 }
                             },
                         contentAlignment = Alignment.Center,

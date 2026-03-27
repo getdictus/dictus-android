@@ -281,6 +281,7 @@ private fun MainTabsScreen(
             composable(AppDestination.Recording.route) {
                 RecordingScreen(
                     dictationController = dictationController,
+                    dataStore = dataStore,
                     onBack = { navController.popBackStack() },
                 )
             }
