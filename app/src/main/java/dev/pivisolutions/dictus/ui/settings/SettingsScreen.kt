@@ -70,18 +70,15 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val language by viewModel.language.collectAsState()
-    val activeModel by viewModel.activeModel.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val soundEnabled by viewModel.soundEnabled.collectAsState()
     val keyboardLayout by viewModel.keyboardLayout.collectAsState()
     val theme by viewModel.theme.collectAsState()
-    val downloadedModels by viewModel.downloadedModels.collectAsState()
 
     val context = LocalContext.current
 
     // Bottom sheet visibility state
     var showLanguagePicker by remember { mutableStateOf(false) }
-    var showModelPicker by remember { mutableStateOf(false) }
     var showKeyboardPicker by remember { mutableStateOf(false) }
     var showThemePicker by remember { mutableStateOf(false) }
 
@@ -102,21 +99,6 @@ fun SettingsScreen(
                 else -> "Automatique"
             },
             onClick = { showLanguagePicker = true },
-        )
-
-        SettingDivider()
-
-        val modelDisplayName = if (downloadedModels.isEmpty()) {
-            "Aucun mod\u00e8le t\u00e9l\u00e9charg\u00e9"
-        } else {
-            activeModel.replaceFirstChar { it.uppercaseChar() }
-        }
-
-        SettingPickerRow(
-            label = "Mod\u00e8le actif",
-            value = modelDisplayName,
-            enabled = downloadedModels.isNotEmpty(),
-            onClick = { if (downloadedModels.isNotEmpty()) showModelPicker = true },
         )
 
         // ---------- SECTION: CLAVIER ----------
@@ -241,18 +223,6 @@ fun SettingsScreen(
             selected = language,
             onSelect = { viewModel.setLanguage(it) },
             onDismiss = { showLanguagePicker = false },
-        )
-    }
-
-    if (showModelPicker) {
-        PickerBottomSheet(
-            title = "Choisir un mod\u00e8le",
-            options = downloadedModels.map { key ->
-                key to key.replaceFirstChar { it.uppercaseChar() }
-            },
-            selected = activeModel,
-            onSelect = { viewModel.setActiveModel(it) },
-            onDismiss = { showModelPicker = false },
         )
     }
 

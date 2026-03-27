@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.models
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -161,6 +162,22 @@ class ModelsViewModel @Inject constructor(
             Timber.e("Failed to delete model '$modelKey'")
         }
         refreshModels()
+    }
+
+    /**
+     * Set the active model key in DataStore.
+     *
+     * Only meaningful for downloaded models. The change is reflected immediately
+     * via the [activeModelKey] StateFlow which is backed by DataStore.
+     *
+     * @param key Stable catalog key for the model to make active.
+     */
+    fun setActiveModel(key: String) {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[PreferenceKeys.ACTIVE_MODEL] = key
+            }
+        }
     }
 
     /**

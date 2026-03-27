@@ -103,6 +103,7 @@ fun ModelsScreen(
                             scope.launch { sheetState.show() }
                         },
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
+                        onSelect = { viewModel.setActiveModel(modelState.info.key) },
                     )
                 }
             }
