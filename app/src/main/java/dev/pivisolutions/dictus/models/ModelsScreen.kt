@@ -95,7 +95,7 @@ fun ModelsScreen(
                         isDownloaded = true,
                         isActive = modelState.info.key == activeModelKey,
                         downloadProgress = modelState.downloadPercent,
-                        canDelete = downloadedModels.size > 1,
+                        canDelete = downloadedModels.size > 1 && modelState.info.key != activeModelKey,
                         hasDownloadError = modelState.hasError,
                         onDownload = { viewModel.downloadModel(modelState.info.key) },
                         onDelete = {

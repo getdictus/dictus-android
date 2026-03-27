@@ -5,20 +5,28 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,11 +38,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.model.ModelInfo
+import kotlin.math.roundToInt
 
 /**
  * Reusable model card for ModelsScreen and the onboarding model download step.
@@ -43,18 +55,10 @@ import dev.pivisolutions.dictus.model.ModelInfo
  * download state:
  * - Not downloaded: shows "Télécharger" accent button
  * - Downloading: shows linear progress bar + percentage label
- * - Downloaded: shows Supprimer button + optional active highlight border
+ * - Downloaded: swipe left to reveal red delete button (iOS-style)
  *
- * WHY press animation with spring: The scale + opacity animation on press gives
- * tactile feedback without haptics, matching the iOS Dictus feel. Spring with
- * dampingRatio=0.6 creates a subtle bounce-back that feels natural.
- *
- * WHY Precision/Vitesse bars: iOS design uses these to give the user a visual
- * sense of the quality/speed trade-off for each model without showing raw numbers.
- *
- * WHY onSelect callback: The Models screen supports tap-to-select on downloaded
- * cards. The callback is a no-op by default so callers that don't need it (e.g.
- * the onboarding model picker) can ignore it.
+ * WHY swipe-to-delete: Matches iOS Dictus behavior — cards stay compact without a
+ * visible delete button, and the swipe gesture is familiar to both iOS and Android users.
  *
  * @param model          ModelInfo descriptor from the catalog.
  * @param isDownloaded   True if the model file exists on disk with correct size.
@@ -90,189 +94,250 @@ fun ModelCard(
         ),
         label = "card_scale",
     )
-    val alpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.85f else 1f,
-        animationSpec = spring(
-            dampingRatio = 0.6f,
-            stiffness = Spring.StiffnessMedium,
-        ),
-        label = "card_alpha",
-    )
 
     val isDownloading = downloadProgress != null
 
     // Active cards get an accent border; others get the default glass border
     val borderColor = if (isActive) DictusColors.Accent else DictusColors.GlassBorder
 
+    // Swipe-to-delete state
+    val deleteButtonWidth = 80.dp
+    val density = LocalDensity.current
+    val deleteButtonWidthPx = with(density) { deleteButtonWidth.toPx() }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = offsetX,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "swipe_offset",
+    )
+
+    // Card height for the delete button
+    var cardHeightPx by remember { mutableFloatStateOf(0f) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
-            .background(DictusColors.Surface)
-            .border(if (isActive) 2.dp else 1.dp, borderColor, RoundedCornerShape(16.dp))
-            .pointerInput(isDownloaded, isActive) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        tryAwaitRelease()
-                        isPressed = false
+            .clip(RoundedCornerShape(16.dp)),
+    ) {
+        // Red delete button behind the card (revealed on swipe left)
+        if (isDownloaded && canDelete && animatedOffsetX < -1f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(deleteButtonWidth)
+                    .height(with(density) { cardHeightPx.toDp() })
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(DictusColors.Destructive)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = {
+                            onDelete()
+                            offsetX = 0f
+                        })
                     },
-                    onTap = {
-                        // Tap-to-select only on downloaded, non-active cards
-                        if (isDownloaded && !isActive) onSelect()
-                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Supprimer",
+                    tint = Color.White,
+                    modifier = Modifier.padding(8.dp),
                 )
             }
-            .padding(20.dp),
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Model header row: name + active chip
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = model.displayName,
-                        color = DictusColors.TextPrimary,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
+        }
+
+        // Main card content (slides left on swipe)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+                .onSizeChanged { cardHeightPx = it.height.toFloat() }
+                .background(DictusColors.Surface)
+                .border(
+                    if (isActive) 2.dp else 1.dp,
+                    borderColor,
+                    RoundedCornerShape(16.dp),
+                )
+                .clip(RoundedCornerShape(16.dp))
+                .pointerInput(isDownloaded, isActive, canDelete) {
+                    if (isDownloaded && canDelete) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                // Snap: if dragged past half the button width, reveal fully
+                                offsetX = if (offsetX < -deleteButtonWidthPx / 2) {
+                                    -deleteButtonWidthPx
+                                } else {
+                                    0f
+                                }
+                            },
+                            onHorizontalDrag = { _, dragAmount ->
+                                offsetX = (offsetX + dragAmount)
+                                    .coerceIn(-deleteButtonWidthPx, 0f)
+                            },
+                        )
+                    }
+                }
+                .pointerInput(isDownloaded, isActive) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            tryAwaitRelease()
+                            isPressed = false
+                        },
+                        onTap = {
+                            // Reset swipe if open
+                            if (offsetX < 0f) {
+                                offsetX = 0f
+                            } else if (isDownloaded && !isActive) {
+                                onSelect()
+                            }
+                        },
                     )
-                    if (isActive) {
-                        // "Actif" chip
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0x206BA3FF))
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        ) {
-                            Text(
-                                text = "Actif",
-                                color = DictusColors.AccentHighlight,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                            )
+                }
+                .padding(20.dp),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Model header row: name + active chip
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = model.displayName,
+                            color = DictusColors.TextPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (isActive) {
+                            // "Actif" chip
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0x206BA3FF))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    text = "Actif",
+                                    color = DictusColors.AccentHighlight,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Description text
-            if (model.description.isNotBlank()) {
-                Text(
-                    text = model.description,
-                    color = DictusColors.TextSecondary,
-                    fontSize = 14.sp,
-                )
-            }
-
-            // Precision bar
-            ModelMetricBar(
-                label = "Precision",
-                value = model.precision,
-                color = DictusColors.Accent,
-            )
-
-            // Vitesse bar
-            ModelMetricBar(
-                label = "Vitesse",
-                value = model.speed,
-                color = DictusColors.AccentHighlight,
-            )
-
-            // Size label
-            val sizeMb = model.expectedSizeBytes / 1_000_000
-            Text(
-                text = "~$sizeMb Mo",
-                color = DictusColors.TextSecondary,
-                fontSize = 12.sp,
-            )
-
-            // Download progress or action buttons
-            when {
-                isDownloading -> {
-                    // Progress bar + percentage
-                    val percent = downloadProgress ?: 0
-                    LinearProgressIndicator(
-                        progress = { percent / 100f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = DictusColors.Accent,
-                        trackColor = DictusColors.Background,
-                        strokeCap = StrokeCap.Round,
-                    )
+                // Description text
+                if (model.description.isNotBlank()) {
                     Text(
-                        text = "T\u00e9l\u00e9chargement \u2014 $percent%",
-                        color = DictusColors.AccentHighlight,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        text = model.description,
+                        color = DictusColors.TextSecondary,
+                        fontSize = 14.sp,
                     )
                 }
-                hasDownloadError -> {
-                    // Error state with retry
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "\u00c9chec du t\u00e9l\u00e9chargement.",
-                            color = DictusColors.Destructive,
-                            fontSize = 13.sp,
+
+                // Precision bar
+                ModelMetricBar(
+                    label = "Precision",
+                    value = model.precision,
+                    color = DictusColors.Accent,
+                )
+
+                // Vitesse bar
+                ModelMetricBar(
+                    label = "Vitesse",
+                    value = model.speed,
+                    color = DictusColors.AccentHighlight,
+                )
+
+                // Size label
+                val sizeMb = model.expectedSizeBytes / 1_000_000
+                Text(
+                    text = "~$sizeMb Mo",
+                    color = DictusColors.TextSecondary,
+                    fontSize = 12.sp,
+                )
+
+                // Download progress or action buttons
+                when {
+                    isDownloading -> {
+                        // Progress bar + percentage
+                        val percent = downloadProgress ?: 0
+                        LinearProgressIndicator(
+                            progress = { percent / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = DictusColors.Accent,
+                            trackColor = DictusColors.Background,
+                            strokeCap = StrokeCap.Round,
                         )
-                        TextButton(onClick = onRetry) {
+                        Text(
+                            text = "T\u00e9l\u00e9chargement \u2014 $percent%",
+                            color = DictusColors.AccentHighlight,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        )
+                    }
+                    hasDownloadError -> {
+                        // Error state with retry
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Text(
-                                text = "R\u00e9essayer",
+                                text = "\u00c9chec du t\u00e9l\u00e9chargement.",
                                 color = DictusColors.Destructive,
                                 fontSize = 13.sp,
                             )
+                            TextButton(onClick = onRetry) {
+                                Text(
+                                    text = "R\u00e9essayer",
+                                    color = DictusColors.Destructive,
+                                    fontSize = 13.sp,
+                                )
+                            }
                         }
                     }
-                }
-                isDownloaded -> {
-                    // Delete button (only if not last model)
-                    if (canDelete) {
-                        TextButton(
-                            onClick = onDelete,
-                            modifier = Modifier.align(Alignment.End),
+                    isDownloaded -> {
+                        // No delete button — swipe left to reveal delete action
+                    }
+                    else -> {
+                        // Download button (accent gradient)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            DictusColors.Accent,
+                                            DictusColors.AccentDark,
+                                        ),
+                                    )
+                                )
+                                .pointerInput(Unit) {
+                                    detectTapGestures(onTap = { onDownload() })
+                                },
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Supprimer",
-                                color = DictusColors.Destructive,
+                                text = "T\u00e9l\u00e9charger",
+                                color = Color.White,
                                 fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
-                    }
-                }
-                else -> {
-                    // Download button (accent gradient)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(DictusColors.Accent, DictusColors.AccentDark),
-                                )
-                            )
-                            .pointerInput(Unit) {
-                                detectTapGestures(onTap = { onDownload() })
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "T\u00e9l\u00e9charger",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
                     }
                 }
             }
@@ -282,10 +347,6 @@ fun ModelCard(
 
 /**
  * A labeled horizontal progress bar for displaying a model metric (Precision or Vitesse).
- *
- * WHY custom Box instead of LinearProgressIndicator: LinearProgressIndicator does not
- * support a static progress value well for decorative use. A Box with fractional width
- * gives full visual control with zero overhead.
  *
  * @param label Short label shown to the left of the bar (e.g. "Precision").
  * @param value Progress value from 0.0 to 1.0.
@@ -305,8 +366,6 @@ private fun ModelMetricBar(
             text = label,
             color = DictusColors.TextSecondary,
             fontSize = 13.sp,
-            modifier = Modifier.padding(end = 0.dp),
-            // Fixed width so bars are left-aligned
         )
         Box(
             modifier = Modifier

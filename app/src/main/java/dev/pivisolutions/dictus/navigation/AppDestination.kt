@@ -33,4 +33,7 @@ sealed class AppDestination(val route: String) {
 
     /** Standalone recording screen — navigated from Home "Nouvelle dictée". */
     data object Recording : AppDestination("recording")
+
+    /** Licences screen — navigated from Settings > À propos > Licences. */
+    data object Licences : AppDestination("licences")
 }

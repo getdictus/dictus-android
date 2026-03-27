@@ -68,6 +68,7 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateToLicences: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
@@ -138,23 +139,6 @@ fun SettingsScreen(
             onClick = { showThemePicker = true },
         )
 
-        // ---------- SECTION: LICENCES ----------
-        SectionHeader(text = "LICENCES")
-
-        SettingLinkRow(
-            label = "WhisperKit \u2014 MIT, Argmax Inc.",
-            url = "https://github.com/argmaxinc/WhisperKit",
-            context = context,
-        )
-
-        SettingDivider()
-
-        SettingLinkRow(
-            label = "Dictus \u2014 MIT, PIVI Solutions 2026",
-            url = "https://github.com/pivisolutions/dictus-android",
-            context = context,
-        )
-
         // ---------- SECTION: A PROPOS ----------
         SectionHeader(text = "A PROPOS")
 
@@ -193,9 +177,16 @@ fun SettingsScreen(
 
         SettingDivider()
 
+        SettingNavRow(
+            label = "Licences",
+            onClick = onNavigateToLicences,
+        )
+
+        SettingDivider()
+
         SettingLinkRow(
             label = "GitHub",
-            url = "https://github.com/pivisolutions/dictus-android",
+            url = "https://github.com/Pivii/dictus",
             context = context,
         )
 
@@ -395,6 +386,37 @@ private fun SettingActionRow(
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * Row that navigates to another screen on tap (chevron icon, no URL).
+ */
+@Composable
+private fun SettingNavRow(
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            color = DictusColors.TextPrimary,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = DictusColors.TextSecondary,
         )
     }
 }
