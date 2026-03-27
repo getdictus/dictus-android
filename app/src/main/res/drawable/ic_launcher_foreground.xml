@@ -1,0 +1,41 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Android Adaptive Icon foreground: waveform bars centered in 108x108 safe zone -->
+    <!-- Safe zone is 66x66 centered (21dp inset on each side) -->
+    <!-- Original 80x80 viewport scaled to fit in safe zone: scale=0.825, offset=21 -->
+
+    <!-- Bar 1 (short left): 18pt height -->
+    <path
+        android:pathData="M36.68,46.58 C36.68,44.1,38.4,42.58,40.43,42.58 L40.43,42.58 C42.45,42.58,44.18,44.1,44.18,46.58 L44.18,57.43 C44.18,59.91,42.45,61.43,40.43,61.43 L40.43,61.43 C38.4,61.43,36.68,59.91,36.68,57.43 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45"/>
+
+    <!-- Bar 2 (tall center): 42pt height -->
+    <path
+        android:pathData="M50.29,36.68 C50.29,34.2,52.01,32.68,54.04,32.68 L54.04,32.68 C56.06,32.68,57.79,34.2,57.79,36.68 L57.79,71.33 C57.79,73.81,56.06,75.33,54.04,75.33 L54.04,75.33 C52.01,75.33,50.29,73.81,50.29,71.33 Z"
+        android:fillAlpha="1.0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="50.29"
+                android:startY="32.68"
+                android:endX="57.79"
+                android:endY="75.33">
+                <item android:offset="0.0" android:color="#FF6BA3FF"/>
+                <item android:offset="1.0" android:color="#FF2563EB"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Bar 3 (medium right): 27pt height -->
+    <path
+        android:pathData="M63.9,42.45 C63.9,39.97,65.63,38.45,67.65,38.45 L67.65,38.45 C69.68,38.45,71.4,39.97,71.4,42.45 L71.4,64.73 C71.4,67.2,69.68,68.73,67.65,68.73 L67.65,68.73 C65.63,68.73,63.9,67.2,63.9,64.73 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.65"/>
+
+</vector>
