@@ -156,6 +156,23 @@ fun SettingsScreen(
             onClick = { showThemePicker = true },
         )
 
+        // ---------- SECTION: LICENCES ----------
+        SectionHeader(text = "LICENCES")
+
+        SettingLinkRow(
+            label = "WhisperKit \u2014 MIT, Argmax Inc.",
+            url = "https://github.com/argmaxinc/WhisperKit",
+            context = context,
+        )
+
+        SettingDivider()
+
+        SettingLinkRow(
+            label = "Dictus \u2014 MIT, PIVI Solutions 2026",
+            url = "https://github.com/pivisolutions/dictus-android",
+            context = context,
+        )
+
         // ---------- SECTION: A PROPOS ----------
         SectionHeader(text = "A PROPOS")
 
