@@ -1,6 +1,8 @@
 package dev.pivisolutions.dictus.navigation
 
+import android.content.Context
 import android.provider.Settings
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
@@ -25,10 +29,12 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.home.HomeScreen
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
+import dev.pivisolutions.dictus.recording.RecordingScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingMicPermissionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModeSelectionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModelDownloadScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingSuccessScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingTestRecordingScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingViewModel
 import dev.pivisolutions.dictus.onboarding.OnboardingWelcomeScreen
 import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
@@ -82,8 +88,8 @@ fun AppNavHost(
             )
         }
         false -> {
-            // Onboarding not complete — show the full 6-step onboarding flow
-            OnboardingScreen()
+            // Onboarding not complete — show the full 7-step onboarding flow
+            OnboardingScreen(dictationController = dictationController)
         }
         true -> {
             MainTabsScreen(
@@ -99,7 +105,7 @@ fun AppNavHost(
 }
 
 /**
- * Full 6-step onboarding flow.
+ * Full 7-step onboarding flow.
  *
  * Hosts an [OnboardingViewModel] via hiltViewModel() and switches between step screens
  * using a simple when(currentStep) expression. Each screen receives the ViewModel's
@@ -118,7 +124,7 @@ fun AppNavHost(
  * are not directly available here, so we check via the Settings.Secure API on step 3.
  */
 @Composable
-private fun OnboardingScreen() {
+private fun OnboardingScreen(dictationController: DictationController?) {
     val viewModel: OnboardingViewModel = hiltViewModel()
     val context = LocalContext.current
 
@@ -130,16 +136,24 @@ private fun OnboardingScreen() {
     val downloadComplete by viewModel.modelDownloadComplete.collectAsState()
     val downloadError by viewModel.downloadError.collectAsState()
 
-    // Re-check IME status whenever we are on step 3 so returning from Settings
-    // updates the imeActivated flag without needing a button tap.
+    // Re-check IME status on step 3: both when entering the step AND when returning
+    // from system Settings (onResume). Without the lifecycle check, the user enables Dictus
+    // in Settings but the onboarding doesn't detect it.
+    // WHY InputMethodManager (not Settings.Secure.ENABLED_INPUT_METHODS): Android 15 (SDK 35)
+    // throws SecurityException when reading ENABLED_INPUT_METHODS directly.
     LaunchedEffect(currentStep) {
         if (currentStep == 3) {
-            val enabledInputMethods = Settings.Secure.getString(
-                context.contentResolver,
-                Settings.Secure.ENABLED_INPUT_METHODS,
-            ) ?: ""
-            val dictusPackage = context.packageName
-            val isEnabled = enabledInputMethods.contains(dictusPackage)
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            val isEnabled = imm.enabledInputMethodList.any { it.packageName == context.packageName }
+            viewModel.setImeActivated(isEnabled)
+        }
+    }
+
+    // Re-check on resume (user returns from system Settings after enabling Dictus)
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (currentStep == 3) {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            val isEnabled = imm.enabledInputMethodList.any { it.packageName == context.packageName }
             viewModel.setImeActivated(isEnabled)
         }
     }
@@ -175,7 +189,11 @@ private fun OnboardingScreen() {
             onRetry = { viewModel.retryDownload() },
             onNext = { viewModel.advanceStep() },
         )
-        6 -> OnboardingSuccessScreen(
+        6 -> OnboardingTestRecordingScreen(
+            dictationController = dictationController,
+            onNext = { viewModel.advanceStep() },
+        )
+        7 -> OnboardingSuccessScreen(
             onComplete = { viewModel.advanceStep() },
         )
     }
@@ -204,21 +222,28 @@ private fun MainTabsScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: AppDestination.Home.route
 
+    // Hide the bottom nav bar when on the Recording screen so it gets full-screen immersion.
+    // WHY conditional (not AnimatedVisibility): simple show/hide is sufficient here; there
+    // is no animation spec for the nav bar in the design.
+    val showBottomBar = currentRoute != AppDestination.Recording.route
+
     Scaffold(
         containerColor = DictusColors.Background,
         bottomBar = {
-            DictusBottomNavBar(
-                currentRoute = currentRoute,
-                onNavigate = { destination ->
-                    navController.navigate(destination.route) {
-                        popUpTo(AppDestination.Home.route) {
-                            saveState = true
+            if (showBottomBar) {
+                DictusBottomNavBar(
+                    currentRoute = currentRoute,
+                    onNavigate = { destination ->
+                        navController.navigate(destination.route) {
+                            popUpTo(AppDestination.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
     ) { innerPadding ->
         NavHost(
@@ -231,7 +256,9 @@ private fun MainTabsScreen(
             composable(AppDestination.Home.route) {
                 HomeScreen(
                     dataStore = dataStore,
-                    onNewDictation = { /* Wiring for future recording screen */ },
+                    onNewDictation = {
+                        navController.navigate(AppDestination.Recording.route)
+                    },
                 )
             }
             composable(AppDestination.Models.route) {
@@ -239,6 +266,12 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.Settings.route) {
                 SettingsScreen()
+            }
+            composable(AppDestination.Recording.route) {
+                RecordingScreen(
+                    dictationController = dictationController,
+                    onBack = { navController.popBackStack() },
+                )
             }
         }
     }

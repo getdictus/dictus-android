@@ -30,4 +30,7 @@ sealed class AppDestination(val route: String) {
 
     /** Settings tab — language, haptics, sound, and app info. */
     data object Settings : AppDestination("settings")
+
+    /** Standalone recording screen — navigated from Home "Nouvelle dictée". */
+    data object Recording : AppDestination("recording")
 }
