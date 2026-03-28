@@ -239,6 +239,7 @@ class DictusImeService : LifecycleInputMethodService() {
     override fun KeyboardContent() {
         val dictationState by _serviceState.collectAsState()
         val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
+        val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
 
         // Read theme preference from DataStore and map to ThemeMode.
@@ -281,17 +282,28 @@ class DictusImeService : LifecycleInputMethodService() {
                     isEmojiPickerOpen = isEmojiPickerOpen,
                     onEmojiToggle = { _isEmojiPickerOpen.value = !_isEmojiPickerOpen.value },
                     onEmojiSelected = { emoji -> commitText(emoji) },
+                    currentWord = currentWord,
                     suggestions = suggestions,
                     onSuggestionSelected = { suggestion ->
                         // Replace the current word fragment with the selected suggestion + space
                         val ic = currentInputConnection ?: return@KeyboardScreen
-                        val currentWord = _currentWord.value
-                        if (currentWord.isNotEmpty()) {
-                            ic.deleteSurroundingText(currentWord.length, 0)
+                        val word = _currentWord.value
+                        if (word.isNotEmpty()) {
+                            ic.deleteSurroundingText(word.length, 0)
                         }
                         ic.commitText("$suggestion ", 1)
                         _suggestions.value = emptyList()
                         _currentWord.value = ""
+                    },
+                    onCurrentWordSelected = {
+                        // Commit the raw input as-is + space (user accepts what they typed)
+                        val ic = currentInputConnection ?: return@KeyboardScreen
+                        val word = _currentWord.value
+                        if (word.isNotEmpty()) {
+                            ic.commitText(" ", 1)
+                            _suggestions.value = emptyList()
+                            _currentWord.value = ""
+                        }
                     },
                     themeMode = themeMode,
                     initialLayer = initialLayer,

@@ -42,8 +42,10 @@ fun KeyboardScreen(
     isEmojiPickerOpen: Boolean = false,
     onEmojiToggle: () -> Unit = {},
     onEmojiSelected: (String) -> Unit = {},
+    currentWord: String = "",
     suggestions: List<String> = emptyList(),
     onSuggestionSelected: (String) -> Unit = {},
+    onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
     hapticsEnabled: Boolean = true,
@@ -77,13 +79,13 @@ fun KeyboardScreen(
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                // Suggestion bar (36.dp) — visible only when suggestions are available
-                if (suggestions.isNotEmpty()) {
-                    SuggestionBar(
-                        suggestions = suggestions,
-                        onSuggestionSelected = onSuggestionSelected,
-                    )
-                }
+                // Suggestion bar (36.dp) — always visible with 3 slots and separators
+                SuggestionBar(
+                    currentWord = currentWord,
+                    suggestions = suggestions,
+                    onSuggestionSelected = onSuggestionSelected,
+                    onCurrentWordSelected = onCurrentWordSelected,
+                )
 
                 // Mic button row above keyboard (46.dp)
                 MicButtonRow(
