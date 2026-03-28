@@ -52,6 +52,7 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-navigation-compose" }
+emoji2-emojipicker = { group = "androidx.emoji2", name = "emoji2-emojipicker", version = "1.5.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

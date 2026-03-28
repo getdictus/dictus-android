@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.savedstate)
     implementation(libs.core.ktx)
+    implementation(libs.emoji2.emojipicker)
 
     testImplementation(libs.junit)
     testImplementation(platform(libs.compose.bom))
