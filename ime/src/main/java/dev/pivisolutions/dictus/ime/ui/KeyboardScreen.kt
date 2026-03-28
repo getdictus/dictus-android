@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.isSystemInDarkTheme
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
@@ -63,6 +64,13 @@ fun KeyboardScreen(
                 onEmojiSelected = { emoji ->
                     onEmojiSelected(emoji)
                     // Stay in emoji picker for rapid emoji entry (don't auto-dismiss)
+                },
+                onReturnToKeyboard = onEmojiToggle,
+                onDeleteBackward = onDeleteBackward,
+                isDarkTheme = when (themeMode) {
+                    ThemeMode.DARK -> true
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.AUTO -> isSystemInDarkTheme()
                 },
             )
         } else {
