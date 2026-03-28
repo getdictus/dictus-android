@@ -36,8 +36,9 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
  * matching iOS emoji picker layout where the user can quickly switch back
  * or delete characters without closing the picker first.
  *
- * Height: 266.dp (picker) + 42.dp (bottom row) = 308.dp total, fitting within keyboard area
- * so the toolbar stays visible above the system navigation bar.
+ * Height: 346.dp total (matches KeyboardScreen: 36 + 46 + 264) so the emoji picker
+ * occupies the exact same space as the normal keyboard. This prevents the system
+ * IME navigation bar from overlapping the ABC/Delete toolbar at the bottom.
  *
  * @param onEmojiSelected Callback with the emoji string to insert via InputConnection.
  * @param onReturnToKeyboard Callback to dismiss picker and return to keyboard (ABC button).
@@ -53,13 +54,14 @@ fun EmojiPickerScreen(
     isDarkTheme: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    // 308dp total: fits within keyboard area so the ABC/Delete toolbar
-    // stays visible above the system navigation bar (globe icon row)
+    // 346dp total: matches KeyboardScreen height (36 + 46 + 264) so the
+    // system IME navigation bar stays below our content, not overlapping
+    // the ABC/Delete toolbar.
     val surfaceColor = MaterialTheme.colorScheme.surface
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(308.dp),
+            .height(346.dp),
     ) {
         // Emoji picker grid — fills available space above the bottom toolbar
         AndroidView(
