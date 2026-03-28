@@ -279,11 +279,13 @@ fun ModelCard(
                     SegmentedMetricBar(
                         label = "Pr\u00e9cision",
                         value = model.precision,
+                        color = DictusColors.Accent,
                         modifier = Modifier.weight(1f),
                     )
                     SegmentedMetricBar(
                         label = "Vitesse",
                         value = model.speed,
+                        color = DictusColors.AccentHighlight,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -391,13 +393,15 @@ fun ModelCard(
 private fun SegmentedMetricBar(
     label: String,
     value: Float,
+    color: Color = DictusColors.Accent,
     modifier: Modifier = Modifier,
 ) {
     val segmentCount = 5
     // Map 0.0–1.0 to 0–5 filled segments (round to nearest)
     val filledCount = (value.coerceIn(0f, 1f) * segmentCount).roundToInt()
-    val filledColor = DictusColors.Accent
-    val emptyColor = LocalDictusColors.current.borderSubtle.copy(alpha = 0.5f)
+    val filledColor = color
+    // iOS uses color.opacity(0.15) for empty segments — same hue, very faded
+    val emptyColor = color.copy(alpha = 0.15f)
 
     Column(
         modifier = modifier,
