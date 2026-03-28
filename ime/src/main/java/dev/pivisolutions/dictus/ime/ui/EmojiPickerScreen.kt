@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,9 +39,10 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
  * matching iOS emoji picker layout where the user can quickly switch back
  * or delete characters without closing the picker first.
  *
- * Height: 346.dp total (matches KeyboardScreen: 36 + 46 + 264) so the emoji picker
- * occupies the exact same space as the normal keyboard. This prevents the system
- * IME navigation bar from overlapping the ABC/Delete toolbar at the bottom.
+ * No explicit height constraint — matches KeyboardScreen pattern where Compose
+ * naturally flows around system insets. The emoji grid uses weight(1f) to fill
+ * available space, and the ABC/Delete toolbar anchors at the bottom with
+ * navigationBarsPadding() to stay above the system IME navigation bar.
  *
  * @param onEmojiSelected Callback with the emoji string to insert via InputConnection.
  * @param onReturnToKeyboard Callback to dismiss picker and return to keyboard (ABC button).
@@ -54,14 +58,13 @@ fun EmojiPickerScreen(
     isDarkTheme: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    // 346dp total: matches KeyboardScreen height (36 + 46 + 264) so the
-    // system IME navigation bar stays below our content, not overlapping
-    // the ABC/Delete toolbar.
+    // No explicit height — let the system size the IME window naturally,
+    // same pattern as KeyboardScreen. This prevents the system IME navigation
+    // bar from overlapping the ABC/Delete toolbar (explicit height was the bug).
     val surfaceColor = MaterialTheme.colorScheme.surface
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .height(346.dp),
+            .fillMaxWidth(),
     ) {
         // Emoji picker grid — fills available space above the bottom toolbar
         AndroidView(
@@ -100,6 +103,7 @@ fun EmojiPickerScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
                 .height(42.dp)
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 8.dp),
