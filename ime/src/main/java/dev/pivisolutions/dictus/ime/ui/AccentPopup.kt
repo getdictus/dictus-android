@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 
 /**
  * Accent strip content shown above a long-pressed key.
@@ -37,7 +38,7 @@ fun AccentPopup(
         modifier = modifier
             .shadow(elevation = 8.dp, shape = shape)
             .clip(shape)
-            .background(DictusColors.KeyBackground),
+            .background(LocalDictusColors.current.keyBackground),
     ) {
         accents.forEachIndexed { index, accent ->
             Box(
@@ -47,7 +48,7 @@ fun AccentPopup(
                         if (highlightedIndex == index) {
                             DictusColors.AccentHighlight.copy(alpha = 0.35f)
                         } else {
-                            DictusColors.KeyBackground
+                            LocalDictusColors.current.keyBackground
                         }
                     )
                     .clickable { onAccentSelected(accent) },
@@ -55,7 +56,7 @@ fun AccentPopup(
             ) {
                 Text(
                     text = accent,
-                    color = DictusColors.KeyText,
+                    color = LocalDictusColors.current.keyText,
                     fontSize = 22.sp,
                 )
             }

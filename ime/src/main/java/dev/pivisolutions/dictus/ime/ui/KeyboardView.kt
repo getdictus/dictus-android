@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.pivisolutions.dictus.core.theme.DictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
@@ -40,7 +40,7 @@ fun KeyboardView(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(DictusColors.Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(top = 2.dp, bottom = 2.dp),
     ) {
         rows.forEach { rowKeys ->

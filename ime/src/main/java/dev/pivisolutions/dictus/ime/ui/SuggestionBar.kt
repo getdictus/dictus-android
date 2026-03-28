@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 
 /**
  * Gboard-style 3-slot suggestion bar above the keyboard.
@@ -40,7 +42,7 @@ fun SuggestionBar(
         modifier = modifier
             .fillMaxWidth()
             .height(36.dp)
-            .background(DictusColors.Surface),
+            .background(MaterialTheme.colorScheme.surface),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         slots.forEachIndexed { index, text ->
@@ -62,7 +64,7 @@ fun SuggestionBar(
                 if (text.isNotEmpty()) {
                     Text(
                         text = text,
-                        color = DictusColors.TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 14.sp,
                         fontWeight = if (index == 1) FontWeight.Bold else FontWeight.Normal,
                         maxLines = 1,
@@ -76,7 +78,7 @@ fun SuggestionBar(
                     modifier = Modifier
                         .width(1.dp)
                         .height(20.dp)
-                        .background(DictusColors.BorderSubtle),
+                        .background(LocalDictusColors.current.borderSubtle),
                 )
             }
         }

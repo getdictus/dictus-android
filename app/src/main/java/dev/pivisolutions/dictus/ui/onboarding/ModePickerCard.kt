@@ -34,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 
 /**
  * Two side-by-side keyboard mode selection cards for onboarding step 4.
@@ -103,16 +105,16 @@ private fun LayoutOptionCard(
         label = "card_scale_$layoutKey",
     )
 
-    val borderColor = if (isSelected) DictusColors.Accent else DictusColors.BorderSubtle
+    val borderColor = if (isSelected) DictusColors.Accent else LocalDictusColors.current.borderSubtle
     val borderWidth = if (isSelected) 2.dp else 1.dp
-    val labelColor = if (isSelected) DictusColors.Accent else DictusColors.TextSecondary
-    val descColor = if (isSelected) DictusColors.TextPrimary else DictusColors.TextSecondary
+    val labelColor = if (isSelected) DictusColors.Accent else LocalDictusColors.current.textSecondary
+    val descColor = if (isSelected) MaterialTheme.colorScheme.onBackground else LocalDictusColors.current.textSecondary
 
     Column(
         modifier = modifier
             .scale(scale)
             .clip(RoundedCornerShape(16.dp))
-            .background(DictusColors.Surface)
+            .background(MaterialTheme.colorScheme.surface)
             .border(borderWidth, borderColor, RoundedCornerShape(16.dp))
             .pointerInput(Unit) {
                 detectTapGestures(
@@ -158,7 +160,7 @@ private fun LayoutOptionCard(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .border(2.dp, DictusColors.BorderSubtle, CircleShape),
+                    .border(2.dp, LocalDictusColors.current.borderSubtle, CircleShape),
             )
         }
     }

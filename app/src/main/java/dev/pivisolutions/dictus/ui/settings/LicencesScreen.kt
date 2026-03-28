@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 
 /**
  * Dedicated licences screen matching iOS LicensesView.
@@ -48,7 +50,7 @@ fun LicencesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DictusColors.Background)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState()),
     ) {
         // Top bar with back button
@@ -62,12 +64,12 @@ fun LicencesScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Retour",
-                    tint = DictusColors.TextPrimary,
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = "Licences",
-                color = DictusColors.TextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -118,14 +120,14 @@ private fun LicenceBlock(
     ) {
         Text(
             text = name,
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = author,
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 14.sp,
         )
         Spacer(modifier = Modifier.height(4.dp))
@@ -138,14 +140,14 @@ private fun LicenceBlock(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = mitLicence(copyright),
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             lineHeight = 16.sp,
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(DictusColors.Surface)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(12.dp),
         )
     }

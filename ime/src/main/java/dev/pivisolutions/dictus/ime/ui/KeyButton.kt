@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
@@ -94,8 +95,8 @@ fun KeyButton(
     val backgroundColor = when {
         key.type == KeyType.SHIFT && isCapsLock -> DictusColors.AccentHighlight
         key.type == KeyType.SHIFT && isShifted -> DictusColors.Accent
-        key.type == KeyType.CHARACTER || key.type == KeyType.SPACE -> DictusColors.KeyBackground
-        else -> DictusColors.KeySpecialBackground
+        key.type == KeyType.CHARACTER || key.type == KeyType.SPACE -> LocalDictusColors.current.keyBackground
+        else -> LocalDictusColors.current.keySpecialBackground
     }
 
     val displayLabel = when (key.type) {
@@ -235,12 +236,15 @@ fun KeyButton(
         }
     }
 
+    // Capture key text color for use in non-composable drawBehind scope
+    val keyTextColor = LocalDictusColors.current.keyText
+
     // Draw an underline on the shift key when caps lock is active
     val capsLockUnderline = if (key.type == KeyType.SHIFT && isCapsLock) {
         Modifier.drawBehind {
             val strokeWidth = 2.dp.toPx()
             drawLine(
-                color = DictusColors.KeyText,
+                color = keyTextColor,
                 start = Offset(size.width * 0.25f, size.height - strokeWidth),
                 end = Offset(size.width * 0.75f, size.height - strokeWidth),
                 strokeWidth = strokeWidth,
@@ -267,7 +271,7 @@ fun KeyButton(
     ) {
         Text(
             text = displayLabel,
-            color = DictusColors.KeyText,
+            color = LocalDictusColors.current.keyText,
             fontSize = fontSize,
             textAlign = TextAlign.Center,
         )
@@ -284,12 +288,12 @@ fun KeyButton(
                         .size(width = 42.dp, height = 52.dp)
                         .shadow(elevation = 4.dp, shape = RoundedCornerShape(8.dp))
                         .clip(RoundedCornerShape(8.dp))
-                        .background(DictusColors.KeyBackground),
+                        .background(LocalDictusColors.current.keyBackground),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = displayLabel,
-                        color = DictusColors.KeyText,
+                        color = LocalDictusColors.current.keyText,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center,

@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
-import dev.pivisolutions.dictus.core.theme.DictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.permission.buildPermissionsToRequest
 import dev.pivisolutions.dictus.permission.rememberPermissionState
 import kotlinx.coroutines.launch
@@ -82,7 +82,7 @@ fun TestSurfaceScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = DictusColors.Background,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(

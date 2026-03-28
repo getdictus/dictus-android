@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.ui.models.ModelCard
 import kotlinx.coroutines.launch
@@ -73,7 +75,7 @@ fun ModelsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DictusColors.Background)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -81,7 +83,7 @@ fun ModelsScreen(
         // Screen title
         Text(
             text = "Mod\u00e8les",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
         )
@@ -134,7 +136,7 @@ fun ModelsScreen(
             .sumOf { it.expectedSizeBytes } / 1_000_000
         Text(
             text = "Stockage utilis\u00e9 : $storageUsedMb Mo / $totalCatalogMb Mo",
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 13.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally),
         )
@@ -149,7 +151,7 @@ fun ModelsScreen(
                 scope.launch { sheetState.hide() }
             },
             sheetState = sheetState,
-            containerColor = DictusColors.Surface,
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             DeleteConfirmationSheet(
                 modelName = pendingDelete.info.displayName,
@@ -175,7 +177,7 @@ private fun ModelSection(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
         )
@@ -197,13 +199,13 @@ private fun DeleteConfirmationSheet(
     ) {
         Text(
             text = "Supprimer $modelName ?",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
             text = "Ce mod\u00e8le sera supprim\u00e9 de votre appareil.",
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -218,14 +220,14 @@ private fun DeleteConfirmationSheet(
                 fontWeight = FontWeight.Medium,
             )
         }
-        HorizontalDivider(color = DictusColors.BorderSubtle)
+        HorizontalDivider(color = LocalDictusColors.current.borderSubtle)
         TextButton(
             onClick = onCancel,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
                 text = "Annuler",
-                color = DictusColors.TextSecondary,
+                color = LocalDictusColors.current.textSecondary,
                 fontSize = 16.sp,
             )
         }

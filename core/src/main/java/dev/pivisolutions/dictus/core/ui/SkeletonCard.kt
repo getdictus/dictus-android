@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.theme.DictusColors
 
 /**
@@ -59,7 +60,7 @@ fun SkeletonCard(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .height(88.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(DictusColors.Surface)
+            .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, DictusColors.GlassBorder, RoundedCornerShape(16.dp))
             .background(
                 Brush.linearGradient(

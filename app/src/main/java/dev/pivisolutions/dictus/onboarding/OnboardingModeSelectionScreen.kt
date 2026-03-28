@@ -15,6 +15,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ui.onboarding.ModePickerCard
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 
@@ -56,7 +58,7 @@ fun OnboardingModeSelectionScreen(
 
         Text(
             text = "Choisissez votre clavier",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = (-0.5).sp,
@@ -67,7 +69,7 @@ fun OnboardingModeSelectionScreen(
         Text(
             text = "ABC est s\u00e9lectionn\u00e9 par d\u00e9faut. " +
                 "Changez si vous pr\u00e9f\u00e9rez ouvrir sur les chiffres.",
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
             lineHeight = (15 * 1.5).sp,
             textAlign = TextAlign.Center,

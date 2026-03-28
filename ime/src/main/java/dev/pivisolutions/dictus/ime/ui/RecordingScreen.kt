@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 
@@ -64,7 +66,7 @@ fun RecordingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(46.dp)
-                .background(DictusColors.Background)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 8.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -75,7 +77,7 @@ fun RecordingScreen(
                     .width(56.dp)
                     .height(40.dp)
                     .clip(pillShape)
-                    .border(1.5.dp, DictusColors.OnSurface.copy(alpha = 0.4f), pillShape)
+                    .border(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), pillShape)
                     .clickable {
                         HapticHelper.performKeyHaptic(view)
                         onCancel()
@@ -84,7 +86,7 @@ fun RecordingScreen(
             ) {
                 Text(
                     text = "\u2715",
-                    color = DictusColors.OnSurface.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontSize = 16.sp,
                 )
             }
@@ -116,7 +118,7 @@ fun RecordingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(218.dp)
-                .background(DictusColors.Background),
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -132,7 +134,7 @@ fun RecordingScreen(
             // Timer MM:SS
             Text(
                 text = String.format("%02d:%02d", elapsedMs / 60000, (elapsedMs % 60000) / 1000),
-                color = DictusColors.KeyText,
+                color = LocalDictusColors.current.keyText,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 16.dp),
@@ -141,7 +143,7 @@ fun RecordingScreen(
             // "En ecoute..." label
             Text(
                 text = "En ecoute...",
-                color = DictusColors.KeyText.copy(alpha = 0.6f),
+                color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 4.dp),
             )
@@ -152,7 +154,7 @@ fun RecordingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(46.dp)
-                .background(DictusColors.Background)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 8.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -169,7 +171,7 @@ fun RecordingScreen(
                 Icon(
                     painter = painterResource(R.drawable.ic_settings),
                     contentDescription = "Settings",
-                    tint = DictusColors.OnSurface.copy(alpha = 0.5f),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier
                         .width(20.dp)
                         .height(20.dp),

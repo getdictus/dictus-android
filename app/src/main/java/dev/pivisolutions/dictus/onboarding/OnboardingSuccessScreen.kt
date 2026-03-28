@@ -20,6 +20,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 import dev.pivisolutions.dictus.ui.onboarding.successGradient
 
@@ -42,7 +44,7 @@ fun OnboardingSuccessScreen(
     onComplete: () -> Unit,
 ) {
     OnboardingStepScaffold(
-        currentStep = 6,
+        currentStep = 7,
         ctaText = "Commencer",
         ctaGradient = successGradient,
         onCtaClick = onComplete,
@@ -68,7 +70,7 @@ fun OnboardingSuccessScreen(
 
         Text(
             text = "C\u2019est pr\u00eat\u00a0!",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = (-0.5).sp,
@@ -78,7 +80,7 @@ fun OnboardingSuccessScreen(
 
         Text(
             text = "Dictus est configur\u00e9 et pr\u00eat \u00e0 l\u2019emploi.",
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 17.sp,
             textAlign = TextAlign.Center,
         )

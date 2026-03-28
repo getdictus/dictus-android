@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -69,7 +71,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DictusColors.Background),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         LazyColumn(
             modifier = Modifier
@@ -86,7 +88,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                     ) {
                         Text(
                             text = "Aucun log disponible",
-                            color = DictusColors.TextSecondary,
+                            color = LocalDictusColors.current.textSecondary,
                             fontSize = 16.sp,
                         )
                     }
@@ -97,7 +99,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                         text = line,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
-                        color = DictusColors.TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 1.dp),
                     )
                 }
@@ -108,7 +110,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(DictusColors.Background)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -116,12 +118,12 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Retour",
-                    tint = DictusColors.TextPrimary,
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = "Debug Logs",
-                color = DictusColors.TextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
@@ -132,7 +134,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Menu",
-                        tint = DictusColors.TextPrimary,
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
                 DropdownMenu(

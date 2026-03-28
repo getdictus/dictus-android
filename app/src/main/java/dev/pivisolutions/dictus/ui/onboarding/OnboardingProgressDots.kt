@@ -19,17 +19,16 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
  * Inactive dots use a low-opacity white to maintain visual hierarchy against the
  * dark background without competing with the active dot.
  *
- * WHY 6 fixed dots: The onboarding flow has exactly 6 steps (Welcome, Mic, Keyboard,
- * Mode, Download, Success). The dot count is intentionally hard-coded to match the step
- * count rather than being dynamic — the UI-SPEC specifies exactly 6 dots.
+ * WHY 7 fixed dots: The onboarding flow has exactly 7 steps (Welcome, Mic, Keyboard,
+ * Mode, Download, Test Recording, Success).
  *
- * @param currentStep Active step index (1-based, 1-6).
- * @param totalSteps  Total number of steps. Defaults to 6.
+ * @param currentStep Active step index (1-based, 1-7).
+ * @param totalSteps  Total number of steps. Defaults to 7.
  */
 @Composable
 fun OnboardingProgressDots(
     currentStep: Int,
-    totalSteps: Int = 6,
+    totalSteps: Int = 7,
     modifier: Modifier = Modifier,
 ) {
     // Active dot color: success green on step 6 (the "done" state), accent blue otherwise

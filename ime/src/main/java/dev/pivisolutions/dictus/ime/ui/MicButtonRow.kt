@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 
@@ -44,7 +45,7 @@ fun MicButtonRow(
         modifier = modifier
             .fillMaxWidth()
             .height(46.dp)
-            .background(DictusColors.Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -62,7 +63,7 @@ fun MicButtonRow(
             Icon(
                 painter = painterResource(R.drawable.ic_settings),
                 contentDescription = "Settings",
-                tint = DictusColors.OnSurface.copy(alpha = 0.5f),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp),
             )
         }

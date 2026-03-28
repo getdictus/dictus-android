@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.delay
 
 /**
@@ -71,20 +73,20 @@ fun FakeSettingsCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(DictusColors.Surface)
-            .border(1.dp, DictusColors.BorderSubtle, RoundedCornerShape(16.dp)),
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, LocalDictusColors.current.borderSubtle, RoundedCornerShape(16.dp)),
     ) {
         // Section header: "Manage keyboards" — matches Android system settings label
         Text(
             text = "Manage keyboards",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             fontWeight = FontWeight.Normal,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
         )
 
         HorizontalDivider(
-            color = DictusColors.BorderSubtle,
+            color = LocalDictusColors.current.borderSubtle,
             thickness = 1.dp,
         )
 
@@ -97,7 +99,7 @@ fun FakeSettingsCard(
         )
 
         HorizontalDivider(
-            color = DictusColors.BorderSubtle,
+            color = LocalDictusColors.current.borderSubtle,
             thickness = 1.dp,
             modifier = Modifier.padding(start = 72.dp),
         )
@@ -153,12 +155,12 @@ private fun KeyboardEntryRow(
         ) {
             Text(
                 text = name,
-                color = DictusColors.TextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 16.sp,
             )
             Text(
                 text = subtitle,
-                color = DictusColors.TextSecondary,
+                color = LocalDictusColors.current.textSecondary,
                 fontSize = 13.sp,
             )
         }

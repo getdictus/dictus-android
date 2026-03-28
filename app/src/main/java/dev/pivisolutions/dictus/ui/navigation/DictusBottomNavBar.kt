@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.navigation.AppDestination
 
 /**
@@ -60,7 +61,7 @@ fun DictusBottomNavBar(
             .padding(horizontal = 8.dp, vertical = 8.dp)
             .height(80.dp)
             .clip(RoundedCornerShape(31.dp))
-            .background(DictusColors.Surface),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center,
     ) {
         Row(

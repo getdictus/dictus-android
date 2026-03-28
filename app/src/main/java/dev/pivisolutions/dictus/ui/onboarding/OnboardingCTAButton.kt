@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 
 /**
  * Shared CTA button used across all onboarding steps.
@@ -62,6 +65,9 @@ fun OnboardingCTAButton(
     gradient: Brush = accentGradient,
     modifier: Modifier = Modifier,
 ) {
+    // rememberUpdatedState ensures the pointerInput closure always calls the latest onClick,
+    // even though pointerInput is only keyed on `enabled` and doesn't restart when onClick changes.
+    val currentOnClick by rememberUpdatedState(onClick)
     var isPressed by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
@@ -92,8 +98,8 @@ fun OnboardingCTAButton(
                     Modifier.background(brush = gradient)
                 } else {
                     Modifier
-                        .background(DictusColors.Surface)
-                        .border(1.dp, DictusColors.BorderSubtle, RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, LocalDictusColors.current.borderSubtle, RoundedCornerShape(14.dp))
                 }
             )
             .pointerInput(enabled) {
@@ -104,7 +110,7 @@ fun OnboardingCTAButton(
                             tryAwaitRelease()
                             isPressed = false
                         },
-                        onTap = { onClick() },
+                        onTap = { currentOnClick() },
                     )
                 }
             },
@@ -118,14 +124,14 @@ fun OnboardingCTAButton(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (enabled) Color.White else DictusColors.TextSecondary,
+                    tint = if (enabled) Color.White else LocalDictusColors.current.textSecondary,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(10.dp))
             }
             Text(
                 text = text,
-                color = if (enabled) Color.White else DictusColors.TextSecondary,
+                color = if (enabled) Color.White else LocalDictusColors.current.textSecondary,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
             )

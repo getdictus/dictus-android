@@ -25,7 +25,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
-import dev.pivisolutions.dictus.core.theme.DictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
@@ -86,7 +86,7 @@ fun AppNavHost(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(DictusColors.Background)
+                    .background(MaterialTheme.colorScheme.background)
             )
         }
         false -> {
@@ -232,7 +232,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.DebugLogs.route
 
     Scaffold(
-        containerColor = DictusColors.Background,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (showBottomBar) {
                 DictusBottomNavBar(

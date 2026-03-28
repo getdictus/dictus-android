@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.model.ModelInfo
 import kotlin.math.roundToInt
 
@@ -160,7 +162,7 @@ fun ModelCard(
                 .fillMaxWidth()
                 .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
                 .onSizeChanged { cardHeightPx = it.height.toFloat() }
-                .background(DictusColors.Surface)
+                .background(MaterialTheme.colorScheme.surface)
                 .border(
                     if (isActive) 2.dp else 1.dp,
                     borderColor,
@@ -221,7 +223,7 @@ fun ModelCard(
                         ) {
                             Text(
                                 text = model.displayName,
-                                color = DictusColors.TextPrimary,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -270,7 +272,7 @@ fun ModelCard(
                         if (model.description.isNotBlank()) {
                             Text(
                                 text = model.description,
-                                color = DictusColors.TextSecondary,
+                                color = LocalDictusColors.current.textSecondary,
                                 fontSize = 13.sp,
                                 lineHeight = 18.sp,
                             )
@@ -298,7 +300,7 @@ fun ModelCard(
                 val sizeMb = model.expectedSizeBytes / 1_000_000
                 Text(
                     text = "~$sizeMb Mo",
-                    color = DictusColors.TextSecondary,
+                    color = LocalDictusColors.current.textSecondary,
                     fontSize = 12.sp,
                 )
 
@@ -314,7 +316,7 @@ fun ModelCard(
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp)),
                             color = DictusColors.Accent,
-                            trackColor = DictusColors.Background,
+                            trackColor = MaterialTheme.colorScheme.background,
                             strokeCap = StrokeCap.Round,
                         )
                         Text(
@@ -401,7 +403,7 @@ private fun ModelMetricBar(
     ) {
         Text(
             text = label,
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 13.sp,
         )
         Box(
@@ -409,7 +411,7 @@ private fun ModelMetricBar(
                 .weight(1f)
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(DictusColors.Background),
+                .background(MaterialTheme.colorScheme.background),
         ) {
             Box(
                 modifier = Modifier

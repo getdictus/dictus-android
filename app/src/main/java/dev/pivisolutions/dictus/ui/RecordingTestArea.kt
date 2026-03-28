@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 
 /**
@@ -48,7 +50,7 @@ fun RecordingTestArea(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = DictusColors.Surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -56,7 +58,7 @@ fun RecordingTestArea(
         ) {
             Text(
                 text = "Recording Test",
-                color = DictusColors.KeyText,
+                color = LocalDictusColors.current.keyText,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -65,7 +67,7 @@ fun RecordingTestArea(
                 is DictationState.Idle -> {
                     Text(
                         text = "State: Idle",
-                        color = DictusColors.OnSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                     )
                     Button(
@@ -81,7 +83,7 @@ fun RecordingTestArea(
                 is DictationState.Recording -> {
                     Text(
                         text = "State: Recording",
-                        color = DictusColors.OnSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                     )
 
@@ -100,7 +102,7 @@ fun RecordingTestArea(
                             dictationState.elapsedMs / 60000,
                             (dictationState.elapsedMs % 60000) / 1000,
                         ),
-                        color = DictusColors.KeyText,
+                        color = LocalDictusColors.current.keyText,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -132,7 +134,7 @@ fun RecordingTestArea(
                 is DictationState.Transcribing -> {
                     Text(
                         text = "State: Transcribing...",
-                        color = DictusColors.OnSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                     )
                 }

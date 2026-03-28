@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
@@ -109,7 +111,7 @@ fun RecordingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DictusColors.Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 32.dp),
     ) {
         // ── Back button (top-left, always visible) ──
@@ -124,7 +126,7 @@ fun RecordingScreen(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Retour",
-                tint = DictusColors.TextPrimary,
+                tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(24.dp),
             )
         }
@@ -142,7 +144,7 @@ fun RecordingScreen(
                 ) {
                     Text(
                         text = "R\u00e9sultat",
-                        color = DictusColors.TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = (-0.5).sp,
@@ -155,7 +157,7 @@ fun RecordingScreen(
                     ) {
                         Text(
                             text = transcriptionResult ?: "",
-                            color = DictusColors.TextPrimary,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 17.sp,
                             lineHeight = 26.sp,
                         )
@@ -180,7 +182,7 @@ fun RecordingScreen(
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
                                 contentDescription = "Copier",
-                                tint = if (copied) DictusColors.Success else DictusColors.TextSecondary,
+                                tint = if (copied) DictusColors.Success else LocalDictusColors.current.textSecondary,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -199,7 +201,7 @@ fun RecordingScreen(
                 ) {
                     Text(
                         text = "Nouvelle dict\u00e9e",
-                        color = DictusColors.TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = (-0.5).sp,
@@ -209,7 +211,7 @@ fun RecordingScreen(
 
                     Text(
                         text = "Appuyez sur le micro et parlez.\nDictus transcrira votre voix.",
-                        color = DictusColors.TextSecondary,
+                        color = LocalDictusColors.current.textSecondary,
                         fontSize = 15.sp,
                         lineHeight = (15 * 1.5).sp,
                         textAlign = TextAlign.Center,
@@ -250,7 +252,7 @@ fun RecordingScreen(
                         val secs = seconds % 60
                         Text(
                             text = "%d:%02d".format(minutes, secs),
-                            color = DictusColors.TextPrimary,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Medium,
                         )
@@ -261,7 +263,7 @@ fun RecordingScreen(
                     isTranscribing -> {
                         Text(
                             text = "Transcription en cours\u2026",
-                            color = DictusColors.TextSecondary,
+                            color = LocalDictusColors.current.textSecondary,
                             fontSize = 17.sp,
                         )
 
@@ -319,13 +321,13 @@ fun RecordingScreen(
                         modifier = Modifier
                             .size(90.dp)
                             .clip(CircleShape)
-                            .background(DictusColors.Surface),
+                            .background(MaterialTheme.colorScheme.surface),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = null,
-                            tint = DictusColors.TextSecondary,
+                            tint = LocalDictusColors.current.textSecondary,
                             modifier = Modifier.size(36.dp),
                         )
                     }
@@ -384,7 +386,7 @@ fun RecordingScreen(
                     hasResult -> "Nouvelle dict\u00e9e"
                     else -> ""
                 },
-                color = DictusColors.TextSecondary,
+                color = LocalDictusColors.current.textSecondary,
                 fontSize = 13.sp,
             )
         }

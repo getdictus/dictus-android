@@ -5,6 +5,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -15,6 +18,55 @@ import androidx.compose.ui.graphics.Color
  * - AUTO: Follow the system dark/light preference (isSystemInDarkTheme).
  */
 enum class ThemeMode { DARK, LIGHT, AUTO }
+
+/**
+ * Custom Dictus color tokens that have no direct Material 3 equivalent.
+ *
+ * These colors vary between dark and light themes and are provided via
+ * [LocalDictusColors] so that all UI composables respond to theme changes.
+ *
+ * WHY a separate data class (not more Material slots): Material 3 has a fixed
+ * set of semantic color roles. Keyboard-specific colors (KeyBackground, KeyText)
+ * and design-specific tokens (TextSecondary, BorderSubtle) don't map cleanly to
+ * any Material role. A CompositionLocal keeps custom colors theme-aware without
+ * misusing Material slots.
+ */
+@Immutable
+data class DictusColorScheme(
+    val textSecondary: Color,
+    val borderSubtle: Color,
+    val keyBackground: Color,
+    val keyText: Color,
+    val keySpecialBackground: Color,
+    val iconBackground: Color,
+)
+
+/** Dark variant of custom Dictus colors. */
+private val DictusDarkExtraColors = DictusColorScheme(
+    textSecondary = DictusColors.TextSecondary,
+    borderSubtle = DictusColors.BorderSubtle,
+    keyBackground = DictusColors.KeyBackground,
+    keyText = DictusColors.KeyText,
+    keySpecialBackground = DictusColors.KeySpecialBackground,
+    iconBackground = DictusColors.IconBackground,
+)
+
+/** Light variant of custom Dictus colors. */
+private val DictusLightExtraColors = DictusColorScheme(
+    textSecondary = DictusColors.LightTextSecondary,
+    borderSubtle = DictusColors.LightBorderSubtle,
+    keyBackground = DictusColors.LightKeyBackground,
+    keyText = DictusColors.LightOnSurface,
+    keySpecialBackground = DictusColors.LightKeySpecialBackground,
+    iconBackground = DictusColors.LightBackground,
+)
+
+/**
+ * CompositionLocal providing the current [DictusColorScheme].
+ *
+ * Access via `LocalDictusColors.current` inside any composable within [DictusTheme].
+ */
+val LocalDictusColors = staticCompositionLocalOf { DictusDarkExtraColors }
 
 /**
  * Dictus dark color scheme using Material 3.
@@ -59,8 +111,8 @@ private val DictusLightColorScheme = lightColorScheme(
  * Dictus application theme.
  *
  * Wraps content in Material 3 theming with the appropriate color scheme
- * based on the requested ThemeMode. Supports DARK (default), LIGHT, and AUTO
- * (follows system dark/light preference) modes.
+ * based on the requested ThemeMode. Also provides [LocalDictusColors] so
+ * custom Dictus color tokens respond to theme changes.
  *
  * @param themeMode The desired theme mode. Defaults to DARK for backward compatibility.
  * @param content The composable content to wrap with the theme.
@@ -76,9 +128,13 @@ fun DictusTheme(
         ThemeMode.AUTO -> isSystemInDarkTheme()
     }
 
-    MaterialTheme(
-        colorScheme = if (useDark) DictusDarkColorScheme else DictusLightColorScheme,
-        typography = DictusTypography,
-        content = content,
-    )
+    val extraColors = if (useDark) DictusDarkExtraColors else DictusLightExtraColors
+
+    CompositionLocalProvider(LocalDictusColors provides extraColors) {
+        MaterialTheme(
+            colorScheme = if (useDark) DictusDarkColorScheme else DictusLightColorScheme,
+            typography = DictusTypography,
+            content = content,
+        )
+    }
 }

@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 
 /**
@@ -96,7 +98,7 @@ fun OnboardingModelDownloadScreen(
 
         Text(
             text = "Mod\u00e8le vocal",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = (-0.5).sp,
@@ -107,7 +109,7 @@ fun OnboardingModelDownloadScreen(
         Text(
             text = "T\u00e9l\u00e9chargez le mod\u00e8le de reconnaissance vocale " +
                 "recommand\u00e9 pour votre appareil.",
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
             lineHeight = (15 * 1.5).sp,
             textAlign = TextAlign.Center,
@@ -156,7 +158,7 @@ private fun ModelInfoCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(DictusColors.Surface)
+            .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, DictusColors.GlassBorder, RoundedCornerShape(16.dp))
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -164,7 +166,7 @@ private fun ModelInfoCard(
         // Model name
         Text(
             text = "Tiny",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -189,12 +191,12 @@ private fun ModelInfoCard(
                 Icon(
                     imageVector = Icons.Outlined.Storage,
                     contentDescription = null,
-                    tint = DictusColors.TextSecondary,
+                    tint = LocalDictusColors.current.textSecondary,
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
                     text = "~77 Mo",
-                    color = DictusColors.TextSecondary,
+                    color = LocalDictusColors.current.textSecondary,
                     fontSize = 13.sp,
                 )
             }
@@ -205,12 +207,12 @@ private fun ModelInfoCard(
                 Icon(
                     imageVector = Icons.Outlined.Bolt,
                     contentDescription = null,
-                    tint = DictusColors.TextSecondary,
+                    tint = LocalDictusColors.current.textSecondary,
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
                     text = "Rapide",
-                    color = DictusColors.TextSecondary,
+                    color = LocalDictusColors.current.textSecondary,
                     fontSize = 13.sp,
                 )
             }
@@ -227,7 +229,7 @@ private fun ModelInfoCard(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(DictusColors.Background),
+                        .background(MaterialTheme.colorScheme.background),
                 ) {
                     Box(
                         modifier = Modifier

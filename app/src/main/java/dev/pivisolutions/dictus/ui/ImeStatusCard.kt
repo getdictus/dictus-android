@@ -19,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 
 /**
  * Card showing the current IME (Input Method Editor) status.
@@ -45,7 +47,7 @@ fun ImeStatusCard(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = DictusColors.Surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -106,7 +108,7 @@ private fun StatusRow(
         )
         Text(
             text = text,
-            color = DictusColors.KeyText,
+            color = LocalDictusColors.current.keyText,
         )
     }
 }

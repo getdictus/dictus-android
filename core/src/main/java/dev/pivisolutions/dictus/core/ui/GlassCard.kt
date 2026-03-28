@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.theme.DictusColors
 
 /**
@@ -33,7 +34,7 @@ fun GlassCard(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(DictusColors.Surface)
+            .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, DictusColors.GlassBorder, RoundedCornerShape(16.dp))
             .padding(20.dp),
         content = content,

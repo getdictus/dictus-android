@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 
@@ -60,7 +62,7 @@ fun TranscribingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(46.dp)
-                .background(DictusColors.Background),
+                .background(MaterialTheme.colorScheme.background),
         )
 
         // Center (218.dp) — animated waveform bars + label
@@ -68,7 +70,7 @@ fun TranscribingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(218.dp)
-                .background(DictusColors.Background),
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -88,7 +90,7 @@ fun TranscribingScreen(
             // "Transcription..." label
             Text(
                 text = "Transcription...",
-                color = DictusColors.KeyText.copy(alpha = 0.6f),
+                color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 16.dp),
             )
@@ -99,7 +101,7 @@ fun TranscribingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(46.dp)
-                .background(DictusColors.Background),
+                .background(MaterialTheme.colorScheme.background),
         )
     }
 }

@@ -21,6 +21,8 @@ import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import androidx.compose.ui.text.font.FontWeight
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 
 /**
@@ -64,6 +66,18 @@ fun OnboardingMicPermissionScreen(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
         onPermissionResult(granted)
+        if (granted) {
+            // Auto-advance to next step after granting — avoids requiring a second tap
+            // and works around a potential pointerInput stale state after the system dialog.
+            onNext()
+        }
+    }
+
+    // Also auto-advance if permission was already granted (e.g. detected by LaunchedEffect above)
+    LaunchedEffect(micGranted) {
+        if (micGranted) {
+            onNext()
+        }
     }
 
     val ctaText = if (micGranted) "Continuer" else "Autoriser le micro"
@@ -92,7 +106,7 @@ fun OnboardingMicPermissionScreen(
 
         Text(
             text = "Microphone",
-            color = DictusColors.TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = (-0.5).sp,
@@ -103,7 +117,7 @@ fun OnboardingMicPermissionScreen(
         Text(
             text = "Dictus a besoin du microphone pour transcrire votre voix. " +
                 "Vos enregistrements restent sur votre appareil.",
-            color = DictusColors.TextSecondary,
+            color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
             lineHeight = (15 * 1.5).sp,
             textAlign = TextAlign.Center,

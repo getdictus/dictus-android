@@ -41,6 +41,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.model.ModelCatalog
 import kotlinx.coroutines.flow.map
@@ -73,7 +75,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DictusColors.Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -98,7 +100,7 @@ fun HomeScreen(
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Mod\u00e8le actif",
-                color = DictusColors.TextSecondary,
+                color = LocalDictusColors.current.textSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
             )
@@ -111,7 +113,7 @@ fun HomeScreen(
                 Column {
                     Text(
                         text = activeModel?.displayName ?: activeModelKey,
-                        color = DictusColors.TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -119,7 +121,7 @@ fun HomeScreen(
                         val sizeMb = activeModel.expectedSizeBytes / 1_000_000
                         Text(
                             text = "~$sizeMb Mo",
-                            color = DictusColors.TextSecondary,
+                            color = LocalDictusColors.current.textSecondary,
                             fontSize = 13.sp,
                         )
                     }
@@ -153,14 +155,14 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = "Derni\u00e8re transcription",
-                        color = DictusColors.TextSecondary,
+                        color = LocalDictusColors.current.textSecondary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                     )
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
                         contentDescription = "Copier",
-                        tint = DictusColors.TextSecondary,
+                        tint = LocalDictusColors.current.textSecondary,
                         modifier = Modifier
                             .size(20.dp)
                             .clickable {
@@ -176,7 +178,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = lastTranscription ?: "",
-                    color = DictusColors.TextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 16.sp,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
