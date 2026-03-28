@@ -1,6 +1,8 @@
 package dev.pivisolutions.dictus.core.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -41,6 +43,9 @@ fun WaveformBars(
     processingPhase: Double = 0.0,
 ) {
     val paddedLevels = padEnergy(energyLevels)
+    // Outer bar base color: white in dark theme, gray in light theme (matches iOS)
+    val isDark = MaterialTheme.colorScheme.background == DictusColors.Background
+    val outerBarBase = if (isDark) Color.White else Color(0xFF8E8E93)
 
     Canvas(modifier = modifier) {
         val barCount = WaveformDriver.BAR_COUNT
@@ -63,7 +68,7 @@ fun WaveformBars(
             // This maps energy 0..1 to minBarHeight..maxBarHeight linearly.
             val barHeight = maxOf(minBarHeight + energy * (maxBarHeight - minBarHeight), minBarHeight)
             val x = index * (barWidth + gapPx)
-            val color = barColor(index, barCount)
+            val color = barColor(index, barCount, outerBarBase)
 
             drawRoundRect(
                 color = color,
@@ -101,7 +106,11 @@ internal fun padEnergy(levels: List<Float>): List<Float> {
  * a continuous distance metric which scales correctly if bar count changes.
  * This also produces smoother opacity gradients at the transition boundary.
  */
-internal fun barColor(index: Int, barCount: Int): Color {
+/**
+ * @param outerBase Base color for outer bars: White in dark theme, gray in light theme.
+ *   Matches iOS where outer bars are gray (#8E8E93) on light backgrounds.
+ */
+internal fun barColor(index: Int, barCount: Int, outerBase: Color = Color.White): Color {
     val center = (barCount - 1) / 2f
     val distanceFromCenter = abs(index - center) / center
 
@@ -110,8 +119,8 @@ internal fun barColor(index: Int, barCount: Int): Color {
         return DictusColors.Accent
     }
 
-    // Outer 60%: white with opacity decreasing toward edges
+    // Outer 60%: outerBase with opacity decreasing toward edges
     // Matches iOS: Double(1.0 - distanceFromCenter) * 0.9 + 0.15
     val opacity = (1.0f - distanceFromCenter) * 0.9f + 0.15f
-    return Color.White.copy(alpha = opacity)
+    return outerBase.copy(alpha = opacity)
 }

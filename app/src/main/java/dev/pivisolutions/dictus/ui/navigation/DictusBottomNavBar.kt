@@ -100,9 +100,11 @@ private fun NavTab(
     isActive: Boolean,
     onClick: () -> Unit,
 ) {
-    // Active tab uses AccentHighlight tint; unselected uses muted white for contrast
-    val iconTint = if (isActive) DictusColors.AccentHighlight else Color.White.copy(alpha = 0.7f)
-    val labelColor = if (isActive) DictusColors.AccentHighlight else Color.White.copy(alpha = 0.7f)
+    // Active tab uses AccentHighlight tint; unselected uses theme-aware muted color
+    // In dark theme: white at 70% opacity. In light theme: dark gray (matches iOS).
+    val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+    val iconTint = if (isActive) DictusColors.AccentHighlight else unselectedColor
+    val labelColor = if (isActive) DictusColors.AccentHighlight else unselectedColor
 
     // Filled pill background behind active tab for iOS visual parity and improved visibility
     Box(
