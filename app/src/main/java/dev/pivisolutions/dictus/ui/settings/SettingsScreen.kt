@@ -75,6 +75,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToLicences: () -> Unit = {},
     onNavigateToDebugLogs: () -> Unit = {},
+    onNavigateToSoundSettings: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
@@ -108,6 +109,11 @@ fun SettingsScreen(
                     else -> "Automatique"
                 },
                 onClick = { showLanguagePicker = true },
+            )
+            SettingDivider()
+            SettingNavRow(
+                label = "Sons",
+                onClick = onNavigateToSoundSettings,
             )
         }
 

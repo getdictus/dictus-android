@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.core.preferences
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 /**
@@ -24,9 +25,13 @@ object PreferenceKeys {
     // --- Onboarding (Phase 4) ---
     val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
 
-    // --- Audio feedback settings (Phase 4) ---
+    // --- Audio feedback settings (Phase 4 + Phase 5) ---
     val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
     val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
+    val SOUND_VOLUME = floatPreferencesKey("sound_volume")
+    val RECORD_START_SOUND = stringPreferencesKey("record_start_sound")
+    val RECORD_STOP_SOUND = stringPreferencesKey("record_stop_sound")
+    val RECORD_CANCEL_SOUND = stringPreferencesKey("record_cancel_sound")
 
     // --- Appearance settings (Phase 4) ---
     val THEME = stringPreferencesKey("theme")

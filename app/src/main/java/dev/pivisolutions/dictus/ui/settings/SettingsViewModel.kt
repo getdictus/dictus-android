@@ -112,6 +112,46 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /** Sound volume (0.05 to 1.0). */
+    val soundVolume: StateFlow<Float> = dataStore.data
+        .map { it[PreferenceKeys.SOUND_VOLUME] ?: 0.5f }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0.5f)
+
+    /** Persist the sound volume to DataStore. */
+    fun setSoundVolume(volume: Float) {
+        viewModelScope.launch {
+            dataStore.edit { it[PreferenceKeys.SOUND_VOLUME] = volume.coerceIn(0.05f, 1.0f) }
+        }
+    }
+
+    /** Name of the WAV file used for recording start sound. */
+    val recordStartSound: StateFlow<String> = dataStore.data
+        .map { it[PreferenceKeys.RECORD_START_SOUND] ?: "electronic_01f" }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "electronic_01f")
+
+    /** Name of the WAV file used for recording stop sound. */
+    val recordStopSound: StateFlow<String> = dataStore.data
+        .map { it[PreferenceKeys.RECORD_STOP_SOUND] ?: "electronic_02b" }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "electronic_02b")
+
+    /** Name of the WAV file used for recording cancel sound. */
+    val recordCancelSound: StateFlow<String> = dataStore.data
+        .map { it[PreferenceKeys.RECORD_CANCEL_SOUND] ?: "electronic_03c" }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "electronic_03c")
+
+    /** Persist a sound preference by type ("start", "stop", or "cancel"). */
+    fun setSoundForType(soundType: String, soundName: String) {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                when (soundType) {
+                    "start" -> prefs[PreferenceKeys.RECORD_START_SOUND] = soundName
+                    "stop" -> prefs[PreferenceKeys.RECORD_STOP_SOUND] = soundName
+                    "cancel" -> prefs[PreferenceKeys.RECORD_CANCEL_SOUND] = soundName
+                }
+            }
+        }
+    }
+
     /** Persist the selected keyboard layout key to DataStore. */
     fun setKeyboardLayout(layout: String) {
         viewModelScope.launch {
