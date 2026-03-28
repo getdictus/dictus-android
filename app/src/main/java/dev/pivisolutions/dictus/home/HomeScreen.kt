@@ -232,6 +232,10 @@ fun HomeScreen(
 private fun DictusWaveformLogo(
     modifier: Modifier = Modifier,
 ) {
+    // Outer bar base color: white in dark theme, gray in light theme (matches iOS & WaveformBars)
+    val isDark = MaterialTheme.colorScheme.background == DictusColors.Background
+    val outerBarBase = if (isDark) Color.White else Color(0xFF8E8E93)
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -243,7 +247,7 @@ private fun DictusWaveformLogo(
                 .width(12.dp)
                 .height(32.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(Color.White.copy(alpha = 0.45f)),
+                .background(outerBarBase.copy(alpha = 0.45f)),
         )
         // Bar 2 — tall center (accent gradient)
         Box(
@@ -266,7 +270,7 @@ private fun DictusWaveformLogo(
                 .width(12.dp)
                 .height(44.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(Color.White.copy(alpha = 0.65f)),
+                .background(outerBarBase.copy(alpha = 0.65f)),
         )
     }
 }
