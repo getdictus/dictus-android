@@ -15,6 +15,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
@@ -326,33 +327,42 @@ class DictusImeService : LifecycleInputMethodService() {
                 // Collect the smoothed display levels for WaveformBars.
                 val smoothedEnergy by waveformDriver.displayLevels.collectAsState()
 
-                RecordingScreen(
-                    elapsedMs = recording.elapsedMs,
-                    energy = smoothedEnergy,
-                    onCancel = {
-                        dictationController?.cancelRecording()
-                        Timber.d("Recording cancelled")
-                    },
-                    onConfirm = {
-                        val controller = dictationController
-                        if (controller != null) {
-                            bindingScope.launch {
-                                val text = controller.confirmAndTranscribe()
-                                if (text != null) {
-                                    commitText(text)
-                                    Timber.d("Transcribed text inserted: '%s'", text)
-                                } else {
-                                    Timber.w("Transcription returned null (failed or empty)")
+                // Wrap in DictusTheme so MaterialTheme.colorScheme.background
+                // resolves to the Dictus brand colors instead of Material 3 defaults
+                // (which have a pinkish/rose tint).
+                DictusTheme(themeMode = themeMode) {
+                    RecordingScreen(
+                        elapsedMs = recording.elapsedMs,
+                        energy = smoothedEnergy,
+                        onCancel = {
+                            dictationController?.cancelRecording()
+                            Timber.d("Recording cancelled")
+                        },
+                        onConfirm = {
+                            val controller = dictationController
+                            if (controller != null) {
+                                bindingScope.launch {
+                                    val text = controller.confirmAndTranscribe()
+                                    if (text != null) {
+                                        commitText(text)
+                                        Timber.d("Transcribed text inserted: '%s'", text)
+                                    } else {
+                                        Timber.w("Transcription returned null (failed or empty)")
+                                    }
                                 }
                             }
-                        }
-                    },
-                    onSwitchKeyboard = switchKeyboard,
-                    onMicTap = { handleMicTap() },
-                )
+                        },
+                        onSwitchKeyboard = switchKeyboard,
+                        onMicTap = { handleMicTap() },
+                    )
+                }
             }
             is DictationState.Transcribing -> {
-                TranscribingScreen()
+                // Wrap in DictusTheme so MaterialTheme.colorScheme.background
+                // resolves to the Dictus brand colors instead of Material 3 defaults.
+                DictusTheme(themeMode = themeMode) {
+                    TranscribingScreen()
+                }
             }
         }
     }
