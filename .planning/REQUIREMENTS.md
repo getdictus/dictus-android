@@ -23,7 +23,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DICT-03**: Transcription runs on-device via whisper.cpp with GGML models
 - [x] **DICT-04**: Transcribed text is inserted at cursor position in the active text field
 - [x] **DICT-05**: User sees a real-time waveform animation during recording
-- [ ] **DICT-06**: User hears a sound when recording starts and stops (configurable)
+- [x] **DICT-06**: User hears a sound when recording starts and stops (configurable)
 - [ ] **DICT-07**: User feels haptic feedback on key press and mic button (configurable)
 - [x] **DICT-08**: Recording runs in a foreground Service with visible notification
 
@@ -91,7 +91,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DICT-03 | Phase 3 | Complete |
 | DICT-04 | Phase 3 | Complete |
 | DICT-05 | Phase 5 | Complete |
-| DICT-06 | Phase 5 | Pending |
+| DICT-06 | Phase 5 | Complete |
 | DICT-07 | Phase 2 | Pending |
 | DICT-08 | Phase 2 | Complete |
 | APP-01 | Phase 4 | Complete |
