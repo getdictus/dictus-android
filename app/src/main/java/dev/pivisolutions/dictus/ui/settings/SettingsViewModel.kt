@@ -119,6 +119,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /** Default keyboard opening mode: "abc" (letters) or "123" (numbers). */
+    val keyboardMode: StateFlow<String> = dataStore.data
+        .map { it[PreferenceKeys.KEYBOARD_MODE] ?: "abc" }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "abc")
+
+    /** Persist the selected keyboard mode to DataStore. */
+    fun setKeyboardMode(mode: String) {
+        viewModelScope.launch {
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_MODE] = mode }
+        }
+    }
+
     /** Currently selected theme key ("dark"). Phase 6 adds "system" for Material You. */
     val theme: StateFlow<String> = dataStore.data
         .map { it[PreferenceKeys.THEME] ?: "dark" }

@@ -24,6 +24,7 @@ fun KeyRow(
     isCapsLock: Boolean = false,
     onKeyPress: (KeyDefinition) -> Unit,
     onAccentSelected: (String) -> Unit,
+    hapticsEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -53,6 +54,7 @@ fun KeyRow(
                 onPress = { onKeyPress(key) },
                 accentChars = accentChars,
                 onAccentSelected = onAccentSelected,
+                hapticsEnabled = hapticsEnabled,
                 modifier = Modifier.weight(key.widthMultiplier),
             )
         }

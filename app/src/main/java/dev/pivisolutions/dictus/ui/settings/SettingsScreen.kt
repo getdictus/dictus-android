@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -54,11 +55,13 @@ import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.core.theme.DictusColors
 
 /**
- * Full settings screen with 3 sections: TRANSCRIPTION, CLAVIER, A PROPOS.
+ * Full settings screen with 4 sections: TRANSCRIPTION, CLAVIER, APPARENCE, A PROPOS.
  *
  * Uses [SettingsViewModel] (Hilt-injected) for all DataStore reads and writes.
- * Sections use ModalBottomSheet pickers for language, model, and keyboard layout,
- * and custom toggles for haptics and sound.
+ * Each section's rows are grouped inside a [SettingsCard] with rounded corners and
+ * Surface background, matching the iOS design's grouped settings style.
+ *
+ * Pickers use ModalBottomSheet. Toggles use [DictusToggle].
  *
  * WHY hiltViewModel() here (not parameter injection): The ViewModel is scoped to
  * this composable's lifecycle. Passing it as a parameter would require the caller
@@ -69,11 +72,13 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToLicences: () -> Unit = {},
+    onNavigateToDebugLogs: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val soundEnabled by viewModel.soundEnabled.collectAsState()
     val keyboardLayout by viewModel.keyboardLayout.collectAsState()
+    val keyboardMode by viewModel.keyboardMode.collectAsState()
     val theme by viewModel.theme.collectAsState()
 
     val context = LocalContext.current
@@ -81,6 +86,7 @@ fun SettingsScreen(
     // Bottom sheet visibility state
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showKeyboardPicker by remember { mutableStateOf(false) }
+    var showKeyboardModePicker by remember { mutableStateOf(false) }
     var showThemePicker by remember { mutableStateOf(false) }
 
     Column(
@@ -91,75 +97,93 @@ fun SettingsScreen(
     ) {
         // ---------- SECTION: TRANSCRIPTION ----------
         SectionHeader(text = "TRANSCRIPTION")
-
-        SettingPickerRow(
-            label = "Langue",
-            value = when (language) {
-                "fr" -> "Fran\u00e7ais"
-                "en" -> "English"
-                else -> "Automatique"
-            },
-            onClick = { showLanguagePicker = true },
-        )
+        SettingsCard {
+            SettingPickerRow(
+                label = "Langue",
+                value = when (language) {
+                    "fr" -> "Fran\u00e7ais"
+                    "en" -> "English"
+                    else -> "Automatique"
+                },
+                onClick = { showLanguagePicker = true },
+            )
+        }
 
         // ---------- SECTION: CLAVIER ----------
         SectionHeader(text = "CLAVIER")
-
-        SettingPickerRow(
-            label = "Disposition du clavier",
-            value = keyboardLayout.uppercase(),
-            onClick = { showKeyboardPicker = true },
-        )
-
-        SettingDivider()
-
-        SettingToggleRow(
-            label = "Retour haptique",
-            checked = hapticsEnabled,
-            onToggle = { viewModel.toggleHaptics() },
-        )
-
-        SettingDivider()
-
-        SettingToggleRow(
-            label = "Son de dict\u00e9e",
-            checked = soundEnabled,
-            onToggle = { viewModel.toggleSound() },
-        )
+        SettingsCard {
+            SettingPickerRow(
+                label = "Disposition du clavier",
+                value = keyboardLayout.uppercase(),
+                onClick = { showKeyboardPicker = true },
+            )
+            SettingDivider()
+            SettingPickerRow(
+                label = "Mode par d\u00e9faut",
+                value = when (keyboardMode) {
+                    "123" -> "123"
+                    else -> "ABC"
+                },
+                onClick = { showKeyboardModePicker = true },
+            )
+            SettingDivider()
+            SettingToggleRow(
+                label = "Retour haptique",
+                checked = hapticsEnabled,
+                onToggle = { viewModel.toggleHaptics() },
+            )
+            SettingDivider()
+            SettingToggleRow(
+                label = "Son de dict\u00e9e",
+                checked = soundEnabled,
+                onToggle = { viewModel.toggleSound() },
+            )
+        }
 
         // ---------- SECTION: APPARENCE ----------
         SectionHeader(text = "APPARENCE")
-
-        SettingPickerRow(
-            label = "Th\u00e8me",
-            value = when (theme) {
-                "dark" -> "Sombre"
-                "light" -> "Clair"
-                "auto" -> "Automatique"
-                else -> "Sombre"
-            },
-            onClick = { showThemePicker = true },
-        )
+        SettingsCard {
+            SettingPickerRow(
+                label = "Th\u00e8me",
+                value = when (theme) {
+                    "dark" -> "Sombre"
+                    "light" -> "Clair"
+                    "auto" -> "Automatique"
+                    else -> "Sombre"
+                },
+                onClick = { showThemePicker = true },
+            )
+        }
 
         // ---------- SECTION: A PROPOS ----------
         SectionHeader(text = "A PROPOS")
-
-        SettingInfoRow(
-            label = "Version",
-            value = "Dictus ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
-        )
-
-        SettingDivider()
-
-        SettingActionRow(
-            label = "Exporter les logs de d\u00e9bogage",
-            onClick = {
-                val logFile = TimberSetup.getLogFile()
-                if (logFile != null) {
-                    val uri = LogExporter.exportLogs(context, logFile)
-                    if (uri != null) {
-                        val shareIntent = LogExporter.createShareIntent(uri)
-                        context.startActivity(Intent.createChooser(shareIntent, "Exporter les logs"))
+        SettingsCard {
+            SettingInfoRow(
+                label = "Version",
+                value = "Dictus ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+            )
+            SettingDivider()
+            SettingNavRow(
+                label = "Debug Logs",
+                onClick = onNavigateToDebugLogs,
+            )
+            SettingDivider()
+            SettingActionRow(
+                label = "Exporter les logs de d\u00e9bogage",
+                onClick = {
+                    val logFile = TimberSetup.getLogFile()
+                    if (logFile != null) {
+                        val uri = LogExporter.exportLogs(context, logFile)
+                        if (uri != null) {
+                            val shareIntent = LogExporter.createShareIntent(uri)
+                            context.startActivity(Intent.createChooser(shareIntent, "Exporter les logs"))
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Impossible d'exporter les logs.",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
                     } else {
                         Toast.makeText(
                             context,
@@ -167,38 +191,26 @@ fun SettingsScreen(
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
-                } else {
-                    Toast.makeText(
-                        context,
-                        "Impossible d'exporter les logs.",
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            },
-        )
-
-        SettingDivider()
-
-        SettingNavRow(
-            label = "Licences",
-            onClick = onNavigateToLicences,
-        )
-
-        SettingDivider()
-
-        SettingLinkRow(
-            label = "GitHub",
-            url = "https://github.com/Pivii/dictus",
-            context = context,
-        )
-
-        SettingDivider()
-
-        SettingLinkRow(
-            label = "Mentions l\u00e9gales",
-            url = "https://pivisolutions.dev/legal",
-            context = context,
-        )
+                },
+            )
+            SettingDivider()
+            SettingNavRow(
+                label = "Licences",
+                onClick = onNavigateToLicences,
+            )
+            SettingDivider()
+            SettingLinkRow(
+                label = "GitHub",
+                url = "https://github.com/Pivii/dictus",
+                context = context,
+            )
+            SettingDivider()
+            SettingLinkRow(
+                label = "Mentions l\u00e9gales",
+                url = "https://pivisolutions.dev/legal",
+                context = context,
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -232,6 +244,19 @@ fun SettingsScreen(
         )
     }
 
+    if (showKeyboardModePicker) {
+        PickerBottomSheet(
+            title = "Mode par d\u00e9faut du clavier",
+            options = listOf(
+                "abc" to "ABC",
+                "123" to "123",
+            ),
+            selected = keyboardMode,
+            onSelect = { viewModel.setKeyboardMode(it) },
+            onDismiss = { showKeyboardModePicker = false },
+        )
+    }
+
     if (showThemePicker) {
         PickerBottomSheet(
             title = "Th\u00e8me de l'application",
@@ -262,6 +287,31 @@ private fun SectionHeader(text: String) {
         fontSize = 14.sp,
         fontWeight = FontWeight.Medium,
         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Settings card container
+// ---------------------------------------------------------------------------
+
+/**
+ * Card-style container for a group of settings rows.
+ *
+ * Provides rounded corners and a Surface-coloured background that visually
+ * separates each section, matching the iOS grouped settings appearance.
+ *
+ * WHY clip before background: The clip modifier must come before background so
+ * that the background fill respects the rounded shape boundary.
+ */
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(DictusColors.Surface),
+        content = content,
     )
 }
 

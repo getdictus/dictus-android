@@ -44,9 +44,12 @@ fun KeyboardScreen(
     suggestions: List<String> = emptyList(),
     onSuggestionSelected: (String) -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
+    initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
+    hapticsEnabled: Boolean = true,
 ) {
-    // Keyboard state
-    var currentLayer by remember { mutableStateOf(KeyboardLayer.LETTERS) }
+    // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
+    // remember(initialLayer) ensures recomposition resets the layer if the preference changes.
+    var currentLayer by remember(initialLayer) { mutableStateOf(initialLayer) }
     var isShifted by remember { mutableStateOf(false) }
     var isCapsLock by remember { mutableStateOf(false) }
     var currentLayout by remember { mutableStateOf("azerty") }
@@ -87,6 +90,7 @@ fun KeyboardScreen(
                     isShifted = isShifted,
                     isCapsLock = isCapsLock,
                     layout = currentLayout,
+                    hapticsEnabled = hapticsEnabled,
                     onKeyPress = { key ->
                         handleKeyPress(
                             key = key,

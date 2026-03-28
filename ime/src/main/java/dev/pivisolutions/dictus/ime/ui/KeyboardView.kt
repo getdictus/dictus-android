@@ -28,6 +28,7 @@ fun KeyboardView(
     layout: String,
     onKeyPress: (KeyDefinition) -> Unit,
     onAccentSelected: (String) -> Unit,
+    hapticsEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val rows = when (layer) {
@@ -49,6 +50,7 @@ fun KeyboardView(
                 isCapsLock = isCapsLock,
                 onKeyPress = onKeyPress,
                 onAccentSelected = onAccentSelected,
+                hapticsEnabled = hapticsEnabled,
             )
         }
     }

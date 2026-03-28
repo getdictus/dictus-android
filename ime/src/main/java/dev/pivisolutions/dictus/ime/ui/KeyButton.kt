@@ -61,6 +61,7 @@ fun KeyButton(
     onPress: () -> Unit,
     accentChars: List<String>? = null,
     onAccentSelected: ((String) -> Unit)? = null,
+    hapticsEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -140,13 +141,13 @@ fun KeyButton(
                     }
 
                     isPressed = true
-                    HapticHelper.performKeyHaptic(view)
+                    if (hapticsEnabled) HapticHelper.performKeyHaptic(view)
                     currentOnPress.value()
 
                     val repeatJob = launch {
                         delay(400L)
                         while (isActive) {
-                            HapticHelper.performKeyHaptic(view)
+                            if (hapticsEnabled) HapticHelper.performKeyHaptic(view)
                             currentOnPress.value()
                             delay(50L)
                         }
@@ -184,7 +185,7 @@ fun KeyButton(
                         isPressed = true
                         showAccentPopup = false
                         highlightedAccentIndex = null
-                        HapticHelper.performKeyHaptic(view)
+                        if (hapticsEnabled) HapticHelper.performKeyHaptic(view)
 
                         val longPressJob = launch {
                             if (supportsAccentPopup) {
