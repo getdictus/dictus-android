@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-03-28T07:04:02.652Z"
+stopped_at: "Completed Phase 05 Plan 04: Text suggestion bar"
+last_updated: "2026-03-28T07:04:45.315Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 25
-  completed_plans: 21
+  completed_plans: 22
   percent: 100
 ---
 
@@ -71,6 +71,7 @@ Progress: [██████████] 100%
 | Phase 04-model-management-onboarding P07 | 3min | 3 tasks | 5 files |
 | Phase 04 P08 | 3min | 3 tasks | 5 files |
 | Phase 05-polish-differentiators P03 | 3min | 2 tasks | 5 files |
+| Phase 05 P04 | 15min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,8 @@ Recent decisions affecting current work:
 - [Phase 04]: Bottom nav hidden via conditional if in Scaffold bottomBar when currentRoute is recording
 - [Phase 05-03]: State hoisted to DictusImeService for emoji picker so onKeyDown can intercept KEYCODE_BACK (BackHandler silently fails in IME context)
 - [Phase 05-03]: EmojiPickerScreen height fixed at 310.dp to match keyboard total height and prevent IME window resize
+- [Phase 05]: StubSuggestionEngine as Phase 5 MVP: SuggestionEngine interface is drop-in replacement contract for AOSP LatinIME JNI — zero UI/wiring changes needed to swap
+- [Phase 05]: SuggestionBar only renders when suggestions non-empty — keyboard height is unchanged when no suggestions available
 
 ### Roadmap Evolution
 
@@ -139,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T07:04:02.649Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-03-28T07:04:45.312Z
+Stopped at: Completed Phase 05 Plan 04: Text suggestion bar
 Resume file: None
