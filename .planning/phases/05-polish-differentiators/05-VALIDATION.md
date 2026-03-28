@@ -2,8 +2,8 @@
 phase: 5
 slug: polish-differentiators
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-28
 ---
 
@@ -38,10 +38,16 @@ created: 2026-03-28
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 05-01-01 | 01 | 1 | DICT-05 | manual | visual waveform inspection | N/A | ⬜ pending |
-| 05-01-02 | 01 | 1 | DICT-06 | manual | audio playback check | N/A | ⬜ pending |
-| 05-02-01 | 02 | 1 | KBD-04 | manual | suggestion bar tap test | N/A | ⬜ pending |
-| 05-02-02 | 02 | 1 | KBD-05 | manual | emoji picker UI check | N/A | ⬜ pending |
+| 05-01-01 | 01 | 1 | DICT-05, DICT-06 | unit | `./gradlew :core:test --tests "*.WaveformDriverTest" && ./gradlew :app:test --tests "*.DictationSoundPlayerTest"` | ❌ W0 | ⬜ pending |
+| 05-01-02 | 01 | 1 | DICT-05, DICT-06 | unit | `./gradlew :core:test :ime:test :app:test` | ❌ W0 | ⬜ pending |
+| 05-02-01 | 02 | 1 | DICT-05 | unit+build | `./gradlew :core:test --tests "*.DictusThemeTest" && ./gradlew assembleDebug` | ❌ W0 | ⬜ pending |
+| 05-02-02 | 02 | 1 | DICT-05 | build+unit | `./gradlew assembleDebug && ./gradlew :core:test :app:test :ime:test` | ❌ W0 | ⬜ pending |
+| 05-03-01 | 03 | 1 | KBD-05 | build | `./gradlew :ime:compileDebugKotlin` | ❌ W0 | ⬜ pending |
+| 05-03-02 | 03 | 1 | KBD-05 | unit+build | `./gradlew :ime:test && ./gradlew assembleDebug` | ❌ W0 | ⬜ pending |
+| 05-04-01 | 04 | 1 | KBD-04 | unit | `./gradlew :ime:test --tests "*.SuggestionBarTest"` | ❌ W0 | ⬜ pending |
+| 05-04-02 | 04 | 1 | KBD-04 | unit+build | `./gradlew :ime:test && ./gradlew assembleDebug` | ❌ W0 | ⬜ pending |
+| 05-05-01 | 05 | 2 | DICT-06 | unit+build | `./gradlew :core:test :app:test :ime:test && ./gradlew assembleDebug` | ❌ W0 | ⬜ pending |
+| 05-05-02 | 05 | 2 | DICT-06 | build+unit | `./gradlew assembleDebug && ./gradlew :app:test` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
