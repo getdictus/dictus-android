@@ -38,6 +38,7 @@ import dev.pivisolutions.dictus.onboarding.OnboardingTestRecordingScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingViewModel
 import dev.pivisolutions.dictus.onboarding.OnboardingWelcomeScreen
 import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
+import dev.pivisolutions.dictus.ui.settings.DebugLogsScreen
 import dev.pivisolutions.dictus.ui.settings.LicencesScreen
 import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import kotlinx.coroutines.flow.map
@@ -227,7 +228,8 @@ private fun MainTabsScreen(
     // WHY conditional (not AnimatedVisibility): simple show/hide is sufficient here; there
     // is no animation spec for the nav bar in the design.
     val showBottomBar = currentRoute != AppDestination.Recording.route &&
-        currentRoute != AppDestination.Licences.route
+        currentRoute != AppDestination.Licences.route &&
+        currentRoute != AppDestination.DebugLogs.route
 
     Scaffold(
         containerColor = DictusColors.Background,
@@ -271,10 +273,18 @@ private fun MainTabsScreen(
                     onNavigateToLicences = {
                         navController.navigate(AppDestination.Licences.route)
                     },
+                    onNavigateToDebugLogs = {
+                        navController.navigate(AppDestination.DebugLogs.route)
+                    },
                 )
             }
             composable(AppDestination.Licences.route) {
                 LicencesScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(AppDestination.DebugLogs.route) {
+                DebugLogsScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

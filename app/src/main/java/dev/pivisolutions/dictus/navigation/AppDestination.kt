@@ -36,4 +36,7 @@ sealed class AppDestination(val route: String) {
 
     /** Licences screen — navigated from Settings > À propos > Licences. */
     data object Licences : AppDestination("licences")
+
+    /** Debug Logs viewer — navigated from Settings > À propos > Debug Logs. */
+    data object DebugLogs : AppDestination("debug_logs")
 }
