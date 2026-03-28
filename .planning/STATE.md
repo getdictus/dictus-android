@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-28T07:13:02.438Z"
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-03-28T07:22:26.762Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 25
-  completed_plans: 24
+  completed_plans: 25
   percent: 100
 ---
 
@@ -74,6 +74,7 @@ Progress: [██████████] 100%
 | Phase 05 P04 | 15min | 2 tasks | 5 files |
 | Phase 05-polish-differentiators P02 | 25min | 2 tasks | 10 files |
 | Phase 05-polish-differentiators P01 | 12min | 2 tasks | 33 files |
+| Phase 05-polish-differentiators P05 | 20min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,9 @@ Recent decisions affecting current work:
 - [Phase 05-polish-differentiators]: withInfiniteAnimationFrameNanos from compose.animation.core — withFrameNanos is internal in Compose 1.x
 - [Phase 05-polish-differentiators]: LaunchedEffect(Unit) for WaveformDriver.runLoop() — auto-cancels on composition exit, no manual stop() needed
 - [Phase 05-polish-differentiators]: SoundPool pre-loaded in DictationService.onCreate() for sub-10ms playback; SOUND_ENABLED observed reactively via dataStore.data.map{}.collect{}
+- [Phase 05-05]: remember(initialLayer) for currentLayer in KeyboardScreen — recomposition resets layer when KEYBOARD_MODE preference changes
+- [Phase 05-05]: hapticsEnabled propagated as parameter through KeyboardScreen->KeyboardView->KeyRow->KeyButton (not CompositionLocal) — consistent with existing param style
+- [Phase 05-05]: SettingsCard pattern: each settings section wrapped in clip(RoundedCornerShape(12.dp)) + background(Surface) Column for iOS visual parity
 
 ### Roadmap Evolution
 
@@ -149,6 +153,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T07:13:02.435Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-28T07:22:26.760Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None
