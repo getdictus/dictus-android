@@ -36,6 +36,7 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    implementation(libs.datastore.preferences)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

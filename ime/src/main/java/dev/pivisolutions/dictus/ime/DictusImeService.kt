@@ -11,8 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import dagger.hilt.android.EntryPointAccessors
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.suggestion.StubSuggestionEngine
 import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
@@ -23,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -231,6 +234,17 @@ class DictusImeService : LifecycleInputMethodService() {
         val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
         val suggestions by _suggestions.collectAsState()
 
+        // Read theme preference from DataStore and map to ThemeMode.
+        // The entryPoint provides DataStore access via Hilt SingletonComponent.
+        val themeKey by entryPoint.dataStore().data
+            .map { it[PreferenceKeys.THEME] ?: "dark" }
+            .collectAsState(initial = "dark")
+        val themeMode = when (themeKey) {
+            "light" -> ThemeMode.LIGHT
+            "auto" -> ThemeMode.AUTO
+            else -> ThemeMode.DARK
+        }
+
         val switchKeyboard = {
             val imm = getSystemService(INPUT_METHOD_SERVICE)
                 as android.view.inputmethod.InputMethodManager
@@ -260,6 +274,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         _suggestions.value = emptyList()
                         _currentWord.value = ""
                     },
+                    themeMode = themeMode,
                 )
             }
             is DictationState.Recording -> {

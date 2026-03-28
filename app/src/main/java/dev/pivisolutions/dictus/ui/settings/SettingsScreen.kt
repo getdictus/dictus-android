@@ -134,6 +134,8 @@ fun SettingsScreen(
             label = "Th\u00e8me",
             value = when (theme) {
                 "dark" -> "Sombre"
+                "light" -> "Clair"
+                "auto" -> "Automatique"
                 else -> "Sombre"
             },
             onClick = { showThemePicker = true },
@@ -235,6 +237,8 @@ fun SettingsScreen(
             title = "Th\u00e8me de l'application",
             options = listOf(
                 "dark" to "Sombre",
+                "light" to "Clair",
+                "auto" to "Automatique",
             ),
             selected = theme,
             onSelect = { viewModel.setTheme(it) },

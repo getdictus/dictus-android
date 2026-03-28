@@ -22,6 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.theme.DictusTheme
+import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.navigation.AppNavHost
 import dev.pivisolutions.dictus.service.DictationService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -92,21 +93,27 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DictusTheme {
+            // Read theme preference from DataStore and map to ThemeMode enum.
+            // collectAsState with initial="dark" ensures the theme is applied immediately
+            // on first composition without waiting for DataStore to emit.
+            val themeKey by dataStore.data
+                .map { it[PreferenceKeys.THEME] ?: "dark" }
+                .collectAsState(initial = "dark")
+            val themeMode = when (themeKey) {
+                "light" -> ThemeMode.LIGHT
+                "auto" -> ThemeMode.AUTO
+                else -> ThemeMode.DARK
+            }
+
+            DictusTheme(themeMode = themeMode) {
                 val controller by _controllerState.collectAsState()
 
-                // Defer DictationService binding until onboarding is complete.
-                // WHY deferred: Binding the service during onboarding increases memory pressure
-                // while the system is already managing the mic permission dialog process.
-                // Eager binding raises the likelihood of the app process being killed (LMKD
-                // targets foreground service processes under low-memory conditions). Deferring
-                // binding to after onboarding completion eliminates this risk.
-                val hasCompletedOnboarding by dataStore.data
-                    .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
-                    .collectAsState(initial = false)
-
-                LaunchedEffect(hasCompletedOnboarding) {
-                    if (hasCompletedOnboarding && !isBound) {
+                // Bind DictationService on launch. The service binding itself is lightweight
+                // (just a binder reference, no foreground notification). The service only becomes
+                // heavyweight when startRecording() triggers startForeground().
+                // Needed during onboarding step 6 (test recording) as well as after onboarding.
+                LaunchedEffect(Unit) {
+                    if (!isBound) {
                         bindDictationService()
                     }
                 }
@@ -159,11 +166,18 @@ class MainActivity : ComponentActivity() {
     private fun checkImeStatus() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imeEnabled = imm.enabledInputMethodList.any { it.packageName == packageName }
-        val currentIme = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.DEFAULT_INPUT_METHOD,
-        )
-        imeSelected = currentIme?.startsWith(packageName) == true
+        // DEFAULT_INPUT_METHOD may also be restricted on Android 15 (SDK 35).
+        // Wrap in try-catch to avoid crash; fall back to false if unreadable.
+        imeSelected = try {
+            val currentIme = Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.DEFAULT_INPUT_METHOD,
+            )
+            currentIme?.startsWith(packageName) == true
+        } catch (_: SecurityException) {
+            Timber.w("Cannot read DEFAULT_INPUT_METHOD on this SDK level")
+            false
+        }
         Timber.d("IME status: enabled=$imeEnabled, selected=$imeSelected")
     }
 

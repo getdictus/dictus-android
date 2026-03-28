@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusTheme
+import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
@@ -42,6 +43,7 @@ fun KeyboardScreen(
     onEmojiSelected: (String) -> Unit = {},
     suggestions: List<String> = emptyList(),
     onSuggestionSelected: (String) -> Unit = {},
+    themeMode: ThemeMode = ThemeMode.DARK,
 ) {
     // Keyboard state
     var currentLayer by remember { mutableStateOf(KeyboardLayer.LETTERS) }
@@ -52,7 +54,7 @@ fun KeyboardScreen(
     // Track last tap time for double-tap shift detection
     var lastShiftTapTime by remember { mutableStateOf(0L) }
 
-    DictusTheme {
+    DictusTheme(themeMode = themeMode) {
         if (isEmojiPickerOpen) {
             EmojiPickerScreen(
                 onEmojiSelected = { emoji ->
