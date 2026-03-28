@@ -261,39 +261,31 @@ fun ModelCard(
                     }
                 }
 
-                // Side-by-side layout: description on LEFT, precision/vitesse bars on RIGHT
-                // Matches iOS model card segmented style per CONTEXT.md locked decision
+                // Description below name (matches iOS vertical layout)
+                if (model.description.isNotBlank()) {
+                    Text(
+                        text = model.description,
+                        color = LocalDictusColors.current.textSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                    )
+                }
+
+                // Precision and Vitesse side by side on the same row (matches iOS)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // LEFT side: description text
-                    Column(modifier = Modifier.weight(1f)) {
-                        if (model.description.isNotBlank()) {
-                            Text(
-                                text = model.description,
-                                color = LocalDictusColors.current.textSecondary,
-                                fontSize = 13.sp,
-                                lineHeight = 18.sp,
-                            )
-                        }
-                    }
-                    // RIGHT side: compact precision and vitesse bars stacked vertically
-                    Column(
+                    SegmentedMetricBar(
+                        label = "Pr\u00e9cision",
+                        value = model.precision,
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        ModelMetricBar(
-                            label = "Precision",
-                            value = model.precision,
-                            color = DictusColors.Accent,
-                        )
-                        ModelMetricBar(
-                            label = "Vitesse",
-                            value = model.speed,
-                            color = DictusColors.AccentHighlight,
-                        )
-                    }
+                    )
+                    SegmentedMetricBar(
+                        label = "Vitesse",
+                        value = model.speed,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
 
                 // Size label
@@ -385,41 +377,49 @@ fun ModelCard(
 }
 
 /**
- * A labeled horizontal progress bar for displaying a model metric (Precision or Vitesse).
+ * iOS-style segmented metric bar with 5 sub-bars.
  *
- * @param label Short label shown to the left of the bar (e.g. "Precision").
- * @param value Progress value from 0.0 to 1.0.
- * @param color Fill color for the bar.
+ * Matches iOS BrandWaveform model card design: each metric shows a label
+ * above a row of 5 rounded segments. Filled segments use accent blue,
+ * empty segments use a muted background color.
+ *
+ * @param label Label shown above the segments (e.g. "Précision").
+ * @param value Progress value from 0.0 to 1.0 (mapped to 0–5 filled segments).
+ * @param modifier Modifier for the outer Column.
  */
 @Composable
-private fun ModelMetricBar(
+private fun SegmentedMetricBar(
     label: String,
     value: Float,
-    color: Color,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    val segmentCount = 5
+    // Map 0.0–1.0 to 0–5 filled segments (round to nearest)
+    val filledCount = (value.coerceIn(0f, 1f) * segmentCount).roundToInt()
+    val filledColor = DictusColors.Accent
+    val emptyColor = LocalDictusColors.current.borderSubtle.copy(alpha = 0.5f)
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
             text = label,
             color = LocalDictusColors.current.textSecondary,
-            fontSize = 13.sp,
+            fontSize = 12.sp,
         )
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(MaterialTheme.colorScheme.background),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(value.coerceIn(0f, 1f))
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(color),
-            )
+            for (i in 0 until segmentCount) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(if (i < filledCount) filledColor else emptyColor),
+                )
+            }
         }
     }
 }
