@@ -41,4 +41,14 @@ object DictusColors {
     val KeyBackground = Color(0xFF1E2538)
     val KeyText = Color.White
     val KeySpecialBackground = Color(0xFF2A3347)
+
+    // --- Light palette (matches iOS DictusColors.swift light mode tokens) ---
+    val LightBackground = Color(0xFFF2F2F7)       // iOS system background light
+    val LightSurface = Color(0xFFFFFFFF)           // iOS secondary background light
+    val LightOnBackground = Color(0xFF0A1628)      // Dark text on light background
+    val LightOnSurface = Color(0xFF1C1C1E)         // Dark text on light surface
+    val LightTextSecondary = Color(0xFF8E8E93)     // iOS secondary label light
+    val LightBorderSubtle = Color(0xFFD1D1D6)      // iOS separator light
+    val LightKeyBackground = Color(0xFFE8E8ED)     // Light key background
+    val LightKeySpecialBackground = Color(0xFFD4D4DA) // Light special key background
 }

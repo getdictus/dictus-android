@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -51,14 +50,20 @@ import kotlin.math.roundToInt
 /**
  * Reusable model card for ModelsScreen and the onboarding model download step.
  *
- * Displays model info (name, description, precision/speed bars) and adapts to the
- * download state:
+ * Displays model info (name, provider badge, description, precision/speed bars) and
+ * adapts to the download state:
  * - Not downloaded: shows "Télécharger" accent button
  * - Downloading: shows linear progress bar + percentage label
  * - Downloaded: swipe left to reveal red delete button (iOS-style)
  *
  * WHY swipe-to-delete: Matches iOS Dictus behavior — cards stay compact without a
  * visible delete button, and the swipe gesture is familiar to both iOS and Android users.
+ *
+ * WHY side-by-side description + bars layout: Matches iOS model card segmented style
+ * per CONTEXT.md locked decision. Description on left, precision/vitesse bars on right.
+ *
+ * WHY "WK" provider badge: Identifies the WhisperKit/whisper.cpp backend, matching
+ * iOS visual design for model provenance.
  *
  * @param model          ModelInfo descriptor from the catalog.
  * @param isDownloaded   True if the model file exists on disk with correct size.
@@ -202,19 +207,39 @@ fun ModelCard(
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Model header row: name + active chip
+                // Model header row: name + "WK" provider badge + active chip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = model.displayName,
-                            color = DictusColors.TextPrimary,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                        // Model name with inline "WK" provider badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = model.displayName,
+                                color = DictusColors.TextPrimary,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            // "WK" provider badge — identifies WhisperKit/whisper.cpp backend
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(DictusColors.Accent.copy(alpha = 0.2f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    text = "WK",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DictusColors.Accent,
+                                )
+                            }
+                        }
                         if (isActive) {
                             // "Actif" chip
                             Box(
@@ -234,28 +259,40 @@ fun ModelCard(
                     }
                 }
 
-                // Description text
-                if (model.description.isNotBlank()) {
-                    Text(
-                        text = model.description,
-                        color = DictusColors.TextSecondary,
-                        fontSize = 14.sp,
-                    )
+                // Side-by-side layout: description on LEFT, precision/vitesse bars on RIGHT
+                // Matches iOS model card segmented style per CONTEXT.md locked decision
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    // LEFT side: description text
+                    Column(modifier = Modifier.weight(1f)) {
+                        if (model.description.isNotBlank()) {
+                            Text(
+                                text = model.description,
+                                color = DictusColors.TextSecondary,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                            )
+                        }
+                    }
+                    // RIGHT side: compact precision and vitesse bars stacked vertically
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        ModelMetricBar(
+                            label = "Precision",
+                            value = model.precision,
+                            color = DictusColors.Accent,
+                        )
+                        ModelMetricBar(
+                            label = "Vitesse",
+                            value = model.speed,
+                            color = DictusColors.AccentHighlight,
+                        )
+                    }
                 }
-
-                // Precision bar
-                ModelMetricBar(
-                    label = "Precision",
-                    value = model.precision,
-                    color = DictusColors.Accent,
-                )
-
-                // Vitesse bar
-                ModelMetricBar(
-                    label = "Vitesse",
-                    value = model.speed,
-                    color = DictusColors.AccentHighlight,
-                )
 
                 // Size label
                 val sizeMb = model.expectedSizeBytes / 1_000_000
