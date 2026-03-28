@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -51,13 +52,47 @@ fun EmojiPickerScreen(
     isDarkTheme: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    // Slightly taller than normal keyboard (350dp) to show 3-4 rows of emojis
+    // plus the ABC/Delete toolbar at the bottom
+    val surfaceColor = MaterialTheme.colorScheme.surface
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(310.dp),
+            .height(350.dp),
     ) {
+        // Emoji picker grid — fills available space above the bottom toolbar
+        AndroidView(
+            factory = { context ->
+                // Force dark/light background on the EmojiPickerView itself
+                // ContextThemeWrapper controls the widget's internal theming
+                val themedContext = ContextThemeWrapper(
+                    context,
+                    if (isDarkTheme) {
+                        android.R.style.Theme_DeviceDefault
+                    } else {
+                        android.R.style.Theme_DeviceDefault_Light
+                    },
+                )
+                EmojiPickerView(themedContext).apply {
+                    emojiGridColumns = 8
+                    setOnEmojiPickedListener { emojiViewItem ->
+                        onEmojiSelected(emojiViewItem.emoji)
+                    }
+                    // Force the View's background to match our theme surface color
+                    setBackgroundColor(surfaceColor.toArgb())
+                }
+            },
+            update = { view ->
+                // Update background when theme changes
+                view.setBackgroundColor(surfaceColor.toArgb())
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        )
+
         // Bottom toolbar: ABC button (left) + Delete button (right)
-        // Placed ABOVE emoji grid so it appears between grid and system nav bar.
+        // Positioned at bottom, just above the system navigation bar (globe icon).
         // Matches iOS layout: ABC and backspace always accessible during emoji entry.
         Row(
             modifier = Modifier
@@ -101,29 +136,5 @@ fun EmojiPickerScreen(
                 )
             }
         }
-
-        // Emoji picker grid — fills remaining height above system nav bar
-        AndroidView(
-            factory = { context ->
-                // Wrap context with appropriate theme to match app theme, not system theme.
-                val themedContext = ContextThemeWrapper(
-                    context,
-                    if (isDarkTheme) {
-                        android.R.style.Theme_DeviceDefault
-                    } else {
-                        android.R.style.Theme_DeviceDefault_Light
-                    },
-                )
-                EmojiPickerView(themedContext).apply {
-                    emojiGridColumns = 8
-                    setOnEmojiPickedListener { emojiViewItem ->
-                        onEmojiSelected(emojiViewItem.emoji)
-                    }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-        )
     }
 }
