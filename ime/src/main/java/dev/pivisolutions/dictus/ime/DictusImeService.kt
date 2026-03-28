@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.IBinder
 import android.view.KeyEvent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import dagger.hilt.android.EntryPointAccessors
@@ -15,6 +16,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.ThemeMode
+import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.suggestion.StubSuggestionEngine
 import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
@@ -83,6 +85,10 @@ class DictusImeService : LifecycleInputMethodService() {
     private val suggestionEngine: SuggestionEngine = StubSuggestionEngine()
     private val _currentWord = MutableStateFlow("")
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
+
+    // Waveform animation driver: smooths raw microphone energy for organic bar movement.
+    // smoothingFactor=0.3 (fast rise) and decayFactor=0.85 (slow fall) match iOS BrandWaveformDriver.
+    private val waveformDriver = WaveformDriver()
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -279,9 +285,23 @@ class DictusImeService : LifecycleInputMethodService() {
             }
             is DictationState.Recording -> {
                 val recording = dictationState as DictationState.Recording
+
+                // Feed raw energy into the driver so it has up-to-date targets.
+                waveformDriver.update(recording.energy)
+
+                // Run the per-frame animation loop. LaunchedEffect(Unit) starts it when
+                // the Recording composable enters composition and cancels automatically
+                // when it leaves (i.e. when state transitions away from Recording).
+                LaunchedEffect(Unit) {
+                    waveformDriver.runLoop()
+                }
+
+                // Collect the smoothed display levels for WaveformBars.
+                val smoothedEnergy by waveformDriver.displayLevels.collectAsState()
+
                 RecordingScreen(
                     elapsedMs = recording.elapsedMs,
-                    energy = recording.energy,
+                    energy = smoothedEnergy,
                     onCancel = {
                         dictationController?.cancelRecording()
                         Timber.d("Recording cancelled")

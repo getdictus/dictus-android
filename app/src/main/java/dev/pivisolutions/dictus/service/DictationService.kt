@@ -18,6 +18,7 @@ import dagger.hilt.components.SingletonComponent
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dev.pivisolutions.dictus.R
+import dev.pivisolutions.dictus.audio.DictationSoundPlayer
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -115,6 +117,11 @@ class DictationService : Service(), DictationController {
     private var timerJob: Job? = null
     private var elapsedMs: Long = 0L
 
+    // Sound feedback for recording lifecycle events.
+    // Initialized in onCreate(); conditionally played based on SOUND_ENABLED preference.
+    private lateinit var soundPlayer: DictationSoundPlayer
+    private var soundEnabled: Boolean = false
+
     // State machine exposed to the IME via the binder.
     // MutableStateFlow is thread-safe; updates from any coroutine are fine.
     private val _state = MutableStateFlow<DictationState>(DictationState.Idle)
@@ -123,6 +130,20 @@ class DictationService : Service(), DictationController {
     override val state: StateFlow<DictationState> = _state.asStateFlow()
 
     override fun onBind(intent: Intent): IBinder = binder
+
+    override fun onCreate() {
+        super.onCreate()
+        soundPlayer = DictationSoundPlayer(applicationContext)
+        soundPlayer.loadSounds()
+
+        // Reactively observe the SOUND_ENABLED preference so changes take effect
+        // without a service restart. Runs on the service scope (Main dispatcher).
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.SOUND_ENABLED] ?: false }
+                .collect { soundEnabled = it }
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -178,6 +199,7 @@ class DictationService : Service(), DictationController {
         timerJob?.cancel()
         timerJob = null
         elapsedMs = 0L
+        if (soundEnabled) soundPlayer.playStop()
         _state.value = DictationState.Idle
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -192,6 +214,7 @@ class DictationService : Service(), DictationController {
      * Returns to idle state without producing any audio output.
      */
     override fun cancelRecording() {
+        if (soundEnabled) soundPlayer.playCancel()
         stopRecordingInternal(discard = true)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -223,6 +246,9 @@ class DictationService : Service(), DictationController {
             stopSelf()
             return null
         }
+
+        // Play stop cue when audio capture ends and transcription begins.
+        if (soundEnabled) soundPlayer.playStop()
 
         Timber.d("confirmAndTranscribe: %d samples captured, transitioning to Transcribing", samples.size)
         _state.value = DictationState.Transcribing
@@ -346,6 +372,9 @@ class DictationService : Service(), DictationController {
         }
 
         _state.value = DictationState.Recording(elapsedMs = 0L, energy = emptyList())
+
+        // Play start cue after transitioning to Recording state.
+        if (soundEnabled) soundPlayer.playStart()
     }
 
     /**
@@ -397,6 +426,7 @@ class DictationService : Service(), DictationController {
         serviceScope.launch {
             transcriptionEngine.release()
         }
+        if (::soundPlayer.isInitialized) soundPlayer.release()
         serviceScope.cancel()
         Timber.d("DictationService destroyed")
     }
