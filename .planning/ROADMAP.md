@@ -16,8 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Audio Recording + Service Architecture** - Foreground service with AudioRecord, IME-to-service binding via local Binder + StateFlow, mic button and haptic feedback
 - [ ] **Phase 3: Whisper Integration** - whisper.cpp native build via NDK/CMake, JNI bridge, end-to-end dictation pipeline (record -> transcribe -> insert)
 - [x] **Phase 4: Model Management + Onboarding** - Model download/deletion from HuggingFace, storage indicators, onboarding flow, settings screen, debug log export (completed 2026-03-26)
-- [ ] **Phase 5: Polish + Differentiators** - Waveform animation, sound feedback, text suggestion bar, emoji picker
-- [ ] **Phase 6: Release Readiness** - Bilingual UI (FR/EN), Follow System theme, cross-app validation, performance profiling
+- [ ] **Phase 5: Polish + Differentiators** - Waveform animation, sound feedback, text suggestion bar, emoji picker, light theme, iOS visual parity
+- [ ] **Phase 6: Release Readiness** - Bilingual UI (FR/EN), cross-app validation, performance profiling
 
 ## Phase Details
 
@@ -110,7 +110,7 @@ Plans:
 - [ ] 04-08-PLAN.md — UAT gap closure: FakeSettingsCard Android-native redesign, RecordingScreen + Home wiring, Licences section in Settings
 
 ### Phase 5: Polish + Differentiators
-**Goal**: Users experience premium feedback and convenience features during dictation and typing
+**Goal**: Users experience premium feedback, convenience features, and visual polish during dictation and typing
 **Depends on**: Phase 3
 **Requirements**: DICT-05, DICT-06, KBD-04, KBD-05
 **Success Criteria** (what must be TRUE):
@@ -118,11 +118,14 @@ Plans:
   2. User hears configurable sounds when recording starts and stops
   3. User can see 3 text suggestions above the keyboard and tap to insert
   4. User can open an emoji picker with categories and recent emojis
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — WaveformDriver (iOS BrandWaveformDriver port) + DictationSoundPlayer (SoundPool) + wiring
+- [ ] 05-02-PLAN.md — Light/auto theme (ThemeMode enum, DictusLightColorScheme), iOS color alignment, bottom nav pill, model card badge
+- [ ] 05-03-PLAN.md — Emoji picker (EmojiPickerView via AndroidView), KeyboardScreen emoji state toggle
+- [ ] 05-04-PLAN.md — Text suggestion bar (SuggestionBar + StubSuggestionEngine), InputConnection wiring
+- [ ] 05-05-PLAN.md — Settings card grouping, ABC/123 keyboard mode, Debug Logs viewer, haptic/sound toggle verification
 
 ### Phase 6: Release Readiness
 **Goal**: Users can use Dictus in French or English with system theme integration
@@ -148,5 +151,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 | 2. Audio Recording + Service Architecture | 3/3 | Complete | 2026-03-25 |
 | 3. Whisper Integration | 3/3 | Complete | 2026-03-25 |
 | 4. Model Management + Onboarding | 8/8 | Complete   | 2026-03-27 |
-| 5. Polish + Differentiators | 0/2 | Not started | - |
+| 5. Polish + Differentiators | 0/5 | Planning complete | - |
 | 6. Release Readiness | 0/1 | Not started | - |
