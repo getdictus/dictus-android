@@ -51,12 +51,61 @@ fun EmojiPickerScreen(
     isDarkTheme: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        // Emoji picker grid (264.dp — leaves 46.dp for bottom toolbar)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(310.dp),
+    ) {
+        // Bottom toolbar: ABC button (left) + Delete button (right)
+        // Placed ABOVE emoji grid so it appears between grid and system nav bar.
+        // Matches iOS layout: ABC and backspace always accessible during emoji entry.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // ABC button — returns to keyboard
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(LocalDictusColors.current.keyBackground)
+                    .clickable(onClick = onReturnToKeyboard)
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "ABC",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            // Delete/backspace button
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(LocalDictusColors.current.keySpecialBackground)
+                    .clickable(onClick = onDeleteBackward)
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "\u232B", // ⌫ delete symbol
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 18.sp,
+                )
+            }
+        }
+
+        // Emoji picker grid — fills remaining height above system nav bar
         AndroidView(
             factory = { context ->
                 // Wrap context with appropriate theme to match app theme, not system theme.
-                // Uses platform Material themes which are always available on Android 8+.
                 val themedContext = ContextThemeWrapper(
                     context,
                     if (isDarkTheme) {
@@ -74,52 +123,7 @@ fun EmojiPickerScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(264.dp),
+                .weight(1f),
         )
-
-        // Bottom toolbar: ABC button (left) + Delete button (right)
-        // Matches iOS emoji picker layout for quick keyboard return and deletion
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(46.dp)
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // ABC button — returns to keyboard
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(LocalDictusColors.current.keyBackground)
-                    .clickable(onClick = onReturnToKeyboard)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "ABC",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-
-            // Delete/backspace button
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(LocalDictusColors.current.keySpecialBackground)
-                    .clickable(onClick = onDeleteBackward)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "\u232B", // ⌫ delete symbol
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 20.sp,
-                )
-            }
-        }
     }
 }
