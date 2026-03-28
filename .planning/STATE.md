@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: "Completed Phase 05 Plan 04: Text suggestion bar"
-last_updated: "2026-03-28T07:04:45.315Z"
+stopped_at: Completed 05-02-PLAN.md (light/auto theme, bottom nav polish, model card redesign)
+last_updated: "2026-03-28T07:08:52.265Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
   percent: 100
 ---
 
@@ -72,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 04 P08 | 3min | 3 tasks | 5 files |
 | Phase 05-polish-differentiators P03 | 3min | 2 tasks | 5 files |
 | Phase 05 P04 | 15min | 2 tasks | 5 files |
+| Phase 05-polish-differentiators P02 | 25min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,8 @@ Recent decisions affecting current work:
 - [Phase 05-03]: EmojiPickerScreen height fixed at 310.dp to match keyboard total height and prevent IME window resize
 - [Phase 05]: StubSuggestionEngine as Phase 5 MVP: SuggestionEngine interface is drop-in replacement contract for AOSP LatinIME JNI — zero UI/wiring changes needed to swap
 - [Phase 05]: SuggestionBar only renders when suggestions non-empty — keyboard height is unchanged when no suggestions available
+- [Phase 05-polish-differentiators]: DictusTheme defaults themeMode=DARK for backward compat; theme string mapped to ThemeMode at each reading site
+- [Phase 05-polish-differentiators]: ime module needs explicit datastore.preferences dependency for DataStore<Preferences> type in DictusImeEntryPoint
 
 ### Roadmap Evolution
 
@@ -142,6 +145,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T07:04:45.312Z
-Stopped at: Completed Phase 05 Plan 04: Text suggestion bar
+Last session: 2026-03-28T07:08:52.262Z
+Stopped at: Completed 05-02-PLAN.md (light/auto theme, bottom nav polish, model card redesign)
 Resume file: None
