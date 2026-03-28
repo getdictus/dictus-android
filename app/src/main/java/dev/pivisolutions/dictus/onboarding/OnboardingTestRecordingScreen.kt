@@ -1,4 +1,4 @@
-package dev.pivisolutions.dictus.recording
+package dev.pivisolutions.dictus.onboarding
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
@@ -45,32 +44,27 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
-import androidx.datastore.preferences.core.edit
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingCTAButton
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingProgressDots
+import dev.pivisolutions.dictus.ui.onboarding.accentGradient
 import kotlinx.coroutines.launch
 
 /**
- * Standalone recording screen — triggered from Home via "Nouvelle dictée".
+ * Onboarding Step 6 — Test recording screen.
  *
- * Reuses the recording/transcription flow from OnboardingTestRecordingScreen but
- * without any onboarding-specific elements (progress dots, Passer/Continuer buttons).
- *
- * Layout uses a layered Box so the mic/stop button stays at a fixed position
- * (200dp from bottom) regardless of state:
- * 1. Upper content (idle text OR result card) — fills the area above the button
- * 2. Bottom block (waveform + timer + button) — anchored to BottomCenter
- * 3. Back button — top-left, always visible
- *
- * Recording auto-starts on first composition so the user lands directly in recording
- * state — matching iOS Dictus behavior where tapping "Nouvelle dictée" starts immediately.
+ * Uses a layered Box layout so the mic/stop button stays at a fixed position
+ * (200dp from bottom) regardless of state. Three layers:
+ * 1. Upper content (text, waveform, timer) — centered above the button
+ * 2. Button layer — fixed 200dp from bottom, stable across all states
+ * 3. Bottom bar (Passer/Continuer + progress dots) — pinned to bottom
  *
  * @param dictationController Controller for the DictationService (may be null if not yet bound).
- * @param onBack Called when the user taps the back arrow to return to Home.
+ * @param onNext Called when the user taps "Continuer" after seeing the result, or "Passer" to skip.
  */
 @Composable
-fun RecordingScreen(
+fun OnboardingTestRecordingScreen(
     dictationController: DictationController?,
-    dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>? = null,
-    onBack: () -> Unit,
+    onNext: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -81,12 +75,6 @@ fun RecordingScreen(
     var transcriptionResult by remember { mutableStateOf<String?>(null) }
     var copied by remember { mutableStateOf(false) }
 
-    // Auto-start recording on first composition — iOS parity: tapping "Nouvelle dictée"
-    // brings the user directly into the recording state without a manual tap.
-    LaunchedEffect(Unit) {
-        dictationController?.startRecording()
-    }
-
     // Processing animation driver for the transcribing state.
     // Uses WaveformDriver.processingEnergy() — same formula as iOS BrandWaveformDriver.
     val processingDriver = remember {
@@ -95,7 +83,6 @@ fun RecordingScreen(
     val processingPhase by processingDriver.processingPhase.collectAsState()
 
     // Run the processing animation loop when transcribing.
-    // LaunchedEffect cancels when isTranscribing becomes false.
     if (dictationState is DictationState.Transcribing) {
         LaunchedEffect(Unit) {
             processingDriver.runLoop()
@@ -112,31 +99,16 @@ fun RecordingScreen(
             .background(DictusColors.Background)
             .padding(horizontal = 32.dp),
     ) {
-        // ── Back button (top-left, always visible) ──
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = 16.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onBack)
-                .padding(8.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Retour",
-                tint = DictusColors.TextPrimary,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-
         // ── Layer 1: Upper content (idle text OR result card) ──
+        // Only used for idle and result states. Recording/transcribing put everything
+        // in the bottom block to match the iOS layout.
         when {
             hasResult -> {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopCenter)
-                        .padding(top = 160.dp, bottom = 240.dp),
+                        .padding(top = 180.dp, bottom = 240.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -189,7 +161,7 @@ fun RecordingScreen(
             }
 
             !isRecording && !isTranscribing -> {
-                // Idle: title + subtitle centered above the button
+                // Idle: title + subtitle centered
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,7 +170,7 @@ fun RecordingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "Nouvelle dict\u00e9e",
+                        text = "Testez la dict\u00e9e",
                         color = DictusColors.TextPrimary,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -220,17 +192,16 @@ fun RecordingScreen(
 
         // ── Layer 2: Bottom block (waveform + timer + button) ──
         // For recording/transcribing: waveform, timer, and button are grouped together
-        // in the lower portion of the screen.
+        // in the lower portion of the screen (matching iOS layout).
         // For idle: just the mic button.
-        // For result: blue mic button to re-record.
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (!hasResult) {
+        if (!hasResult) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 120.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 // Waveform + timer (only during recording/transcribing)
                 when {
                     isRecording -> {
@@ -279,114 +250,101 @@ fun RecordingScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
-            }
 
-            // Button — changes appearance based on state
-            when {
-                isRecording -> {
-                    // Red stop button during recording
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .clip(CircleShape)
-                            .background(DictusColors.Recording)
-                            .clickable {
-                                scope.launch {
-                                    val result = dictationController?.confirmAndTranscribe()
-                                    transcriptionResult = result ?: "(Aucun r\u00e9sultat)"
-                                    // Persist last transcription to DataStore for HomeScreen
-                                    if (result != null) {
-                                        dataStore?.edit { prefs ->
-                                            prefs[dev.pivisolutions.dictus.core.preferences.PreferenceKeys.LAST_TRANSCRIPTION] = result
-                                        }
+                // Button (same position in all non-result states)
+                when {
+                    isRecording -> {
+                        Box(
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .background(DictusColors.Recording)
+                                .clickable {
+                                    scope.launch {
+                                        val result = dictationController?.confirmAndTranscribe()
+                                        transcriptionResult = result ?: "(Aucun r\u00e9sultat)"
                                     }
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Stop,
-                            contentDescription = "Arr\u00eater",
-                            tint = Color.White,
-                            modifier = Modifier.size(36.dp),
-                        )
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Stop,
+                                contentDescription = "Arr\u00eater",
+                                tint = Color.White,
+                                modifier = Modifier.size(36.dp),
+                            )
+                        }
+                    }
+
+                    isTranscribing -> {
+                        Box(
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .background(DictusColors.Surface),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = null,
+                                tint = DictusColors.TextSecondary,
+                                modifier = Modifier.size(36.dp),
+                            )
+                        }
+                    }
+
+                    else -> {
+                        Box(
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .background(DictusColors.Accent)
+                                .clickable {
+                                    dictationController?.startRecording()
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Enregistrer",
+                                tint = Color.White,
+                                modifier = Modifier.size(36.dp),
+                            )
+                        }
                     }
                 }
 
-                isTranscribing -> {
-                    // Disabled mic button during transcription
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .clip(CircleShape)
-                            .background(DictusColors.Surface),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = null,
-                            tint = DictusColors.TextSecondary,
-                            modifier = Modifier.size(36.dp),
-                        )
-                    }
-                }
+                // Reserve space for label
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (isRecording) "Toucher pour arr\u00eater" else "",
+                    color = DictusColors.TextSecondary,
+                    fontSize = 13.sp,
+                )
+            }
+        }
 
-                hasResult -> {
-                    // Blue mic button in result state — tapping re-records
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .clip(CircleShape)
-                            .background(DictusColors.Accent)
-                            .clickable {
-                                transcriptionResult = null
-                                copied = false
-                                dictationController?.startRecording()
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "Nouvelle dict\u00e9e",
-                            tint = Color.White,
-                            modifier = Modifier.size(36.dp),
-                        )
-                    }
-                }
-
-                else -> {
-                    // Idle state: blue mic button to start recording
-                    Box(
-                        modifier = Modifier
-                            .size(90.dp)
-                            .clip(CircleShape)
-                            .background(DictusColors.Accent)
-                            .clickable {
-                                dictationController?.startRecording()
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "Enregistrer",
-                            tint = Color.White,
-                            modifier = Modifier.size(36.dp),
-                        )
-                    }
-                }
+        // ── Layer 3: Bottom bar (Passer/Continuer + dots) ──
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 60.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (hasResult) {
+                OnboardingCTAButton(
+                    text = "Continuer",
+                    onClick = onNext,
+                    gradient = accentGradient,
+                )
+            } else {
+                Spacer(modifier = Modifier.height(56.dp))
             }
 
-            // Reserve space for label below the button
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = when {
-                    isRecording -> "Toucher pour arr\u00eater"
-                    hasResult -> "Nouvelle dict\u00e9e"
-                    else -> ""
-                },
-                color = DictusColors.TextSecondary,
-                fontSize = 13.sp,
-            )
+            Spacer(modifier = Modifier.padding(top = 24.dp))
+
+            OnboardingProgressDots(currentStep = 6)
         }
     }
 }

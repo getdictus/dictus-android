@@ -9,16 +9,26 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import kotlin.math.abs
 
 /**
- * Canvas-based 30-bar waveform visualization for the recording overlay.
+ * Canvas-based 30-bar waveform visualization for recording overlays.
  *
- * Each bar is a rounded rectangle (pill shape) drawn on a single Canvas.
- * Center bars (indices 11-18) use an accent gradient from AccentHighlight
- * to Accent. Edge bars use white with alpha fading toward the edges.
+ * Ported from iOS BrandWaveform. Each bar is a rounded rectangle (pill shape)
+ * drawn on a single Canvas for optimal performance (single GPU draw call).
  *
- * Energy values are expected in 0.0..1.0 range. Lists shorter than 30
- * are padded with 0f; lists longer than 30 take the last 30 items.
+ * Color scheme (matching iOS BrandWaveform.resolvedBarColor):
+ *   - Center 40% of bars: brand blue (DictusColors.Accent)
+ *   - Outer 60%: white with opacity decreasing toward edges
+ *
+ * Bar height formula (matching iOS):
+ *   height = max(minHeight + energy * (maxHeight - minHeight), minHeight)
+ *   - minHeight = 2dp (idle) or 4dp (processing): always-visible baseline
+ *   - This ensures bars scale energy within the available height range
+ *     rather than raw multiplication which under-utilizes the space
+ *
+ * Processing mode: when isProcessing=true, bars show a traveling sine wave
+ * using WaveformDriver.processingEnergy() instead of live energy levels.
  *
  * This composable lives in core so both the app module and the ime module
  * can reuse it without duplication.
@@ -27,18 +37,31 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 fun WaveformBars(
     energyLevels: List<Float>,
     modifier: Modifier = Modifier,
+    isProcessing: Boolean = false,
+    processingPhase: Double = 0.0,
 ) {
     val paddedLevels = padEnergy(energyLevels)
 
     Canvas(modifier = modifier) {
-        val barCount = 30
+        val barCount = WaveformDriver.BAR_COUNT
         val gapPx = 2.dp.toPx()
         val barWidth = (size.width - gapPx * (barCount - 1)) / barCount
-        val minBarHeight = 2.dp.toPx()
+        // Min bar height: 2dp idle (thin visible baseline), 4dp processing
+        // Matches iOS: let minHeight: CGFloat = driver.isProcessing ? 4 : 2
+        val minBarHeight = if (isProcessing) 4.dp.toPx() else 2.dp.toPx()
+        val maxBarHeight = size.height
         val centerY = size.height / 2f
 
-        paddedLevels.forEachIndexed { index, energy ->
-            val barHeight = maxOf(minBarHeight, energy * size.height)
+        for (index in 0 until barCount) {
+            val energy: Float = if (isProcessing) {
+                WaveformDriver.processingEnergy(index, processingPhase, barCount)
+            } else {
+                paddedLevels.getOrElse(index) { 0f }
+            }
+
+            // iOS formula: max(minHeight + energy * (maxHeight - minHeight), minHeight)
+            // This maps energy 0..1 to minBarHeight..maxBarHeight linearly.
+            val barHeight = maxOf(minBarHeight + energy * (maxBarHeight - minBarHeight), minBarHeight)
             val x = index * (barWidth + gapPx)
             val color = barColor(index, barCount)
 
@@ -69,37 +92,26 @@ internal fun padEnergy(levels: List<Float>): List<Float> {
 /**
  * Determines the color for a waveform bar at the given index.
  *
- * Center bars (indices 11-18) use a gradient from AccentHighlight to Accent.
- * Edge bars use white with alpha fading from 0.6 near center to 0.15 at edges.
+ * Matches iOS BrandWaveform.resolvedBarColor:
+ *   - Distance from center < 0.4 (inner 40%): brand blue (Accent)
+ *   - Distance from center >= 0.4 (outer 60%): white with opacity
+ *     = (1.0 - distanceFromCenter) * 0.9 + 0.15
+ *
+ * WHY distance-based instead of fixed indices: The iOS version uses
+ * a continuous distance metric which scales correctly if bar count changes.
+ * This also produces smoother opacity gradients at the transition boundary.
  */
 internal fun barColor(index: Int, barCount: Int): Color {
-    // Center bars: indices 11-18 (8 bars)
-    if (index in 11..18) {
-        // Interpolate from AccentHighlight (index 11) to Accent (index 18)
-        val fraction = (index - 11) / 7f
-        return lerp(DictusColors.AccentHighlight, DictusColors.Accent, fraction)
+    val center = (barCount - 1) / 2f
+    val distanceFromCenter = abs(index - center) / center
+
+    // Inner 40%: solid brand blue
+    if (distanceFromCenter < 0.4f) {
+        return DictusColors.Accent
     }
 
-    // Edge bars: white with alpha fading from 0.6 (near center) to 0.15 (at edges)
-    val distanceFromCenter = if (index < 11) {
-        // Left side: index 10 is closest to center, index 0 is farthest
-        (10 - index) / 10f
-    } else {
-        // Right side: index 19 is closest to center, index 29 is farthest
-        (index - 19) / 10f
-    }
-    val alpha = 0.6f - (0.6f - 0.15f) * distanceFromCenter
-    return Color.White.copy(alpha = alpha)
-}
-
-/**
- * Linear interpolation between two colors.
- */
-private fun lerp(start: Color, end: Color, fraction: Float): Color {
-    return Color(
-        red = start.red + (end.red - start.red) * fraction,
-        green = start.green + (end.green - start.green) * fraction,
-        blue = start.blue + (end.blue - start.blue) * fraction,
-        alpha = start.alpha + (end.alpha - start.alpha) * fraction,
-    )
+    // Outer 60%: white with opacity decreasing toward edges
+    // Matches iOS: Double(1.0 - distanceFromCenter) * 0.9 + 0.15
+    val opacity = (1.0f - distanceFromCenter) * 0.9f + 0.15f
+    return Color.White.copy(alpha = opacity)
 }

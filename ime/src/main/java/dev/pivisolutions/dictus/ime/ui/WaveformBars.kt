@@ -11,4 +11,11 @@ import androidx.compose.ui.Modifier
 fun WaveformBars(
     energyLevels: List<Float>,
     modifier: Modifier = Modifier,
-) = CoreWaveformBars(energyLevels = energyLevels, modifier = modifier)
+    isProcessing: Boolean = false,
+    processingPhase: Double = 0.0,
+) = CoreWaveformBars(
+    energyLevels = energyLevels,
+    modifier = modifier,
+    isProcessing = isProcessing,
+    processingPhase = processingPhase,
+)
