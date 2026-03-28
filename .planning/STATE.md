@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-28T00:25:14.760Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-03-28T07:04:02.652Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 25
+  completed_plans: 21
   percent: 100
 ---
 
@@ -70,6 +70,7 @@ Progress: [██████████] 100%
 | Phase 04-model-management-onboarding P06 | 3min | 2 tasks | 4 files |
 | Phase 04-model-management-onboarding P07 | 3min | 3 tasks | 5 files |
 | Phase 04 P08 | 3min | 3 tasks | 5 files |
+| Phase 05-polish-differentiators P03 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,8 @@ Recent decisions affecting current work:
 - [Phase 04]: FakeSettingsCard uses KeyboardEntryRow (name + subtitle) to match Android Clavier a l'ecran panel instead of iOS breadcrumb
 - [Phase 04]: RecordingScreen in new recording/ package — single responsibility, auto-starts via LaunchedEffect(Unit) for iOS parity
 - [Phase 04]: Bottom nav hidden via conditional if in Scaffold bottomBar when currentRoute is recording
+- [Phase 05-03]: State hoisted to DictusImeService for emoji picker so onKeyDown can intercept KEYCODE_BACK (BackHandler silently fails in IME context)
+- [Phase 05-03]: EmojiPickerScreen height fixed at 310.dp to match keyboard total height and prevent IME window resize
 
 ### Roadmap Evolution
 
@@ -136,6 +139,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T00:25:14.757Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-polish-differentiators/05-CONTEXT.md
+Last session: 2026-03-28T07:04:02.649Z
+Stopped at: Completed 05-03-PLAN.md
+Resume file: None
