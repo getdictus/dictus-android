@@ -23,7 +23,12 @@ import timber.log.Timber
  * routes key press events to the appropriate InputConnection callbacks
  * provided by DictusImeService.
  *
- * Total height: 46.dp (mic row) + 264.dp (keyboard) = 310.dp.
+ * Total height: 36.dp (suggestion bar, when visible) + 46.dp (mic row) + 264.dp (keyboard) = 346.dp max.
+ * When no suggestions are available, the suggestion bar is hidden: 310.dp total.
+ *
+ * The emoji picker state is hoisted to DictusImeService so that back key
+ * dismissal can be handled via onKeyDown override (BackHandler does not work
+ * in IME context).
  */
 @Composable
 fun KeyboardScreen(
@@ -32,6 +37,11 @@ fun KeyboardScreen(
     onSendReturn: () -> Unit,
     onSwitchKeyboard: () -> Unit,
     onMicTap: () -> Unit = {},
+    isEmojiPickerOpen: Boolean = false,
+    onEmojiToggle: () -> Unit = {},
+    onEmojiSelected: (String) -> Unit = {},
+    suggestions: List<String> = emptyList(),
+    onSuggestionSelected: (String) -> Unit = {},
 ) {
     // Keyboard state
     var currentLayer by remember { mutableStateOf(KeyboardLayer.LETTERS) }
@@ -43,59 +53,77 @@ fun KeyboardScreen(
     var lastShiftTapTime by remember { mutableStateOf(0L) }
 
     DictusTheme {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            // Mic button row above keyboard (46.dp)
-            MicButtonRow(
-                onSwitchKeyboard = onSwitchKeyboard,
-                onMicTap = onMicTap,
-                isRecording = false,
+        if (isEmojiPickerOpen) {
+            EmojiPickerScreen(
+                onEmojiSelected = { emoji ->
+                    onEmojiSelected(emoji)
+                    // Stay in emoji picker for rapid emoji entry (don't auto-dismiss)
+                },
             )
-
-            // Keyboard area (264.dp) for 48.dp keys with existing row spacing.
-            KeyboardView(
-                layer = currentLayer,
-                isShifted = isShifted,
-                isCapsLock = isCapsLock,
-                layout = currentLayout,
-                onKeyPress = { key ->
-                    handleKeyPress(
-                        key = key,
-                        isShifted = isShifted,
-                        isCapsLock = isCapsLock,
-                        currentLayer = currentLayer,
-                        lastShiftTapTime = lastShiftTapTime,
-                        onCommitText = onCommitText,
-                        onDeleteBackward = onDeleteBackward,
-                        onSendReturn = onSendReturn,
-                        onShiftChanged = { shifted, caps, tapTime ->
-                            isShifted = shifted
-                            isCapsLock = caps
-                            lastShiftTapTime = tapTime
-                            Timber.d("Shift toggled: %s, CapsLock: %s", shifted, caps)
-                        },
-                        onLayerChanged = { layer ->
-                            currentLayer = layer
-                            Timber.d("Layer switched to: %s", layer)
-                        },
-                        onAutoUnshift = {
-                            // Turn off shift after typing a character (unless caps lock)
-                            if (isShifted && !isCapsLock) {
-                                isShifted = false
-                            }
-                        },
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                // Suggestion bar (36.dp) — visible only when suggestions are available
+                if (suggestions.isNotEmpty()) {
+                    SuggestionBar(
+                        suggestions = suggestions,
+                        onSuggestionSelected = onSuggestionSelected,
                     )
-                },
-                onAccentSelected = { accent ->
-                    onCommitText(accent)
-                    if (isShifted && !isCapsLock) {
-                        isShifted = false
-                    }
-                    Timber.d("Accent selected: %s", accent)
-                },
-                modifier = Modifier.height(264.dp),
-            )
+                }
+
+                // Mic button row above keyboard (46.dp)
+                MicButtonRow(
+                    onSwitchKeyboard = onSwitchKeyboard,
+                    onMicTap = onMicTap,
+                    isRecording = false,
+                )
+
+                // Keyboard area (264.dp) for 48.dp keys with existing row spacing.
+                KeyboardView(
+                    layer = currentLayer,
+                    isShifted = isShifted,
+                    isCapsLock = isCapsLock,
+                    layout = currentLayout,
+                    onKeyPress = { key ->
+                        handleKeyPress(
+                            key = key,
+                            isShifted = isShifted,
+                            isCapsLock = isCapsLock,
+                            currentLayer = currentLayer,
+                            lastShiftTapTime = lastShiftTapTime,
+                            onCommitText = onCommitText,
+                            onDeleteBackward = onDeleteBackward,
+                            onSendReturn = onSendReturn,
+                            onEmojiToggle = onEmojiToggle,
+                            onShiftChanged = { shifted, caps, tapTime ->
+                                isShifted = shifted
+                                isCapsLock = caps
+                                lastShiftTapTime = tapTime
+                                Timber.d("Shift toggled: %s, CapsLock: %s", shifted, caps)
+                            },
+                            onLayerChanged = { layer ->
+                                currentLayer = layer
+                                Timber.d("Layer switched to: %s", layer)
+                            },
+                            onAutoUnshift = {
+                                // Turn off shift after typing a character (unless caps lock)
+                                if (isShifted && !isCapsLock) {
+                                    isShifted = false
+                                }
+                            },
+                        )
+                    },
+                    onAccentSelected = { accent ->
+                        onCommitText(accent)
+                        if (isShifted && !isCapsLock) {
+                            isShifted = false
+                        }
+                        Timber.d("Accent selected: %s", accent)
+                    },
+                    modifier = Modifier.height(264.dp),
+                )
+            }
         }
     }
 }
@@ -115,6 +143,7 @@ private fun handleKeyPress(
     onCommitText: (String) -> Unit,
     onDeleteBackward: () -> Unit,
     onSendReturn: () -> Unit,
+    onEmojiToggle: () -> Unit = {},
     onShiftChanged: (shifted: Boolean, caps: Boolean, tapTime: Long) -> Unit,
     onLayerChanged: (KeyboardLayer) -> Unit,
     onAutoUnshift: () -> Unit,
@@ -157,7 +186,8 @@ private fun handleKeyPress(
             onLayerChanged(newLayer)
         }
         KeyType.EMOJI -> {
-            Timber.d("Emoji picker not yet implemented")
+            onEmojiToggle()
+            Timber.d("Emoji picker toggled")
         }
         KeyType.MIC -> {
             Timber.d("Mic not yet implemented")

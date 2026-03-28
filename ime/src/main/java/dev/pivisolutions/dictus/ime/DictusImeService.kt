@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
+import android.view.KeyEvent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -13,6 +14,8 @@ import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
+import dev.pivisolutions.dictus.ime.suggestion.StubSuggestionEngine
+import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
@@ -66,6 +69,18 @@ class DictusImeService : LifecycleInputMethodService() {
     // This MutableStateFlow is updated by collecting the service's StateFlow after binding.
     private val _serviceState = MutableStateFlow<DictationState>(DictationState.Idle)
 
+    // Emoji picker visibility state, hoisted here so back key can dismiss it via onKeyDown.
+    // BackHandler (Compose) does not work in IME context -- back key is not dispatched through
+    // the Compose back handler stack in an InputMethodService.
+    private val _isEmojiPickerOpen = MutableStateFlow(false)
+
+    // Suggestion engine — Phase 5 MVP uses StubSuggestionEngine (prefix-matching stub).
+    // To upgrade to AOSP LatinIME JNI: replace StubSuggestionEngine() with the JNI-backed
+    // implementation. SuggestionEngine interface ensures zero UI/wiring changes required.
+    private val suggestionEngine: SuggestionEngine = StubSuggestionEngine()
+    private val _currentWord = MutableStateFlow("")
+    private val _suggestions = MutableStateFlow<List<String>>(emptyList())
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             // The binder is a DictationService.LocalBinder. We use getDeclaredMethod
@@ -117,6 +132,46 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         bindingScope.cancel()
         super.onDestroy()
+    }
+
+    /**
+     * Intercepts KEYCODE_BACK to dismiss the emoji picker when it is open.
+     *
+     * WHY onKeyDown instead of BackHandler (Compose): In an InputMethodService,
+     * the back key is routed through the View/Window system, not through the
+     * Compose navigation back stack. BackHandler silently does nothing in this context.
+     * Overriding onKeyDown is the correct approach for IME services.
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && _isEmojiPickerOpen.value) {
+            _isEmojiPickerOpen.value = false
+            return true // Consume the back key
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    /**
+     * Called by the system when the selection or cursor position in the editor changes.
+     *
+     * Used to extract the current word being typed and update suggestions in real time.
+     * We read up to 50 characters before the cursor and split on whitespace/newline to
+     * isolate the last word fragment, then feed it to the SuggestionEngine.
+     */
+    override fun onUpdateSelection(
+        oldSelStart: Int, oldSelEnd: Int,
+        newSelStart: Int, newSelEnd: Int,
+        candidatesStart: Int, candidatesEnd: Int,
+    ) {
+        super.onUpdateSelection(
+            oldSelStart, oldSelEnd,
+            newSelStart, newSelEnd,
+            candidatesStart, candidatesEnd,
+        )
+        val ic = currentInputConnection ?: return
+        val beforeCursor = ic.getTextBeforeCursor(50, 0)?.toString() ?: ""
+        val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
+        _currentWord.value = currentWord
+        _suggestions.value = suggestionEngine.getSuggestions(currentWord)
     }
 
     /**
@@ -173,6 +228,8 @@ class DictusImeService : LifecycleInputMethodService() {
     @Composable
     override fun KeyboardContent() {
         val dictationState by _serviceState.collectAsState()
+        val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
+        val suggestions by _suggestions.collectAsState()
 
         val switchKeyboard = {
             val imm = getSystemService(INPUT_METHOD_SERVICE)
@@ -188,6 +245,21 @@ class DictusImeService : LifecycleInputMethodService() {
                     onSendReturn = { sendReturnKey() },
                     onSwitchKeyboard = switchKeyboard,
                     onMicTap = { handleMicTap() },
+                    isEmojiPickerOpen = isEmojiPickerOpen,
+                    onEmojiToggle = { _isEmojiPickerOpen.value = !_isEmojiPickerOpen.value },
+                    onEmojiSelected = { emoji -> commitText(emoji) },
+                    suggestions = suggestions,
+                    onSuggestionSelected = { suggestion ->
+                        // Replace the current word fragment with the selected suggestion + space
+                        val ic = currentInputConnection ?: return@KeyboardScreen
+                        val currentWord = _currentWord.value
+                        if (currentWord.isNotEmpty()) {
+                            ic.deleteSurroundingText(currentWord.length, 0)
+                        }
+                        ic.commitText("$suggestion ", 1)
+                        _suggestions.value = emptyList()
+                        _currentWord.value = ""
+                    },
                 )
             }
             is DictationState.Recording -> {
