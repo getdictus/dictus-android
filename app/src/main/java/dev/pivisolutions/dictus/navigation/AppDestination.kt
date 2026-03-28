@@ -39,4 +39,16 @@ sealed class AppDestination(val route: String) {
 
     /** Debug Logs viewer — navigated from Settings > À propos > Debug Logs. */
     data object DebugLogs : AppDestination("debug_logs")
+
+    /** Sound settings — volume slider, start/stop/cancel sound pickers. */
+    data object SoundSettings : AppDestination("sound_settings")
+
+    /**
+     * Sound picker list — shows all available WAV files for a given sound type.
+     *
+     * @param soundType Route parameter: "start", "stop", or "cancel".
+     */
+    data object SoundPicker : AppDestination("sound_picker/{soundType}") {
+        fun createRoute(soundType: String): String = "sound_picker/$soundType"
+    }
 }

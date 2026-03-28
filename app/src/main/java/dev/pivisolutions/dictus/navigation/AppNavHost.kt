@@ -41,6 +41,8 @@ import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
 import dev.pivisolutions.dictus.ui.settings.DebugLogsScreen
 import dev.pivisolutions.dictus.ui.settings.LicencesScreen
 import dev.pivisolutions.dictus.ui.settings.SettingsScreen
+import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
+import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
 import kotlinx.coroutines.flow.map
 
 /**
@@ -229,7 +231,9 @@ private fun MainTabsScreen(
     // is no animation spec for the nav bar in the design.
     val showBottomBar = currentRoute != AppDestination.Recording.route &&
         currentRoute != AppDestination.Licences.route &&
-        currentRoute != AppDestination.DebugLogs.route
+        currentRoute != AppDestination.DebugLogs.route &&
+        currentRoute != AppDestination.SoundSettings.route &&
+        !currentRoute.startsWith("sound_picker")
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -276,6 +280,9 @@ private fun MainTabsScreen(
                     onNavigateToDebugLogs = {
                         navController.navigate(AppDestination.DebugLogs.route)
                     },
+                    onNavigateToSoundSettings = {
+                        navController.navigate(AppDestination.SoundSettings.route)
+                    },
                 )
             }
             composable(AppDestination.Licences.route) {
@@ -285,6 +292,21 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.DebugLogs.route) {
                 DebugLogsScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(AppDestination.SoundSettings.route) {
+                SoundSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToSoundPicker = { soundType ->
+                        navController.navigate(AppDestination.SoundPicker.createRoute(soundType))
+                    },
+                )
+            }
+            composable(AppDestination.SoundPicker.route) { backStackEntry ->
+                val soundType = backStackEntry.arguments?.getString("soundType") ?: "start"
+                SoundPickerScreen(
+                    soundType = soundType,
                     onBack = { navController.popBackStack() },
                 )
             }

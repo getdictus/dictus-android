@@ -119,8 +119,11 @@ class DictationService : Service(), DictationController {
 
     // Sound feedback for recording lifecycle events.
     // Initialized in onCreate(); conditionally played based on SOUND_ENABLED preference.
+    // Sound names and volume are reactively observed from DataStore so changes in
+    // SoundSettingsScreen take effect without a service restart.
     private lateinit var soundPlayer: DictationSoundPlayer
     private var soundEnabled: Boolean = false
+    private var soundVolume: Float = 0.5f
 
     // State machine exposed to the IME via the binder.
     // MutableStateFlow is thread-safe; updates from any coroutine are fine.
@@ -134,7 +137,18 @@ class DictationService : Service(), DictationController {
     override fun onCreate() {
         super.onCreate()
         soundPlayer = DictationSoundPlayer(applicationContext)
-        soundPlayer.loadSounds()
+
+        // Load sounds with user-selected names from DataStore on first launch.
+        // Subsequent preference changes are handled by the reactive observers below.
+        serviceScope.launch {
+            val prefs = dataStore.data.first()
+            val startSound = prefs[PreferenceKeys.RECORD_START_SOUND] ?: "electronic_01f"
+            val stopSound = prefs[PreferenceKeys.RECORD_STOP_SOUND] ?: "electronic_02b"
+            val cancelSound = prefs[PreferenceKeys.RECORD_CANCEL_SOUND] ?: "electronic_03c"
+            soundPlayer.loadSounds(startSound, stopSound, cancelSound)
+
+            soundPlayer.volume = prefs[PreferenceKeys.SOUND_VOLUME] ?: 0.5f
+        }
 
         // Reactively observe the SOUND_ENABLED preference so changes take effect
         // without a service restart. Runs on the service scope (Main dispatcher).
@@ -142,6 +156,33 @@ class DictationService : Service(), DictationController {
             dataStore.data
                 .map { it[PreferenceKeys.SOUND_ENABLED] ?: false }
                 .collect { soundEnabled = it }
+        }
+
+        // Reactively observe volume changes.
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.SOUND_VOLUME] ?: 0.5f }
+                .collect { volume ->
+                    soundVolume = volume
+                    soundPlayer.volume = volume
+                }
+        }
+
+        // Reactively observe sound name changes and reload the affected slot.
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.RECORD_START_SOUND] ?: "electronic_01f" }
+                .collect { soundPlayer.reloadSound("start", it) }
+        }
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.RECORD_STOP_SOUND] ?: "electronic_02b" }
+                .collect { soundPlayer.reloadSound("stop", it) }
+        }
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.RECORD_CANCEL_SOUND] ?: "electronic_03c" }
+                .collect { soundPlayer.reloadSound("cancel", it) }
         }
     }
 
