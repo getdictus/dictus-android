@@ -79,7 +79,6 @@ fun SettingsScreen(
 ) {
     val language by viewModel.language.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
-    val soundEnabled by viewModel.soundEnabled.collectAsState()
     val keyboardLayout by viewModel.keyboardLayout.collectAsState()
     val keyboardMode by viewModel.keyboardMode.collectAsState()
     val theme by viewModel.theme.collectAsState()
@@ -110,11 +109,6 @@ fun SettingsScreen(
                 },
                 onClick = { showLanguagePicker = true },
             )
-            SettingDivider()
-            SettingNavRow(
-                label = "Sons",
-                onClick = onNavigateToSoundSettings,
-            )
         }
 
         // ---------- SECTION: CLAVIER ----------
@@ -141,10 +135,9 @@ fun SettingsScreen(
                 onToggle = { viewModel.toggleHaptics() },
             )
             SettingDivider()
-            SettingToggleRow(
-                label = "Son de dict\u00e9e",
-                checked = soundEnabled,
-                onToggle = { viewModel.toggleSound() },
+            SettingNavRow(
+                label = "Sons",
+                onClick = onNavigateToSoundSettings,
             )
         }
 
