@@ -104,9 +104,10 @@ fun EmojiPickerScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .height(42.dp)
                 .background(MaterialTheme.colorScheme.surface)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 8.dp)
+                .height(42.dp)
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,

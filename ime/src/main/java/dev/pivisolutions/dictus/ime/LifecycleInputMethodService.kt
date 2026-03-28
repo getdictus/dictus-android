@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime
 
+import android.graphics.Color
 import android.inputmethodservice.InputMethodService
 import android.view.View
 import androidx.compose.runtime.Composable
@@ -66,6 +67,12 @@ abstract class LifecycleInputMethodService : InputMethodService(),
             decorView.setViewTreeViewModelStoreOwner(this@LifecycleInputMethodService)
             decorView.setViewTreeSavedStateRegistryOwner(this@LifecycleInputMethodService)
         }
+
+        // Set the IME window background to transparent so there's no visible
+        // band between our keyboard content and the system navigation bar.
+        // The actual background color is provided by each Compose screen via
+        // MaterialTheme.colorScheme.background/surface.
+        window?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
 
         return view
     }
