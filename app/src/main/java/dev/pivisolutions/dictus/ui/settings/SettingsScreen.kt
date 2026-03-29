@@ -84,6 +84,7 @@ fun SettingsScreen(
     val keyboardLayout by viewModel.keyboardLayout.collectAsState()
     val keyboardMode by viewModel.keyboardMode.collectAsState()
     val theme by viewModel.theme.collectAsState()
+    val uiLanguage by viewModel.uiLanguage.collectAsState()
 
     val context = LocalContext.current
 
@@ -92,6 +93,7 @@ fun SettingsScreen(
     var showKeyboardPicker by remember { mutableStateOf(false) }
     var showKeyboardModePicker by remember { mutableStateOf(false) }
     var showThemePicker by remember { mutableStateOf(false) }
+    var showUiLanguagePicker by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -102,6 +104,16 @@ fun SettingsScreen(
         // ---------- SECTION: TRANSCRIPTION ----------
         SectionHeader(text = stringResource(R.string.settings_section_transcription))
         SettingsCard {
+            SettingPickerRow(
+                label = stringResource(R.string.settings_ui_language_label),
+                value = when (uiLanguage) {
+                    "fr" -> stringResource(R.string.settings_ui_language_french)
+                    "en" -> stringResource(R.string.settings_ui_language_english)
+                    else -> stringResource(R.string.settings_ui_language_system)
+                },
+                onClick = { showUiLanguagePicker = true },
+            )
+            SettingDivider()
             SettingPickerRow(
                 label = stringResource(R.string.settings_language),
                 value = when (language) {
@@ -219,6 +231,20 @@ fun SettingsScreen(
     }
 
     // --- Bottom sheets ---
+
+    if (showUiLanguagePicker) {
+        PickerBottomSheet(
+            title = stringResource(R.string.picker_ui_language_title),
+            options = listOf(
+                "system" to stringResource(R.string.settings_ui_language_system),
+                "fr" to stringResource(R.string.settings_ui_language_french),
+                "en" to stringResource(R.string.settings_ui_language_english),
+            ),
+            selected = uiLanguage,
+            onSelect = { viewModel.setUiLanguage(it) },
+            onDismiss = { showUiLanguagePicker = false },
+        )
+    }
 
     if (showLanguagePicker) {
         PickerBottomSheet(

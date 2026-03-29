@@ -83,6 +83,13 @@
     <string name="settings_theme_light">Clair</string>
     <string name="settings_theme_auto">Automatique</string>
 
+    <!-- Settings: UI language picker -->
+    <string name="settings_ui_language_label">Interface language</string>
+    <string name="settings_ui_language_system">System</string>
+    <string name="settings_ui_language_french">Fran\u00e7ais</string>
+    <string name="settings_ui_language_english">English</string>
+    <string name="picker_ui_language_title">Interface language</string>
+
     <!-- Settings: Picker bottom sheet titles -->
     <string name="picker_language_title">Choisir la langue</string>
     <string name="picker_keyboard_layout_title">Disposition du clavier</string>

@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.ui.settings
 
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -10,6 +12,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -181,5 +184,46 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.edit { it[PreferenceKeys.THEME] = themeKey }
         }
+    }
+
+    /**
+     * Currently active UI language override ("system", "fr", or "en").
+     *
+     * Reads from AppCompatDelegate.getApplicationLocales() which is the source of truth
+     * persisted by AndroidX (not DataStore). MutableStateFlow so it updates immediately
+     * after setUiLanguage() is called — before the Activity recreates on older APIs.
+     *
+     * WHY not DataStore: AppCompatDelegate already persists locale automatically on API 24+
+     * via AppLocalesMetadataHolderService. Using DataStore would duplicate state.
+     * WHY MutableStateFlow not stateIn: There is no ongoing flow to read from
+     * AppCompatDelegate — it's a static getter. We read once and update imperatively.
+     */
+    val uiLanguage: StateFlow<String> = MutableStateFlow(getCurrentUiLanguage())
+
+    /**
+     * Set the UI language override. Calls AppCompatDelegate.setApplicationLocales()
+     * which triggers Activity recreation and updates all string resources automatically.
+     *
+     * MUST be called on the main thread. Since this is called from an onClick lambda
+     * in the UI layer, no Dispatchers.Main wrapping is needed.
+     *
+     * @param languageTag "system" to follow device locale, "fr" for French, "en" for English.
+     */
+    fun setUiLanguage(languageTag: String) {
+        val locales = if (languageTag == "system") {
+            LocaleListCompat.getEmptyLocaleList()
+        } else {
+            LocaleListCompat.forLanguageTags(languageTag)
+        }
+        AppCompatDelegate.setApplicationLocales(locales)
+        // Activity will recreate (on API 32 and below) or recompose (on API 33+),
+        // so the MutableStateFlow update below keeps the UI in sync during the transition.
+        (uiLanguage as MutableStateFlow).value = languageTag
+    }
+
+    /** Returns the current UI language tag by reading AppCompatDelegate. */
+    private fun getCurrentUiLanguage(): String {
+        val locales = AppCompatDelegate.getApplicationLocales()
+        return locales.toLanguageTags().ifEmpty { "system" }
     }
 }
