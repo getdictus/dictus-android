@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Whisper Integration** - whisper.cpp native build via NDK/CMake, JNI bridge, end-to-end dictation pipeline (record -> transcribe -> insert)
 - [x] **Phase 4: Model Management + Onboarding** - Model download/deletion from HuggingFace, storage indicators, onboarding flow, settings screen, debug log export (completed 2026-03-26)
 - [x] **Phase 5: Polish + Differentiators** - Waveform animation, sound feedback, text suggestion bar, emoji picker, light theme, iOS visual parity (completed 2026-03-28)
-- [ ] **Phase 6: Release Readiness** - Bilingual UI (FR/EN), cross-app validation, performance profiling
+- [ ] **Phase 6: Release Readiness** - Bilingual UI (FR/EN), in-app language picker, cross-app validation
 
 ## Phase Details
 
@@ -128,17 +128,19 @@ Plans:
 - [ ] 05-05-PLAN.md — Settings card grouping, ABC/123 keyboard mode, Debug Logs viewer, haptic/sound toggle verification
 
 ### Phase 6: Release Readiness
-**Goal**: Users can use Dictus in French or English with system theme integration
+**Goal**: Users can use Dictus in French or English with in-app language switching and cross-app validation
 **Depends on**: Phase 4, Phase 5
 **Requirements**: DSG-02, DSG-03
 **Success Criteria** (what must be TRUE):
   1. All UI strings appear in French by default and in English when device language is English
-  2. User can toggle "Follow System" to switch from Dictus dark theme to Material You dynamic colors
-  3. Text insertion works correctly across 10+ common apps (messaging, email, browser, notes)
-**Plans**: TBD
+  2. User can select UI language (System/French/English) from Settings
+  3. Text insertion and dictation work correctly across WhatsApp, Gmail, and Chrome (including cold-start IME scenario)
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md — Extract app/ module strings (onboarding + settings + home/models/recording) into values/ (EN) + values-fr/ (FR)
+- [ ] 06-02-PLAN.md — Extract ime/ strings, core/ French overlay, localization infrastructure (appcompat, AppCompatActivity, generateLocaleConfig)
+- [ ] 06-03-PLAN.md — In-app language picker in Settings + cross-app validation checkpoint
 
 ## Progress
 
@@ -152,4 +154,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 | 3. Whisper Integration | 3/3 | Complete | 2026-03-25 |
 | 4. Model Management + Onboarding | 8/8 | Complete   | 2026-03-27 |
 | 5. Polish + Differentiators | 5/5 | Complete   | 2026-03-28 |
-| 6. Release Readiness | 0/1 | Not started | - |
+| 6. Release Readiness | 0/3 | Planning complete | - |
