@@ -37,6 +37,21 @@
             on the share intent. Exported=false with grantUriPermissions=true is the
             correct combination for a one-shot file share.
         -->
+        <!--
+            AppLocalesMetadataHolderService enables locale persistence on API 24-32.
+            On API 33+, the system persists locale selections natively.
+            android:enabled="false" means it won't run as an actual service —
+            AppCompat reads its metadata at startup to restore the saved locale.
+        -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

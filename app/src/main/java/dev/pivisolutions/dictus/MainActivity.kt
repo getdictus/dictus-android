@@ -9,7 +9,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,7 +53,7 @@ import javax.inject.Inject
  * @AndroidEntryPoint enables Hilt dependency injection in this Activity.
  */
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var dataStore: DataStore<Preferences>

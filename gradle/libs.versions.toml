@@ -21,6 +21,7 @@ cmake = "3.22.1"
 okhttp = "4.12.0"
 navigation = "2.8.9"
 hilt-navigation-compose = "1.2.0"
+appcompat = "1.7.0"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -53,6 +54,7 @@ navigation-compose = { group = "androidx.navigation", name = "navigation-compose
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-navigation-compose" }
 emoji2-emojipicker = { group = "androidx.emoji2", name = "emoji2-emojipicker", version = "1.5.0" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
