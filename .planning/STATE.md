@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-03-29T08:11:00.678Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-29T08:11:56.508Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 29
-  completed_plans: 26
+  completed_plans: 27
   percent: 100
 ---
 
@@ -76,6 +76,7 @@ Progress: [██████████] 100%
 | Phase 05-polish-differentiators P01 | 12min | 2 tasks | 33 files |
 | Phase 05-polish-differentiators P05 | 20min | 2 tasks | 11 files |
 | Phase 06-release-readiness P02 | 4 | 3 tasks | 12 files |
+| Phase 06-release-readiness P01 | 4min | 1 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Recent decisions affecting current work:
 - [Phase 05-05]: SettingsCard pattern: each settings section wrapped in clip(RoundedCornerShape(12.dp)) + background(Surface) Column for iOS visual parity
 - [Phase 06-02]: resources.properties must be in app/src/main/res/ not app/src/main/ — AGP extractSupportedLocales task requires it inside the res source set
 - [Phase 06-02]: AppCompatActivity extends ComponentActivity so all existing APIs remain available without changes when extending for locale switching support
+- [Phase 06-release-readiness]: English strings in values/strings.xml (no qualifier) — no values-en/ created to avoid Android resource resolution quirks on non-FR non-EN devices
+- [Phase 06-release-readiness]: Model name 'Tiny' not extracted to strings.xml — it is a proper name, not translated
+- [Phase 06-release-readiness]: onboarding_test_recording_no_result uses context.getString() inside coroutine lambda — stringResource() requires Compose composition context
 
 ### Roadmap Evolution
 
@@ -156,6 +160,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T08:11:00.675Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-03-29T08:11:56.506Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
