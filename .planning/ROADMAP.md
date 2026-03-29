@@ -48,7 +48,7 @@ Plans:
   2. User sees a notification while recording is active (foreground service)
   3. User feels haptic feedback on key presses and mic button taps (configurable)
   4. Dictation state machine transitions are observable: idle -> recording -> idle
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
 - [x] 02-01-PLAN.md — DictationState, AudioCaptureManager, DictationService foreground service with notification
@@ -80,7 +80,7 @@ Plans:
   1. User can record speech and see transcribed text appear at the cursor in the active text field
   2. Transcription runs entirely on-device with no network requests
   3. Transcription of 10 seconds of audio completes in under 8 seconds on Pixel 4 (small-q5_0 model)
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
 - [x] 03-01-PLAN.md — whisper.cpp git submodule, whisper/ Android library module with NDK/CMake, JNI bridge, Kotlin wrapper
@@ -135,12 +135,13 @@ Plans:
   1. All UI strings appear in French by default and in English when device language is English
   2. User can select UI language (System/French/English) from Settings
   3. Text insertion and dictation work correctly across WhatsApp, Gmail, and Chrome (including cold-start IME scenario)
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Extract app/ module strings (onboarding + settings + home/models/recording) into values/ (EN) + values-fr/ (FR)
-- [ ] 06-02-PLAN.md — Extract ime/ strings, core/ French overlay, localization infrastructure (appcompat, AppCompatActivity, generateLocaleConfig)
+- [ ] 06-01-PLAN.md — Extract onboarding screen strings into values/ (EN) + values-fr/ (FR)
+- [ ] 06-02-PLAN.md — Wave 0 test stubs, ime/ strings, core/ French overlay, localization infrastructure
 - [ ] 06-03-PLAN.md — In-app language picker in Settings + cross-app validation checkpoint
+- [ ] 06-04-PLAN.md — Extract settings, home, models, recording screen strings into values/ (EN) + values-fr/ (FR)
 
 ## Progress
 
@@ -154,4 +155,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 (and 5 in parallel) -> 6
 | 3. Whisper Integration | 3/3 | Complete | 2026-03-25 |
 | 4. Model Management + Onboarding | 8/8 | Complete   | 2026-03-27 |
 | 5. Polish + Differentiators | 5/5 | Complete   | 2026-03-28 |
-| 6. Release Readiness | 0/3 | Planning complete | - |
+| 6. Release Readiness | 0/4 | Planning complete | - |
