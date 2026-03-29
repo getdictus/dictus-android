@@ -35,10 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -108,6 +110,8 @@ fun RecordingScreen(
     val isRecording = dictationState is DictationState.Recording
     val isTranscribing = dictationState is DictationState.Transcribing
 
+    val noResultLabel = stringResource(R.string.recording_no_result)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -125,7 +129,7 @@ fun RecordingScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Retour",
+                contentDescription = stringResource(R.string.recording_back_cd),
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(24.dp),
             )
@@ -143,7 +147,7 @@ fun RecordingScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "R\u00e9sultat",
+                        text = stringResource(R.string.recording_result_title),
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -181,7 +185,7 @@ fun RecordingScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copier",
+                                contentDescription = stringResource(R.string.recording_copy_cd),
                                 tint = if (copied) DictusColors.Success else LocalDictusColors.current.textSecondary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -200,7 +204,7 @@ fun RecordingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "Nouvelle dict\u00e9e",
+                        text = stringResource(R.string.recording_idle_title),
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -210,7 +214,7 @@ fun RecordingScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Appuyez sur le micro et parlez.\nDictus transcrira votre voix.",
+                        text = stringResource(R.string.recording_idle_body),
                         color = LocalDictusColors.current.textSecondary,
                         fontSize = 15.sp,
                         lineHeight = (15 * 1.5).sp,
@@ -262,7 +266,7 @@ fun RecordingScreen(
 
                     isTranscribing -> {
                         Text(
-                            text = "Transcription en cours\u2026",
+                            text = stringResource(R.string.recording_transcribing),
                             color = LocalDictusColors.current.textSecondary,
                             fontSize = 17.sp,
                         )
@@ -295,7 +299,7 @@ fun RecordingScreen(
                             .clickable {
                                 scope.launch {
                                     val result = dictationController?.confirmAndTranscribe()
-                                    transcriptionResult = result ?: "(Aucun r\u00e9sultat)"
+                                    transcriptionResult = result ?: noResultLabel
                                     // Persist last transcription to DataStore for HomeScreen
                                     if (result != null) {
                                         dataStore?.edit { prefs ->
@@ -308,7 +312,7 @@ fun RecordingScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Stop,
-                            contentDescription = "Arr\u00eater",
+                            contentDescription = stringResource(R.string.recording_stop_cd),
                             tint = Color.White,
                             modifier = Modifier.size(36.dp),
                         )
@@ -349,7 +353,7 @@ fun RecordingScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
-                            contentDescription = "Nouvelle dict\u00e9e",
+                            contentDescription = stringResource(R.string.recording_new_dictation_cd),
                             tint = Color.White,
                             modifier = Modifier.size(36.dp),
                         )
@@ -370,7 +374,7 @@ fun RecordingScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
-                            contentDescription = "Enregistrer",
+                            contentDescription = stringResource(R.string.recording_record_cd),
                             tint = Color.White,
                             modifier = Modifier.size(36.dp),
                         )
@@ -382,8 +386,8 @@ fun RecordingScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = when {
-                    isRecording -> "Toucher pour arr\u00eater"
-                    hasResult -> "Nouvelle dict\u00e9e"
+                    isRecording -> stringResource(R.string.recording_tap_to_stop)
+                    hasResult -> stringResource(R.string.recording_idle_title)
                     else -> ""
                 },
                 color = LocalDictusColors.current.textSecondary,

@@ -30,10 +30,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -82,7 +84,7 @@ fun ModelsScreen(
     ) {
         // Screen title
         Text(
-            text = "Mod\u00e8les",
+            text = stringResource(R.string.models_title),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -90,7 +92,7 @@ fun ModelsScreen(
 
         // Téléchargés section
         if (downloadedModels.isNotEmpty()) {
-            ModelSection(title = "T\u00e9l\u00e9charg\u00e9s") {
+            ModelSection(title = stringResource(R.string.models_section_downloaded)) {
                 downloadedModels.forEach { modelState ->
                     ModelCard(
                         model = modelState.info,
@@ -113,7 +115,7 @@ fun ModelsScreen(
 
         // Disponibles section
         if (availableModels.isNotEmpty()) {
-            ModelSection(title = "Disponibles") {
+            ModelSection(title = stringResource(R.string.models_section_available)) {
                 availableModels.forEach { modelState ->
                     ModelCard(
                         model = modelState.info,
@@ -135,7 +137,7 @@ fun ModelsScreen(
         val totalCatalogMb = dev.pivisolutions.dictus.model.ModelCatalog.ALL
             .sumOf { it.expectedSizeBytes } / 1_000_000
         Text(
-            text = "Stockage utilis\u00e9 : $storageUsedMb Mo / $totalCatalogMb Mo",
+            text = stringResource(R.string.models_storage_used, storageUsedMb, totalCatalogMb),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 13.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -198,13 +200,13 @@ private fun DeleteConfirmationSheet(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "Supprimer $modelName ?",
+            text = stringResource(R.string.models_delete_confirm_title, modelName),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
-            text = "Ce mod\u00e8le sera supprim\u00e9 de votre appareil.",
+            text = stringResource(R.string.models_delete_confirm_body),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
         )
@@ -214,7 +216,7 @@ private fun DeleteConfirmationSheet(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = "Supprimer",
+                text = stringResource(R.string.models_delete_confirm_button),
                 color = DictusColors.Destructive,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
@@ -226,7 +228,7 @@ private fun DeleteConfirmationSheet(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = "Annuler",
+                text = stringResource(R.string.models_delete_cancel_button),
                 color = LocalDictusColors.current.textSecondary,
                 fontSize = 16.sp,
             )

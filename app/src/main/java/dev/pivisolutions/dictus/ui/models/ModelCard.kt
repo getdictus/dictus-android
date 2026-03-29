@@ -39,10 +39,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -149,7 +151,7 @@ fun ModelCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Supprimer",
+                    contentDescription = stringResource(R.string.model_delete_cd),
                     tint = Color.White,
                     modifier = Modifier.padding(8.dp),
                 )
@@ -243,7 +245,7 @@ fun ModelCard(
                             }
                         }
                         if (isActive) {
-                            // "Actif" chip
+                            // Active chip
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -251,7 +253,7 @@ fun ModelCard(
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                             ) {
                                 Text(
-                                    text = "Actif",
+                                    text = stringResource(R.string.model_active),
                                     color = DictusColors.AccentHighlight,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
@@ -277,13 +279,13 @@ fun ModelCard(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     SegmentedMetricBar(
-                        label = "Pr\u00e9cision",
+                        label = stringResource(R.string.model_precision),
                         value = model.precision,
                         color = DictusColors.Accent,
                         modifier = Modifier.weight(1f),
                     )
                     SegmentedMetricBar(
-                        label = "Vitesse",
+                        label = stringResource(R.string.model_speed),
                         value = model.speed,
                         color = DictusColors.AccentHighlight,
                         modifier = Modifier.weight(1f),
@@ -314,7 +316,7 @@ fun ModelCard(
                             strokeCap = StrokeCap.Round,
                         )
                         Text(
-                            text = "T\u00e9l\u00e9chargement \u2014 $percent%",
+                            text = stringResource(R.string.model_download_progress, percent),
                             color = DictusColors.AccentHighlight,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
@@ -328,13 +330,13 @@ fun ModelCard(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "\u00c9chec du t\u00e9l\u00e9chargement.",
+                                text = stringResource(R.string.model_download_error),
                                 color = DictusColors.Destructive,
                                 fontSize = 13.sp,
                             )
                             TextButton(onClick = onRetry) {
                                 Text(
-                                    text = "R\u00e9essayer",
+                                    text = stringResource(R.string.model_retry),
                                     color = DictusColors.Destructive,
                                     fontSize = 13.sp,
                                 )
@@ -365,7 +367,7 @@ fun ModelCard(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "T\u00e9l\u00e9charger",
+                                text = stringResource(R.string.model_download),
                                 color = Color.White,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,

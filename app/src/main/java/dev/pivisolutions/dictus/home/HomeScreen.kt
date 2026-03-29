@@ -33,12 +33,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
@@ -99,7 +101,7 @@ fun HomeScreen(
         // Active model card
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Mod\u00e8le actif",
+                text = stringResource(R.string.home_active_model),
                 color = LocalDictusColors.current.textSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
@@ -154,14 +156,14 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Derni\u00e8re transcription",
+                        text = stringResource(R.string.home_last_transcription),
                         color = LocalDictusColors.current.textSecondary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                     )
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copier",
+                        contentDescription = stringResource(R.string.home_copy_cd),
                         tint = LocalDictusColors.current.textSecondary,
                         modifier = Modifier
                             .size(20.dp)
@@ -210,7 +212,7 @@ fun HomeScreen(
                 shape = RoundedCornerShape(14.dp),
             ) {
                 Text(
-                    text = "Nouvelle dict\u00e9e",
+                    text = stringResource(R.string.home_new_dictation),
                     color = Color.White,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
