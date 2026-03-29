@@ -25,10 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -66,10 +68,10 @@ fun OnboardingModelDownloadScreen(
     val hasError = downloadError != null && !downloadComplete
 
     val ctaText = when {
-        downloadComplete -> "Continuer"
-        isDownloading -> "T\u00e9l\u00e9chargement en cours..."
-        hasError -> "T\u00e9l\u00e9charger"
-        else -> "T\u00e9l\u00e9charger"
+        downloadComplete -> stringResource(R.string.onboarding_model_download_cta_continue)
+        isDownloading -> stringResource(R.string.onboarding_model_download_cta_downloading)
+        hasError -> stringResource(R.string.onboarding_model_download_cta_download)
+        else -> stringResource(R.string.onboarding_model_download_cta_download)
     }
 
     val ctaEnabled = !isDownloading
@@ -97,7 +99,7 @@ fun OnboardingModelDownloadScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Mod\u00e8le vocal",
+            text = stringResource(R.string.onboarding_model_download_title),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
@@ -107,8 +109,7 @@ fun OnboardingModelDownloadScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "T\u00e9l\u00e9chargez le mod\u00e8le de reconnaissance vocale " +
-                "recommand\u00e9 pour votre appareil.",
+            text = stringResource(R.string.onboarding_model_download_body),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
             lineHeight = (15 * 1.5).sp,
@@ -130,14 +131,14 @@ fun OnboardingModelDownloadScreen(
                 horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = "\u00c9chec du t\u00e9l\u00e9chargement.",
+                    text = stringResource(R.string.onboarding_model_download_error),
                     color = DictusColors.Recording,
                     fontSize = 13.sp,
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 TextButton(onClick = onRetry) {
                     Text(
-                        text = "R\u00e9essayer",
+                        text = stringResource(R.string.onboarding_model_download_retry),
                         color = DictusColors.Recording,
                         fontSize = 13.sp,
                     )
@@ -163,7 +164,7 @@ private fun ModelInfoCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Model name
+        // Model name — "Tiny" is a proper name, not translated
         Text(
             text = "Tiny",
             color = MaterialTheme.colorScheme.onBackground,
@@ -173,7 +174,7 @@ private fun ModelInfoCard(
 
         // Subtitle: recommended badge
         Text(
-            text = "Recommand\u00e9 pour votre appareil",
+            text = stringResource(R.string.onboarding_model_download_recommended),
             color = DictusColors.Accent,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
@@ -195,7 +196,7 @@ private fun ModelInfoCard(
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    text = "~77 Mo",
+                    text = stringResource(R.string.onboarding_model_download_size),
                     color = LocalDictusColors.current.textSecondary,
                     fontSize = 13.sp,
                 )
@@ -211,7 +212,7 @@ private fun ModelInfoCard(
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    text = "Rapide",
+                    text = stringResource(R.string.onboarding_model_download_fast),
                     color = LocalDictusColors.current.textSecondary,
                     fontSize = 13.sp,
                 )
@@ -243,7 +244,7 @@ private fun ModelInfoCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "T\u00e9l\u00e9chargement \u2014 $downloadProgress%",
+                    text = stringResource(R.string.onboarding_model_download_progress, downloadProgress),
                     color = DictusColors.AccentHighlight,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,

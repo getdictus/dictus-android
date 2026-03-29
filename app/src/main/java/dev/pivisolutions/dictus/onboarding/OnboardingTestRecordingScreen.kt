@@ -34,10 +34,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -115,7 +117,7 @@ fun OnboardingTestRecordingScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "R\u00e9sultat",
+                        text = stringResource(R.string.onboarding_test_recording_result),
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -153,7 +155,7 @@ fun OnboardingTestRecordingScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copier",
+                                contentDescription = stringResource(R.string.onboarding_test_recording_cd_copy),
                                 tint = if (copied) DictusColors.Success else LocalDictusColors.current.textSecondary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -172,7 +174,7 @@ fun OnboardingTestRecordingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "Testez la dict\u00e9e",
+                        text = stringResource(R.string.onboarding_test_recording_title),
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -182,7 +184,7 @@ fun OnboardingTestRecordingScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Appuyez sur le micro et parlez.\nDictus transcrira votre voix.",
+                        text = stringResource(R.string.onboarding_test_recording_body),
                         color = LocalDictusColors.current.textSecondary,
                         fontSize = 15.sp,
                         lineHeight = (15 * 1.5).sp,
@@ -233,7 +235,7 @@ fun OnboardingTestRecordingScreen(
 
                     isTranscribing -> {
                         Text(
-                            text = "Transcription en cours\u2026",
+                            text = stringResource(R.string.onboarding_test_recording_transcribing),
                             color = LocalDictusColors.current.textSecondary,
                             fontSize = 17.sp,
                         )
@@ -264,14 +266,14 @@ fun OnboardingTestRecordingScreen(
                                 .clickable {
                                     scope.launch {
                                         val result = dictationController?.confirmAndTranscribe()
-                                        transcriptionResult = result ?: "(Aucun r\u00e9sultat)"
+                                        transcriptionResult = result ?: context.getString(R.string.onboarding_test_recording_no_result)
                                     }
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Stop,
-                                contentDescription = "Arr\u00eater",
+                                contentDescription = stringResource(R.string.onboarding_test_recording_cd_stop),
                                 tint = Color.White,
                                 modifier = Modifier.size(36.dp),
                             )
@@ -308,7 +310,7 @@ fun OnboardingTestRecordingScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Mic,
-                                contentDescription = "Enregistrer",
+                                contentDescription = stringResource(R.string.onboarding_test_recording_cd_record),
                                 tint = Color.White,
                                 modifier = Modifier.size(36.dp),
                             )
@@ -319,7 +321,7 @@ fun OnboardingTestRecordingScreen(
                 // Reserve space for label
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (isRecording) "Toucher pour arr\u00eater" else "",
+                    text = if (isRecording) stringResource(R.string.onboarding_test_recording_tap_to_stop) else "",
                     color = LocalDictusColors.current.textSecondary,
                     fontSize = 13.sp,
                 )
@@ -336,7 +338,7 @@ fun OnboardingTestRecordingScreen(
         ) {
             if (hasResult) {
                 OnboardingCTAButton(
-                    text = "Continuer",
+                    text = stringResource(R.string.onboarding_test_recording_cta_continue),
                     onClick = onNext,
                     gradient = accentGradient,
                 )

@@ -14,12 +14,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import androidx.compose.ui.text.font.FontWeight
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -80,7 +82,7 @@ fun OnboardingMicPermissionScreen(
         }
     }
 
-    val ctaText = if (micGranted) "Continuer" else "Autoriser le micro"
+    val ctaText = if (micGranted) stringResource(R.string.onboarding_mic_permission_cta_continue) else stringResource(R.string.onboarding_mic_permission_cta_grant)
     val ctaIcon = if (micGranted) null else Icons.Default.Mic
 
     OnboardingStepScaffold(
@@ -105,7 +107,7 @@ fun OnboardingMicPermissionScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Microphone",
+            text = stringResource(R.string.onboarding_mic_permission_title),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
@@ -115,8 +117,7 @@ fun OnboardingMicPermissionScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Dictus a besoin du microphone pour transcrire votre voix. " +
-                "Vos enregistrements restent sur votre appareil.",
+            text = stringResource(R.string.onboarding_mic_permission_body),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
             lineHeight = (15 * 1.5).sp,

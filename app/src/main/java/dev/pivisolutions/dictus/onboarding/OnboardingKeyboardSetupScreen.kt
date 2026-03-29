@@ -11,10 +11,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +48,7 @@ fun OnboardingKeyboardSetupScreen(
     onOpenSettings: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val ctaText = if (imeActivated) "Continuer" else "Ouvrir les R\u00e9glages"
+    val ctaText = if (imeActivated) stringResource(R.string.onboarding_keyboard_setup_cta_continue) else stringResource(R.string.onboarding_keyboard_setup_cta_open_settings)
     val ctaIcon = if (imeActivated) null else Icons.Default.OpenInNew
 
     OnboardingStepScaffold(
@@ -67,7 +69,7 @@ fun OnboardingKeyboardSetupScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Ajouter le clavier",
+            text = stringResource(R.string.onboarding_keyboard_setup_title),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
@@ -77,7 +79,7 @@ fun OnboardingKeyboardSetupScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Activez le clavier Dictus dans les r\u00e9glages de votre appareil.",
+            text = stringResource(R.string.onboarding_keyboard_setup_body),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
             lineHeight = (15 * 1.5).sp,

@@ -10,10 +10,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +45,7 @@ fun OnboardingModeSelectionScreen(
 ) {
     OnboardingStepScaffold(
         currentStep = 4,
-        ctaText = "Continuer",
+        ctaText = stringResource(R.string.onboarding_mode_selection_cta),
         ctaEnabled = true,
         onCtaClick = onNext,
     ) {
@@ -57,7 +59,7 @@ fun OnboardingModeSelectionScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Choisissez votre clavier",
+            text = stringResource(R.string.onboarding_mode_selection_title),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
@@ -67,8 +69,7 @@ fun OnboardingModeSelectionScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "ABC est s\u00e9lectionn\u00e9 par d\u00e9faut. " +
-                "Changez si vous pr\u00e9f\u00e9rez ouvrir sur les chiffres.",
+            text = stringResource(R.string.onboarding_mode_selection_body),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 15.sp,
             lineHeight = (15 * 1.5).sp,

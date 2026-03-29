@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Onboarding: Welcome screen (Step 1) -->
+    <string name="onboarding_welcome_wordmark">Dictus</string>
+    <string name="onboarding_welcome_tagline">Dictation vocale, 100\u00a0% offline</string>
+    <string name="onboarding_welcome_cta">Commencer</string>
+
+    <!-- Onboarding: Microphone permission screen (Step 2) -->
+    <string name="onboarding_mic_permission_title">Microphone</string>
+    <string name="onboarding_mic_permission_body">Dictus a besoin du microphone pour transcrire votre voix. Vos enregistrements restent sur votre appareil.</string>
+    <string name="onboarding_mic_permission_cta_grant">Autoriser le micro</string>
+    <string name="onboarding_mic_permission_cta_continue">Continuer</string>
+
+    <!-- Onboarding: Keyboard setup screen (Step 3) -->
+    <string name="onboarding_keyboard_setup_title">Ajouter le clavier</string>
+    <string name="onboarding_keyboard_setup_body">Activez le clavier Dictus dans les r\u00e9glages de votre appareil.</string>
+    <string name="onboarding_keyboard_setup_cta_open_settings">Ouvrir les R\u00e9glages</string>
+    <string name="onboarding_keyboard_setup_cta_continue">Continuer</string>
+
+    <!-- Onboarding: Mode selection screen (Step 4) -->
+    <string name="onboarding_mode_selection_title">Choisissez votre clavier</string>
+    <string name="onboarding_mode_selection_body">ABC est s\u00e9lectionn\u00e9 par d\u00e9faut. Changez si vous pr\u00e9f\u00e9rez ouvrir sur les chiffres.</string>
+    <string name="onboarding_mode_selection_cta">Continuer</string>
+
+    <!-- Onboarding: Model download screen (Step 5) -->
+    <string name="onboarding_model_download_title">Mod\u00e8le vocal</string>
+    <string name="onboarding_model_download_body">T\u00e9l\u00e9chargez le mod\u00e8le de reconnaissance vocale recommand\u00e9 pour votre appareil.</string>
+    <string name="onboarding_model_download_cta_download">T\u00e9l\u00e9charger</string>
+    <string name="onboarding_model_download_cta_downloading">T\u00e9l\u00e9chargement en cours\u2026</string>
+    <string name="onboarding_model_download_cta_continue">Continuer</string>
+    <string name="onboarding_model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
+    <string name="onboarding_model_download_retry">R\u00e9essayer</string>
+    <string name="onboarding_model_download_recommended">Recommand\u00e9 pour votre appareil</string>
+    <string name="onboarding_model_download_size">~77 Mo</string>
+    <string name="onboarding_model_download_fast">Rapide</string>
+    <string name="onboarding_model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
+
+    <!-- Onboarding: Test recording screen (Step 6) -->
+    <string name="onboarding_test_recording_title">Testez la dict\u00e9e</string>
+    <string name="onboarding_test_recording_body">Appuyez sur le micro et parlez.\nDictus transcrira votre voix.</string>
+    <string name="onboarding_test_recording_result">R\u00e9sultat</string>
+    <string name="onboarding_test_recording_transcribing">Transcription en cours\u2026</string>
+    <string name="onboarding_test_recording_no_result">(Aucun r\u00e9sultat)</string>
+    <string name="onboarding_test_recording_tap_to_stop">Toucher pour arr\u00eater</string>
+    <string name="onboarding_test_recording_cta_continue">Continuer</string>
+    <string name="onboarding_test_recording_cd_copy">Copier</string>
+    <string name="onboarding_test_recording_cd_stop">Arr\u00eater</string>
+    <string name="onboarding_test_recording_cd_record">Enregistrer</string>
+
+    <!-- Onboarding: Success screen (Step 7) -->
+    <string name="onboarding_success_title">C\u2019est pr\u00eat\u00a0!</string>
+    <string name="onboarding_success_body">Dictus est configur\u00e9 et pr\u00eat \u00e0 l\u2019emploi.</string>
+    <string name="onboarding_success_cta">Commencer</string>
+
+</resources>

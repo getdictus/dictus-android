@@ -10,9 +10,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +56,7 @@ fun OnboardingWelcomeScreen(
 
     OnboardingStepScaffold(
         currentStep = 1,
-        ctaText = "Commencer",
+        ctaText = stringResource(R.string.onboarding_welcome_cta),
         onCtaClick = onNext,
     ) {
         // Animated sine-wave waveform using the shared WaveformBars component from core/ui
@@ -71,7 +73,7 @@ fun OnboardingWelcomeScreen(
 
         // "Dictus" wordmark
         Text(
-            text = "Dictus",
+            text = stringResource(R.string.onboarding_welcome_wordmark),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 42.sp,
             fontWeight = FontWeight.ExtraLight,
@@ -82,7 +84,7 @@ fun OnboardingWelcomeScreen(
 
         // Tagline
         Text(
-            text = "Dictation vocale, 100\u00a0% offline",
+            text = stringResource(R.string.onboarding_welcome_tagline),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 17.sp,
         )
