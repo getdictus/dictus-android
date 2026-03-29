@@ -39,8 +39,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Design
 
 - [x] **DSG-01**: App uses a branded dark theme matching Dictus iOS colors by default
-- [ ] **DSG-02**: User can toggle "Follow System" to use Material You dynamic colors
-- [ ] **DSG-03**: UI is bilingual French (default) / English
+- [x] **DSG-02**: User can toggle "Follow System" to use Material You dynamic colors
+- [x] **DSG-03**: UI is bilingual French (default) / English
 
 ## v2 Requirements
 
@@ -101,8 +101,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APP-05 | Phase 4 | Complete |
 | APP-06 | Phase 1 | Complete |
 | DSG-01 | Phase 1 | Complete |
-| DSG-02 | Phase 6 | Pending |
-| DSG-03 | Phase 6 | Pending |
+| DSG-02 | Phase 6 | Complete |
+| DSG-03 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total

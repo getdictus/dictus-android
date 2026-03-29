@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-29T07:38:02.544Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-29T08:11:00.678Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 25
-  completed_plans: 25
+  total_plans: 29
+  completed_plans: 26
   percent: 100
 ---
 
@@ -75,6 +75,7 @@ Progress: [██████████] 100%
 | Phase 05-polish-differentiators P02 | 25min | 2 tasks | 10 files |
 | Phase 05-polish-differentiators P01 | 12min | 2 tasks | 33 files |
 | Phase 05-polish-differentiators P05 | 20min | 2 tasks | 11 files |
+| Phase 06-release-readiness P02 | 4 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,8 @@ Recent decisions affecting current work:
 - [Phase 05-05]: remember(initialLayer) for currentLayer in KeyboardScreen — recomposition resets layer when KEYBOARD_MODE preference changes
 - [Phase 05-05]: hapticsEnabled propagated as parameter through KeyboardScreen->KeyboardView->KeyRow->KeyButton (not CompositionLocal) — consistent with existing param style
 - [Phase 05-05]: SettingsCard pattern: each settings section wrapped in clip(RoundedCornerShape(12.dp)) + background(Surface) Column for iOS visual parity
+- [Phase 06-02]: resources.properties must be in app/src/main/res/ not app/src/main/ — AGP extractSupportedLocales task requires it inside the res source set
+- [Phase 06-02]: AppCompatActivity extends ComponentActivity so all existing APIs remain available without changes when extending for locale switching support
 
 ### Roadmap Evolution
 
@@ -153,6 +156,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T07:38:02.537Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-release-readiness/06-CONTEXT.md
+Last session: 2026-03-29T08:11:00.675Z
+Stopped at: Completed 06-02-PLAN.md
+Resume file: None
