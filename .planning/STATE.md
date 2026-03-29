@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-03-29T08:23:11.102Z"
+stopped_at: "Completed 06-03 Task 1 — checkpoint:human-verify for Task 2 (cross-app validation)"
+last_updated: "2026-03-29T08:29:35.587Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 29
-  completed_plans: 28
+  completed_plans: 29
   percent: 100
 ---
 
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 | Phase 06-release-readiness P02 | 4 | 3 tasks | 12 files |
 | Phase 06-release-readiness P01 | 4min | 1 tasks | 9 files |
 | Phase 06 P04 | 9min | 2 tasks | 13 files |
+| Phase 06-release-readiness P03 | 15min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,7 @@ Recent decisions affecting current work:
 - [Phase 06-release-readiness]: Model name 'Tiny' not extracted to strings.xml — it is a proper name, not translated
 - [Phase 06-release-readiness]: onboarding_test_recording_no_result uses context.getString() inside coroutine lambda — stringResource() requires Compose composition context
 - [Phase 06]: noResultLabel captured via remember{stringResource()} before coroutine scope in RecordingScreen to avoid composable context restriction
+- [Phase 06-03]: MutableStateFlow for uiLanguage — AppCompatDelegate is source of truth, DataStore duplication avoided; setApplicationLocales() called on main thread from onClick only
 
 ### Roadmap Evolution
 
@@ -162,6 +164,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T08:23:11.099Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-03-29T08:29:35.584Z
+Stopped at: Completed 06-03 Task 1 — checkpoint:human-verify for Task 2 (cross-app validation)
 Resume file: None
