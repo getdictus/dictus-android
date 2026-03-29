@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -89,7 +90,7 @@ fun TranscribingScreen(
 
             // "Transcription..." label
             Text(
-                text = "Transcription...",
+                text = stringResource(dev.pivisolutions.dictus.ime.R.string.ime_transcribing),
                 color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 16.dp),

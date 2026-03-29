@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ime_name">Clavier Dictus</string>
+    <string name="subtype_azerty">AZERTY (Fran\u00e7ais)</string>
+    <string name="subtype_qwerty">QWERTY (Anglais)</string>
+</resources>

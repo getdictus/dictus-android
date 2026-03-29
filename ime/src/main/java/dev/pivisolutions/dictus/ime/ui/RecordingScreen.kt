@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -142,7 +143,7 @@ fun RecordingScreen(
 
             // "En ecoute..." label
             Text(
-                text = "En ecoute...",
+                text = stringResource(dev.pivisolutions.dictus.ime.R.string.ime_recording_listening),
                 color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 4.dp),

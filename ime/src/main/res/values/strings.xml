@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ime_recording_listening">Listening\u2026</string>
+    <string name="ime_transcribing">Transcribing\u2026</string>
+    <string name="ime_emoji_return_keyboard">ABC</string>
+</resources>
