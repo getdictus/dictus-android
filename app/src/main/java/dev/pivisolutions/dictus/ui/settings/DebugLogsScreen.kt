@@ -28,13 +28,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.logging.TimberSetup
-import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +88,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "Aucun log disponible",
+                            text = stringResource(R.string.debug_logs_empty),
                             color = LocalDictusColors.current.textSecondary,
                             fontSize = 16.sp,
                         )
@@ -117,12 +118,12 @@ fun DebugLogsScreen(onBack: () -> Unit) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Retour",
+                    contentDescription = stringResource(R.string.debug_logs_back_cd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
-                text = "Debug Logs",
+                text = stringResource(R.string.debug_logs_title),
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -133,7 +134,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Menu",
+                        contentDescription = stringResource(R.string.debug_logs_menu_cd),
                         tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
@@ -142,7 +143,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                     onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Effacer") },
+                        text = { Text(stringResource(R.string.debug_logs_clear)) },
                         onClick = {
                             showMenu = false
                             logFile?.writeText("")
@@ -150,7 +151,7 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text("Copier") },
+                        text = { Text(stringResource(R.string.debug_logs_copy)) },
                         onClick = {
                             showMenu = false
                             clipboardManager.setText(AnnotatedString(lines.joinToString("\n")))

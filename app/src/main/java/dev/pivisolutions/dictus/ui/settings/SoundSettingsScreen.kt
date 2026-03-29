@@ -29,10 +29,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 
@@ -77,12 +79,12 @@ fun SoundSettingsScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Retour",
+                    contentDescription = stringResource(R.string.sound_settings_back_cd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
-                text = "Sons",
+                text = stringResource(R.string.sound_settings_title),
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -90,18 +92,18 @@ fun SoundSettingsScreen(
         }
 
         // ---------- SECTION: GENERAL ----------
-        SoundSectionHeader(text = "GENERAL")
+        SoundSectionHeader(text = stringResource(R.string.sound_settings_section_general))
         SoundSettingsCard {
             // Toggle: sound enabled/disabled
             SoundToggleRow(
-                label = "Son de dict\u00e9e",
+                label = stringResource(R.string.sound_settings_dictation_sound),
                 checked = soundEnabled,
                 onToggle = { viewModel.toggleSound() },
             )
             SoundDivider()
             // Volume slider
             SoundSliderRow(
-                label = "Volume",
+                label = stringResource(R.string.sound_settings_volume),
                 value = soundVolume,
                 enabled = soundEnabled,
                 onValueChange = { viewModel.setSoundVolume(it) },
@@ -109,24 +111,24 @@ fun SoundSettingsScreen(
         }
 
         // ---------- SECTION: SONS ----------
-        SoundSectionHeader(text = "SONS")
+        SoundSectionHeader(text = stringResource(R.string.sound_settings_section_sounds))
         SoundSettingsCard {
             SoundPickerRow(
-                label = "Son de d\u00e9but",
+                label = stringResource(R.string.sound_settings_start_sound),
                 value = formatSoundName(startSound),
                 enabled = soundEnabled,
                 onClick = { onNavigateToSoundPicker("start") },
             )
             SoundDivider()
             SoundPickerRow(
-                label = "Son de fin",
+                label = stringResource(R.string.sound_settings_stop_sound),
                 value = formatSoundName(stopSound),
                 enabled = soundEnabled,
                 onClick = { onNavigateToSoundPicker("stop") },
             )
             SoundDivider()
             SoundPickerRow(
-                label = "Son d'annulation",
+                label = stringResource(R.string.sound_settings_cancel_sound),
                 value = formatSoundName(cancelSound),
                 enabled = soundEnabled,
                 onClick = { onNavigateToSoundPicker("cancel") },

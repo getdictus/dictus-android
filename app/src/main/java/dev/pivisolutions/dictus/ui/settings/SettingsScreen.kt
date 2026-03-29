@@ -46,11 +46,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.pivisolutions.dictus.BuildConfig
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
@@ -98,30 +100,30 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         // ---------- SECTION: TRANSCRIPTION ----------
-        SectionHeader(text = "TRANSCRIPTION")
+        SectionHeader(text = stringResource(R.string.settings_section_transcription))
         SettingsCard {
             SettingPickerRow(
-                label = "Langue",
+                label = stringResource(R.string.settings_language),
                 value = when (language) {
-                    "fr" -> "Fran\u00e7ais"
-                    "en" -> "English"
-                    else -> "Automatique"
+                    "fr" -> stringResource(R.string.settings_language_fr)
+                    "en" -> stringResource(R.string.settings_language_en)
+                    else -> stringResource(R.string.settings_language_auto)
                 },
                 onClick = { showLanguagePicker = true },
             )
         }
 
         // ---------- SECTION: CLAVIER ----------
-        SectionHeader(text = "CLAVIER")
+        SectionHeader(text = stringResource(R.string.settings_section_keyboard))
         SettingsCard {
             SettingPickerRow(
-                label = "Disposition du clavier",
+                label = stringResource(R.string.settings_keyboard_layout),
                 value = keyboardLayout.uppercase(),
                 onClick = { showKeyboardPicker = true },
             )
             SettingDivider()
             SettingPickerRow(
-                label = "Mode par d\u00e9faut",
+                label = stringResource(R.string.settings_default_mode),
                 value = when (keyboardMode) {
                     "123" -> "123"
                     else -> "ABC"
@@ -130,65 +132,65 @@ fun SettingsScreen(
             )
             SettingDivider()
             SettingToggleRow(
-                label = "Retour haptique",
+                label = stringResource(R.string.settings_haptic_feedback),
                 checked = hapticsEnabled,
                 onToggle = { viewModel.toggleHaptics() },
             )
             SettingDivider()
             SettingNavRow(
-                label = "Sons",
+                label = stringResource(R.string.settings_sounds),
                 onClick = onNavigateToSoundSettings,
             )
         }
 
         // ---------- SECTION: APPARENCE ----------
-        SectionHeader(text = "APPARENCE")
+        SectionHeader(text = stringResource(R.string.settings_section_appearance))
         SettingsCard {
             SettingPickerRow(
-                label = "Th\u00e8me",
+                label = stringResource(R.string.settings_theme),
                 value = when (theme) {
-                    "dark" -> "Sombre"
-                    "light" -> "Clair"
-                    "auto" -> "Automatique"
-                    else -> "Sombre"
+                    "dark" -> stringResource(R.string.settings_theme_dark)
+                    "light" -> stringResource(R.string.settings_theme_light)
+                    "auto" -> stringResource(R.string.settings_theme_auto)
+                    else -> stringResource(R.string.settings_theme_dark)
                 },
                 onClick = { showThemePicker = true },
             )
         }
 
         // ---------- SECTION: A PROPOS ----------
-        SectionHeader(text = "A PROPOS")
+        SectionHeader(text = stringResource(R.string.settings_section_about))
         SettingsCard {
             SettingInfoRow(
-                label = "Version",
+                label = stringResource(R.string.settings_version),
                 value = "Dictus ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
             )
             SettingDivider()
             SettingNavRow(
-                label = "Debug Logs",
+                label = stringResource(R.string.settings_debug_logs),
                 onClick = onNavigateToDebugLogs,
             )
             SettingDivider()
             SettingActionRow(
-                label = "Exporter les logs de d\u00e9bogage",
+                label = stringResource(R.string.settings_export_logs),
                 onClick = {
                     val logFile = TimberSetup.getLogFile()
                     if (logFile != null) {
                         val uri = LogExporter.exportLogs(context, logFile)
                         if (uri != null) {
                             val shareIntent = LogExporter.createShareIntent(uri)
-                            context.startActivity(Intent.createChooser(shareIntent, "Exporter les logs"))
+                            context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.settings_export_logs_chooser)))
                         } else {
                             Toast.makeText(
                                 context,
-                                "Impossible d'exporter les logs.",
+                                context.getString(R.string.settings_export_logs_error),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }
                     } else {
                         Toast.makeText(
                             context,
-                            "Impossible d'exporter les logs.",
+                            context.getString(R.string.settings_export_logs_error),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -196,18 +198,18 @@ fun SettingsScreen(
             )
             SettingDivider()
             SettingNavRow(
-                label = "Licences",
+                label = stringResource(R.string.settings_licences),
                 onClick = onNavigateToLicences,
             )
             SettingDivider()
             SettingLinkRow(
-                label = "GitHub",
+                label = stringResource(R.string.settings_github),
                 url = "https://github.com/Pivii/dictus",
                 context = context,
             )
             SettingDivider()
             SettingLinkRow(
-                label = "Mentions l\u00e9gales",
+                label = stringResource(R.string.settings_legal),
                 url = "https://pivisolutions.dev/legal",
                 context = context,
             )
@@ -220,11 +222,11 @@ fun SettingsScreen(
 
     if (showLanguagePicker) {
         PickerBottomSheet(
-            title = "Choisir la langue",
+            title = stringResource(R.string.picker_language_title),
             options = listOf(
-                "auto" to "Automatique",
-                "fr" to "Fran\u00e7ais",
-                "en" to "English",
+                "auto" to stringResource(R.string.settings_language_auto),
+                "fr" to stringResource(R.string.settings_language_fr),
+                "en" to stringResource(R.string.settings_language_en),
             ),
             selected = language,
             onSelect = { viewModel.setLanguage(it) },
@@ -234,7 +236,7 @@ fun SettingsScreen(
 
     if (showKeyboardPicker) {
         PickerBottomSheet(
-            title = "Disposition du clavier",
+            title = stringResource(R.string.picker_keyboard_layout_title),
             options = listOf(
                 "azerty" to "AZERTY",
                 "qwerty" to "QWERTY",
@@ -247,7 +249,7 @@ fun SettingsScreen(
 
     if (showKeyboardModePicker) {
         PickerBottomSheet(
-            title = "Mode par d\u00e9faut du clavier",
+            title = stringResource(R.string.picker_default_mode_title),
             options = listOf(
                 "abc" to "ABC",
                 "123" to "123",
@@ -260,11 +262,11 @@ fun SettingsScreen(
 
     if (showThemePicker) {
         PickerBottomSheet(
-            title = "Th\u00e8me de l'application",
+            title = stringResource(R.string.picker_theme_title),
             options = listOf(
-                "dark" to "Sombre",
-                "light" to "Clair",
-                "auto" to "Automatique",
+                "dark" to stringResource(R.string.settings_theme_dark),
+                "light" to stringResource(R.string.settings_theme_light),
+                "auto" to stringResource(R.string.settings_theme_auto),
             ),
             selected = theme,
             onSelect = { viewModel.setTheme(it) },

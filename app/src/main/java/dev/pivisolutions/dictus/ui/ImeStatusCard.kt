@@ -17,7 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -58,27 +60,27 @@ fun ImeStatusCard(
                 isEnabled && isSelected -> {
                     StatusRow(
                         color = DictusColors.Success,
-                        text = "Dictus keyboard active",
+                        text = stringResource(R.string.ime_status_active),
                     )
                 }
                 // State 2: Enabled but not selected as current IME
                 isEnabled -> {
                     StatusRow(
                         color = Color(0xFFFFA500), // Orange
-                        text = "Keyboard enabled but not selected",
+                        text = stringResource(R.string.ime_status_enabled_not_selected),
                     )
                     OutlinedButton(onClick = onOpenSettings) {
-                        Text("Select Keyboard")
+                        Text(stringResource(R.string.ime_status_select_keyboard))
                     }
                 }
                 // State 1: Not enabled in system settings
                 else -> {
                     StatusRow(
                         color = DictusColors.Recording, // Red
-                        text = "Keyboard not enabled",
+                        text = stringResource(R.string.ime_status_not_enabled),
                     )
                     OutlinedButton(onClick = onOpenSettings) {
-                        Text("Enable Keyboard")
+                        Text(stringResource(R.string.ime_status_enable_keyboard))
                     }
                 }
             }

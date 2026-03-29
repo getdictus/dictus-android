@@ -31,11 +31,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
-import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.delay
@@ -78,7 +78,7 @@ fun FakeSettingsCard(
     ) {
         // Section header: "Manage keyboards" — matches Android system settings label
         Text(
-            text = "Manage keyboards",
+            text = stringResource(R.string.fake_settings_manage_keyboards),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             fontWeight = FontWeight.Normal,
@@ -93,7 +93,7 @@ fun FakeSettingsCard(
         // Gboard entry (toggle 1 — animates on first)
         KeyboardEntryRow(
             name = "Gboard",
-            subtitle = "Multilingual typing",
+            subtitle = stringResource(R.string.fake_settings_gboard_subtitle),
             isOn = toggle1On,
             icon = { GboardIcon() },
         )
@@ -107,7 +107,7 @@ fun FakeSettingsCard(
         // Dictus entry (toggle 2 — animates on second)
         KeyboardEntryRow(
             name = "Dictus Keyboard",
-            subtitle = "QWERTY (English)",
+            subtitle = stringResource(R.string.fake_settings_dictus_subtitle),
             isOn = toggle2On,
             icon = {
                 Image(

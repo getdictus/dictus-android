@@ -15,9 +15,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
@@ -57,7 +59,7 @@ fun RecordingTestArea(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Recording Test",
+                text = stringResource(R.string.recording_test_title),
                 color = LocalDictusColors.current.keyText,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
@@ -66,7 +68,7 @@ fun RecordingTestArea(
             when (dictationState) {
                 is DictationState.Idle -> {
                     Text(
-                        text = "State: Idle",
+                        text = stringResource(R.string.recording_test_state_idle),
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                     )
@@ -76,13 +78,13 @@ fun RecordingTestArea(
                             containerColor = DictusColors.Accent,
                         ),
                     ) {
-                        Text("Test Recording")
+                        Text(stringResource(R.string.recording_test_start_button))
                     }
                 }
 
                 is DictationState.Recording -> {
                     Text(
-                        text = "State: Recording",
+                        text = stringResource(R.string.recording_test_state_recording),
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                     )
@@ -118,7 +120,7 @@ fun RecordingTestArea(
                                 containerColor = DictusColors.Success,
                             ),
                         ) {
-                            Text("Stop")
+                            Text(stringResource(R.string.recording_test_stop_button))
                         }
                         Button(
                             onClick = onCancelRecording,
@@ -126,14 +128,14 @@ fun RecordingTestArea(
                                 containerColor = DictusColors.Recording,
                             ),
                         ) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.recording_test_cancel_button))
                         }
                     }
                 }
 
                 is DictationState.Transcribing -> {
                     Text(
-                        text = "State: Transcribing...",
+                        text = stringResource(R.string.recording_test_state_transcribing),
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                     )
