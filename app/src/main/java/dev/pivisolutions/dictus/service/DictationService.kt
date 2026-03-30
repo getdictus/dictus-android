@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
 import dev.pivisolutions.dictus.model.ModelManager
 import timber.log.Timber
@@ -93,7 +94,7 @@ class DictationService : Service(), DictationController {
         ).dataStore()
     }
 
-    private val transcriptionEngine = WhisperTranscriptionEngine()
+    private val sttProvider: SttProvider = WhisperProvider()
     private val modelManager by lazy { ModelManager(applicationContext) }
     private val modelDownloader by lazy { ModelDownloader(modelManager) }
 
@@ -320,8 +321,8 @@ class DictationService : Service(), DictationController {
             }
 
             // 4. Initialize engine if needed
-            if (!transcriptionEngine.isReady) {
-                val initialized = transcriptionEngine.initialize(modelPath)
+            if (!sttProvider.isReady) {
+                val initialized = sttProvider.initialize(modelPath)
                 if (!initialized) {
                     Timber.e("Failed to initialize transcription engine")
                     _state.value = DictationState.Idle
@@ -335,7 +336,7 @@ class DictationService : Service(), DictationController {
             val rawText = withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
                 // Fall back to "fr" when whisperLanguage is null and whisper.cpp
                 // does not support true auto-detection on this model variant.
-                transcriptionEngine.transcribe(samples, whisperLanguage ?: "fr")
+                sttProvider.transcribe(samples, whisperLanguage ?: "fr")
             }
 
             if (rawText == null) {
@@ -465,7 +466,7 @@ class DictationService : Service(), DictationController {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.launch {
-            transcriptionEngine.release()
+            sttProvider.release()
         }
         if (::soundPlayer.isInitialized) soundPlayer.release()
         serviceScope.cancel()
