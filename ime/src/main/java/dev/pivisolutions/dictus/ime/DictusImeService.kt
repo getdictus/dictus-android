@@ -266,6 +266,15 @@ class DictusImeService : LifecycleInputMethodService() {
             .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
             .collectAsState(initial = true)
 
+        // Read keyboard layout preference (AZERTY vs QWERTY).
+        // WHY collectAsState: This is a Compose composable, so we use the DataStore Flow
+        // + collectAsState() pattern (not coroutine-scope collect). When the user toggles
+        // the layout in Settings, DataStore emits a new value, Compose recomposes, and
+        // KeyboardScreen receives the updated layout immediately.
+        val keyboardLayout by entryPoint.dataStore().data
+            .map { it[PreferenceKeys.KEYBOARD_LAYOUT] ?: "azerty" }
+            .collectAsState(initial = "azerty")
+
         val switchKeyboard = {
             val imm = getSystemService(INPUT_METHOD_SERVICE)
                 as android.view.inputmethod.InputMethodManager
@@ -309,6 +318,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     themeMode = themeMode,
                     initialLayer = initialLayer,
                     hapticsEnabled = hapticsEnabled,
+                    keyboardLayout = keyboardLayout,
                 )
             }
             is DictationState.Recording -> {

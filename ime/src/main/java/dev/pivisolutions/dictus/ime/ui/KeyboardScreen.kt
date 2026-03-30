@@ -49,13 +49,17 @@ fun KeyboardScreen(
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
     hapticsEnabled: Boolean = true,
+    keyboardLayout: String = "azerty",  // NEW — AZERTY/QWERTY from DataStore
 ) {
     // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
     // remember(initialLayer) ensures recomposition resets the layer if the preference changes.
     var currentLayer by remember(initialLayer) { mutableStateOf(initialLayer) }
     var isShifted by remember { mutableStateOf(false) }
     var isCapsLock by remember { mutableStateOf(false) }
-    var currentLayout by remember { mutableStateOf("azerty") }
+    // keyboardLayout comes from DataStore via DictusImeService.
+    // remember(keyboardLayout) resets the state when the preference changes in Settings,
+    // so the user sees the new layout immediately without restarting the keyboard.
+    var currentLayout by remember(keyboardLayout) { mutableStateOf(keyboardLayout) }
 
     // Track last tap time for double-tap shift detection
     var lastShiftTapTime by remember { mutableStateOf(0L) }
