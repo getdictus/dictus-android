@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Public Beta
 status: completed
 stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-03-30T13:03:47.079Z"
+last_updated: "2026-03-30T13:09:02.406Z"
 last_activity: "2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard"
 progress:
   total_phases: 5
