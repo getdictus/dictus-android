@@ -1,174 +1,182 @@
 # Project Research Summary
 
-**Project:** Dictus Android
-**Domain:** Android custom keyboard (IME) with on-device ML voice dictation
-**Researched:** 2026-03-21
-**Confidence:** HIGH
+**Project:** Dictus Android v1.1 — New Capabilities
+**Domain:** Android IME — on-device voice dictation keyboard with multi-provider STT, text prediction, and OSS distribution
+**Researched:** 2026-03-30
+**Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-Dictus Android is an on-device voice dictation keyboard -- a custom `InputMethodService` that integrates whisper.cpp for fully offline speech-to-text. The expert approach is a multi-module Gradle project (app, ime, core, whisper) where the IME renders its keyboard UI via Jetpack Compose inside an `AbstractComposeView`, and delegates all audio capture and ML inference to a foreground `DictationService` via a same-process local Binder. This same-process architecture is a major simplification over iOS, where the keyboard extension runs in a separate process with strict memory limits. The stack is entirely Kotlin-first: Compose for UI, Hilt for DI, StateFlow for reactive state, DataStore for persistence, and OkHttp for one-time model downloads from HuggingFace.
+Dictus Android v1.1 extends a shipped v1.0 MVP (full keyboard + offline whisper.cpp STT) into a public OSS beta with four new capability areas: production-grade text prediction, a second STT engine (Parakeet via sherpa-onnx), formalized beta distribution via GitHub Releases CI, and OSS repository scaffolding. The recommended approach for each area avoids the obvious-but-wrong paths: AOSP's C++ LatinIME engine (no Maven artifact, build toolchain too heavy), the large Parakeet 0.6B model (640 MB, OOMs in IME process), Firebase Crashlytics (breaks on custom ROMs), and Fastlane (Play Store-centric, no value for APK-only distribution). In every case, a lighter, more compatible alternative exists: binary `.dict` files with a Kotlin ranker, the 110M Parakeet CTC model at 126 MB, Timber file logging, and native GitHub Actions.
 
-The recommended approach is to build bottom-up from shared contracts (`:core` module with state machine and design system), then tackle the two highest-risk items in parallel: the whisper.cpp native build/JNI bridge (`:whisper`) and the Compose-based keyboard UI (`:ime`). These converge in the `DictationService` (`:app`) which wires audio recording to Whisper inference and exposes results via StateFlow. The app layer adds onboarding, settings, and model management. This ordering front-loads the two riskiest unknowns -- native C++ builds on Android and Compose inside `InputMethodService` -- where failure would force architectural changes.
+The most important architectural decision for v1.1 is the `SttProvider` interface in `core/`. This interface must be defined and `WhisperProvider` implemented before any Parakeet code is written. The entire multi-provider feature tree depends on it as a gate, and building Parakeet without it produces a god-object `DictationService` that cannot be extended. Equally critical: mutual exclusivity between loaded STT models is not optional — loading whisper.cpp and Parakeet simultaneously on a 6 GB device under Android system load will trigger the OOM killer.
 
-The top risks are: (1) Compose in IME requires manual lifecycle wiring that is not documented in official Android docs and crashes without it; (2) whisper.cpp's Android examples are poorly maintained, and incorrect build flags or thread counts cause 10x slowdowns; (3) JNI memory management for 190-460MB model files requires explicit lifecycle handling or native memory leaks will crash the app. All three are well-understood and have proven solutions, but each requires careful implementation in the early phases.
+The primary risk to the v1.1 release is the `libc++_shared.so` symbol collision between whisper.cpp and sherpa-onnx. If both `.so` files embed incompatible STL versions, the process crashes on first ONNX inference — intermittently, and only on some devices. The fix (build whisper.cpp with `c++_static` and hide STL symbols) must be validated before any other Parakeet UI work proceeds. OSS repo preparation has a hard gate: `truffleHog` or equivalent must scan git history before the repo goes public, since HuggingFace URLs and any tokens ever touched are permanent if committed.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is mature and well-documented. Kotlin 2.3.20 with AGP 9.1.0 (which includes built-in Kotlin support). Jetpack Compose via BOM 2026.03.00 for all UI. whisper.cpp v1.8.4 compiled via NDK r28 and CMake for on-device inference. No cloud dependencies beyond one-time model downloads.
+The v1.1 stack adds three new components on top of the existing Kotlin + Compose + whisper.cpp + Hilt + DataStore + OkHttp baseline. For text prediction: AOSP binary `.dict` files (Apache 2.0, ~3-4 MB each for FR and EN) from `Helium314/aosp-dictionaries` on Codeberg, loaded as ByteBuffer in Kotlin with a custom prefix ranker — no NDK required. For Parakeet STT: sherpa-onnx v1.12.34 AAR (MIT, pre-built, not on Maven Central — local AAR in `asr/libs/`), using the 110M CTC model at 126 MB INT8. For CI/CD: native GitHub Actions with `r0adkll/sign-android-release` and `softprops/action-gh-release`. For license auditing: `gradle-license-plugin` v0.9.8.
 
-**Core technologies:**
-- **Kotlin + AGP 9.1.0**: Primary language and build system -- AGP 9 has built-in Kotlin support, no separate plugin needed
-- **Jetpack Compose (BOM 2026.03.00)**: Declarative UI for both keyboard and app screens -- parity with iOS SwiftUI approach
-- **whisper.cpp v1.8.4 + NDK r28**: On-device Whisper inference via JNI -- same GGML models as iOS, MIT license
-- **Hilt 2.57.1**: Compile-time DI -- catches injection errors at build time, critical for multi-module project
-- **StateFlow + Coroutines**: Reactive state management -- powers the dictation state machine (idle, recording, transcribing, ready)
-- **OkHttp 4.12.x**: Model downloads only -- no REST API, no serialization, simplest option for file download with progress
-- **DataStore Preferences**: Settings persistence -- replaces SharedPreferences, coroutine-based, type-safe
+**Core new technologies:**
+- **sherpa-onnx 1.12.34 AAR**: Parakeet ONNX inference via JNI — pre-built, MIT, no NDK build required
+- **AOSP binary .dict files (Apache 2.0)**: FR + EN word frequency data for suggestion ranking — static assets, no C++ required
+- **GitHub Actions + r0adkll/sign-android-release**: Automated signed APK release on `v*` tag push
+- **gradle-license-plugin 0.9.8**: License audit report generation before OSS repo goes public
+- **Parakeet 110M CTC INT8 (126 MB)**: The only feasible Parakeet model for an IME process; the 0.6B variant (640 MB) is explicitly excluded
+
+**Critical version/compatibility constraints:**
+- sherpa-onnx 1.12.34 AAR is not on Maven Central — must be downloaded from GitHub Releases and stored in `asr/libs/`
+- Do NOT add `com.microsoft.onnxruntime:onnxruntime-android` as a separate Gradle dependency — sherpa-onnx bundles it; duplicate inclusion causes version conflicts
+- HeliBoard source code (GPL v3) must not be included — only the Apache 2.0 binary `.dict` files are safe to use
 
 ### Expected Features
 
-**Must have (P0 -- non-functional without these):**
-- Custom keyboard IME with AZERTY + QWERTY, shift, caps, numbers, symbols, accented characters
-- On-device STT via whisper.cpp (JNI bridge, GGML model loading, batch transcription)
-- Audio recording via AudioRecord in foreground Service
-- Text insertion via InputConnection into any host app
-- Onboarding flow (IME activation is confusing on Android -- critical for retention)
-- Model download from HuggingFace with progress UI
-- Basic settings (model, language, layout selection)
+**Must have for v1.1 public beta (P1):**
+- `SttProvider` interface in `core/` — architectural gate for all multi-provider work
+- Parakeet 110M integration via sherpa-onnx AAR, batch mode, English only
+- Model cards with provider badge in model manager (users must know which engine backs each model)
+- Binary `.dict` suggestion engine (FR + EN, top-3 candidates, tap to replace) — replaces stub `StubSuggestionEngine`
+- Signed APK on GitHub Releases via CI (tag push -> build -> sign -> release)
+- Semantic versioning convention (`1.1.0-beta01`, monotonically increasing `versionCode`)
+- GitHub YAML issue templates (bug + feature) for actionable beta feedback
+- `CONTRIBUTING.md` and `README.md` update (build prerequisites, architecture overview)
+- `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1)
+- License audit clean pass before public repo (`gradle-license-plugin`, no GPL contamination)
+- Tech debt fixes from v1.0 (settings AZERTY toggle, POST_NOTIFICATIONS, stale test assertions)
 
-**Should have (P1 -- significantly improves experience):**
-- Waveform animation during recording (premium feel, differentiator vs bare-bones Whisper keyboards)
-- Haptic and sound feedback for key press and dictation events
-- Debug logging with Timber + file export (essential for beta)
-- Dark theme with Dictus brand colors
+**Should have for v1.1.x (P2):**
+- Bigram context scoring in suggestion engine (improves ranking without ML)
+- Post-dictation confidence indicator (requires surfacing whisper.cpp `token.p` through JNI)
+- Auto-fallback to Whisper when active language conflicts with Parakeet (English-only constraint)
+- In-app "check for updates" Settings link (Intent to GitHub Releases page)
 
-**Defer (P2/v2+):**
-- Emoji picker, suggestion bar with transcription preview, bilingual UI
-- Voice Activity Detection (auto-stop), streaming transcription, GPU/NNAPI acceleration
-- Swipe typing, AI text reformatting, autocorrect ML -- explicitly anti-features
+**Defer to v2+ (do not implement in v1.1):**
+- Streaming transcription (Parakeet CTC streaming mode — requires audio pipeline refactor)
+- Voice Activity Detection (Silero VAD or WebRTC VAD)
+- GPU/NNAPI acceleration (experimental on Pixel 4's Snapdragon 855)
+- Personal word dictionary / user learning
+- Play Store or F-Droid distribution
+- Automated ktlint as CI gate (add after contributor norms are established)
 
 ### Architecture Approach
 
-Four-module Gradle project running in a single process. The IME (`:ime`) renders Compose UI and communicates with `DictationService` (`:app`) via local Binder with shared StateFlow. The service owns audio recording and whisper.cpp inference. All shared contracts live in `:core`. The whisper JNI bridge is isolated in `:whisper`.
+The v1.1 architecture adds one new Gradle module (`asr/`) and one new interface (`SttProvider` in `core/`) to the existing 4-module structure. The Bound Service IPC pattern between `DictusImeService` and `DictationService` is unchanged — the IME continues calling `confirmAndTranscribe()` through the same `LocalBinder`. Provider selection is internal to `DictationService`: it reads `ACTIVE_STT_PROVIDER` from DataStore and calls `getOrInitEngine()`, which enforces mutual exclusivity (release current engine before loading new one). The `BinaryDictRanker` lives in `ime/suggestion/` alongside the existing `SuggestionEngine` interface and loads `.dict` assets from `ime/src/main/assets/dicts/`. The `asr/` module depends only on `core/` (for `SttProvider`) and has no dependency on `app/` or `ime/`, preventing circular dependencies.
 
 **Major components:**
-1. **DictusIME** (`:ime`) -- `InputMethodService` with Compose keyboard UI, binds to DictationService, handles InputConnection
-2. **DictationService** (`:app`) -- Foreground Service owning AudioRecord + WhisperBridge, single source of truth for dictation state
-3. **WhisperBridge** (`:whisper`) -- Kotlin JNI wrapper around whisper.cpp, thread-safe singleton, explicit lifecycle management
-4. **ModelManager** (`:app`) -- Downloads GGML models from HuggingFace, manages storage and active model selection
-5. **DictationStateMachine** (`:core`) -- Shared `StateFlow<DictationState>` with states: idle, requested, recording, transcribing, ready, failed
+1. **`core/stt/SttProvider` (NEW interface)** — `WhisperProvider` and `ParakeetProvider` implement it; `DictationService` holds `var activeEngine: SttProvider?`
+2. **`asr/` module (NEW)** — contains only `ParakeetProvider` + sherpa-onnx AAR in `libs/`; no CMakeLists.txt needed
+3. **`DictationService.getOrInitEngine()` (MODIFIED)** — provider selection with memory guard (`availMem < 1.5 GB` refuses Parakeet) and mutual exclusivity
+4. **`ime/suggestion/BinaryDictRanker` (NEW)** — implements `SuggestionEngine`, reads binary `.dict` assets, runs on dedicated `dict-worker` thread via `Executors.newSingleThreadExecutor()`
+5. **`ModelInfo` extended data class (MODIFIED)** — adds `provider: AiProvider`, `extractedDirName: String?`, `supportedLanguages: List<String>` for ONNX archive-based models
+6. **GitHub Actions workflows (NEW)** — `ci.yml` (lint + unit tests + debug APK on push/PR), `release.yml` (signed APK on `v*` tag push)
 
 ### Critical Pitfalls
 
-1. **ComposeView lifecycle crash in IME** -- `InputMethodService` lacks `LifecycleOwner`/`ViewModelStoreOwner`/`SavedStateRegistryOwner`. Must implement all three manually and wire them to `ComposeView`. Without this, the keyboard will not render at all. Address in Phase 1.
+1. **`libc++_shared.so` symbol collision between whisper.cpp and sherpa-onnx (Pitfall 12)** — Build whisper.cpp with `c++_static` and hide STL symbols via `-Wl,--exclude-libs,libc++_static.a`. Validate with a standalone test loading both engines + 20 inference iterations before any UI integration. Crash is intermittent and device-specific — easy to miss in initial testing.
 
-2. **whisper.cpp build misconfiguration causing 10x slowdowns** -- Official Android examples are poorly maintained. Must use CMake with `-DCMAKE_BUILD_TYPE=Release -DGGML_NEON=ON`, pin to a specific release tag, and set thread count to 4 (matching Pixel 4's big cores). Validate inference speed independently before integrating. Address in Phase 3.
+2. **Native text prediction called on wrong thread causes keyboard lag (Pitfall 11)** — All `BinaryDictRanker` calls must go through a dedicated `dict-worker` single-threaded executor. Never call JNI lookup on `Dispatchers.Default` or `Dispatchers.Main`. Debounce at 50ms. Validate with a microbenchmark (1000 sequential lookups) before keyboard UI integration.
 
-3. **JNI native memory leaks** -- The 190-460MB whisper context lives outside JVM garbage collection. Must wrap native pointer in `Closeable`, call `whisper_free()` in `Service.onDestroy()` and `try/finally`, verify with `dumpsys meminfo`. Address in Phase 3.
+3. **Parakeet + whisper.cpp simultaneous load OOMs on 6 GB devices (Pitfall 14)** — Enforce mutual exclusivity in `getOrInitEngine()`. Add explicit `ActivityManager.getMemoryInfo()` guard: if `availMem < 1.5 GB`, refuse Parakeet load and show user-facing error. Validate on Pixel 4 with `adb shell dumpsys meminfo` after each load/unload cycle.
 
-4. **Foreground service restrictions on API 31+** -- `ForegroundServiceStartNotAllowedException` if `startForeground()` is not called immediately. Must declare `foregroundServiceType="microphone"`, create notification channel in `Application.onCreate()`, call `startForeground()` as first line of `onStartCommand()`. Address in Phase 2.
+4. **Signing key loss breaks future APK updates (Pitfall 15)** — Generate a dedicated APK signing keystore before the first public release. Back it up to at minimum two locations. Never commit `.jks` to git. Verify the GitHub Actions workflow does not expose secrets to fork PRs.
 
-5. **Model download corruption** -- Interrupted downloads of 190-460MB files leave partial files that crash whisper. Must download to `.tmp`, rename after completion + SHA-256 hash verification, support HTTP range resume. Address in Phase 4.
+5. **Secrets or HuggingFace tokens in git history before OSS repo goes public (Pitfall 17)** — Run `truffleHog` or `git secrets --scan` on full git history before making the repo public. Store all model URLs in a versioned `assets/model_catalog.json`, not hardcoded in Kotlin. The repo going public is a one-way door.
+
+6. **Multi-provider architecture implemented as god object (Pitfall 18)** — Define `SttProvider` interface and implement `WhisperProvider` before writing any Parakeet code. `DictationService` must hold `var activeEngine: SttProvider?` and delegate all calls to it — zero `when (provider)` blocks in the service.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, four phases are recommended. The ordering is driven by three hard dependencies: (1) `SttProvider` interface gates Parakeet work, (2) OSS repo preparation gates the public release, (3) the `libc++` collision must be validated before Parakeet UI is built.
 
-### Phase 1: Core Foundation + Keyboard Shell
-**Rationale:** Everything depends on `:core` contracts and a rendering keyboard. The Compose-in-IME lifecycle wiring is the first architectural risk to retire. Text insertion must be validated across multiple apps early.
-**Delivers:** `:core` module (state machine, DataStore prefs, design system, logging), `:ime` module with Compose keyboard rendering AZERTY/QWERTY layouts, key press handling, text insertion via InputConnection
-**Addresses:** Full letter layout, number/symbol layers, backspace/enter/space, haptic feedback, dark theme, text insertion into any app
-**Avoids:** ComposeView lifecycle crash (Pitfall 1), Compose recomposition lag (Pitfall 8), InputConnection failures (Pitfall 9)
+### Phase 1: Foundation — SttProvider Interface + Tech Debt
+**Rationale:** The `SttProvider` interface is the single most load-bearing architectural decision in v1.1. Every subsequent phase depends on it. Defining it first and implementing `WhisperProvider` as a thin wrapper validates the abstraction before any ONNX code is written. Tech debt from v1.0 should be cleared here to avoid carrying it into a public release.
+**Delivers:** `SttProvider` interface in `core/`, `WhisperProvider` adapter, extended `ModelInfo` data class, tech debt fixes (settings AZERTY toggle, POST_NOTIFICATIONS, stale test assertions)
+**Addresses:** Pitfall 18 (god object anti-pattern) — interface defined before Parakeet code exists
+**Research flag:** Well-established patterns — no additional research needed
 
-### Phase 2: Audio Recording + Service Architecture
-**Rationale:** The IPC binding pattern (local Binder + StateFlow) and foreground service setup must be validated before whisper.cpp integration. Audio recording quality must be independently verified.
-**Delivers:** `DictationService` as foreground service, AudioRecord wrapper (16kHz mono PCM), IME-to-service binding with StateFlow, recording notification, basic recording UI state in keyboard
-**Addresses:** Microphone button (dictation trigger), recording feedback (visual), permission handling
-**Avoids:** Foreground service race condition (Pitfall 2), IPC binding failures (Pitfall 5), AudioRecord buffer underrun (Pitfall 7)
+### Phase 2: Text Prediction — BinaryDictRanker
+**Rationale:** Suggestion engine work is fully independent of STT provider work and has no NDK complexity. It can be developed in parallel with Phase 1 or immediately after. The threading model (dedicated `dict-worker` executor) must be validated with a microbenchmark before keyboard UI integration.
+**Delivers:** `BinaryDictRanker` in `ime/suggestion/`, FR + EN `.dict` assets in `ime/`, `StubSuggestionEngine` replaced, top-3 suggestion candidates after dictation, tap-to-replace interaction
+**Uses:** AOSP binary `.dict` files (Apache 2.0), `Executors.newSingleThreadExecutor()` for JNI safety
+**Avoids:** Pitfall 11 (wrong-thread JNI lag) — microbenchmark gates keyboard UI integration
+**Research flag:** Well-documented pattern — threading validation is the key gate, not further research
 
-### Phase 3: whisper.cpp Native Integration
-**Rationale:** Highest technical risk. The native build, JNI bridge, and inference performance must be validated in isolation before wiring to the full pipeline. Phases 2 and 3 can partially overlap if Phase 2's audio capture is stubbed.
-**Delivers:** `:whisper` module with CMake build, JNI bridge (initModel, transcribe, freeModel), thread management (4 threads on SD855), end-to-end dictation flow (record -> transcribe -> insert text)
-**Addresses:** On-device speech-to-text (core value proposition)
-**Avoids:** Build misconfiguration slowdowns (Pitfall 3), JNI memory leaks (Pitfall 4), model loading ANR (Pitfall 10)
+### Phase 3: Parakeet Integration — sherpa-onnx + Multi-Provider UI
+**Rationale:** Parakeet work can only start after `SttProvider` exists (Phase 1). The `libc++` collision validation must be the first step of this phase — if it fails, the architecture decision (separate processes vs. `c++_static` build) changes scope significantly. Only after the collision is resolved should model download, `ParakeetProvider`, and model manager UI be built.
+**Delivers:** `asr/` module, `ParakeetProvider`, Parakeet 110M in `ModelCatalog`, model cards with provider badge, `ACTIVE_STT_PROVIDER` DataStore key, provider selection in Settings, English-only language warning, mutual exclusivity memory guard in `DictationService`
+**Uses:** sherpa-onnx 1.12.34 AAR (local, `asr/libs/`), 110M CTC INT8 model (126 MB)
+**Avoids:** Pitfall 12 (libc++ collision) — validated first; Pitfall 14 (OOM) — mutual exclusivity enforced
+**Research flag:** Needs empirical validation — libc++ collision fix must be verified on Pixel 4 before UI work begins; ONNX memory release behavior must be confirmed with `dumpsys meminfo`
 
-### Phase 4: Model Management + Onboarding
-**Rationale:** With the dictation pipeline working, users need a way to download models and set up the keyboard. Onboarding is critical for retention -- Android IME activation is a confusing multi-step process.
-**Delivers:** Model download from HuggingFace with progress/resume/hash verification, model storage management, onboarding flow (enable IME, set default, mic permission, download model, test dictation), settings screen
-**Addresses:** Model download/management, onboarding flow, settings screen, multiple Whisper model sizes
-**Avoids:** Model download corruption (Pitfall 6)
-
-### Phase 5: Polish + Differentiators
-**Rationale:** With core functionality complete, add the features that create competitive advantage and premium feel.
-**Delivers:** Waveform animation during recording, dictation start/stop audio cues, sound feedback on key press, suggestion bar with transcription preview, emoji picker
-**Addresses:** Waveform animation, sound feedback, dictation audio cues, emoji picker, suggestion bar
-**Avoids:** Waveform causing keyboard stutter (Pitfall 8 -- isolate Canvas from keyboard state)
-
-### Phase 6: Release Preparation
-**Rationale:** Final validation, edge case handling, and release packaging.
-**Delivers:** Cross-app text insertion testing, long recording validation, bilingual UI (FR/EN), "Follow System" theme, Play Store listing, performance profiling on Pixel 4
-**Addresses:** Remaining P2 features, "Looks Done But Isn't" checklist items
+### Phase 4: Beta Distribution + OSS Repository
+**Rationale:** OSS repo preparation is independent of feature work and can be partially parallelized with Phase 3. The hard gate is the license audit and `truffleHog` scan — the repo cannot go public until both pass. Signing key setup must happen before the first signed release APK is built.
+**Delivers:** GitHub Actions CI workflow (`ci.yml`), signed release APK workflow (`release.yml`), `CONTRIBUTING.md`, `README.md` update, `CODE_OF_CONDUCT.md`, YAML issue templates (bug + feature), `NOTICES.txt` via `gradle-license-plugin`, semantic versioning convention, release keystore setup with documented backup procedure
+**Avoids:** Pitfall 15 (signing key loss), Pitfall 17 (secrets in git history before public)
+**Research flag:** Well-documented patterns — the only validation needed is the `truffleHog` scan result before public launch
 
 ### Phase Ordering Rationale
 
-- **Dependencies flow downward:** Core contracts must exist before IME or app modules. Audio recording must work before whisper.cpp can process audio. Model management must work before onboarding can guide users through download.
-- **Risk front-loading:** Phases 1-3 retire the three biggest architectural risks (Compose in IME, foreground service on API 31+, whisper.cpp native build). If any of these fail, the project needs to pivot early rather than late.
-- **Phases 2 and 3 are parallelizable:** The audio service and whisper.cpp native build have no compile-time dependency on each other. The `:whisper` module can be built and tested with standalone audio files while the audio pipeline is being built.
-- **Pitfall coverage:** Each phase has specific pitfalls to validate against. No pitfall is deferred past the phase where its failure would be most costly.
+- Phase 1 before Phase 3: `SttProvider` interface is a hard dependency for Parakeet; `ModelInfo` extension is needed before model catalog changes
+- Phase 2 is independent: binary `.dict` ranker shares no code paths with STT provider work; can run in parallel with Phase 1 or Phase 3
+- Phase 4 partially independent: `CONTRIBUTING.md`, `README.md`, and templates can be written any time; license audit and signing key setup must complete before public release
+- The `libc++` collision validation at the start of Phase 3 is the highest-risk gate in v1.1 — if it requires a separate-process architecture, it adds significant scope
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1:** Compose IME lifecycle wiring is not in official docs -- rely on community examples and the Gist/Medium sources identified in research. Hilt injection in `InputMethodService` requires `EntryPointAccessors`, not `@AndroidEntryPoint`.
-- **Phase 3:** whisper.cpp Android build is the highest-risk item. The official examples are acknowledged as poorly maintained. Plan for 2-3 days of build debugging. Reference the `LocalMind` Medium article and `whisper.android` example for working configurations.
+Phases needing empirical validation during implementation:
+- **Phase 3:** `libc++_shared.so` collision fix must be validated on Pixel 4 before any Parakeet UI work. The recommended fix (whisper.cpp with `c++_static` + symbol visibility scripts) is documented but not tested against this project's CMakeLists.txt. If validation fails, the fallback (separate processes) changes scope significantly.
+- **Phase 3:** ONNX Runtime memory release timing — the delayed release issue (sherpa-onnx #1939) may require explicit validation with `dumpsys meminfo` to confirm mutual exclusivity actually frees memory before whisper.cpp reloads.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 2:** Foreground services, AudioRecord, and bound services are well-documented in official Android docs. Standard patterns apply.
-- **Phase 4:** OkHttp file downloads with progress are a solved problem. Onboarding UI is standard Compose navigation.
-- **Phase 5:** Compose Canvas animations and emoji grids are well-documented with official samples.
+Phases with standard patterns (no additional research needed):
+- **Phase 1:** `SttProvider` interface is standard Kotlin design; `WhisperProvider` is a thin delegation wrapper
+- **Phase 2:** Binary `.dict` format is documented in AOSP source; Kotlin `ByteBuffer` reader needs no external dependencies
+- **Phase 4:** GitHub Actions workflow is well-established; `gradle-license-plugin` documentation is clear
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All versions verified against official release notes. AGP 9.1.0, Kotlin 2.3.20, Compose BOM 2026.03.00 all confirmed current stable. |
-| Features | MEDIUM-HIGH | Competitive analysis covers the landscape well. FUTO Keyboard is the closest competitor and is well-documented. Feature prioritization aligns with PRD. |
-| Architecture | HIGH | Same-process IME architecture is standard Android. Local Binder pattern is documented in official docs. Multi-module structure follows established Gradle patterns. |
-| Pitfalls | HIGH | All 10 pitfalls are backed by GitHub issues, official docs, or real-world implementation reports. Recovery strategies are concrete. |
+| Stack | MEDIUM-HIGH | sherpa-onnx 1.12.34 AAR verified from GitHub Releases (March 2026); AOSP .dict files verified Apache 2.0; GitHub Actions pattern HIGH. sherpa-onnx Android docs are build-from-source focused — AAR approach inferred from release assets, not explicitly documented |
+| Features | MEDIUM-HIGH | Feature scope derived from PRD, iOS reference app, and competitive analysis (FUTO Keyboard). P1/P2 prioritization is based on dependency graph analysis. Bigram scoring feasibility from binary .dict is MEDIUM (documented in AOSP source, unvalidated in project) |
+| Architecture | HIGH | Based on actual v1.0 source code analysis. Module dependency graph derived from existing constraints. `getOrInitEngine()` memory guard pattern is standard Android practice |
+| Pitfalls | HIGH | libc++ collision documented in Android NDK official docs; OOM risk validated from sherpa-onnx issue tracker; signing key pitfall is standard OSS distribution risk; threading pitfall based on IME frame budget analysis |
 
-**Overall confidence:** HIGH
+**Overall confidence:** MEDIUM-HIGH
 
 ### Gaps to Address
 
-- **Compose IME performance on Pixel 4:** No benchmark data for Compose-based keyboards on SD855. FUTO Keyboard uses Views, not Compose. If Compose performance is unacceptable after optimization, fallback to View-based rendering would be a significant architectural change (HIGH recovery cost). Profile early in Phase 1.
-- **whisper.cpp optimal thread count:** The 4-thread recommendation for SD855 comes from community benchmarks, not official guidance. Must profile on a real Pixel 4 during Phase 3.
-- **Hilt DI in InputMethodService:** `@AndroidEntryPoint` does not work on `InputMethodService`. Must use `EntryPointAccessors.fromApplication()`. This is documented but not widely covered. Validate in Phase 1.
-- **ComposeView recreation on configuration change:** When the soft keyboard is shown/hidden or the device rotates, `onCreateInputView()` may be called again. The lifecycle wiring must handle recreation without leaking the previous `ComposeView`. Needs testing in Phase 1.
+- **libc++ collision with existing CMake build:** The recommended fix has not been tested against the project's actual CMakeLists.txt. This must be the first task of Phase 3. If changes to the whisper.cpp submodule or build flags are required, scope may increase.
+- **ONNX Runtime memory release timing:** The delayed memory release issue (sherpa-onnx #1939) is documented but unresolved as of early 2026. The mutual exclusivity guard may not be sufficient if ONNX Runtime retains allocations after `release()`. Needs empirical validation with `dumpsys meminfo`.
+- **Binary `.dict` read performance:** The Kotlin `ByteBuffer` prefix ranker approach is theoretically sound but its performance on full FR/EN `.dict` files (3-4 MB each) has not been benchmarked. The microbenchmark (1000 sequential lookups) in Phase 2 is the validation gate.
+- **16 KB page size (Android 15+):** The pre-built sherpa-onnx AAR's `.so` files use 4 KB alignment. Not a blocker for v1.1 (GitHub Releases APK targeting API 29+), but a known blocker for any future Play Store submission targeting API 35+. Document in `CONTRIBUTING.md`.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Android Developers: InputMethodService](https://developer.android.com/reference/android/inputmethodservice/InputMethodService) -- IME framework
-- [Android Developers: Creating an Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) -- official IME guide
-- [Android Developers: Bound Services](https://developer.android.com/develop/background-work/services/bound-services) -- local Binder pattern
-- [Android Developers: Foreground Services](https://developer.android.com/develop/background-work/services/fgs/troubleshooting) -- API 31+ restrictions
-- [whisper.cpp GitHub](https://github.com/ggml-org/whisper.cpp) -- v1.8.4, official Android example
-- [AGP 9.1.0 Release Notes](https://developer.android.com/build/releases/agp-9-1-0-release-notes) -- build system
-- [Jetpack Compose BOM](https://developer.android.com/develop/ui/compose/bom) -- UI framework versioning
+- [sherpa-onnx GitHub Releases v1.12.34](https://github.com/k2-fsa/sherpa-onnx/releases) — AAR artifacts, Parakeet model URLs, confirmed March 26, 2026
+- [sherpa-onnx Parakeet CTC 110M model](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/offline-ctc/nemo/english.html) — 126 MB INT8 confirmed
+- [Android NDK C++ library support](https://developer.android.com/ndk/guides/cpp-support) — libc++ collision behavior documented officially
+- [r0adkll/sign-android-release](https://github.com/r0adkll/sign-android-release) — APK signing GitHub Action
+- [softprops/action-gh-release](https://github.com/softprops/action-gh-release) — GitHub Releases upload action
+- [gradle-license-plugin v0.9.8](https://github.com/jaredsburrows/gradle-license-plugin) — license audit for Android
+- [Android developer docs: Creating an Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) — candidates view, suggestion commit pattern
+- [Helium314/HeliBoard GitHub](https://github.com/Helium314/HeliBoard) — GPL v3 license confirmed (excluded from project)
+- [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) — CODE_OF_CONDUCT standard
 
 ### Secondary (MEDIUM confidence)
-- [Compose IME Gist](https://gist.github.com/LennyLizowzskiy/51c9233d38b21c52b1b7b5a4b8ab57ff) -- lifecycle wiring pattern
-- [Custom Soft Keyboard with Compose (Medium)](https://medium.com/@maksymkoval1/implementation-of-a-custom-soft-keyboard-in-android-using-compose-b8522d7ed9cd) -- real implementation
-- [Building LocalMind: Whisper on Android via JNI (Medium)](https://medium.com/@mohammedrazachandwala/building-localmind-how-i-ported-openais-whisper-to-android-using-jni-and-kotlin-575dddd38fdc) -- JNI bridge reference
-- [whisper.cpp Issues #1022, #1070, #856, #962](https://github.com/ggml-org/whisper.cpp/issues) -- Android build and performance issues
-- [FUTO Keyboard](https://keyboard.futo.org/) -- closest open-source competitor
+- [Helium314/aosp-dictionaries (Codeberg)](https://codeberg.org/Helium314/aosp-dictionaries) — Apache 2.0 binary .dict files; format inferred from AOSP source documentation
+- [sherpa-onnx Android Docs](https://k2-fsa.github.io/sherpa/onnx/android/index.html) — integration approach; build-from-source focused, AAR path inferred from release assets
+- [sherpa-onnx Issue #2641](https://github.com/k2-fsa/sherpa-onnx/issues/2641) — 16 KB page size incompatibility
+- [sherpa-onnx Issue #1939](https://github.com/k2-fsa/sherpa-onnx/issues/1939) — ONNX memory release delay
+- [FUTO Keyboard](https://keyboard.futo.org/) — closest open-source competitor reference
+- [GitHub Actions Android patterns](https://dev.to/ronynn/automating-android-apk-builds-with-github-actions-the-sane-way-1h95) — workflow structure reference
 
 ### Tertiary (LOW confidence)
-- [whisper.cpp Discussion #3567](https://github.com/ggml-org/whisper.cpp/discussions/3567) -- thread count recommendation for SD855 (community benchmarks, needs validation on real hardware)
+- Parakeet 0.6B iOS memory benchmark (~1.23 GB) — inferred from independent community benchmarks, not official documentation
+- [Grammarly Engineering: Building a Native Android Keyboard](https://www.grammarly.com/blog/engineering/how-grammarly-built-a-native-keyboard-for-android/) — considered for threading model analysis
 
 ---
-*Research completed: 2026-03-21*
+*Research completed: 2026-03-30*
 *Ready for roadmap: yes*

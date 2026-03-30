@@ -1,169 +1,344 @@
 # Feature Landscape
 
 **Domain:** Android voice dictation custom keyboard (on-device, privacy-first)
-**Researched:** 2026-03-21
-**Confidence:** MEDIUM-HIGH (based on competitive analysis + PRD + iOS parity requirements)
+**Researched:** 2026-03-30 (v1.1 update — appended to v1.0 research)
+**Confidence:** MEDIUM-HIGH (competitive analysis, PRD, iOS parity, Android IME docs, GitHub ecosystem research)
+
+> This file covers both v1.0 features (shipped, preserved for reference) and v1.1 new features (text prediction, Parakeet STT, beta distribution, OSS preparation). The v1.1 section is the primary focus of this research pass.
+
+---
 
 ## Competitive Context
 
 The Android voice dictation keyboard space has distinct tiers:
 
-1. **Mainstream keyboards with voice** -- Gboard (dominant), SwiftKey, Samsung Keyboard. Voice is a feature, not the product.
-2. **Overlay dictation apps** -- Wispr Flow (cloud-based, overlay bubble, works with any keyboard). Not a keyboard itself.
-3. **Privacy-first keyboards** -- FUTO Keyboard (full keyboard + offline Whisper voice input, open source, closest competitor).
-4. **Whisper-only keyboards** -- Transcribro, WhisperInput, Kaiboard. Voice-only input, no full keyboard layout.
+1. **Mainstream keyboards with voice** — Gboard (dominant), SwiftKey, Samsung Keyboard. Voice is a feature, not the product.
+2. **Overlay dictation apps** — Wispr Flow (cloud-based, overlay bubble, works with any keyboard). Not a keyboard itself.
+3. **Privacy-first keyboards** — FUTO Keyboard (full keyboard + offline Whisper voice input, open source, closest competitor).
+4. **Whisper-only keyboards** — Transcribro, WhisperInput, Kaiboard. Voice-only input, no full keyboard layout.
 
 Dictus sits at the intersection of tiers 3 and 4: a full custom keyboard with integrated on-device Whisper dictation, privacy-first, open source. FUTO Keyboard is the direct competitor.
 
 ---
 
-## Table Stakes
+## v1.0 Features (Shipped — Reference Only)
 
-Features users expect from any custom keyboard with voice dictation. Missing any of these and users will return to Gboard.
+### Table Stakes (Shipped in v1.0)
+
+| Feature | Why Expected | Complexity | Status |
+|---------|--------------|------------|--------|
+| Full letter layout (AZERTY/QWERTY) | Every keyboard has it. Without a complete typing experience, users return to Gboard. | Medium | Done |
+| Number and symbol layers | Standard keyboard feature. Users type numbers, punctuation, special characters constantly. | Low | Done |
+| Backspace, enter, space bar | Fundamental text editing. Enter key must respect `imeOptions`. | Low | Done |
+| Microphone button (dictation trigger) | Core product purpose. Must be prominent and easy to reach. | Low | Done |
+| On-device STT (whisper.cpp) | Core value proposition. Works offline, no cloud. | High | Done |
+| Recording feedback (waveform animation) | User must know the app is listening. | Medium | Done |
+| Text insertion into any app | `InputConnection.commitText()` in any text field. | Low | Done |
+| Settings screen | Model selection, language, layout, haptics, sound, theme. | Low | Done |
+| Onboarding flow (7 steps) | IME activation on Android is confusing. Must guide users through setup. | Medium | Done |
+| Model download/management | Download from HuggingFace, show progress, storage indicator, delete. | Medium | Done |
+| Haptic + sound feedback | Expected by users of any keyboard. Toggleable. | Low | Done |
+| Dark theme (Material You) | Modern keyboards default to dark. | Low | Done |
+| Emoji picker with categories | Full emoji input within the keyboard. | Medium | Done |
+| Stub suggestion bar | Suggestion bar UI with 40-word prefix matching (StubSuggestionEngine). | Low | Done — needs replacement |
+| Bilingual FR/EN UI | French default, English fallback in Android string resources. | Low | Done |
+| Debug logging (Timber + file export) | Essential for beta testing without crash reporting service. | Low | Done |
+
+---
+
+## v1.1 Features (New — This Milestone's Focus)
+
+### Area 1: Text Prediction (Suggestion Bar — Production Engine)
+
+**Context:** v1.0 ships a `StubSuggestionEngine` doing prefix matching over 40 hardcoded words. This is visible in the suggestion strip but produces no useful suggestions for real input. v1.1 replaces it with a real dictionary-backed engine.
+
+**How production Android keyboards implement suggestion strips (from research):**
+
+The standard Android IME pattern uses `onCreateCandidatesView()` to display a horizontal strip of 3 word candidates above the keyboard. When the user taps a suggestion:
+1. The IME calls `deleteSurroundingText(n, 0)` to delete the typed prefix.
+2. The IME calls `commitText(suggestion, 1)` to insert the chosen word.
+
+For Dictus specifically, the suggestion strip serves a different purpose than real-time typing prediction: it is primarily for **post-dictation correction** (showing alternative word candidates after a transcription is committed). This changes the complexity profile significantly — there is no need for sub-50ms latency or composing-text state management that per-keystroke prediction requires.
+
+#### Table Stakes for Suggestion Bar (v1.1)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Full letter layout (AZERTY/QWERTY) | Every keyboard has it. Users will not switch without a complete typing experience. | Medium | Must include shift, caps lock, long-press accented characters. AZERTY is a differentiator for French users but table stakes for Dictus's target audience. |
-| Number and symbol layers | Standard keyboard feature. Users type numbers, punctuation, special characters constantly. | Low | Two layers: numbers/symbols (?123) and extended symbols (=\<). |
-| Backspace, enter, space bar | Fundamental text editing. | Low | Space bar must be large and centered. Enter key must respect `imeOptions` (search, done, next, etc.). |
-| Microphone button (dictation trigger) | Core product purpose. Must be prominent and easy to reach. | Low | Large, visually distinct, always visible. This is THE feature that defines Dictus. |
-| On-device speech-to-text | Core value proposition. Users chose Dictus for privacy. | High | whisper.cpp via JNI. This is the most complex feature. Must work offline. |
-| Recording feedback (visual) | User must know the app is listening. Without visual feedback, users will wonder if dictation started. | Medium | Waveform animation, recording indicator, elapsed time. Gboard shows a pulsing mic icon at minimum. |
-| Text insertion into any app | The keyboard must work everywhere -- messaging apps, browsers, email, notes. | Low | `InputConnection.commitText()`. Must handle all text field types. |
-| Settings screen | Users expect to configure their keyboard. | Low | Model selection, language, layout, haptics, sound, theme. |
-| Onboarding flow | IME activation on Android is confusing (Settings > System > Keyboard). Users need hand-holding. | Medium | Must guide through: enable IME, set as default, grant mic permission, download model. Without this, most users will never activate the keyboard. |
-| Model download/management | Users need to download the STT model before first use. Must be clear about size, speed, and storage. | Medium | Download from HuggingFace, show progress, storage indicator, delete unused models. |
-| Haptic feedback on key press | Every major keyboard provides key press haptics. Typing without haptics feels broken. | Low | Use `HapticFeedbackConstants` in Compose. Must be toggleable. |
-| Sound feedback on key press | Optional but expected. Gboard, SwiftKey all offer it. | Low | Key click sounds, toggleable. Separate from dictation start/stop sounds. |
-| Dark theme | Modern keyboards default to dark. Users expect it. | Low | Material You dark theme. Dictus brand colors as default. |
-| Permission handling | RECORD_AUDIO is a runtime permission. Must handle denial gracefully. | Low | Explain why mic is needed. Provide path to settings if denied. |
+| Show top-3 word candidates after dictation | Users expect to see alternatives if transcription is wrong. Every production keyboard offers this for typed input; for dictation, post-hoc correction is the primary use case. | MEDIUM | Load binary .dict, rank by prefix/frequency, display in existing suggestion strip UI. Existing strip UI stays unchanged. |
+| Tap to replace transcribed text | Standard suggestion strip behavior: tap replaces last committed word. | LOW | `deleteSurroundingText` + `commitText`. Maps directly to existing `InputConnection` usage in v1.0. |
+| Dismiss / ignore suggestions | User must be able to continue without acting on suggestions. | LOW | No action needed — the existing strip already supports this; suggestions simply update on next input event. |
+| FR + EN dictionary support | Dictus is bilingual; suggestion engine must match the active transcription language. | MEDIUM | Two binary .dict files (~3 MB FR, ~4 MB EN) loaded conditionally based on `activeLanguage` in DataStore. |
 
----
-
-## Differentiators
-
-Features that set Dictus apart from Gboard and other keyboards. Not expected, but create competitive advantage.
+#### Differentiators for Suggestion Bar (v1.1)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| 100% on-device, zero cloud | Strongest privacy guarantee. Gboard's on-device mode is Pixel 6+ only. Wispr Flow requires internet. FUTO is the only real competitor here. | Already architected | This is the core brand promise. No network requests except model downloads. |
-| AZERTY keyboard (French-first) | No Whisper keyboard on Android offers proper AZERTY with accented characters. FUTO has French autocorrect but standard QWERTY only. Gboard has AZERTY but its offline voice is Pixel 6+ only. | Medium | Long-press accented characters (e, a, u, o, i, c). French is a first-class citizen, not an afterthought. |
-| Bilingual FR/EN interface | App and keyboard UI in both French and English. Most Whisper keyboards are English-only (Transcribro explicitly only supports English). | Low | Android string resources with `values-fr/`. French as default. |
-| Open source (MIT) | Full transparency. Users can verify the privacy claims. FUTO is also open source, but Kaiboard and Wispr Flow are not. | N/A | Community contributions, trust, auditability. |
-| Free with no ads or tracking | No subscription, no freemium, no data collection. Wispr Flow has word limits on free tier. | N/A | Sustainable via open source community model. |
-| Waveform animation during recording | Visual feedback that the mic is actively hearing you. More engaging than Gboard's static pulsing icon. Creates a premium feel. | Medium | Real-time audio energy visualization in Compose Canvas. Differentiates from bare-bones Whisper keyboards. |
-| Dictation start/stop audio cues | Audible confirmation that recording started and stopped. Reduces uncertainty. | Low | Configurable. Short, distinctive sounds. |
-| Multiple Whisper model sizes | User chooses accuracy vs speed tradeoff. Most Whisper keyboards ship with one model (usually tiny). FUTO offers model selection too. | Low (UI) | tiny (~1-2s), base (~2-4s), small quantized (~4-8s). Let users decide based on their device and patience. |
-| Suggestion bar with transcription preview | After dictation, show the transcribed text in the suggestion bar for quick review before committing. | Medium | Allows user to see and potentially correct before text is inserted. |
-| Emoji picker with categories | Full emoji input within the keyboard. Most Whisper-only keyboards lack this entirely. | Medium | Lazy grid with categories, recents, search. Table stakes for a full keyboard, but a differentiator vs Whisper-only apps. |
+| Bigram context scoring | Using the word before the transcribed word to rank candidates (e.g., "il fait" suggests "beau" above "bois"). Improves relevance without ML. | MEDIUM | AOSP binary .dict format includes bigram frequency data. A Kotlin reader can extract it without NDK. This is a step above pure prefix frequency. |
+| Post-dictation confidence indicator | Show a subtle visual cue (color, underline) on the committed word when Whisper's confidence is below threshold. Signals to user that correction may be needed. | MEDIUM | Requires Whisper to expose per-token confidence. whisper.cpp supports this via `token.p`. Needs surfacing through JNI layer. |
 
----
-
-## Anti-Features
-
-Features to explicitly NOT build. Each has a reason that prevents scope creep.
+#### Anti-Features for Suggestion Bar
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Swipe/glide typing | Massive implementation effort (requires ML model for gesture recognition). FUTO's swipe is still in alpha after years. Dictus's value is voice, not gesture typing. | Focus engineering time on STT quality. Users who want swipe typing already use Gboard. |
-| AI text reformatting / LLM integration | Requires cloud API or large on-device LLM. Breaks the "no cloud" promise if using API. Not yet on iOS either. Wispr Flow does this but it's cloud-dependent. | Defer to post-MVP. If implemented later, use user-provided API key (as planned on iOS). |
-| Autocorrect with ML model | Requires training/shipping language models for text prediction. FUTO and Gboard have years of investment here. Dictus cannot compete on typing intelligence. | Provide basic suggestion bar. Users who need strong autocorrect keep Gboard as secondary keyboard. |
-| Clipboard manager | Not related to voice dictation. Feature bloat. SwiftKey has it, but it's a separate product concern. | Out of scope. Android has system clipboard. |
-| Inline translation | Wispr Flow offers this, but it requires cloud. Whisper's translate mode exists but quality is inconsistent for non-English targets. | Defer. Could be a v2 feature using Whisper's translate task, but only EN target is reliable. |
-| GIF/sticker search | Requires network. Not related to voice dictation. Feature bloat typical of mainstream keyboards. | Out of scope. |
-| Multi-device sync | No cloud = no sync. Settings are device-local. | Out of scope. Consistent with privacy-first positioning. |
-| Streaming/real-time transcription | whisper.cpp does batch inference (record then transcribe). Streaming requires different architecture (Sherpa-ONNX supports it). Significantly more complex. | Use batch mode: record -> stop -> transcribe -> insert. Adequate for dictation use case. Consider for v2 with Sherpa-ONNX. |
-| Voice Activity Detection (auto-stop) | Silero VAD or WebRTC VAD could auto-stop recording on silence. Adds dependency and complexity. Can cause premature stops during natural pauses. | Manual stop (tap mic to stop). Simpler, more predictable. Consider VAD as v1.1 feature. |
-| GPU/NNAPI acceleration | whisper.cpp NNAPI backend is experimental. Adds complexity for marginal gains on Pixel 4. | CPU multi-thread inference (4 threads on big cores). Defer GPU to v1.1. |
-| One-handed mode | Keyboard layout resize for single-hand use. Nice to have but not related to core value prop. | Defer to v1.1+. |
-| Custom themes / theme editor | Users love customizing keyboard appearance, but it's engineering time away from STT quality. | Ship Dictus Dark + Follow System. Two options, done. |
-| Floating/split keyboard | Tablet optimization. Pixel 4 is the target device. | Out of scope for MVP. |
+| AOSP LatinIME C++ port (`libjni_latinime.so`) | No Maven artifact exists. Requires full AOSP toolchain to build. HeliBoard and OpenBoard have it tightly coupled to their own IME — extracting it as a standalone Gradle dependency has never been done cleanly by the community. For post-dictation correction, the latency benefit of C++ is irrelevant. | Binary .dict files + Kotlin prefix ranker (no NDK) |
+| HeliBoard's `Dictionary.kt` source code | GPL v3. Including it in a MIT-licensed app requires re-licensing the entire app under GPL v3. | Use the Apache 2.0 .dict binary files from `Helium314/aosp-dictionaries` only; write own reader. |
+| Per-keystroke real-time prediction | Dictus's primary text input path is dictation, not typing. Building real-time typing prediction (< 50ms per keystroke) requires composing-text state management, a significant new complexity surface. Users who want elite typing prediction keep Gboard as a secondary keyboard. | Post-dictation correction only. Real-time typing suggestions are a v2+ consideration. |
+| ML-based autocorrect | Training or shipping ML language models for autocorrect is disproportionate effort for Dictus's use case. FUTO has years of investment here. | Simple frequency-ranked dictionary suggestions. |
+| User word learning (personal dictionary writes) | Persisting user corrections to a personal dictionary requires managing mutable binary .dict files or a separate SQLite store. Adds complexity without clear benefit for dictation-primary users. | Defer to v2. Read-only dictionary is correct for v1.1. |
 
 ---
 
-## Feature Dependencies
+### Area 2: Multi-Provider STT (Parakeet / Nvidia)
 
-```
-Permission (RECORD_AUDIO) --> Audio Recording --> Transcription --> Text Insertion
-                                    |
-                                    v
-                            Waveform Animation
-                            Recording Feedback (sound/haptic)
+**Context:** v1.0 ships with a single STT provider (whisper.cpp). v1.1 adds Parakeet as a second provider, requiring an abstraction layer and updated model manager UX.
 
-Model Download --> Model Loading --> Transcription
-                       |
-                       v
-               Model Manager UI
+**How production apps handle multi-provider model management (from research):**
 
-IME Activation (onboarding) --> Keyboard Layout --> All keyboard features
-                                     |
-                                     v
-                              Number/Symbol layers
-                              Accented characters (long-press)
-                              Emoji picker
-                              Suggestion bar
+Apps with multiple AI models (e.g., offline speech apps) typically use a provider card pattern in the model list: each card shows the provider name/logo, model name, size, language support, and download state. The active model is indicated with a selected state (checkmark or highlighted border). Switching providers requires downloading the new provider's model first. Download UX for large models (100+ MB) requires deterministic progress display and the ability to cancel and resume.
 
-Settings Screen --> Layout selection (AZERTY/QWERTY)
-                --> Model selection
-                --> Language selection
-                --> Haptic/Sound toggles
-                --> Theme toggle
+#### Table Stakes for Parakeet / Multi-Provider (v1.1)
 
-Onboarding Flow --> Enable IME --> Set Default --> Mic Permission --> Model Download --> Test Dictation
-(each step depends on the previous)
-```
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| `SttProvider` interface in `core` module | Without an abstraction, adding a second provider requires forking `DictationService` logic. This is the architectural foundation everything else rests on. | LOW | `interface SttProvider { val id, displayName; suspend fun transcribe(...); fun isModelReady() }`. Whisper implements it, Parakeet implements it. |
+| Model cards with provider badge in model manager | Users need to understand which engine backs each model. "Whisper (tiny)", "Whisper (small.q5_1)", "Parakeet (110M)" should be visually distinct. | MEDIUM | Add `provider: SttProvider` field to `ModelInfo` data class. Update model list UI to show provider badge. Existing model manager screens need visual update. |
+| Active provider persisted in DataStore | The selected STT provider/model must survive app restarts. | LOW | Add `active_stt_provider` key to DataStore. `DictationService` reads it on bind to select the right `SttProvider` implementation. |
+| Download UX for 126 MB Parakeet model | 126 MB is ~4x larger than whisper tiny quantized (~37 MB). Users must see meaningful progress (not just a spinner) and be able to cancel. | MEDIUM | Reuse OkHttp download flow from v1.0 model manager. Show MB downloaded / total MB. Persist partial downloads across app restarts (ETag + Range headers). |
+| Switch provider in Settings | Users must be able to change the active STT engine from the Settings screen. | LOW | Extend existing "Active model" settings row to show provider group, or add a separate "STT Engine" setting. |
+| English-only Parakeet label | Parakeet 110M CTC supports English only. The UI must make this clear to avoid user confusion when Whisper is set to French. | LOW | Show language support tag on model card ("English only"). Warn user if active language is French and they select Parakeet. |
 
-**Critical path:** IME setup + whisper.cpp JNI integration + audio recording pipeline. Everything else layers on top.
+#### Differentiators for Parakeet (v1.1)
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Provider notes / description on model card | A short text blurb on each model card ("Fast English-only transcription, Nvidia NeMo architecture" vs "Multilingual, French + English, OpenAI Whisper") helps users make an informed choice. | LOW | Static strings per provider. No network lookup needed. |
+| Auto-fallback to Whisper if Parakeet model not downloaded | If user switches language to French while Parakeet is active, automatically fall back to the best available Whisper model and surface a toast explaining why. | MEDIUM | Language-to-provider compatibility check in `DictationService.onStartCommand`. |
+
+#### Anti-Features for Parakeet
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Parakeet TDT 0.6B model | 640 MB total (INT8). IME process memory budget is typically 256–512 MB on most OEMs. This model will OOM in the IME process on Pixel 4 and most real-world devices. | 110M CTC model (126 MB INT8) only. |
+| NNAPI execution provider for sherpa-onnx | Marked experimental in ONNX Runtime. Causes crashes on some Snapdragon 855 configurations (Pixel 4's SoC). | CPU execution provider (XNNPACK optional but safe). |
+| Building sherpa-onnx from source | Multi-hour NDK build, no added benefit. AAR pre-built artifact exists at v1.12.34. | Use the pre-built AAR from GitHub Releases. |
+| Streaming transcription (CTC streaming mode) | Parakeet 110M CTC supports streaming, but Dictus's audio pipeline is built for batch mode (record → stop → transcribe). Adapting the pipeline adds significant complexity for marginal UX gain in v1.1. | Batch mode only in v1.1. Streaming is a v2 feature. |
+| Adding `com.microsoft.onnxruntime:onnxruntime-android` as a separate Gradle dep | sherpa-onnx AAR bundles ONNX Runtime internally. Adding it separately creates version conflicts at runtime. | Let sherpa-onnx AAR manage its own ONNX Runtime. |
 
 ---
 
-## MVP Recommendation
+### Area 3: Beta Distribution (APK via GitHub Releases)
 
-### Must ship (P0 -- without these, product is non-functional):
+**Context:** v1.0 was distributed via direct APK sideloading. v1.1 formalizes this into a repeatable GitHub Releases CI/CD pipeline with versioning conventions and feedback collection.
 
-1. **Custom keyboard IME** (AZERTY + QWERTY, shift, caps, numbers, symbols, accented chars)
-2. **On-device STT** via whisper.cpp (JNI bridge, GGML model loading, batch transcription)
-3. **Audio recording** via AudioRecord in foreground Service
-4. **Text insertion** via InputConnection
-5. **Onboarding flow** (IME activation is confusing on Android -- this is critical for retention)
-6. **Model download** from HuggingFace (at least small quantized)
-7. **Basic settings** (model, language, layout)
+**How OSS Android apps handle beta distribution without Play Store (from research):**
 
-### Should ship (P1 -- significantly improves experience):
+The standard pattern is: git tag push → GitHub Actions CI → signed APK → GitHub Release with changelog. Users subscribe to GitHub Release notifications or check the Releases page. For feedback, GitHub Issues is the lowest-friction option that doesn't introduce any cloud dependencies. In-app update checks can be implemented against the GitHub Releases API (polling latest release tag vs the app's current `versionName`).
 
-8. **Waveform animation** during recording
-9. **Haptic feedback** on key press and dictation start/stop
-10. **Sound feedback** for dictation start/stop
-11. **Debug logging** (Timber + file export -- essential for beta testing)
-12. **Dark theme** (Dictus brand colors)
+#### Table Stakes for Beta Distribution (v1.1)
 
-### Can defer (P2 -- nice to have, not launch-blocking):
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Signed release APK on GitHub Releases | Beta testers need a signed, installable APK. Unsigned debug builds won't install on devices with standard security settings. | MEDIUM | GitHub Actions + `r0adkll/sign-android-release` action. Release keystore stored as base64 GitHub Secret. |
+| Automated APK build on git tag | Manual build-and-upload is error-prone. CI must produce the artifact automatically on `v*` tag push. | LOW | `.github/workflows/release.yml` triggered on `push: tags: ['v*']`. |
+| Semantic versioning (`versionName` + `versionCode`) | Users need to identify which version they have. `versionName` = `1.1.0-beta01`, `versionCode` = integer monotonically increasing. | LOW | Convention: `MAJOR.MINOR.PATCH-betaNN`. Update `versionCode` on every release (CI can derive from tag). `versionName` from git tag. |
+| Changelog in GitHub Release body | Beta testers need to know what changed. Without a changelog, feedback is not contextualized. | LOW | Markdown changelog written manually in the GitHub Release description. For v1.1, manual is fine; semantic-release automation is a v2 optimization. |
+| GitHub Issues for feedback collection | Zero-friction feedback channel. Users already have GitHub accounts if they found a privacy-first OSS keyboard. | LOW | YAML issue templates (bug report + feature request). Link from Settings > Feedback and release notes. |
 
-13. **Emoji picker** with categories
-14. **Suggestion bar** with transcription preview
-15. **Follow System theme** option
-16. **Bilingual UI** (FR/EN string resources)
+#### Differentiators for Beta Distribution (v1.1)
 
-### Defer to v1.1+:
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| In-app "check for updates" link in Settings | Beta testers forget to check for updates. A Settings row linking to the GitHub Releases page (no in-app download, just a link to browser) reduces the discovery gap without introducing any update-install permissions or complexity. | LOW | `Intent.ACTION_VIEW` to `https://github.com/[repo]/releases`. No library needed. |
+| Version info in Settings footer | Showing `versionName` + `versionCode` in Settings > About lets testers quickly verify which build they're running when filing bugs. | LOW | Already common in Android apps. Static display from `BuildConfig.VERSION_NAME` and `BuildConfig.VERSION_CODE`. |
+| Debug log export for bug reports | Testers on non-developer devices cannot ADB logcat. The existing Timber file logger + export path in Settings is the only way to get logs from testers. | LOW | Already exists in v1.0. Ensure it's prominent in the bug report issue template (ask users to attach exported log). |
 
-- Voice Activity Detection (auto-stop on silence)
-- Streaming transcription (Sherpa-ONNX)
-- Multiple STT engines (Parakeet)
-- GPU/NNAPI acceleration
-- One-handed mode
-- Smart modes / LLM integration
+#### Anti-Features for Beta Distribution
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Firebase Crashlytics | Introduces a Google cloud dependency. Contradicts Dictus's "no cloud, no tracking" value proposition. Users who chose a privacy-first keyboard will notice. | Timber file logger (already in v1.0). Export path in Settings for bug reports. |
+| Play Store Internal Testing / Beta track | Requires a paid Google Play Developer account ($25). For a v1.1 private beta of an OSS app, this is unnecessary overhead. | GitHub Releases APK distribution. |
+| Firebase App Distribution | Same concern as Crashlytics — introduces Google cloud account dependency, requires testers to install the Firebase App Distribution apk. | GitHub Releases + direct APK install. |
+| Fastlane | Fastlane adds Ruby dependency overhead and is optimized for Play Store (`supply`) and TestFlight lanes. No value for GitHub Releases-only distribution. | Native GitHub Actions. |
+| Automated in-app APK download and install | Triggering APK download and `PackageInstaller` from inside the app requires `REQUEST_INSTALL_PACKAGES` permission, which is flagged as high-risk by security scanners and confusing to users. | Link to GitHub Releases in browser. User downloads and installs manually. |
+
+---
+
+### Area 4: OSS Repository Preparation
+
+**Context:** The repo will be made public for v1.1. Contributors need standard OSS scaffolding: issue templates, PR template, CONTRIBUTING.md, CODE_OF_CONDUCT, CI checks. This is infrastructure, not features — but it directly affects whether contributors can engage.
+
+**What contributors expect in OSS Android projects (from research):**
+
+Contributors expect: a working build on first checkout (no manual setup steps beyond documented ones), a clear PR checklist that doesn't require maintainer clarification, and CI that validates their contribution before review. The most common friction points are: undocumented local build requirements (NDK version, Java version), no clear guidance on where to add new code, and PRs merged without tests. For Android specifically: contributors expect `./gradlew build` to work on a clean clone with documented Java/NDK prerequisites.
+
+#### Table Stakes for OSS Repo (v1.1)
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| `CONTRIBUTING.md` (root level) | The first file contributors look for. Without it, setup questions land in Issues, wasting maintainer time. | LOW | Must include: prerequisites (Java 17, NDK 27.2, Android Studio version), clone steps, how to run on device, how to run tests, branch naming convention, commit message convention. |
+| `.github/ISSUE_TEMPLATE/bug_report.yml` | YAML form templates enforce required fields (OS version, Android version, Dictus version, steps to reproduce, expected vs actual). Markdown templates allow submitting half-empty reports. | LOW | YAML format with required: true on key fields. Include a "logs" textarea. |
+| `.github/ISSUE_TEMPLATE/feature_request.yml` | Separate template from bug reports. Prevents feature requests from being filed as bugs. | LOW | Standard OSS feature request template. Keep short. |
+| `.github/PULL_REQUEST_TEMPLATE.md` | PR checklist prevents common mistakes: untested on device, missing translations, lint not run. | LOW | Checklist: tested on physical device, `./gradlew lintDebug` passes, `./gradlew testDebugUnitTest` passes, strings added in both `values/` and `values-fr/`, no TODO comments left. |
+| `CODE_OF_CONDUCT.md` | Standard for any public OSS project. Contributor Covenant 2.1 is the de facto standard in 2026. | LOW | Copy Contributor Covenant 2.1. Set contact email. |
+| CI workflow (lint + unit tests + debug build) | PRs without CI checks require manual verification by the maintainer. CI that runs lint, unit tests, and assembleDebug gives confidence that the contribution compiles and passes basic quality gates. | MEDIUM | `.github/workflows/ci.yml` triggered on push to `main` and PR to `main`. Steps: `lintDebug` → `testDebugUnitTest` → `assembleDebug` → upload debug APK as artifact. |
+| `README.md` update | The public-facing introduction. Must explain what Dictus is, why it exists, how to install, how to build from source. | LOW | Add: screenshots, feature list, install instructions (download APK from Releases), build-from-source instructions, license badge, contribution invite. |
+| OSS license audit report | Before going public, verify all dependencies are license-compatible with MIT distribution. AOSP .dict files (Apache 2.0) and sherpa-onnx AAR (MIT) are clear. HeliBoard source (GPL v3) must not be included. | MEDIUM | Run `./gradlew licenseDebugReport` with `gradle-license-plugin`. Review output for any GPL/LGPL/AGPL deps that conflict with MIT. Update `app/src/main/assets/open_source_licenses.html` in-app. |
+
+#### Differentiators for OSS Repo (v1.1)
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Build reproducibility section in CONTRIBUTING.md | Documenting exact NDK version (27.2), Java version (17 Temurin), and AGP version eliminates the most common "it doesn't build for me" contributor friction. This is specific to Android NDK projects where version mismatches cause silent failures. | LOW | One paragraph. Exact version pins. |
+| `NOTICES.txt` / license attribution file | Good practice for MIT projects that bundle Apache 2.0 and MIT dependencies. Required if distributing to F-Droid eventually (F-Droid checks license compliance). | LOW | Generated by `gradle-license-plugin`. Commit to repo. Update in CI. |
+| Architecture overview in CONTRIBUTING.md | A 10-line module map (app / ime / core / whisper / asr) prevents contributors from placing code in the wrong module. Without it, PRs regularly put things in `app/` when they belong in `core/`. | LOW | Describe the 5-module layout, what belongs in each, and the IPC pattern (Bound Service between `ime` and `app`). |
+
+#### Anti-Features for OSS Repo
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Automated code formatting enforcement in CI (ktfmt/ktlint as CI gate) | For a first-time OSS release, adding a formatter as a hard CI gate immediately blocks all external contributors who don't have it configured in their IDE. | Document the code style (Kotlin official style guide) in CONTRIBUTING.md. Run ktlint locally as a suggestion, not a hard gate, in v1.1. Add it as a CI gate in v1.2 after the project has established contributor norms. |
+| CLA (Contributor License Agreement) | Heavy legal overhead for a small OSS project. Discourages casual contributors. MIT license already handles rights adequately for a one-person maintainer project. | MIT license in repo root. No CLA. |
+| Mandatory issue → PR linking | Requiring every PR to link an issue discourages small documentation fixes and typo PRs. | Recommend but don't enforce. Note it in CONTRIBUTING.md as "preferred for non-trivial changes". |
+| Dependabot auto-merge PRs | sherpa-onnx AAR is a manually managed local file, not a Gradle dep that Dependabot can update. Auto-merge for Android deps is risky (AGP updates break NDK builds). | Enable Dependabot for awareness. Never enable auto-merge for Android projects with NDK. |
+
+---
+
+## Feature Dependencies (v1.1)
+
+```
+[SttProvider interface in core]
+    └──required by──> [ParakeetProvider (asr module)]
+    └──required by──> [WhisperProvider refactor]
+                          └──enables──> [Provider selection in DictationService]
+                                            └──enables──> [Provider badge in model manager UI]
+                                                              └──enables──> [Switch engine in Settings]
+
+[Binary .dict files in assets]
+    └──required by──> [Kotlin BinaryDictRanker]
+                          └──replaces──> [StubSuggestionEngine]
+                                            └──feeds──> [Existing suggestion strip UI] (no UI change needed)
+
+[Whisper JNI token confidence]
+    └──optional for──> [Post-dictation confidence indicator on suggestion]
+
+[GitHub Actions CI workflow]
+    └──required by──> [Signed release APK on GitHub Releases]
+    └──required by──> [PR validation (lint + tests)]
+
+[GitHub issue templates]
+    └──required by──> [Meaningful beta feedback]
+
+[License audit (gradle-license-plugin)]
+    └──required by──> [OSS public release (no GPL contamination)]
+
+[CONTRIBUTING.md + README]
+    └──required by──> [First external contributor can build and submit PR]
+```
+
+### Dependency Notes
+
+- **SttProvider interface must exist before Parakeet work starts:** Both Whisper and Parakeet implementations depend on the same interface in `core`. Implementing Parakeet first (without the interface) creates a tangled merge later.
+- **Binary .dict ranker is independent of STT work:** Can be developed in parallel with Parakeet integration. No shared code paths.
+- **OSS repo prep (CI, templates, CONTRIBUTING.md) is independent of feature work:** Can be done in parallel or first. Doing it first means all v1.1 feature PRs go through the same CI pipeline.
+- **License audit must complete before public repo:** A GPL-contaminated public repo is harder to fix retroactively than preventing it pre-launch.
+
+---
+
+## MVP Definition for v1.1
+
+### Launch With (v1.1 Public Beta)
+
+- [ ] **SttProvider interface** — foundation for all multi-provider work
+- [ ] **Parakeet 110M integration** (sherpa-onnx AAR, batch mode, English only) — the headline new feature
+- [ ] **Model cards with provider badge** — users must understand which engine they're selecting
+- [ ] **Binary .dict suggestion engine** (FR + EN, top-3 candidates, tap to replace) — replaces stub, closes the most visible "not production-ready" gap
+- [ ] **Signed APK on GitHub Releases via CI** — required for beta distribution
+- [ ] **Semantic versioning convention** (`1.1.0-beta01`) — beta testers need version identification
+- [ ] **GitHub issue templates** (bug + feature) — enables actionable feedback
+- [ ] **CONTRIBUTING.md + README update** — required for public OSS repo
+- [ ] **CODE_OF_CONDUCT.md** — standard for any public repo
+- [ ] **License audit** — must be clean before public release
+- [ ] **Tech debt fixes** (settings AZERTY toggle, POST_NOTIFICATIONS, stale test assertions) — ship quality matters
+
+### Add After Validation (v1.1.x)
+
+- [ ] **Bigram context scoring** — once basic suggestions are validated, improve ranking quality
+- [ ] **Post-dictation confidence indicator** — requires surfacing whisper.cpp `token.p` through JNI
+- [ ] **Auto-fallback to Whisper when language conflicts with Parakeet** — quality of life, not blocker
+- [ ] **In-app "check for updates" Settings link** — low effort, helps testers stay current
+- [ ] **ktlint as CI gate** — add after contributor norms are established
+
+### Future Consideration (v2+)
+
+- [ ] **Streaming transcription** (Parakeet CTC streaming mode) — requires audio pipeline refactor
+- [ ] **Voice Activity Detection (auto-stop on silence)** — Silero VAD or WebRTC VAD
+- [ ] **GPU/NNAPI acceleration** — experimental on Pixel 4's Snapdragon 855
+- [ ] **Personal word dictionary (user learning)** — mutable .dict or SQLite
+- [ ] **Play Store distribution** — deferred; requires Google account, policy compliance review for keyboard apps
+- [ ] **F-Droid distribution** — feasible post v1.1 if license audit is clean; requires reproducible builds
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| SttProvider interface | LOW (invisible) | LOW | P1 — architectural gate |
+| Parakeet 110M integration | HIGH | MEDIUM | P1 |
+| Model cards with provider badge | HIGH | MEDIUM | P1 |
+| Binary .dict suggestion engine (basic) | HIGH | MEDIUM | P1 |
+| Signed APK CI pipeline | HIGH (beta access) | LOW | P1 |
+| Versioning convention | MEDIUM | LOW | P1 |
+| GitHub issue templates | MEDIUM | LOW | P1 |
+| CONTRIBUTING.md + README | MEDIUM | LOW | P1 |
+| CODE_OF_CONDUCT | LOW (but required) | LOW | P1 |
+| License audit | LOW (invisible) | MEDIUM | P1 — pre-public gate |
+| Tech debt fixes (v1.0) | MEDIUM | LOW | P1 |
+| Bigram context scoring | MEDIUM | MEDIUM | P2 |
+| Post-dictation confidence indicator | MEDIUM | MEDIUM | P2 |
+| Auto-fallback language ↔ provider | MEDIUM | LOW | P2 |
+| In-app update link | LOW | LOW | P2 |
+| ktlint CI gate | LOW | LOW | P3 |
+
+**Priority key:**
+- P1: Must have for v1.1 public beta launch
+- P2: Should have, add in v1.1.x if time permits
+- P3: Nice to have, v1.2+
+
+---
+
+## Competitor Feature Analysis (v1.1 Scope)
+
+| Feature | FUTO Keyboard | HeliBoard | Dictus v1.1 |
+|---------|---------------|-----------|-------------|
+| Multi-provider STT | No (Whisper only) | No (no STT) | Yes — Whisper + Parakeet |
+| Text prediction engine | Full LatinIME C++ port | Full LatinIME C++ port | Binary .dict + Kotlin ranker (lighter, no NDK) |
+| Beta distribution | GitHub Releases + F-Droid | F-Droid | GitHub Releases only (F-Droid deferred) |
+| OSS repo health | CONTRIBUTING.md, CI | CONTRIBUTING.md, CI | Full set: templates, CI, COC, license audit |
+| License compliance tooling | Not documented | Not documented | `gradle-license-plugin` generating `NOTICES.txt` |
+| In-app update notification | Not present | Not present | Settings link to Releases page (v1.1.x) |
 
 ---
 
 ## Sources
 
-- [FUTO Keyboard](https://keyboard.futo.org/) -- closest open-source competitor with offline Whisper
-- [Transcribro (GitHub)](https://github.com/soupslurpr/Transcribro) -- on-device Whisper keyboard, English only
-- [Kaiboard (GitHub)](https://github.com/kaisoapbox/kaiboard) -- open-source Whisper keyboard
-- [WhisperInput (GitHub)](https://github.com/alex-vt/WhisperInput) -- offline Whisper voice input for Android
-- [Wispr Flow Android](https://wisprflow.ai/android) -- cloud-based overlay dictation, launched Feb 2026
-- [Gboard advanced voice typing](https://support.google.com/gboard/answer/11197787) -- on-device voice, Pixel 6+ only
-- [Android VAD library](https://github.com/gkonovalov/android-vad) -- WebRTC/Silero/Yamnet VAD for Android
-- [Best keyboard apps 2026](https://www.clevertype.co/post/best-keyboard-apps-for-android-2025-ai-powered-typing-showdown)
-- [Wispr Flow TechCrunch launch](https://techcrunch.com/2026/02/23/wispr-flow-launches-an-android-app-for-ai-powered-dictation/)
-- [FUTO Keyboard review](https://www.androidpolice.com/tried-futo-keyboard-gboard-swiftkey-for-a-month/)
+- [Android developer docs: Creating an Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) — candidates view, suggestion commit pattern (HIGH)
+- [Helium314/HeliBoard GitHub](https://github.com/Helium314/HeliBoard) — binary .dict usage, GPL v3 license (HIGH)
+- [Helium314/aosp-dictionaries (Codeberg)](https://codeberg.org/Helium314/aosp-dictionaries) — Apache 2.0 binary .dict files for FR + EN (MEDIUM)
+- [FUTO Keyboard](https://keyboard.futo.org/) — closest open-source competitor with offline Whisper (HIGH)
+- [sherpa-onnx GitHub Releases v1.12.34](https://github.com/k2-fsa/sherpa-onnx/releases) — AAR artifacts, Parakeet model URLs (HIGH)
+- [sherpa-onnx Parakeet CTC 110M model docs](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/offline-ctc/nemo/english.html) — 126 MB INT8 confirmed (HIGH)
+- [r0adkll/sign-android-release](https://github.com/r0adkll/sign-android-release) — GitHub Action for APK signing (HIGH)
+- [softprops/action-gh-release](https://github.com/softprops/action-gh-release) — GitHub Releases upload (HIGH)
+- [gradle-license-plugin](https://github.com/jaredsburrows/gradle-license-plugin) — license audit for Android (HIGH)
+- [javiersantos/AppUpdater](https://github.com/javiersantos/AppUpdater) — in-app update check against GitHub Releases (MEDIUM — considered, not recommended for v1.1)
+- [Android versioning docs](https://developer.android.com/studio/publish/versioning) — versionCode / versionName conventions (HIGH)
+- [Semantic versioning 2.0.0](https://semver.org/) — version naming convention (HIGH)
+- [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) — CODE_OF_CONDUCT standard (HIGH)
+- [AOSP CONTRIBUTING.md](https://android.googlesource.com/platform/frameworks/support/+/androidx-main/CONTRIBUTING.md) — contributor expectation reference (MEDIUM)
+- [Grammarly Engineering: Building a Native Android Keyboard](https://www.grammarly.com/blog/engineering/how-grammarly-built-a-native-keyboard-for-android/) — production keyboard architecture patterns (MEDIUM)
+
+---
+*Feature research for: Dictus Android v1.1 — text prediction, Parakeet STT, beta distribution, OSS preparation*
+*Researched: 2026-03-30*
