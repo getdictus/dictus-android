@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.navigation.AppDestination
@@ -72,19 +74,19 @@ fun DictusBottomNavBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             NavTab(
-                label = "Accueil",
+                label = stringResource(R.string.nav_home),
                 icon = Icons.Outlined.Home,
                 isActive = currentRoute == AppDestination.Home.route,
                 onClick = { onNavigate(AppDestination.Home) },
             )
             NavTab(
-                label = "Mod\u00e8les",
+                label = stringResource(R.string.nav_models),
                 icon = Icons.Outlined.Memory,
                 isActive = currentRoute == AppDestination.Models.route,
                 onClick = { onNavigate(AppDestination.Models) },
             )
             NavTab(
-                label = "R\u00e9glages",
+                label = stringResource(R.string.nav_settings),
                 icon = Icons.Outlined.Settings,
                 isActive = currentRoute == AppDestination.Settings.route,
                 onClick = { onNavigate(AppDestination.Settings) },

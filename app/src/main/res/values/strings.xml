@@ -55,33 +55,33 @@
 
     <!-- Settings: Section headers -->
     <string name="settings_section_transcription">TRANSCRIPTION</string>
-    <string name="settings_section_keyboard">CLAVIER</string>
-    <string name="settings_section_appearance">APPARENCE</string>
-    <string name="settings_section_about">A PROPOS</string>
+    <string name="settings_section_keyboard">KEYBOARD</string>
+    <string name="settings_section_appearance">APPEARANCE</string>
+    <string name="settings_section_about">ABOUT</string>
 
     <!-- Settings: Row labels -->
-    <string name="settings_language">Langue</string>
-    <string name="settings_keyboard_layout">Disposition du clavier</string>
-    <string name="settings_default_mode">Mode par d\u00e9faut</string>
-    <string name="settings_haptic_feedback">Retour haptique</string>
-    <string name="settings_sounds">Sons</string>
-    <string name="settings_theme">Th\u00e8me</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_keyboard_layout">Keyboard layout</string>
+    <string name="settings_default_mode">Default mode</string>
+    <string name="settings_haptic_feedback">Haptic feedback</string>
+    <string name="settings_sounds">Sounds</string>
+    <string name="settings_theme">Theme</string>
     <string name="settings_version">Version</string>
     <string name="settings_debug_logs">Debug Logs</string>
-    <string name="settings_export_logs">Exporter les logs de d\u00e9bogage</string>
+    <string name="settings_export_logs">Export debug logs</string>
     <string name="settings_licences">Licences</string>
     <string name="settings_github">GitHub</string>
-    <string name="settings_legal">Mentions l\u00e9gales</string>
+    <string name="settings_legal">Legal notices</string>
 
     <!-- Settings: Language picker values -->
-    <string name="settings_language_auto">Automatique</string>
+    <string name="settings_language_auto">Automatic</string>
     <string name="settings_language_fr">Fran\u00e7ais</string>
     <string name="settings_language_en">English</string>
 
     <!-- Settings: Theme picker values -->
-    <string name="settings_theme_dark">Sombre</string>
-    <string name="settings_theme_light">Clair</string>
-    <string name="settings_theme_auto">Automatique</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_auto">Automatic</string>
 
     <!-- Settings: UI language picker -->
     <string name="settings_ui_language_label">Interface language</string>
@@ -91,37 +91,37 @@
     <string name="picker_ui_language_title">Interface language</string>
 
     <!-- Settings: Picker bottom sheet titles -->
-    <string name="picker_language_title">Choisir la langue</string>
-    <string name="picker_keyboard_layout_title">Disposition du clavier</string>
-    <string name="picker_default_mode_title">Mode par d\u00e9faut du clavier</string>
-    <string name="picker_theme_title">Th\u00e8me de l\'application</string>
+    <string name="picker_language_title">Choose language</string>
+    <string name="picker_keyboard_layout_title">Keyboard layout</string>
+    <string name="picker_default_mode_title">Default keyboard mode</string>
+    <string name="picker_theme_title">App theme</string>
 
     <!-- Settings: Toast messages -->
-    <string name="settings_export_logs_error">Impossible d\'exporter les logs.</string>
-    <string name="settings_export_logs_chooser">Exporter les logs</string>
+    <string name="settings_export_logs_error">Unable to export logs.</string>
+    <string name="settings_export_logs_chooser">Export logs</string>
 
     <!-- SoundSettingsScreen -->
-    <string name="sound_settings_title">Sons</string>
+    <string name="sound_settings_title">Sounds</string>
     <string name="sound_settings_section_general">GENERAL</string>
-    <string name="sound_settings_section_sounds">SONS</string>
-    <string name="sound_settings_dictation_sound">Son de dict\u00e9e</string>
+    <string name="sound_settings_section_sounds">SOUNDS</string>
+    <string name="sound_settings_dictation_sound">Dictation sound</string>
     <string name="sound_settings_volume">Volume</string>
-    <string name="sound_settings_start_sound">Son de d\u00e9but</string>
-    <string name="sound_settings_stop_sound">Son de fin</string>
-    <string name="sound_settings_cancel_sound">Son d\'annulation</string>
-    <string name="sound_settings_back_cd">Retour</string>
+    <string name="sound_settings_start_sound">Start sound</string>
+    <string name="sound_settings_stop_sound">Stop sound</string>
+    <string name="sound_settings_cancel_sound">Cancel sound</string>
+    <string name="sound_settings_back_cd">Back</string>
 
     <!-- DebugLogsScreen -->
     <string name="debug_logs_title">Debug Logs</string>
-    <string name="debug_logs_empty">Aucun log disponible</string>
-    <string name="debug_logs_clear">Effacer</string>
-    <string name="debug_logs_copy">Copier</string>
+    <string name="debug_logs_empty">No logs available</string>
+    <string name="debug_logs_clear">Clear</string>
+    <string name="debug_logs_copy">Copy</string>
     <string name="debug_logs_menu_cd">Menu</string>
-    <string name="debug_logs_back_cd">Retour</string>
+    <string name="debug_logs_back_cd">Back</string>
 
     <!-- LicencesScreen -->
     <string name="licences_title">Licences</string>
-    <string name="licences_back_cd">Retour</string>
+    <string name="licences_back_cd">Back</string>
 
     <!-- ImeStatusCard -->
     <string name="ime_status_active">Dictus keyboard active</string>
@@ -145,42 +145,56 @@
     <string name="fake_settings_dictus_subtitle">QWERTY (English)</string>
 
     <!-- ModelCard -->
-    <string name="model_active">Actif</string>
-    <string name="model_download">T\u00e9l\u00e9charger</string>
-    <string name="model_retry">R\u00e9essayer</string>
-    <string name="model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
-    <string name="model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
-    <string name="model_precision">Pr\u00e9cision</string>
-    <string name="model_speed">Vitesse</string>
-    <string name="model_delete_cd">Supprimer</string>
+    <string name="model_active">Active</string>
+    <string name="model_download">Download</string>
+    <string name="model_retry">Retry</string>
+    <string name="model_download_progress">Downloading \u2014 %1$d%%</string>
+    <string name="model_download_error">Download failed.</string>
+    <string name="model_precision">Precision</string>
+    <string name="model_speed">Speed</string>
+    <string name="model_delete_cd">Delete</string>
 
     <!-- HomeScreen -->
-    <string name="home_active_model">Mod\u00e8le actif</string>
-    <string name="home_last_transcription">Derni\u00e8re transcription</string>
-    <string name="home_copy_cd">Copier</string>
-    <string name="home_new_dictation">Nouvelle dict\u00e9e</string>
+    <string name="home_active_model">Active model</string>
+    <string name="home_last_transcription">Last transcription</string>
+    <string name="home_copy_cd">Copy</string>
+    <string name="home_new_dictation">New dictation</string>
 
     <!-- RecordingScreen -->
-    <string name="recording_result_title">R\u00e9sultat</string>
-    <string name="recording_copy_cd">Copier</string>
-    <string name="recording_back_cd">Retour</string>
-    <string name="recording_stop_cd">Arr\u00eater</string>
-    <string name="recording_record_cd">Enregistrer</string>
-    <string name="recording_new_dictation_cd">Nouvelle dict\u00e9e</string>
-    <string name="recording_idle_title">Nouvelle dict\u00e9e</string>
-    <string name="recording_idle_body">Appuyez sur le micro et parlez.\nDictus transcrira votre voix.</string>
-    <string name="recording_tap_to_stop">Toucher pour arr\u00eater</string>
-    <string name="recording_transcribing">Transcription en cours\u2026</string>
-    <string name="recording_no_result">(Aucun r\u00e9sultat)</string>
+    <string name="recording_result_title">Result</string>
+    <string name="recording_copy_cd">Copy</string>
+    <string name="recording_back_cd">Back</string>
+    <string name="recording_stop_cd">Stop</string>
+    <string name="recording_record_cd">Record</string>
+    <string name="recording_new_dictation_cd">New dictation</string>
+    <string name="recording_idle_title">New dictation</string>
+    <string name="recording_idle_body">Tap the mic and speak.\nDictus will transcribe your voice.</string>
+    <string name="recording_tap_to_stop">Tap to stop</string>
+    <string name="recording_transcribing">Transcribing\u2026</string>
+    <string name="recording_no_result">(No result)</string>
 
     <!-- ModelsScreen -->
-    <string name="models_title">Mod\u00e8les</string>
-    <string name="models_section_downloaded">T\u00e9l\u00e9charg\u00e9s</string>
-    <string name="models_section_available">Disponibles</string>
-    <string name="models_storage_used">Stockage utilis\u00e9 : %1$d Mo / %2$d Mo</string>
-    <string name="models_delete_confirm_title">Supprimer %1$s ?</string>
-    <string name="models_delete_confirm_body">Ce mod\u00e8le sera supprim\u00e9 de votre appareil.</string>
-    <string name="models_delete_confirm_button">Supprimer</string>
-    <string name="models_delete_cancel_button">Annuler</string>
+    <string name="models_title">Models</string>
+    <string name="models_section_downloaded">Downloaded</string>
+    <string name="models_section_available">Available</string>
+    <string name="models_storage_used">Storage used: %1$d MB / %2$d MB</string>
+    <string name="models_delete_confirm_title">Delete %1$s?</string>
+    <string name="models_delete_confirm_body">This model will be removed from your device.</string>
+    <string name="models_delete_confirm_button">Delete</string>
+    <string name="models_delete_cancel_button">Cancel</string>
+
+    <!-- Navigation bar -->
+    <string name="nav_home">Home</string>
+    <string name="nav_models">Models</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Sound picker -->
+    <string name="sound_picker_title_start">Start sound</string>
+    <string name="sound_picker_title_stop">Stop sound</string>
+    <string name="sound_picker_title_cancel">Cancel sound</string>
+
+    <!-- Shared content descriptions -->
+    <string name="cd_back">Back</string>
+    <string name="cd_selected">Selected</string>
 
 </resources>

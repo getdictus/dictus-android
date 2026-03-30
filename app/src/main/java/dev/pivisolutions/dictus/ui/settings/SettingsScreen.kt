@@ -105,16 +105,6 @@ fun SettingsScreen(
         SectionHeader(text = stringResource(R.string.settings_section_transcription))
         SettingsCard {
             SettingPickerRow(
-                label = stringResource(R.string.settings_ui_language_label),
-                value = when (uiLanguage) {
-                    "fr" -> stringResource(R.string.settings_ui_language_french)
-                    "en" -> stringResource(R.string.settings_ui_language_english)
-                    else -> stringResource(R.string.settings_ui_language_system)
-                },
-                onClick = { showUiLanguagePicker = true },
-            )
-            SettingDivider()
-            SettingPickerRow(
                 label = stringResource(R.string.settings_language),
                 value = when (language) {
                     "fr" -> stringResource(R.string.settings_language_fr)
@@ -167,6 +157,16 @@ fun SettingsScreen(
                     else -> stringResource(R.string.settings_theme_dark)
                 },
                 onClick = { showThemePicker = true },
+            )
+            SettingDivider()
+            SettingPickerRow(
+                label = stringResource(R.string.settings_ui_language_label),
+                value = when (uiLanguage) {
+                    "fr" -> stringResource(R.string.settings_ui_language_french)
+                    "en" -> stringResource(R.string.settings_ui_language_english)
+                    else -> stringResource(R.string.settings_ui_language_system)
+                },
+                onClick = { showUiLanguagePicker = true },
             )
         }
 

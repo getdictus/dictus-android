@@ -183,4 +183,18 @@
     <string name="models_delete_confirm_button">Supprimer</string>
     <string name="models_delete_cancel_button">Annuler</string>
 
+    <!-- Navigation bar -->
+    <string name="nav_home">Accueil</string>
+    <string name="nav_models">Mod\u00e8les</string>
+    <string name="nav_settings">R\u00e9glages</string>
+
+    <!-- Sound picker -->
+    <string name="sound_picker_title_start">Son de d\u00e9but</string>
+    <string name="sound_picker_title_stop">Son de fin</string>
+    <string name="sound_picker_title_cancel">Son d\'annulation</string>
+
+    <!-- Shared content descriptions -->
+    <string name="cd_back">Retour</string>
+    <string name="cd_selected">S\u00e9lectionn\u00e9</string>
+
 </resources>

@@ -35,8 +35,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 
@@ -67,9 +69,9 @@ fun SoundPickerScreen(
     }
 
     val title = when (soundType) {
-        "start" -> "Son de d\u00e9but"
-        "stop" -> "Son de fin"
-        else -> "Son d'annulation"
+        "start" -> stringResource(R.string.sound_picker_title_start)
+        "stop" -> stringResource(R.string.sound_picker_title_stop)
+        else -> stringResource(R.string.sound_picker_title_cancel)
     }
 
     // Local SoundPool for previewing sounds. Disposed when leaving the screen.
@@ -94,7 +96,7 @@ fun SoundPickerScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Retour",
+                    contentDescription = stringResource(R.string.cd_back),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
@@ -278,7 +280,7 @@ private fun SoundRow(
         if (isSelected) {
             Icon(
                 imageVector = Icons.Default.Check,
-                contentDescription = "S\u00e9lectionn\u00e9",
+                contentDescription = stringResource(R.string.cd_selected),
                 tint = DictusColors.Accent,
                 modifier = Modifier.size(22.dp),
             )
