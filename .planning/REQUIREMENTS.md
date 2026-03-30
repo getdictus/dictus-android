@@ -41,7 +41,7 @@ Requirements for v1.1 Public Beta. Each maps to roadmap phases.
 
 ### Tech Debt
 
-- [ ] **DEBT-01**: Le toggle AZERTY/QWERTY dans Settings propage correctement le changement à l'IME
+- [x] **DEBT-01**: Le toggle AZERTY/QWERTY dans Settings propage correctement le changement à l'IME
 - [x] **DEBT-02**: La permission POST_NOTIFICATIONS est déclarée dans AndroidManifest pour API 33+
 - [x] **DEBT-03**: Les tests stales sont corrigés ou supprimés (AudioCaptureManagerTest, ModelCatalogTest, OnboardingViewModelTest)
 
@@ -84,7 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEBT-01 | Phase 7 | Pending |
+| DEBT-01 | Phase 7 | Complete |
 | DEBT-02 | Phase 7 | Complete |
 | DEBT-03 | Phase 7 | Complete |
 | STT-01 | Phase 7 | Pending |

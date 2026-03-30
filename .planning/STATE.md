@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
-status: planning
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-03-30T12:53:02.102Z"
-last_activity: 2026-03-30 — Roadmap created for v1.1 Public Beta (5 phases, 20 requirements mapped)
+status: completed
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-03-30T13:01:34.522Z"
+last_activity: "2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 10
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-30)
 ## Current Position
 
 Phase: 7 of 11 (Phase 7: Foundation)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-03-30 — Roadmap created for v1.1 Public Beta (5 phases, 20 requirements mapped)
+Plan: 3 of 3 (Phase 7 complete)
+Status: Phase 7 complete — all 3 plans executed
+Last activity: 2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 10%
 
 ## Performance Metrics
 
@@ -48,7 +48,9 @@ Progress: [░░░░░░░░░░] 0%
 | 9. Parakeet Integration | TBD | - | - |
 | 10. Beta Distribution + License Audit | TBD | - | - |
 | 11. OSS Repository | TBD | - | - |
-| Phase 07-foundation P01 | 22 | 2 tasks | 5 files |
+| Phase 07-foundation P01 | 22 min | 2 tasks | 5 files |
+| Phase 07-foundation P02 | ~15 min | 2 tasks | 3 files |
+| Phase 07-foundation P03 | ~10 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -63,6 +65,7 @@ Key v1.1 architectural decisions (from research):
 - SttProvider interface in `core/` is a hard gate before any Parakeet code
 - [Phase 07-foundation]: AudioCaptureManagerTest assertions updated to match actual implementation (20x+sqrt curve, pre-filled history) — production code is correct, tests were stale
 - [Phase 07-foundation]: Release variant Robolectric test failures (ImeStatusCardTest, RecordingTestAreaTest) are pre-existing and deferred — debug baseline is green 91/91
+- [Phase 07-foundation P03]: remember(keyboardLayout) used to trigger KeyboardScreen recomposition on KEYBOARD_LAYOUT DataStore change — same pattern as remember(initialLayer) for KEYBOARD_MODE
 
 ### Research Flags (Phase 9)
 
@@ -79,6 +82,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-30T12:53:02.100Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-30T13:01:34.520Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
