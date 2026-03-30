@@ -41,7 +41,11 @@
   2. Notifications display correctly on API 33+ devices (POST_NOTIFICATIONS declared in AndroidManifest)
   3. The full test suite passes with zero stale assertions (AudioCaptureManagerTest, ModelCatalogTest, OnboardingViewModelTest fixed or removed)
   4. A `SttProvider` interface exists in `core/` and `WhisperProvider` wraps the existing whisper.cpp engine behind it — no behavior change for users, but all STT calls route through the interface
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 07-01-PLAN.md — POST_NOTIFICATIONS manifest fix + stale test fixes (DEBT-02, DEBT-03)
+- [ ] 07-02-PLAN.md — SttProvider interface extraction + WhisperProvider rename (STT-01)
+- [ ] 07-03-PLAN.md — AZERTY/QWERTY DataStore observation in IME (DEBT-01)
 
 ### Phase 8: Text Prediction
 **Goal**: Users see real, ranked word suggestions while typing and after dictation — the stub suggestion engine is replaced by a production binary dictionary ranker.
@@ -102,7 +106,7 @@
 | 4. Model Management + Onboarding | v1.0 | 8/8 | Complete | 2026-03-27 |
 | 5. Polish + Differentiators | v1.0 | 5/5 | Complete | 2026-03-28 |
 | 6. Release Readiness | v1.0 | 4/4 | Complete | 2026-03-30 |
-| 7. Foundation | v1.1 | 0/? | Not started | - |
+| 7. Foundation | v1.1 | 0/3 | Planned | - |
 | 8. Text Prediction | v1.1 | 0/? | Not started | - |
 | 9. Parakeet Integration | v1.1 | 0/? | Not started | - |
 | 10. Beta Distribution + License Audit | v1.1 | 0/? | Not started | - |
