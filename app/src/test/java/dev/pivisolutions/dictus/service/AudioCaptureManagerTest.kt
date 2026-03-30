@@ -52,8 +52,8 @@ class AudioCaptureManagerTest {
 
     @Test
     fun `normalizeEnergy typical speech value`() {
-        // 0.1 * 5 = 0.5
-        assertEquals(0.5f, manager.normalizeEnergy(0.1f), 0.0001f)
+        // 0.1 * 20 = 2.0 -> coerced to 1.0 -> sqrt(1.0) = 1.0
+        assertEquals(1.0f, manager.normalizeEnergy(0.1f), 0.0001f)
     }
 
     @Test
@@ -71,8 +71,12 @@ class AudioCaptureManagerTest {
     // --- Energy history tests ---
 
     @Test
-    fun `energy history starts empty`() {
-        assertTrue(manager.getEnergyHistory().isEmpty())
+    fun `energy history starts with 30 zero entries`() {
+        // AudioCaptureManager pre-fills energyHistory with 30 zeros so the
+        // waveform renders all 30 bars immediately without a slide-in effect.
+        val history = manager.getEnergyHistory()
+        assertEquals(30, history.size)
+        history.forEach { assertEquals(0f, it, 0.0001f) }
     }
 
     @Test

@@ -49,21 +49,21 @@ class ModelCatalogTest {
     fun `second model is base with correct size`() {
         val base = ModelCatalog.ALL[1]
         assertEquals("base", base.key)
-        assertEquals(142_000_000L, base.expectedSizeBytes)
+        assertEquals(147_951_465L, base.expectedSizeBytes)
     }
 
     @Test
     fun `third model is small with correct size`() {
         val small = ModelCatalog.ALL[2]
         assertEquals("small", small.key)
-        assertEquals(466_000_000L, small.expectedSizeBytes)
+        assertEquals(487_601_967L, small.expectedSizeBytes)
     }
 
     @Test
     fun `fourth model is small-q5_1 with correct size`() {
         val smallQ5 = ModelCatalog.ALL[3]
         assertEquals("small-q5_1", smallQ5.key)
-        assertEquals(190_031_232L, smallQ5.expectedSizeBytes)
+        assertEquals(190_085_487L, smallQ5.expectedSizeBytes)
     }
 
     @Test

@@ -116,8 +116,8 @@ class OnboardingViewModel @Inject constructor(
         val step = currentStep.value
         when {
             step == 5 && !_modelDownloadComplete.value -> return // Block: download not complete
-            step == 6 -> completeOnboarding()
-            step < 6 -> savedStateHandle["currentStep"] = step + 1
+            step == 7 -> completeOnboarding()
+            step < 7 -> savedStateHandle["currentStep"] = step + 1
         }
     }
 

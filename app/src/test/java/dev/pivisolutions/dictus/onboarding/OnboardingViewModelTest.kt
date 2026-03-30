@@ -186,7 +186,9 @@ class OnboardingViewModelTest {
             advanceUntilIdle()
             viewModel.advanceStep() // -> 6
 
-            // Tap "Commencer" on step 6
+            // Tap "Commencer" on step 6 -> moves to step 7
+            viewModel.advanceStep()
+            // Step 7 triggers completeOnboarding()
             viewModel.advanceStep()
             advanceUntilIdle()
 
