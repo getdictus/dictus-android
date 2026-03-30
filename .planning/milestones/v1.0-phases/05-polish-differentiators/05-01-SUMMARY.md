@@ -131,6 +131,16 @@ None - no external service configuration required.
 - DictationSoundPlayer can be extended with additional sound IDs from the bundled WAV variants
 - Remaining plan 05-01 requirements fulfilled; 05-02 (light theme + visual parity) can proceed
 
+## Self-Check: PASSED
+
+- WaveformDriver.kt: FOUND
+- DictationSoundPlayer.kt: FOUND
+- electronic_01f.wav (sample): FOUND
+- 05-01-SUMMARY.md: FOUND
+- commit def9596 (RED tests): FOUND
+- commit 1627103 (GREEN implementation): FOUND
+- commit dd07db7 (Task 2 wiring): FOUND
+
 ---
 *Phase: 05-polish-differentiators*
 *Completed: 2026-03-28*
