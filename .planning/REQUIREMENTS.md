@@ -84,32 +84,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUGG-01 | — | Pending |
-| SUGG-02 | — | Pending |
-| SUGG-03 | — | Pending |
-| STT-01 | — | Pending |
-| STT-02 | — | Pending |
-| STT-03 | — | Pending |
-| STT-04 | — | Pending |
-| STT-05 | — | Pending |
-| BETA-01 | — | Pending |
-| BETA-02 | — | Pending |
-| BETA-03 | — | Pending |
-| OSS-01 | — | Pending |
-| OSS-02 | — | Pending |
-| OSS-03 | — | Pending |
-| OSS-04 | — | Pending |
-| LIC-01 | — | Pending |
-| LIC-02 | — | Pending |
-| DEBT-01 | — | Pending |
-| DEBT-02 | — | Pending |
-| DEBT-03 | — | Pending |
+| DEBT-01 | Phase 7 | Pending |
+| DEBT-02 | Phase 7 | Pending |
+| DEBT-03 | Phase 7 | Pending |
+| STT-01 | Phase 7 | Pending |
+| SUGG-01 | Phase 8 | Pending |
+| SUGG-02 | Phase 8 | Pending |
+| SUGG-03 | Phase 8 | Pending |
+| STT-02 | Phase 9 | Pending |
+| STT-03 | Phase 9 | Pending |
+| STT-04 | Phase 9 | Pending |
+| STT-05 | Phase 9 | Pending |
+| BETA-01 | Phase 10 | Pending |
+| BETA-02 | Phase 10 | Pending |
+| BETA-03 | Phase 10 | Pending |
+| LIC-01 | Phase 10 | Pending |
+| LIC-02 | Phase 10 | Pending |
+| OSS-01 | Phase 11 | Pending |
+| OSS-02 | Phase 11 | Pending |
+| OSS-03 | Phase 11 | Pending |
+| OSS-04 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-30*
-*Last updated: 2026-03-30 after initial definition*
+*Last updated: 2026-03-30 after roadmap creation*
