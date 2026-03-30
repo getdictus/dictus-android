@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.core.preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 
 /**
  * DataStore preference keys for Dictus settings.
@@ -42,4 +43,8 @@ object PreferenceKeys {
     // --- Keyboard mode (Phase 5) ---
     /** Default keyboard opening mode: "abc" (letters) or "123" (numbers). */
     val KEYBOARD_MODE = stringPreferencesKey("keyboard_mode")
+
+    // --- Personal dictionary (Phase 8) ---
+    /** Set of words the user has typed at least twice, persisted across restarts. */
+    val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")
 }
