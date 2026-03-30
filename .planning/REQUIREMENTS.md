@@ -15,7 +15,7 @@ Requirements for v1.1 Public Beta. Each maps to roadmap phases.
 
 ### STT Multi-Provider
 
-- [ ] **STT-01**: L'architecture supporte N fournisseurs STT via une interface SttProvider extensible
+- [x] **STT-01**: L'architecture supporte N fournisseurs STT via une interface SttProvider extensible
 - [ ] **STT-02**: L'utilisateur peut télécharger et utiliser un modèle Parakeet/Nvidia via sherpa-onnx
 - [ ] **STT-03**: L'utilisateur peut sélectionner le fournisseur STT actif dans les paramètres
 - [ ] **STT-04**: L'écran modèles affiche des notes descriptives par fournisseur (Whisper, Parakeet)
@@ -87,7 +87,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBT-01 | Phase 7 | Complete |
 | DEBT-02 | Phase 7 | Complete |
 | DEBT-03 | Phase 7 | Complete |
-| STT-01 | Phase 7 | Pending |
+| STT-01 | Phase 7 | Complete |
 | SUGG-01 | Phase 8 | Pending |
 | SUGG-02 | Phase 8 | Pending |
 | SUGG-03 | Phase 8 | Pending |

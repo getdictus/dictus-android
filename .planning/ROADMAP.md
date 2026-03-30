@@ -24,7 +24,7 @@
 
 **Milestone Goal:** Extend the shipped MVP with production-grade text prediction, a second STT engine (Parakeet), formalized beta distribution via GitHub Releases CI, and a contribution-ready OSS repository — all while clearing v1.0 tech debt before going public.
 
-- [ ] **Phase 7: Foundation** — SttProvider interface + v1.0 tech debt clearance
+- [x] **Phase 7: Foundation** — SttProvider interface + v1.0 tech debt clearance (completed 2026-03-30)
 - [ ] **Phase 8: Text Prediction** — Production suggestion engine replacing the stub
 - [ ] **Phase 9: Parakeet Integration** — Multi-provider STT with sherpa-onnx
 - [ ] **Phase 10: Beta Distribution + License Audit** — CI pipeline, signed releases, license clean pass
@@ -41,7 +41,7 @@
   2. Notifications display correctly on API 33+ devices (POST_NOTIFICATIONS declared in AndroidManifest)
   3. The full test suite passes with zero stale assertions (AudioCaptureManagerTest, ModelCatalogTest, OnboardingViewModelTest fixed or removed)
   4. A `SttProvider` interface exists in `core/` and `WhisperProvider` wraps the existing whisper.cpp engine behind it — no behavior change for users, but all STT calls route through the interface
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 07-01-PLAN.md — POST_NOTIFICATIONS manifest fix + stale test fixes (DEBT-02, DEBT-03)
 - [ ] 07-02-PLAN.md — SttProvider interface extraction + WhisperProvider rename (STT-01)
@@ -106,7 +106,7 @@ Plans:
 | 4. Model Management + Onboarding | v1.0 | 8/8 | Complete | 2026-03-27 |
 | 5. Polish + Differentiators | v1.0 | 5/5 | Complete | 2026-03-28 |
 | 6. Release Readiness | v1.0 | 4/4 | Complete | 2026-03-30 |
-| 7. Foundation | 2/3 | In Progress|  | - |
+| 7. Foundation | 3/3 | Complete   | 2026-03-30 | - |
 | 8. Text Prediction | v1.1 | 0/? | Not started | - |
 | 9. Parakeet Integration | v1.1 | 0/? | Not started | - |
 | 10. Beta Distribution + License Audit | v1.1 | 0/? | Not started | - |

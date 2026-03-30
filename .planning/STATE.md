@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-03-30T13:01:34.522Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-03-30T13:03:47.079Z"
 last_activity: "2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 10
 ---
 
@@ -51,6 +51,7 @@ Progress: [█░░░░░░░░░] 10%
 | Phase 07-foundation P01 | 22 min | 2 tasks | 5 files |
 | Phase 07-foundation P02 | ~15 min | 2 tasks | 3 files |
 | Phase 07-foundation P03 | ~10 min | 2 tasks | 2 files |
+| Phase 07-foundation P02 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Key v1.1 architectural decisions (from research):
 - [Phase 07-foundation]: AudioCaptureManagerTest assertions updated to match actual implementation (20x+sqrt curve, pre-filled history) — production code is correct, tests were stale
 - [Phase 07-foundation]: Release variant Robolectric test failures (ImeStatusCardTest, RecordingTestAreaTest) are pre-existing and deferred — debug baseline is green 91/91
 - [Phase 07-foundation P03]: remember(keyboardLayout) used to trigger KeyboardScreen recomposition on KEYBOARD_LAYOUT DataStore change — same pattern as remember(initialLayer) for KEYBOARD_MODE
+- [Phase 07-foundation]: SttProvider placed in core/stt/ (not core/whisper/) to make engine-neutral nature explicit for Phase 9 Parakeet
+- [Phase 07-foundation]: Empty supportedLanguages list means all languages supported (Whisper); non-empty means restriction (Parakeet will be listOf(en))
 
 ### Research Flags (Phase 9)
 
@@ -82,6 +85,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-30T13:01:34.520Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-03-30T13:03:47.077Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
