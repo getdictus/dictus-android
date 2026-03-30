@@ -32,9 +32,14 @@ La dictée vocale on-device qui fonctionne comme clavier système — gratuite, 
 
 ### Active
 
-<!-- Current scope. Building toward these for next milestone. -->
+<!-- Current scope. Building toward these for v1.1 Public Beta. -->
 
-(None yet — define with `/gsd:new-milestone`)
+- [ ] Suggestions texte production (AOSP LatinIME ou équivalent natif C++)
+- [ ] Parakeet/Nvidia STT — 2e fournisseur de modèles avec architecture multi-provider
+- [ ] Audit et correction des licences OSS dans l'app
+- [ ] Préparation bêta publique — distribution APK/GitHub Releases, collecte feedback
+- [ ] Repo GitHub OSS — CONTRIBUTING.md, issue templates, PR template, CODE_OF_CONDUCT, README
+- [ ] Tech debt v1.0 — vérifier et corriger settings toggle, POST_NOTIFICATIONS, tests stales
 
 ### Out of Scope
 
@@ -85,5 +90,17 @@ Target device: Pixel 4 (Snapdragon 855, 6 GB RAM).
 | q5_1 au lieu de q5_0 | HuggingFace fournit pre-built q5_1, pas q5_0 | ✓ Good |
 | when() dispatch pour onboarding | One-time flow, pas besoin de NavHost/AnimatedContent | ✓ Good — simple et efficace |
 
+## Current Milestone: v1.1 Public Beta
+
+**Goal:** Peaufiner l'app (suggestions texte, Parakeet STT), préparer le repo et la distribution pour une bêta publique.
+
+**Target features:**
+- Suggestions texte production (remplacer le stub par un moteur natif C++)
+- Parakeet/Nvidia comme 2e fournisseur STT avec architecture multi-provider extensible
+- Audit et mise à jour des licences OSS
+- Distribution bêta via APK/GitHub Releases + collecte feedback
+- Repo GitHub prêt pour les contributions open source
+- Correction du tech debt v1.0
+
 ---
-*Last updated: 2026-03-30 after v1.0 milestone*
+*Last updated: 2026-03-30 after v1.1 milestone started*
