@@ -56,7 +56,7 @@ Plans:
   2. Tapping a suggestion replaces the in-progress word and inserts a trailing space
   3. Words the user types frequently appear in suggestions over time (personal word dictionary)
   4. Suggestion lookups do not cause keyboard lag (validated by microbenchmark: 1000 sequential lookups on `dict-worker` thread)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 08-01-PLAN.md — DictionaryEngine + PersonalDictionary + dictionary assets + full test suite (SUGG-01, SUGG-03)
 - [ ] 08-02-PLAN.md — Wire DictionaryEngine into DictusImeService + device verification (SUGG-02)
@@ -110,7 +110,7 @@ Plans:
 | 5. Polish + Differentiators | v1.0 | 5/5 | Complete | 2026-03-28 |
 | 6. Release Readiness | v1.0 | 4/4 | Complete | 2026-03-30 |
 | 7. Foundation | v1.1 | 3/3 | Complete | 2026-03-30 |
-| 8. Text Prediction | v1.1 | 0/2 | In progress | - |
+| 8. Text Prediction | 1/2 | In Progress|  | - |
 | 9. Parakeet Integration | v1.1 | 0/? | Not started | - |
 | 10. Beta Distribution + License Audit | v1.1 | 0/? | Not started | - |
 | 11. OSS Repository | v1.1 | 0/? | Not started | - |

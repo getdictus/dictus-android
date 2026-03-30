@@ -9,9 +9,9 @@ Requirements for v1.1 Public Beta. Each maps to roadmap phases.
 
 ### Suggestions texte
 
-- [ ] **SUGG-01**: L'utilisateur voit des suggestions contextuelles basées sur un dictionnaire binaire FR+EN pendant la saisie
+- [x] **SUGG-01**: L'utilisateur voit des suggestions contextuelles basées sur un dictionnaire binaire FR+EN pendant la saisie
 - [ ] **SUGG-02**: L'utilisateur peut taper une suggestion pour remplacer le mot en cours et insérer un espace
-- [ ] **SUGG-03**: Le clavier apprend des mots fréquemment tapés par l'utilisateur (dictionnaire personnel)
+- [x] **SUGG-03**: Le clavier apprend des mots fréquemment tapés par l'utilisateur (dictionnaire personnel)
 
 ### STT Multi-Provider
 
@@ -88,9 +88,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEBT-02 | Phase 7 | Complete |
 | DEBT-03 | Phase 7 | Complete |
 | STT-01 | Phase 7 | Complete |
-| SUGG-01 | Phase 8 | Pending |
+| SUGG-01 | Phase 8 | Complete |
 | SUGG-02 | Phase 8 | Pending |
-| SUGG-03 | Phase 8 | Pending |
+| SUGG-03 | Phase 8 | Complete |
 | STT-02 | Phase 9 | Pending |
 | STT-03 | Phase 9 | Pending |
 | STT-04 | Phase 9 | Pending |

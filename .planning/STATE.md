@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Phase 8 context gathered
-last_updated: "2026-03-30T14:14:29.404Z"
+stopped_at: Completed 08-text-prediction-01-PLAN.md
+last_updated: "2026-03-30T17:11:25.000Z"
 last_activity: "2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
   percent: 10
 ---
 
@@ -52,6 +52,7 @@ Progress: [█░░░░░░░░░] 10%
 | Phase 07-foundation P02 | ~15 min | 2 tasks | 3 files |
 | Phase 07-foundation P03 | ~10 min | 2 tasks | 2 files |
 | Phase 07-foundation P02 | 8 | 2 tasks | 4 files |
+| Phase 08-text-prediction P01 | 17 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ Key v1.1 architectural decisions (from research):
 - [Phase 07-foundation P03]: remember(keyboardLayout) used to trigger KeyboardScreen recomposition on KEYBOARD_LAYOUT DataStore change — same pattern as remember(initialLayer) for KEYBOARD_MODE
 - [Phase 07-foundation]: SttProvider placed in core/stt/ (not core/whisper/) to make engine-neutral nature explicit for Phase 9 Parakeet
 - [Phase 07-foundation]: Empty supportedLanguages list means all languages supported (Whisper); non-empty means restriction (Parakeet will be listOf(en))
+- [Phase 08-text-prediction]: Injectable ioDispatcher in DictionaryEngine: Dispatchers.IO by default, overrideable in tests for advanceUntilIdle() compatibility
+- [Phase 08-text-prediction]: Top 50k words from AOSP corpus: covers normal usage at ~2MB/file vs 8-15MB for full decoded set
+- [Phase 08-text-prediction]: AOSP .combined pre-decoded format from Helium314/aosp-dictionaries wordlists/ — no NDK needed, strips leading space during processing
 
 ### Research Flags (Phase 9)
 
@@ -85,6 +89,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-30T14:14:29.401Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-text-prediction/08-CONTEXT.md
+Last session: 2026-03-30T17:11:24.998Z
+Stopped at: Completed 08-text-prediction-01-PLAN.md
+Resume file: None
