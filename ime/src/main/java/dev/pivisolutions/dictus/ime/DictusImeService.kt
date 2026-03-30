@@ -19,7 +19,7 @@ import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
-import dev.pivisolutions.dictus.ime.suggestion.StubSuggestionEngine
+import dev.pivisolutions.dictus.ime.suggestion.DictionaryEngine
 import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
@@ -81,10 +81,17 @@ class DictusImeService : LifecycleInputMethodService() {
     // the Compose back handler stack in an InputMethodService.
     private val _isEmojiPickerOpen = MutableStateFlow(false)
 
-    // Suggestion engine — Phase 5 MVP uses StubSuggestionEngine (prefix-matching stub).
-    // To upgrade to AOSP LatinIME JNI: replace StubSuggestionEngine() with the JNI-backed
-    // implementation. SuggestionEngine interface ensures zero UI/wiring changes required.
-    private val suggestionEngine: SuggestionEngine = StubSuggestionEngine()
+    // Production suggestion engine: loads AOSP FR/EN dictionary from assets on
+    // Dispatchers.IO, performs accent-insensitive prefix matching with frequency
+    // ranking, and boosts personal dictionary words. Until dictionary loads
+    // (~500ms), returns empty suggestions gracefully.
+    private val suggestionEngine: SuggestionEngine by lazy {
+        DictionaryEngine(
+            context = applicationContext,
+            dataStore = entryPoint.dataStore(),
+            coroutineScope = bindingScope,
+        )
+    }
     private val _currentWord = MutableStateFlow("")
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
 
@@ -302,6 +309,10 @@ class DictusImeService : LifecycleInputMethodService() {
                             ic.deleteSurroundingText(word.length, 0)
                         }
                         ic.commitText("$suggestion ", 1)
+                        // Count this suggestion selection toward the personal dictionary
+                        // learning threshold (2 types = learned). The engine's personalDictionary
+                        // is accessed via cast since we know the runtime type is DictionaryEngine.
+                        (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(suggestion)
                         _suggestions.value = emptyList()
                         _currentWord.value = ""
                     },
@@ -309,7 +320,9 @@ class DictusImeService : LifecycleInputMethodService() {
                         // Commit the raw input as-is + space (user accepts what they typed)
                         val ic = currentInputConnection ?: return@KeyboardScreen
                         val word = _currentWord.value
+                        // Count the committed raw word toward personal dictionary
                         if (word.isNotEmpty()) {
+                            (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(word)
                             ic.commitText(" ", 1)
                             _suggestions.value = emptyList()
                             _currentWord.value = ""
@@ -356,6 +369,11 @@ class DictusImeService : LifecycleInputMethodService() {
                                     if (text != null) {
                                         commitText(text)
                                         Timber.d("Transcribed text inserted: '%s'", text)
+                                        // Clear suggestions after voice transcription so the bar
+                                        // does not show stale suggestions from the last typed word.
+                                        // Suggestions resume when user types on keyboard.
+                                        _suggestions.value = emptyList()
+                                        _currentWord.value = ""
                                     } else {
                                         Timber.w("Transcription returned null (failed or empty)")
                                     }
