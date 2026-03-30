@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: "Completed 06-03 Task 1 — checkpoint:human-verify for Task 2 (cross-app validation)"
-last_updated: "2026-03-29T08:29:35.587Z"
+stopped_at: Completed 06-03-PLAN.md — language picker + cross-app validation complete
+last_updated: "2026-03-30T08:51:54.839Z"
 last_activity: 2026-03-25 -- Phase 03 Plan 03 complete (E2E dictation pipeline wired)
 progress:
   total_phases: 7
@@ -79,6 +79,7 @@ Progress: [██████████] 100%
 | Phase 06-release-readiness P01 | 4min | 1 tasks | 9 files |
 | Phase 06 P04 | 9min | 2 tasks | 13 files |
 | Phase 06-release-readiness P03 | 15min | 1 tasks | 5 files |
+| Phase 06-release-readiness P03 | ~15min + human verify + fix | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,8 @@ Recent decisions affecting current work:
 - [Phase 06-release-readiness]: onboarding_test_recording_no_result uses context.getString() inside coroutine lambda — stringResource() requires Compose composition context
 - [Phase 06]: noResultLabel captured via remember{stringResource()} before coroutine scope in RecordingScreen to avoid composable context restriction
 - [Phase 06-03]: MutableStateFlow for uiLanguage — AppCompatDelegate is source of truth, DataStore duplication avoided; setApplicationLocales() called on main thread from onClick only
+- [Phase 06-03]: Language picker moved from TRANSCRIPTION to APPEARANCE section — logical grouping with theme picker
+- [Phase 06-03]: English default file (values/strings.xml) must contain English strings — French-in-default was a 06-04 error fixed during 06-03 verification
 
 ### Roadmap Evolution
 
@@ -164,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T08:29:35.584Z
-Stopped at: Completed 06-03 Task 1 — checkpoint:human-verify for Task 2 (cross-app validation)
+Last session: 2026-03-30T08:51:54.837Z
+Stopped at: Completed 06-03-PLAN.md — language picker + cross-app validation complete
 Resume file: None
