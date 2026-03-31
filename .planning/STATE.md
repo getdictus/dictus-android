@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Phase 9 context gathered
-last_updated: "2026-03-31T15:41:59.779Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-31T16:24:21.187Z"
 last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
   percent: 100
 ---
 
@@ -55,6 +55,7 @@ Progress: [██████████] 100%
 | Phase 08-text-prediction P01 | 17 | 2 tasks | 10 files |
 | Phase 08-text-prediction P02 | 10 | 1 tasks | 1 files |
 | Phase 08-text-prediction P03 | 8 | 1 tasks | 1 files |
+| Phase 09-parakeet-integration P02 | 6 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Key v1.1 architectural decisions (from research):
 - [Phase 08-text-prediction]: Safe cast (as? DictionaryEngine) for personalDictionary access: avoids coupling SuggestionEngine interface to personal dictionary concerns
 - [Phase 08-text-prediction]: recordWordTyped called after commitText in onSuggestionSelected (commit first, then learn)
 - [Phase 08-text-prediction]: Safe cast (as? DictionaryEngine) for personalDictionary access from onSuggestionSelected and onCurrentWordSelected in DictusImeService
+- [Phase 09-parakeet-integration]: commons-compress:1.26.1 chosen over system tar command for Parakeet archive extraction: pure-Java, works on all Android API levels
+- [Phase 09-parakeet-integration]: isDirectoryModel() extension defined inside ModelCatalog object: keeps provider-layout decision colocated with catalog logic
+- [Phase 09-parakeet-integration]: Parakeet models use directory layout models/{key}/{fileName} vs flat models/{fileName} for Whisper
 
 ### Research Flags (Phase 9)
 
@@ -95,6 +99,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-31T15:41:59.777Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-parakeet-integration/09-CONTEXT.md
+Last session: 2026-03-31T16:24:21.185Z
+Stopped at: Completed 09-02-PLAN.md
+Resume file: None
