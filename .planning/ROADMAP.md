@@ -25,7 +25,7 @@
 **Milestone Goal:** Extend the shipped MVP with production-grade text prediction, a second STT engine (Parakeet), formalized beta distribution via GitHub Releases CI, and a contribution-ready OSS repository — all while clearing v1.0 tech debt before going public.
 
 - [x] **Phase 7: Foundation** — SttProvider interface + v1.0 tech debt clearance (completed 2026-03-30)
-- [ ] **Phase 8: Text Prediction** — Production suggestion engine replacing the stub (gap closure in progress)
+- [x] **Phase 8: Text Prediction** — Production suggestion engine replacing the stub (gap closure in progress) (completed 2026-03-31)
 - [ ] **Phase 9: Parakeet Integration** — Multi-provider STT with sherpa-onnx
 - [ ] **Phase 10: Beta Distribution + License Audit** — CI pipeline, signed releases, license clean pass
 - [ ] **Phase 11: OSS Repository** — Public repo scaffolding for open contribution
@@ -56,7 +56,7 @@ Plans:
   2. Tapping a suggestion replaces the in-progress word and inserts a trailing space
   3. Words the user types frequently appear in suggestions over time (personal word dictionary)
   4. Suggestion lookups do not cause keyboard lag (validated by microbenchmark: 1000 sequential lookups on `dict-worker` thread)
-**Plans:** 3 plans (2 complete, 1 gap closure)
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 08-01-PLAN.md — DictionaryEngine + PersonalDictionary + dictionary assets + full test suite (SUGG-01, SUGG-03)
 - [x] 08-02-PLAN.md — Wire DictionaryEngine into DictusImeService + device verification (SUGG-02)
@@ -111,7 +111,7 @@ Plans:
 | 5. Polish + Differentiators | v1.0 | 5/5 | Complete | 2026-03-28 |
 | 6. Release Readiness | v1.0 | 4/4 | Complete | 2026-03-30 |
 | 7. Foundation | v1.1 | 3/3 | Complete | 2026-03-30 |
-| 8. Text Prediction | v1.1 | 2/3 | Gap closure | - |
+| 8. Text Prediction | 3/3 | Complete   | 2026-03-31 | - |
 | 9. Parakeet Integration | v1.1 | 0/? | Not started | - |
 | 10. Beta Distribution + License Audit | v1.1 | 0/? | Not started | - |
 | 11. OSS Repository | v1.1 | 0/? | Not started | - |

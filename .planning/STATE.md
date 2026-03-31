@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: "Checkpoint: Task 2 human-verify — awaiting device verification of live suggestions"
-last_updated: "2026-03-30T17:16:18.891Z"
+stopped_at: "Checkpoint: Task 2 human-verify — awaiting device verification of personal dictionary learning"
+last_updated: "2026-03-31T14:21:19.954Z"
 last_activity: "2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 6
+  completed_plans: 6
   percent: 10
 ---
 
@@ -54,6 +54,7 @@ Progress: [█░░░░░░░░░] 10%
 | Phase 07-foundation P02 | 8 | 2 tasks | 4 files |
 | Phase 08-text-prediction P01 | 17 | 2 tasks | 10 files |
 | Phase 08-text-prediction P02 | 10 | 1 tasks | 1 files |
+| Phase 08-text-prediction P03 | 8 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Key v1.1 architectural decisions (from research):
 - [Phase 08-text-prediction]: AOSP .combined pre-decoded format from Helium314/aosp-dictionaries wordlists/ — no NDK needed, strips leading space during processing
 - [Phase 08-text-prediction]: by lazy for DictionaryEngine in DictusImeService: applicationContext not available at field-init time in InputMethodService
 - [Phase 08-text-prediction]: Safe cast (as? DictionaryEngine) for personalDictionary access: avoids coupling SuggestionEngine interface to personal dictionary concerns
+- [Phase 08-text-prediction]: recordWordTyped called after commitText in onSuggestionSelected (commit first, then learn)
+- [Phase 08-text-prediction]: Safe cast (as? DictionaryEngine) for personalDictionary access from onSuggestionSelected and onCurrentWordSelected in DictusImeService
 
 ### Research Flags (Phase 9)
 
@@ -92,6 +95,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-30T17:16:18.889Z
-Stopped at: Checkpoint: Task 2 human-verify — awaiting device verification of live suggestions
+Last session: 2026-03-31T14:21:19.952Z
+Stopped at: Checkpoint: Task 2 human-verify — awaiting device verification of personal dictionary learning
 Resume file: None
