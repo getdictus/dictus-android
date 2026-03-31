@@ -325,6 +325,10 @@ class DictusImeService : LifecycleInputMethodService() {
                             ic.deleteSurroundingText(word.length, 0)
                         }
                         ic.commitText("$suggestion ", 1)
+                        // Count suggestion selection toward personal dictionary learning (2 taps = learned).
+                        // Safe cast: at runtime suggestionEngine is always DictionaryEngine, but the safe
+                        // cast avoids a hard coupling on the declared SuggestionEngine interface type.
+                        (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(suggestion)
                         _suggestions.value = emptyList()
                         _currentWord.value = ""
                     },
@@ -333,6 +337,8 @@ class DictusImeService : LifecycleInputMethodService() {
                         val ic = currentInputConnection ?: return@KeyboardScreen
                         val word = _currentWord.value
                         if (word.isNotEmpty()) {
+                            // Count the committed raw word toward personal dictionary learning.
+                            (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(word)
                             ic.commitText(" ", 1)
                             _suggestions.value = emptyList()
                             _currentWord.value = ""
