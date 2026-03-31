@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-31T16:26:03.270Z"
+stopped_at: Completed 09-03-PLAN.md tasks 1-2, checkpoint at Task 3 (device verify)
+last_updated: "2026-03-31T16:35:20.797Z"
 last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 100
 ---
 
@@ -57,6 +57,7 @@ Progress: [██████████] 100%
 | Phase 08-text-prediction P03 | 8 | 1 tasks | 1 files |
 | Phase 09-parakeet-integration P02 | 6 | 2 tasks | 4 files |
 | Phase 09-parakeet-integration P01 | 6 | 2 tasks | 14 files |
+| Phase 09-parakeet-integration P03 | 422 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,7 @@ Key v1.1 architectural decisions (from research):
 - [Phase 09-parakeet-integration]: sherpa-onnx Kotlin API vendored as source into asr/ module — not as AAR — because v1.12.34 not on Maven Central
 - [Phase 09-parakeet-integration]: null AssetManager in OfflineRecognizer routes to newFromFile() JNI path for file-path model loading (not assets)
 - [Phase 09-parakeet-integration]: pickFirsts libc++_shared.so in app packaging block resolves potential whisper.cpp + sherpa-onnx native lib merge conflict
+- [Phase 09-parakeet-integration]: FakeDataStore + direct dataStore.data.first() check in ModelsViewModelTest — SharingStarted.WhileSubscribed StateFlow does not propagate without collector in unit tests
 
 ### Research Flags (Phase 9)
 
@@ -103,6 +105,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:26:03.268Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-31T16:35:20.794Z
+Stopped at: Completed 09-03-PLAN.md tasks 1-2, checkpoint at Task 3 (device verify)
 Resume file: None
