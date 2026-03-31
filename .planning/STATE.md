@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: "Checkpoint: Task 2 human-verify — awaiting device verification of personal dictionary learning"
-last_updated: "2026-03-31T14:21:19.954Z"
+stopped_at: Completed 08-03-PLAN.md — Phase 8 Text Prediction complete
+last_updated: "2026-03-31T15:15:24.433Z"
 last_activity: "2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard"
 progress:
   total_phases: 5
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-30)
 
 **Core value:** La dictee vocale on-device qui fonctionne comme clavier systeme -- gratuite, privee, sans cloud.
-**Current focus:** Phase 7 — Foundation (SttProvider interface + tech debt)
+**Current focus:** Phase 8 — Text Prediction complete, ready for Phase 9
 
 ## Current Position
 
-Phase: 7 of 11 (Phase 7: Foundation)
-Plan: 3 of 3 (Phase 7 complete)
-Status: Phase 7 complete — all 3 plans executed
-Last activity: 2026-03-30 — DEBT-01 resolved: KEYBOARD_LAYOUT preference now flows reactively from Settings to IME keyboard
+Phase: 8 of 11 (Phase 8: Text Prediction)
+Plan: 3 of 3 (Phase 8 complete)
+Status: Phase 8 complete — all 3 plans executed, SUGG-03 gap closed
+Last activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -95,6 +95,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-31T14:21:19.952Z
-Stopped at: Checkpoint: Task 2 human-verify — awaiting device verification of personal dictionary learning
+Last session: 2026-03-31T15:15:23.580Z
+Stopped at: Completed 08-03-PLAN.md — Phase 8 Text Prediction complete
 Resume file: None

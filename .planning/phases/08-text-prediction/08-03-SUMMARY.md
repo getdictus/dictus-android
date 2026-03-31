@@ -46,7 +46,7 @@ completed: 2026-03-31
 - **Duration:** 8 min
 - **Started:** 2026-03-31T00:00:00Z
 - **Completed:** 2026-03-31T00:08:00Z
-- **Tasks:** 1 of 2 complete (Task 2 is human-verify checkpoint)
+- **Tasks:** 2 of 2 complete
 - **Files modified:** 1
 
 ## Accomplishments
@@ -55,12 +55,14 @@ completed: 2026-03-31
 - Added `(suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(word)` in `onCurrentWordSelected` inside the if-block before commitText
 - All 106 ime module tests pass; `compileDebugKotlin` exits 0
 - SUGG-03 gap closed: personal dictionary counting now fires live at runtime
+- Device verification approved: typing "dictus" twice causes it to appear in future "dict" suggestions
 
 ## Task Commits
 
 Each task was committed atomically:
 
 1. **Task 1: Add recordWordTyped calls** - `b72d611` (feat)
+2. **Task 2: Verify personal dictionary learning on device** - human-verify approved
 
 ## Files Created/Modified
 
@@ -77,7 +79,7 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-No device connected at automation time — `./gradlew installDebug` confirmed the build succeeds up to APK packaging; install step requires a connected device (Task 2 checkpoint).
+No device connected at automation time — `./gradlew installDebug` confirmed the build succeeds up to APK packaging. Device verification completed in continuation session: user confirmed personal dictionary learning works correctly.
 
 ## User Setup Required
 
@@ -85,8 +87,9 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 
-- Personal dictionary learning is now fully wired; Task 2 human-verify remains (device test)
-- Phase 9 (Parakeet integration) can proceed once SUGG-03 device verification is confirmed
+- Personal dictionary learning fully wired and device-verified
+- Phase 8 (Text Prediction) is now complete — all 3 plans executed
+- Phase 9 (Parakeet integration) can proceed
 
 ---
 *Phase: 08-text-prediction*
