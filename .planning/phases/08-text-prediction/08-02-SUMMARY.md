@@ -1,8 +1,8 @@
 ---
 phase: 08-text-prediction
 plan: 02
-subsystem: ime/suggestion
-tags: [dictionary-engine, suggestion, personal-dictionary, ime-service, wiring]
+subsystem: ime/service
+tags: [dictionary-engine, suggestion, ime-service, wiring, perf-fix, settings]
 
 # Dependency graph
 requires:
@@ -10,88 +10,84 @@ requires:
     provides: "DictionaryEngine and PersonalDictionary with AOSP FR+EN dictionaries"
 provides:
   - "DictusImeService wired with production DictionaryEngine (replaces StubSuggestionEngine)"
-  - "Personal dictionary word counting on suggestion tap and raw word commit"
+  - "DictionaryEngine performance optimization (pre-computed prefix index)"
+  - "SUGGESTIONS_ENABLED toggle in Settings > Keyboard"
   - "Post-dictation suggestion bar clearing"
 affects:
   - "ime/DictusImeService.kt - live keyboard suggestion pipeline"
+  - "ime/suggestion/DictionaryEngine.kt - perf optimization"
+  - "ime/suggestion/WordEntry.kt - strippedLower field"
+  - "core/preferences/PreferenceKeys.kt - SUGGESTIONS_ENABLED key"
+  - "app/ui/settings/ - suggestions toggle"
 
 # Tech tracking
 tech-stack:
   added: []
   patterns:
     - "by lazy for DictionaryEngine: defers initialization past field-init time when applicationContext and entryPoint are available"
-    - "Safe cast (as? DictionaryEngine) for optional personalDictionary access without interface coupling"
+    - "Pre-computed strippedLower in WordEntry for O(1) accent comparison"
+    - "Prefix index Map<Char, List<WordEntry>> reduces scan from 50k to ~2k per keystroke"
+    - "SUGGESTIONS_ENABLED DataStore preference with reactive observation in IME"
 
 key-files:
   created: []
   modified:
     - "ime/src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
+    - "ime/src/main/java/dev/pivisolutions/dictus/ime/suggestion/DictionaryEngine.kt"
+    - "ime/src/main/java/dev/pivisolutions/dictus/ime/suggestion/WordEntry.kt"
+    - "core/src/main/java/dev/pivisolutions/dictus/core/preferences/PreferenceKeys.kt"
+    - "app/src/main/java/dev/pivisolutions/dictus/ui/settings/SettingsViewModel.kt"
+    - "app/src/main/java/dev/pivisolutions/dictus/ui/settings/SettingsScreen.kt"
 
 key-decisions:
-  - "by lazy initialization for DictionaryEngine: applicationContext and entryPoint are not available at field-init time in InputMethodService — lazy defers to first access (after onCreate)"
-  - "Safe cast (as? DictionaryEngine) for personalDictionary access: avoids adding recordWordTyped to SuggestionEngine interface which would force StubSuggestionEngine to implement it"
-
-patterns-established:
-  - "Post-dictation state reset: always clear _suggestions and _currentWord after commitText in voice transcription flow"
+  - "by lazy initialization for DictionaryEngine: applicationContext and entryPoint are not available at field-init time in InputMethodService"
+  - "Personal dictionary counting deferred to future autocorrect phase: works in unit tests but never fires in live IME runtime"
+  - "Added suggestions toggle as user-facing safety valve for performance concerns"
 
 requirements-completed:
   - SUGG-02
 
 # Metrics
-duration: ~10min
-completed: 2026-03-30
+duration: ~45min (including perf debugging + device verification)
+completed: 2026-03-31
 ---
 
-# Phase 08 Plan 02: Wire DictionaryEngine into DictusImeService Summary
+# Phase 08 Plan 02: Wire DictionaryEngine into DictusImeService — Summary
 
-**DictusImeService now uses the production AOSP-backed DictionaryEngine instead of StubSuggestionEngine, with personal dictionary counting on suggestion taps and post-dictation bar clearing.**
+**DictusImeService now uses the production AOSP-backed DictionaryEngine. Critical perf fix applied (50ms→<1ms per keystroke). Suggestions toggle added in Settings.**
 
-## Performance
+## Tasks
 
-- **Duration:** ~10 min
-- **Started:** 2026-03-30T17:15:00Z
-- **Completed:** 2026-03-30T17:25:00Z
-- **Tasks:** 1 complete, 1 awaiting human verification
-- **Files modified:** 1
+| Task | Status | Commit |
+|------|--------|--------|
+| 1: Replace StubSuggestionEngine with DictionaryEngine | Done | `6db1747` |
+| 2: Device verification | Approved | N/A (human checkpoint) |
+| Post-plan: Perf fix + toggle + cleanup | Done | `3f5a568` |
 
-## Accomplishments
-- Replaced `StubSuggestionEngine` with `DictionaryEngine` using `by lazy` initialization
-- Engine receives `applicationContext`, `entryPoint.dataStore()`, and `bindingScope` — all dependencies wired correctly
-- Suggestion tap (`onSuggestionSelected`) now calls `personalDictionary.recordWordTyped(suggestion)`
-- Raw word commit (`onCurrentWordSelected`) now calls `personalDictionary.recordWordTyped(word)` before committing space
-- Voice transcription confirm (`onConfirm`) now clears `_suggestions` and `_currentWord` after `commitText(text)`
-- All 106 existing tests pass; `compileDebugKotlin` exits 0
+## What was built
 
-## Task Commits
+1. **DictionaryEngine wiring**: Replaced StubSuggestionEngine with lazy-initialized DictionaryEngine using applicationContext, dataStore, and bindingScope.
+2. **Performance fix**: Pre-computed `strippedLower` in WordEntry at load time + prefix index by first char. Reduced per-keystroke work from ~50ms (50k NFD normalizations) to <1ms.
+3. **Suggestions toggle**: SUGGESTIONS_ENABLED preference in Settings > Keyboard, observed reactively in IME service.
+4. **Exact-match fix**: Compare original words (not stripped) so "deja" input no longer excludes "deja" from suggestions.
+5. **Post-dictation clear**: Suggestions and current word cleared after voice transcription.
 
-Each task was committed atomically:
+## Deviations
 
-1. **Task 1: Replace StubSuggestionEngine with DictionaryEngine** - `6db1747` (feat)
-2. **Task 2: Verify live suggestion behavior on device** - awaiting human verification
+- **Personal dictionary counting removed**: `recordWordTyped` works in unit tests but never executes in the live IME service (confirmed via logcat). Root cause undiagnosed. Deferred to future autocorrect phase alongside auto-capitalization.
+- **Suggestions toggle added**: Not in original plan, added at user request as safety valve.
+- **Perf fix required**: Original DictionaryEngine design caused severe input lag on Pixel 4.
 
-## Files Created/Modified
-- `ime/src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt` - Engine swap + personal dict counting + post-dictation clear
+## Self-Check: PASSED
 
-## Decisions Made
-- `by lazy` for `DictionaryEngine`: In an `InputMethodService`, field initializers run during object construction before `onCreate()`. `applicationContext` and `entryPoint` are not ready at that point. `by lazy` defers initialization to first access (triggered from `onUpdateSelection` after `onCreate`). Without `lazy`, the service would crash on startup.
-- Safe cast `(suggestionEngine as? DictionaryEngine)` for `personalDictionary` access: Adding `recordWordTyped` to the `SuggestionEngine` interface would force `StubSuggestionEngine` to implement it (dead code) and couple the interface to personal dictionary concerns. The safe cast keeps the interface clean and is appropriate since the caller knows the runtime type in production.
-
-## Deviations from Plan
-
-None - plan executed exactly as written.
-
-## Issues Encountered
-
-None.
-
-## User Setup Required
-
-None - no external service configuration required.
-
-## Next Phase Readiness
-- DictionaryEngine is live in the keyboard. Human verification on device needed to confirm suggestions appear, taps work, personal dictionary accumulates, and post-dictation clearing works.
-- Once Task 2 is approved: Phase 08 is complete, Phase 09 (Parakeet Integration) can begin.
+- [x] StubSuggestionEngine replaced by DictionaryEngine
+- [x] DictionaryEngine wired with applicationContext, dataStore, bindingScope
+- [x] Post-dictation clears suggestion bar
+- [x] Suggestions work on device (prefix matching, accent-insensitive, apostrophe words)
+- [x] Performance acceptable on Pixel 4
+- [x] Suggestions toggle in settings
+- [ ] Personal dictionary learning (deferred to future phase)
 
 ---
 *Phase: 08-text-prediction*
-*Completed: 2026-03-30*
+*Completed: 2026-03-31*
