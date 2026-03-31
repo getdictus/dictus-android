@@ -1,21 +1,30 @@
 package dev.pivisolutions.dictus.models
 
+import android.app.ActivityManager
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.service.DownloadProgress
 import dev.pivisolutions.dictus.service.ModelDownloader
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -58,6 +67,7 @@ class ModelsViewModel @Inject constructor(
     private val modelManager: ModelManager,
     private val modelDownloader: ModelDownloader,
     private val dataStore: DataStore<Preferences>,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     // Map of modelKey → download progress (0–100), only for active downloads
@@ -83,6 +93,18 @@ class ModelsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = ModelCatalog.DEFAULT_KEY,
         )
+
+    // Snackbar event for model loading feedback during engine swap
+    private val _snackbarEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
+
+    // Parakeet language mismatch dialog state — holds the pending model key, or null
+    private val _showParakeetLanguageDialog = MutableStateFlow<String?>(null)
+    val showParakeetLanguageDialog: StateFlow<String?> = _showParakeetLanguageDialog.asStateFlow()
+
+    // RAM insufficient dialog state — holds the pending model key, or null
+    private val _showRamWarningDialog = MutableStateFlow<String?>(null)
+    val showRamWarningDialog: StateFlow<String?> = _showRamWarningDialog.asStateFlow()
 
     init {
         refreshModels()
@@ -169,15 +191,79 @@ class ModelsViewModel @Inject constructor(
      *
      * Only meaningful for downloaded models. The change is reflected immediately
      * via the [activeModelKey] StateFlow which is backed by DataStore.
+     * Emits a snackbar event when switching between provider types (Whisper ↔ Parakeet).
      *
      * @param key Stable catalog key for the model to make active.
      */
     fun setActiveModel(key: String) {
         viewModelScope.launch {
+            // Emit loading snackbar when switching providers
+            val newInfo = ModelCatalog.findByKey(key)
+            val currentKey = dataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
+            val currentInfo = currentKey?.let { ModelCatalog.findByKey(it) }
+            if (newInfo != null && currentInfo != null && newInfo.provider != currentInfo.provider) {
+                _snackbarEvent.emit(appContext.getString(R.string.model_loading_snackbar))
+            }
+
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.ACTIVE_MODEL] = key
             }
         }
+    }
+
+    /**
+     * Request to set active model with safety checks for Parakeet models.
+     *
+     * WHY not direct setActiveModel: Parakeet is English-only. If the user's
+     * transcription language is FR or auto, they need a confirmation dialog.
+     * The 0.6B model also needs a RAM check (8+ GB required).
+     *
+     * @param key Stable catalog key for the model to make active.
+     */
+    fun requestSetActiveModel(key: String) {
+        viewModelScope.launch {
+            val info = ModelCatalog.findByKey(key) ?: return@launch
+
+            // RAM guard for 0.6B model
+            if (info.key == "parakeet-tdt-0.6b-v2") {
+                val actManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val memInfo = ActivityManager.MemoryInfo()
+                actManager.getMemoryInfo(memInfo)
+                val totalGb = memInfo.totalMem / (1024L * 1024L * 1024L)
+                if (totalGb < 8) {
+                    _showRamWarningDialog.value = key
+                    return@launch
+                }
+            }
+
+            // Language mismatch check for all Parakeet models
+            if (info.provider == AiProvider.PARAKEET) {
+                val lang = dataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto"
+                if (lang != "en") {
+                    _showParakeetLanguageDialog.value = key
+                    return@launch
+                }
+            }
+
+            setActiveModel(key)
+        }
+    }
+
+    /** Confirm Parakeet activation despite language mismatch. */
+    fun confirmParakeetActivation() {
+        val key = _showParakeetLanguageDialog.value ?: return
+        _showParakeetLanguageDialog.value = null
+        setActiveModel(key)
+    }
+
+    /** Dismiss the Parakeet language mismatch dialog without activating the model. */
+    fun dismissParakeetDialog() {
+        _showParakeetLanguageDialog.value = null
+    }
+
+    /** Dismiss the RAM warning dialog without activating the model. */
+    fun dismissRamWarningDialog() {
+        _showRamWarningDialog.value = null
     }
 
     /**

@@ -37,8 +37,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import dev.pivisolutions.dictus.asr.ParakeetProvider
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
+import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelManager
 import timber.log.Timber
 
@@ -94,7 +96,7 @@ class DictationService : Service(), DictationController {
         ).dataStore()
     }
 
-    private val sttProvider: SttProvider = WhisperProvider()
+    private var currentProvider: SttProvider? = null
     private val modelManager by lazy { ModelManager(applicationContext) }
     private val modelDownloader by lazy { ModelDownloader(modelManager) }
 
@@ -320,23 +322,19 @@ class DictationService : Service(), DictationController {
                 return null
             }
 
-            // 4. Initialize engine if needed
-            if (!sttProvider.isReady) {
-                val initialized = sttProvider.initialize(modelPath)
-                if (!initialized) {
-                    Timber.e("Failed to initialize transcription engine")
-                    _state.value = DictationState.Idle
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                    return null
-                }
+            // 4. Get or initialize the correct provider (handles engine switching)
+            val provider = getOrInitProvider(activeModelKey, modelPath)
+            if (provider == null) {
+                Timber.e("Failed to get STT provider for model '%s'", activeModelKey)
+                _state.value = DictationState.Idle
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return null
             }
 
             // 5. Transcribe with timeout
             val rawText = withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
-                // Fall back to "fr" when whisperLanguage is null and whisper.cpp
-                // does not support true auto-detection on this model variant.
-                sttProvider.transcribe(samples, whisperLanguage ?: "fr")
+                provider.transcribe(samples, whisperLanguage ?: "fr")
             }
 
             if (rawText == null) {
@@ -363,6 +361,46 @@ class DictationService : Service(), DictationController {
             stopSelf()
             null
         }
+    }
+
+    /**
+     * Get or initialize the correct STT provider based on the active model's provider type.
+     *
+     * WHY dynamic dispatch: Phase 9 adds Parakeet as a second engine. The provider is
+     * determined by the active model's AiProvider enum, not a separate setting.
+     * Strict single-engine policy: if the provider type changes, release() the current
+     * one before initialize() on the new one — prevents OOM from dual engine loading.
+     */
+    private suspend fun getOrInitProvider(modelKey: String, modelPath: String): SttProvider? {
+        val info = ModelCatalog.findByKey(modelKey) ?: return null
+        val neededProviderClass = when (info.provider) {
+            AiProvider.WHISPER -> WhisperProvider::class
+            AiProvider.PARAKEET -> ParakeetProvider::class
+        }
+
+        val current = currentProvider
+        // If provider type changed, release current before creating new
+        if (current != null && current::class != neededProviderClass) {
+            Timber.d("Switching provider: %s -> %s", current.providerId, info.provider)
+            current.release()
+            currentProvider = null
+        }
+
+        // Reuse existing provider if same type and ready
+        if (currentProvider?.isReady == true) return currentProvider
+
+        // Create and initialize new provider
+        val newProvider = when (info.provider) {
+            AiProvider.WHISPER -> WhisperProvider()
+            AiProvider.PARAKEET -> ParakeetProvider()
+        }
+        val initialized = newProvider.initialize(modelPath)
+        if (!initialized) {
+            Timber.e("Failed to initialize %s provider", info.provider)
+            return null
+        }
+        currentProvider = newProvider
+        return newProvider
     }
 
     /**
@@ -466,7 +504,7 @@ class DictationService : Service(), DictationController {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.launch {
-            sttProvider.release()
+            currentProvider?.release()
         }
         if (::soundPlayer.isInitialized) soundPlayer.release()
         serviceScope.cancel()

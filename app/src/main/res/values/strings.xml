@@ -145,6 +145,17 @@
     <string name="fake_settings_gboard_subtitle">Multilingual typing</string>
     <string name="fake_settings_dictus_subtitle">QWERTY (English)</string>
 
+    <!-- ModelCard — Parakeet provider -->
+    <string name="model_parakeet_language_warning">English only — French transcription is not supported</string>
+    <string name="parakeet_lang_dialog_title">English Only Model</string>
+    <string name="parakeet_lang_dialog_message">This model only supports English. Continue?</string>
+    <string name="ram_warning_dialog_title">Insufficient RAM</string>
+    <string name="ram_warning_dialog_message">This model requires 8+ GB of RAM. Your device does not have enough memory to run it.</string>
+    <string name="model_loading_snackbar">Loading model\u2026</string>
+    <string name="dialog_continue">Continue</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_ok">OK</string>
+
     <!-- ModelCard -->
     <string name="model_active">Active</string>
     <string name="model_download">Download</string>

@@ -13,15 +13,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +71,8 @@ fun ModelsScreen(
     val models by viewModel.models.collectAsState()
     val activeModelKey by viewModel.activeModelKey.collectAsState()
     val storageUsedBytes by viewModel.storageUsedBytes.collectAsState()
+    val parakeetDialogKey by viewModel.showParakeetLanguageDialog.collectAsState()
+    val ramWarningKey by viewModel.showRamWarningDialog.collectAsState()
 
     val downloadedModels = models.filter { it.isDownloaded }
     val availableModels = models.filter { !it.isDownloaded }
@@ -74,11 +82,61 @@ fun ModelsScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    // Snackbar for engine swap feedback
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.snackbarEvent.collect { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
+
+    // Parakeet language mismatch confirmation dialog
+    if (parakeetDialogKey != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissParakeetDialog() },
+            title = { Text(stringResource(R.string.parakeet_lang_dialog_title)) },
+            text = { Text(stringResource(R.string.parakeet_lang_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmParakeetActivation() }) {
+                    Text(stringResource(R.string.dialog_continue))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissParakeetDialog() }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            },
+        )
+    }
+
+    // RAM insufficient warning dialog
+    if (ramWarningKey != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissRamWarningDialog() },
+            title = { Text(stringResource(R.string.ram_warning_dialog_title)) },
+            text = { Text(stringResource(R.string.ram_warning_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissRamWarningDialog() }) {
+                    Text(stringResource(R.string.dialog_ok))
+                }
+            },
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { innerPadding ->
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
+            .padding(innerPadding)
             .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -107,7 +165,7 @@ fun ModelsScreen(
                             scope.launch { sheetState.show() }
                         },
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
-                        onSelect = { viewModel.setActiveModel(modelState.info.key) },
+                        onSelect = { viewModel.requestSetActiveModel(modelState.info.key) },
                     )
                 }
             }
@@ -169,7 +227,9 @@ fun ModelsScreen(
             )
         }
     }
-}
+
+    } // end Scaffold content lambda
+} // end ModelsScreen
 
 @Composable
 private fun ModelSection(
