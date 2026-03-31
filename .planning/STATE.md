@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-31T16:24:21.187Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-03-31T16:26:03.270Z"
 last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 100
 ---
 
@@ -56,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 08-text-prediction P02 | 10 | 1 tasks | 1 files |
 | Phase 08-text-prediction P03 | 8 | 1 tasks | 1 files |
 | Phase 09-parakeet-integration P02 | 6 | 2 tasks | 4 files |
+| Phase 09-parakeet-integration P01 | 6 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ Key v1.1 architectural decisions (from research):
 - [Phase 09-parakeet-integration]: commons-compress:1.26.1 chosen over system tar command for Parakeet archive extraction: pure-Java, works on all Android API levels
 - [Phase 09-parakeet-integration]: isDirectoryModel() extension defined inside ModelCatalog object: keeps provider-layout decision colocated with catalog logic
 - [Phase 09-parakeet-integration]: Parakeet models use directory layout models/{key}/{fileName} vs flat models/{fileName} for Whisper
+- [Phase 09-parakeet-integration]: sherpa-onnx Kotlin API vendored as source into asr/ module — not as AAR — because v1.12.34 not on Maven Central
+- [Phase 09-parakeet-integration]: null AssetManager in OfflineRecognizer routes to newFromFile() JNI path for file-path model loading (not assets)
+- [Phase 09-parakeet-integration]: pickFirsts libc++_shared.so in app packaging block resolves potential whisper.cpp + sherpa-onnx native lib merge conflict
 
 ### Research Flags (Phase 9)
 
@@ -99,6 +103,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:24:21.185Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-31T16:26:03.268Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
