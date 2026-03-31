@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.model
 
 import android.content.Context
+import dev.pivisolutions.dictus.model.ModelCatalog.isDirectoryModel
 import java.io.File
 
 /**
@@ -45,7 +46,7 @@ data class ModelInfo(
 )
 
 /**
- * Static catalog of all supported Whisper GGML models.
+ * Static catalog of all supported ASR models (Whisper GGML and Parakeet ONNX).
  *
  * Acts as the single source of truth for model metadata. All download URLs,
  * file names, and size checks reference this catalog rather than being
@@ -58,17 +59,25 @@ data class ModelInfo(
 object ModelCatalog {
     const val DEFAULT_KEY = "tiny"
     private const val WHISPER_BASE_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
+    private const val SHERPA_ONNX_RELEASES_URL =
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models"
 
     /**
      * All available models in selection order (fastest → most accurate).
      *
-     * Phase 4 exposes 4 models:
+     * Phase 4 Whisper models (4 entries):
      *   tiny      — 77 MB  — fastest, good for short commands
      *   base      — 148 MB — balanced speed and accuracy
      *   small     — 488 MB — high accuracy, slower
      *   small-q5_1 — 190 MB — quantised small, best accuracy/size trade-off
      *
-     * WHY corrected sizes: The exact byte sizes were confirmed via UAT debug session.
+     * Phase 9 Parakeet models (3 entries, English-only, sherpa-onnx):
+     *   parakeet-ctc-110m-int8 — 126 MB — fast quantised model
+     *   parakeet-ctc-110m-fp16 — 220 MB — full precision variant
+     *   parakeet-tdt-0.6b-v2  — 640 MB — large model, requires 8+ GB RAM
+     *
+     * WHY corrected sizes: The exact byte sizes were confirmed via UAT debug session
+     * (Whisper) or from official sherpa-onnx release metadata (Parakeet).
      * expectedSizeBytes is used for the 95% minimum-size threshold check in getModelPath()
      * which tolerates minor CDN mirror variations while still rejecting partial downloads.
      */
@@ -113,20 +122,77 @@ object ModelCatalog {
             precision = 0.85f,
             speed = 0.55f,
         ),
+        // --- Parakeet models (English-only, sherpa-onnx) ---
+        // Downloaded as tar.bz2 archives; each archive contains model.onnx (or model.int8.onnx)
+        // + tokens.txt. Stored in models/{key}/ directory on device.
+        ModelInfo(
+            key = "parakeet-ctc-110m-int8",
+            fileName = "model.int8.onnx",
+            displayName = "Parakeet 110M INT8",
+            expectedSizeBytes = 131_628_000L,
+            qualityLabel = "Rapide",
+            description = "Anglais uniquement - Rapide et precis",
+            precision = 0.75f,
+            speed = 0.85f,
+            provider = AiProvider.PARAKEET,
+        ),
+        ModelInfo(
+            key = "parakeet-ctc-110m-fp16",
+            fileName = "model.onnx",
+            displayName = "Parakeet 110M FP16",
+            expectedSizeBytes = 230_000_000L,
+            qualityLabel = "Precis",
+            description = "Anglais uniquement - Haute precision",
+            precision = 0.85f,
+            speed = 0.65f,
+            provider = AiProvider.PARAKEET,
+        ),
+        ModelInfo(
+            key = "parakeet-tdt-0.6b-v2",
+            fileName = "model.onnx",
+            displayName = "Parakeet 0.6B TDT",
+            expectedSizeBytes = 670_000_000L,
+            qualityLabel = "Premium",
+            description = "Anglais uniquement - Necessite 8+ GB RAM",
+            precision = 0.95f,
+            speed = 0.40f,
+            provider = AiProvider.PARAKEET,
+        ),
     )
 
     /** Find a model descriptor by its stable key, or null if not in catalog. */
     fun findByKey(key: String): ModelInfo? = ALL.find { it.key == key }
 
     /**
+     * Returns true if a model uses a directory-based storage layout.
+     *
+     * Parakeet models are stored in a subdirectory (models/{key}/{fileName}) because
+     * they require companion files (tokens.txt) alongside the ONNX model file.
+     * Whisper models use a flat layout (models/{fileName}).
+     */
+    fun ModelInfo.isDirectoryModel(): Boolean = provider == AiProvider.PARAKEET
+
+    /**
      * Build the download URL for a model based on its provider.
      *
      * WHY when expression: Exhaustive switch ensures a compile-time error if a
      * new provider is added without implementing its URL scheme.
+     *
+     * Parakeet models are distributed as tar.bz2 archives from the sherpa-onnx
+     * GitHub Releases page (asr-models tag). Each archive extracts to a directory
+     * containing model.onnx (or model.int8.onnx) + tokens.txt.
      */
     fun downloadUrl(info: ModelInfo): String = when (info.provider) {
         AiProvider.WHISPER -> "$WHISPER_BASE_URL/${info.fileName}"
-        AiProvider.PARAKEET -> error("Parakeet downloads not yet supported")
+        AiProvider.PARAKEET -> when (info.key) {
+            "parakeet-ctc-110m-int8" ->
+                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2"
+            "parakeet-ctc-110m-fp16" ->
+                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000.tar.bz2"
+            "parakeet-tdt-0.6b-v2" ->
+                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-en.tar.bz2"
+            else -> error("Unknown Parakeet model key: ${info.key}")
+        }
     }
 }
 
@@ -162,10 +228,18 @@ class ModelManager(context: Context) {
      * corrupt/partial downloads. Using >= 95% of expectedSizeBytes (instead of
      * exact equality) tolerates minor size variations across HuggingFace CDN
      * mirrors while still rejecting clearly partial downloads.
+     *
+     * For Parakeet models (directory-based), the path points to the ONNX model file
+     * inside models/{key}/{fileName} — e.g. models/parakeet-ctc-110m-int8/model.int8.onnx.
+     * For Whisper models (flat), the path points to models/{fileName}.
      */
     fun getModelPath(modelKey: String): String? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
-        val file = File(modelsDir, info.fileName)
+        val file = if (info.isDirectoryModel()) {
+            File(File(modelsDir, info.key), info.fileName)
+        } else {
+            File(modelsDir, info.fileName)
+        }
         return if (file.exists() && file.length() >= info.expectedSizeBytes * 95 / 100) {
             file.absolutePath
         } else {
@@ -188,10 +262,16 @@ class ModelManager(context: Context) {
      * Get the target file path for downloading a model (may not exist yet).
      *
      * Used by ModelDownloader to determine the write destination.
+     * For Parakeet models, returns the path to the ONNX file inside the model subdirectory.
+     * The parent directory is created by ModelDownloader during extraction.
      */
     fun getTargetPath(modelKey: String): String? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
-        return File(modelsDir, info.fileName).absolutePath
+        return if (info.isDirectoryModel()) {
+            File(File(modelsDir, info.key), info.fileName).absolutePath
+        } else {
+            File(modelsDir, info.fileName).absolutePath
+        }
     }
 
     /**
@@ -223,16 +303,24 @@ class ModelManager(context: Context) {
     }
 
     /**
-     * Delete a model file from disk.
+     * Delete a model from disk.
      *
-     * Returns false and leaves the file untouched if canDelete is false (e.g.,
-     * it is the last downloaded model). Returns true and deletes the file when
+     * Returns false and leaves files untouched if canDelete is false (e.g.,
+     * it is the last downloaded model). Returns true and deletes files when
      * deletion is allowed.
+     *
+     * For Parakeet models (directory-based), deletes the entire model subdirectory
+     * (models/{key}/) including model.onnx and tokens.txt.
+     * For Whisper models (flat), deletes the single model file.
      */
     fun deleteModel(modelKey: String): Boolean {
         if (!canDelete(modelKey)) return false
         val info = ModelCatalog.findByKey(modelKey) ?: return false
-        return File(modelsDir, info.fileName).delete()
+        return if (info.isDirectoryModel()) {
+            File(modelsDir, info.key).deleteRecursively()
+        } else {
+            File(modelsDir, info.fileName).delete()
+        }
     }
 
     /**
@@ -240,19 +328,33 @@ class ModelManager(context: Context) {
      *
      * Uses actual file lengths rather than expectedSizeBytes so partially
      * downloaded files are accounted for correctly during active downloads.
+     * For Parakeet models (directory-based), sums all files in the model subdirectory.
      */
     fun storageUsedBytes(): Long =
         ModelCatalog.ALL.sumOf { info ->
-            val file = File(modelsDir, info.fileName)
-            if (file.exists()) file.length() else 0L
+            if (info.isDirectoryModel()) {
+                val dir = File(modelsDir, info.key)
+                if (dir.exists()) dir.walkTopDown().filter { it.isFile }.sumOf { it.length() } else 0L
+            } else {
+                val file = File(modelsDir, info.fileName)
+                if (file.exists()) file.length() else 0L
+            }
         }
 
     /**
-     * Return the actual disk size of a single model file, or 0 if not present.
+     * Return the actual disk size of a single model, or 0 if not present.
+     *
+     * For Parakeet models (directory-based), returns the size of the ONNX model file
+     * (tokens.txt is small and not included in the size check).
+     * For Whisper models (flat), returns the single file size.
      */
     fun modelFileSize(modelKey: String): Long {
         val info = ModelCatalog.findByKey(modelKey) ?: return 0L
-        val file = File(modelsDir, info.fileName)
+        val file = if (info.isDirectoryModel()) {
+            File(File(modelsDir, info.key), info.fileName)
+        } else {
+            File(modelsDir, info.fileName)
+        }
         return if (file.exists()) file.length() else 0L
     }
 }

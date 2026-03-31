@@ -41,13 +41,21 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    packaging {
+        jniLibs {
+            pickFirsts += setOf("**/libc++_shared.so")
+        }
+    }
 }
 
 dependencies {
     implementation(project(":core"))
     implementation(project(":ime"))
     implementation(project(":whisper"))
+    implementation(project(":asr"))
     implementation(libs.okhttp)
+    implementation("org.apache.commons:commons-compress:1.26.1")
     implementation(libs.navigation.compose)
     implementation(libs.datastore.preferences)
     implementation(libs.lifecycle.viewmodel.compose)
