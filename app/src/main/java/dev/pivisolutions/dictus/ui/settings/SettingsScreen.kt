@@ -80,6 +80,7 @@ fun SettingsScreen(
     onNavigateToSoundSettings: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
+    val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keyboardLayout by viewModel.keyboardLayout.collectAsState()
     val keyboardMode by viewModel.keyboardMode.collectAsState()
@@ -131,6 +132,12 @@ fun SettingsScreen(
                     else -> "ABC"
                 },
                 onClick = { showKeyboardModePicker = true },
+            )
+            SettingDivider()
+            SettingToggleRow(
+                label = stringResource(R.string.settings_suggestions),
+                checked = suggestionsEnabled,
+                onToggle = { viewModel.toggleSuggestions() },
             )
             SettingDivider()
             SettingToggleRow(

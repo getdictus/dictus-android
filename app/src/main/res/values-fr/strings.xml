@@ -64,6 +64,7 @@
     <string name="settings_keyboard_layout">Disposition du clavier</string>
     <string name="settings_default_mode">Mode par d\u00e9faut</string>
     <string name="settings_haptic_feedback">Retour haptique</string>
+    <string name="settings_suggestions">Suggestions</string>
     <string name="settings_sounds">Sons</string>
     <string name="settings_theme">Th\u00e8me</string>
     <string name="settings_version">Version</string>

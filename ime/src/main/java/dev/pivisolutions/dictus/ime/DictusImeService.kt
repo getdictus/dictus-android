@@ -81,6 +81,10 @@ class DictusImeService : LifecycleInputMethodService() {
     // the Compose back handler stack in an InputMethodService.
     private val _isEmojiPickerOpen = MutableStateFlow(false)
 
+    // Whether the built-in suggestion bar is enabled. Observed from DataStore
+    // so the user can toggle it in settings without restarting the IME.
+    private val _suggestionsEnabled = MutableStateFlow(true)
+
     // Production suggestion engine: loads AOSP FR/EN dictionary from assets on
     // Dispatchers.IO, performs accent-insensitive prefix matching with frequency
     // ranking, and boosts personal dictionary words. Until dictionary loads
@@ -140,6 +144,13 @@ class DictusImeService : LifecycleInputMethodService() {
         super.onCreate()
         Timber.d("DictusImeService created")
         bindDictationService()
+
+        // Observe suggestions toggle from DataStore (defaults to true)
+        bindingScope.launch {
+            entryPoint.dataStore().data
+                .map { it[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true }
+                .collect { enabled -> _suggestionsEnabled.value = enabled }
+        }
     }
 
     override fun onDestroy() {
@@ -188,8 +199,13 @@ class DictusImeService : LifecycleInputMethodService() {
         val ic = currentInputConnection ?: return
         val beforeCursor = ic.getTextBeforeCursor(50, 0)?.toString() ?: ""
         val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
+
         _currentWord.value = currentWord
-        _suggestions.value = suggestionEngine.getSuggestions(currentWord)
+        _suggestions.value = if (_suggestionsEnabled.value) {
+            suggestionEngine.getSuggestions(currentWord)
+        } else {
+            emptyList()
+        }
     }
 
     /**
@@ -309,10 +325,6 @@ class DictusImeService : LifecycleInputMethodService() {
                             ic.deleteSurroundingText(word.length, 0)
                         }
                         ic.commitText("$suggestion ", 1)
-                        // Count this suggestion selection toward the personal dictionary
-                        // learning threshold (2 types = learned). The engine's personalDictionary
-                        // is accessed via cast since we know the runtime type is DictionaryEngine.
-                        (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(suggestion)
                         _suggestions.value = emptyList()
                         _currentWord.value = ""
                     },
@@ -320,9 +332,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         // Commit the raw input as-is + space (user accepts what they typed)
                         val ic = currentInputConnection ?: return@KeyboardScreen
                         val word = _currentWord.value
-                        // Count the committed raw word toward personal dictionary
                         if (word.isNotEmpty()) {
-                            (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(word)
                             ic.commitText(" ", 1)
                             _suggestions.value = emptyList()
                             _currentWord.value = ""

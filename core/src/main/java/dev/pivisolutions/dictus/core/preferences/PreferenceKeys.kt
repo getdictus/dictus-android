@@ -44,6 +44,11 @@ object PreferenceKeys {
     /** Default keyboard opening mode: "abc" (letters) or "123" (numbers). */
     val KEYBOARD_MODE = stringPreferencesKey("keyboard_mode")
 
+    // --- Suggestions (Phase 8) ---
+    /** Whether the built-in suggestion bar is enabled. Users can disable if they
+     *  experience performance issues or prefer typing without suggestions. */
+    val SUGGESTIONS_ENABLED = booleanPreferencesKey("suggestions_enabled")
+
     // --- Personal dictionary (Phase 8) ---
     /** Set of words the user has typed at least twice, persisted across restarts. */
     val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")
