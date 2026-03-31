@@ -72,7 +72,11 @@ Plans:
   3. The model manager shows a provider badge (Whisper / Parakeet) on each model card with a descriptive note per provider
   4. When a Parakeet model is selected and the UI language is not English, the user sees a visible warning about the English-only limitation
   5. Loading a Parakeet model automatically unloads the Whisper engine (and vice versa) — simultaneous load is blocked
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 09-01-PLAN.md — asr/ module + sherpa-onnx native libs + ParakeetProvider (STT-02)
+- [ ] 09-02-PLAN.md — Parakeet catalog entries + download infrastructure + tests (STT-02, STT-04)
+- [ ] 09-03-PLAN.md — Dynamic provider dispatch + UI badges/warnings + activation dialog + device verify (STT-03, STT-04, STT-05)
 
 ### Phase 10: Beta Distribution + License Audit
 **Goal**: Every push to main is validated by CI, every version tag produces a signed APK on GitHub Releases, and the project's OSS dependency licenses are audited and correct.
@@ -112,6 +116,6 @@ Plans:
 | 6. Release Readiness | v1.0 | 4/4 | Complete | 2026-03-30 |
 | 7. Foundation | v1.1 | 3/3 | Complete | 2026-03-30 |
 | 8. Text Prediction | 3/3 | Complete   | 2026-03-31 | - |
-| 9. Parakeet Integration | v1.1 | 0/? | Not started | - |
+| 9. Parakeet Integration | v1.1 | 0/3 | Not started | - |
 | 10. Beta Distribution + License Audit | v1.1 | 0/? | Not started | - |
 | 11. OSS Repository | v1.1 | 0/? | Not started | - |
