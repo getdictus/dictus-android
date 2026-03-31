@@ -48,6 +48,7 @@ import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
+import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelInfo
 import kotlin.math.roundToInt
 
@@ -229,18 +230,22 @@ fun ModelCard(
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.SemiBold,
                             )
-                            // "WK" provider badge — identifies WhisperKit/whisper.cpp backend
+                            // Provider badge — "WK" (blue) for Whisper, "NV" (amber) for Parakeet/Nvidia
+                            val (badgeText, badgeColor) = when (model.provider) {
+                                AiProvider.WHISPER -> "WK" to DictusColors.Accent
+                                AiProvider.PARAKEET -> "NV" to Color(0xFFF59E0B)
+                            }
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(DictusColors.Accent.copy(alpha = 0.2f))
+                                    .background(badgeColor.copy(alpha = 0.2f))
                                     .padding(horizontal = 6.dp, vertical = 2.dp),
                             ) {
                                 Text(
-                                    text = "WK",
+                                    text = badgeText,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = DictusColors.Accent,
+                                    color = badgeColor,
                                 )
                             }
                         }
@@ -260,6 +265,23 @@ fun ModelCard(
                                 )
                             }
                         }
+                    }
+                }
+
+                // Persistent amber warning for Parakeet English-only limitation
+                if (model.provider == AiProvider.PARAKEET) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF59E0B).copy(alpha = 0.15f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.model_parakeet_language_warning),
+                            color = Color(0xFFF59E0B),
+                            fontSize = 12.sp,
+                        )
                     }
                 }
 
