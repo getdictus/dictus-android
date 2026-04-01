@@ -43,8 +43,8 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
-      - name: Generate license report and assemble debug APK
-        run: ./gradlew licenseeDebug assembleDebug
+      - name: Assemble debug APK (includes license report via Gradle dependency)
+        run: ./gradlew assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

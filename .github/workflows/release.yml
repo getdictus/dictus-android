@@ -48,7 +48,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
-        run: ./gradlew licenseeRelease assembleRelease
+        run: ./gradlew assembleRelease
 
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2

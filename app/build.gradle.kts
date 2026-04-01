@@ -88,6 +88,34 @@ licensee {
     allow("BSD-3-Clause")
 }
 
+// Copy licensee artifacts.json into APK assets so LicencesScreen can read it at runtime.
+// The licensee plugin generates the file in build/reports/ but does not bundle it as an asset.
+androidComponents {
+    onVariants { variant ->
+        val variantName = variant.name
+        val capitalizedVariant = variantName.replaceFirstChar { it.uppercase() }
+        val outputDir = layout.buildDirectory.dir("generated/licensee_assets/$variantName")
+
+        val copyTask = tasks.register("copyLicenseeAssets$capitalizedVariant") {
+            dependsOn("licenseeAndroid$capitalizedVariant")
+            inputs.file(layout.buildDirectory.file("reports/licensee/android$capitalizedVariant/artifacts.json"))
+            outputs.dir(outputDir)
+            doLast {
+                val src = layout.buildDirectory.file("reports/licensee/android$capitalizedVariant/artifacts.json").get().asFile
+                val dest = outputDir.get().asFile.resolve("app/cash/licensee/artifacts.json")
+                dest.parentFile.mkdirs()
+                src.copyTo(dest, overwrite = true)
+            }
+        }
+
+        variant.sources.assets?.addStaticSourceDirectory(outputDir.get().asFile.absolutePath)
+
+        tasks.matching { it.name == "merge${capitalizedVariant}Assets" }.configureEach {
+            dependsOn(copyTask)
+        }
+    }
+}
+
 dependencies {
     implementation(project(":core"))
     implementation(project(":ime"))
