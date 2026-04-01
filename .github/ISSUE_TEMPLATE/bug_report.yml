@@ -1,0 +1,56 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: "e.g. Pixel 6, Android 13 (API 33)"
+    validations:
+      required: true
+  - type: dropdown
+    id: stt-provider
+    attributes:
+      label: STT provider
+      options:
+        - Whisper
+        - Parakeet
+    validations:
+      required: true
+  - type: input
+    id: stt-model
+    attributes:
+      label: STT model
+      placeholder: "e.g. Whisper tiny, Parakeet 110M INT8"
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      placeholder: "e.g. 1.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
