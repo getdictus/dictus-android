@@ -146,7 +146,7 @@
     <string name="fake_settings_dictus_subtitle">QWERTY (English)</string>
 
     <!-- ModelCard — Parakeet provider -->
-    <string name="model_parakeet_language_warning">English only — French transcription is not supported</string>
+    <string name="model_parakeet_language_warning">English only</string>
     <string name="parakeet_lang_dialog_title">English Only Model</string>
     <string name="parakeet_lang_dialog_message">This model only supports English. Continue?</string>
     <string name="ram_warning_dialog_title">Insufficient RAM</string>
@@ -161,6 +161,7 @@
     <string name="model_download">Download</string>
     <string name="model_retry">Retry</string>
     <string name="model_download_progress">Downloading \u2014 %1$d%%</string>
+    <string name="model_extracting">Extracting\u2026</string>
     <string name="model_download_error">Download failed.</string>
     <string name="model_precision">Precision</string>
     <string name="model_speed">Speed</string>
@@ -194,6 +195,8 @@
     <string name="models_delete_confirm_body">This model will be removed from your device.</string>
     <string name="models_delete_confirm_button">Delete</string>
     <string name="models_delete_cancel_button">Cancel</string>
+    <string name="models_provider_whisper">Whisper \u2014 transcription engine based on OpenAI Whisper, optimized for multilingual accuracy.</string>
+    <string name="models_provider_parakeet">Parakeet \u2014 transcription engine developed by NVIDIA, optimized for speed. Parakeet TDT models.</string>
 
     <!-- Navigation bar -->
     <string name="nav_home">Home</string>

@@ -146,7 +146,7 @@
     <string name="fake_settings_dictus_subtitle">AZERTY (Fran\u00e7ais)</string>
 
     <!-- ModelCard — Parakeet provider -->
-    <string name="model_parakeet_language_warning">Anglais uniquement \u2014 la transcription fran\u00e7aise n\u2019est pas support\u00e9e</string>
+    <string name="model_parakeet_language_warning">Anglais uniquement</string>
     <string name="parakeet_lang_dialog_title">Mod\u00e8le anglais uniquement</string>
     <string name="parakeet_lang_dialog_message">Ce mod\u00e8le ne supporte que l\u2019anglais. Continuer\u00a0?</string>
     <string name="ram_warning_dialog_title">RAM insuffisante</string>
@@ -161,6 +161,7 @@
     <string name="model_download">T\u00e9l\u00e9charger</string>
     <string name="model_retry">R\u00e9essayer</string>
     <string name="model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
+    <string name="model_extracting">Extraction\u2026</string>
     <string name="model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
     <string name="model_precision">Pr\u00e9cision</string>
     <string name="model_speed">Vitesse</string>
@@ -194,6 +195,8 @@
     <string name="models_delete_confirm_body">Ce mod\u00e8le sera supprim\u00e9 de votre appareil.</string>
     <string name="models_delete_confirm_button">Supprimer</string>
     <string name="models_delete_cancel_button">Annuler</string>
+    <string name="models_provider_whisper">Whisper \u2014 moteur de transcription bas\u00e9 sur OpenAI Whisper, optimis\u00e9 pour la pr\u00e9cision multilingue.</string>
+    <string name="models_provider_parakeet">Parakeet \u2014 moteur de transcription d\u00e9velopp\u00e9 par NVIDIA, optimis\u00e9 pour la vitesse. Mod\u00e8les Parakeet TDT.</string>
 
     <!-- Navigation bar -->
     <string name="nav_home">Accueil</string>

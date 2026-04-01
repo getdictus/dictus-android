@@ -36,6 +36,9 @@ sealed class DownloadProgress {
     /** Download is in flight. [percent] is 0–100. */
     data class Progress(val percent: Int) : DownloadProgress()
 
+    /** Archive download finished, now extracting model files (Parakeet only). */
+    data object Extracting : DownloadProgress()
+
     /** Download completed successfully. [path] is the absolute path to the model file. */
     data class Complete(val path: String) : DownloadProgress()
 
@@ -189,6 +192,16 @@ open class ModelDownloader(
         val isArchive = info.isDirectoryModel()
         val tempFile = if (isArchive) File("$targetPath.archive.tmp") else File("$targetPath.tmp")
 
+        // Clean up leftover temp/partial files from a previous interrupted download
+        tempFile.delete()
+        if (isArchive) {
+            val partialModel = File(targetPath)
+            if (partialModel.exists() && partialModel.length() < info.expectedSizeBytes * 0.95) {
+                Timber.d("Cleaning up partial extraction for %s (%d bytes)", modelKey, partialModel.length())
+                partialModel.delete()
+            }
+        }
+
         val request = Request.Builder().url(url).build()
         val call = client.newCall(request)
 
@@ -212,6 +225,7 @@ open class ModelDownloader(
             }
             val totalBytes = body.contentLength()
             var bytesRead = 0L
+            var lastEmittedPercent = -1
 
             tempFile.parentFile?.mkdirs()
             FileOutputStream(tempFile).use { output ->
@@ -224,7 +238,10 @@ open class ModelDownloader(
                         bytesRead += read
                         if (totalBytes > 0) {
                             val percent = ((bytesRead * 100) / totalBytes).toInt()
-                            emit(DownloadProgress.Progress(percent))
+                            if (percent != lastEmittedPercent) {
+                                lastEmittedPercent = percent
+                                emit(DownloadProgress.Progress(percent))
+                            }
                         }
                     }
                 }
@@ -234,6 +251,8 @@ open class ModelDownloader(
 
             if (isArchive) {
                 // Parakeet: extract tar.bz2 archive, then delete the archive temp file
+                Timber.d("Download complete, extracting archive for %s (%d bytes)", modelKey, tempFile.length())
+                emit(DownloadProgress.Extracting)
                 val targetDir = File(targetPath).parent ?: run {
                     emit(DownloadProgress.Error("Cannot determine target directory for: $modelKey"))
                     tempFile.delete()
@@ -285,36 +304,53 @@ open class ModelDownloader(
      */
     private fun extractTarBz2(archivePath: String, targetDir: String, modelInfo: ModelInfo): Boolean {
         val targetDirFile = File(targetDir).also { it.mkdirs() }
+        val startTime = System.currentTimeMillis()
+
+        // Build the set of files we need to extract from the archive.
+        // CTC models: model file + tokens.txt (2 files)
+        // Transducer models: encoder + decoder + joiner + tokens.txt (4 files)
+        val requiredFiles = mutableSetOf(modelInfo.fileName, "tokens.txt")
+        if (modelInfo.isTransducer) {
+            requiredFiles.addAll(listOf("decoder.int8.onnx", "decoder.onnx", "joiner.int8.onnx", "joiner.onnx"))
+        }
+        val extractedFiles = mutableSetOf<String>()
 
         return try {
-            java.io.FileInputStream(archivePath).use { fis ->
-                BZip2CompressorInputStream(fis).use { bzIn ->
+            java.io.BufferedInputStream(java.io.FileInputStream(archivePath), 256 * 1024).use { bis ->
+                BZip2CompressorInputStream(bis).use { bzIn ->
                     TarArchiveInputStream(bzIn).use { tarIn ->
-                        var modelExtracted = false
-                        var tokensExtracted = false
-
                         var entry = tarIn.nextEntry
                         while (entry != null) {
-                            val entryName = File(entry.name).name // strip parent directory component
-                            if (!entry.isDirectory && (entryName == modelInfo.fileName || entryName == "tokens.txt")) {
+                            val entryName = File(entry.name).name
+                            if (!entry.isDirectory && entryName in requiredFiles) {
                                 val outFile = File(targetDirFile, entryName)
-                                FileOutputStream(outFile).use { out ->
-                                    val buffer = ByteArray(8192)
+                                java.io.BufferedOutputStream(FileOutputStream(outFile), 256 * 1024).use { out ->
+                                    val buffer = ByteArray(128 * 1024)
                                     var n: Int
                                     while (tarIn.read(buffer).also { n = it } != -1) {
                                         out.write(buffer, 0, n)
                                     }
                                 }
-                                if (entryName == modelInfo.fileName) modelExtracted = true
-                                if (entryName == "tokens.txt") tokensExtracted = true
+                                extractedFiles.add(entryName)
                                 Timber.d("Extracted: %s → %s", entryName, outFile.absolutePath)
                             }
+                            // Stop early once we have all required files
+                            val hasModel = modelInfo.fileName in extractedFiles
+                            val hasTokens = "tokens.txt" in extractedFiles
+                            val hasTransducerParts = !modelInfo.isTransducer ||
+                                (extractedFiles.any { it.startsWith("decoder") } &&
+                                 extractedFiles.any { it.startsWith("joiner") })
+                            if (hasModel && hasTokens && hasTransducerParts) break
                             entry = tarIn.nextEntry
                         }
 
-                        if (!modelExtracted) Timber.e("Model file '%s' not found in archive", modelInfo.fileName)
-                        if (!tokensExtracted) Timber.e("tokens.txt not found in archive for %s", modelInfo.key)
-                        modelExtracted && tokensExtracted
+                        val elapsed = System.currentTimeMillis() - startTime
+                        Timber.d("Extraction took %d ms for %s (extracted: %s)", elapsed, modelInfo.key, extractedFiles)
+                        val hasModel = modelInfo.fileName in extractedFiles
+                        val hasTokens = "tokens.txt" in extractedFiles
+                        if (!hasModel) Timber.e("Model file '%s' not found in archive", modelInfo.fileName)
+                        if (!hasTokens) Timber.e("tokens.txt not found in archive for %s", modelInfo.key)
+                        hasModel && hasTokens
                     }
                 }
             }

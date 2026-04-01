@@ -45,6 +45,7 @@ data class ModelUiState(
     val isDownloaded: Boolean,
     val downloadPercent: Int?,
     val hasError: Boolean = false,
+    val isExtracting: Boolean = false,
 )
 
 /**
@@ -77,6 +78,9 @@ class ModelsViewModel @Inject constructor(
     // Map of modelKey → has error
     private val _downloadErrors = MutableStateFlow<Set<String>>(emptySet())
 
+    // Set of modelKeys currently extracting archive
+    private val _extracting = MutableStateFlow<Set<String>>(emptySet())
+
     // Derived StateFlow of full model UI state
     private val _models = MutableStateFlow<List<ModelUiState>>(emptyList())
     val models: StateFlow<List<ModelUiState>> = _models.asStateFlow()
@@ -102,10 +106,6 @@ class ModelsViewModel @Inject constructor(
     private val _showParakeetLanguageDialog = MutableStateFlow<String?>(null)
     val showParakeetLanguageDialog: StateFlow<String?> = _showParakeetLanguageDialog.asStateFlow()
 
-    // RAM insufficient dialog state — holds the pending model key, or null
-    private val _showRamWarningDialog = MutableStateFlow<String?>(null)
-    val showRamWarningDialog: StateFlow<String?> = _showRamWarningDialog.asStateFlow()
-
     init {
         refreshModels()
     }
@@ -118,15 +118,28 @@ class ModelsViewModel @Inject constructor(
     fun refreshModels() {
         val progress = _downloadProgress.value
         val errors = _downloadErrors.value
-        _models.value = ModelCatalog.ALL.map { info ->
-            ModelUiState(
-                info = info,
-                isDownloaded = modelManager.isDownloaded(info.key),
-                downloadPercent = progress[info.key],
-                hasError = info.key in errors,
-            )
-        }
+        val extracting = _extracting.value
+        // Filter out models that require more RAM than available on this device
+        val deviceRamGb = deviceTotalRamGb()
+        _models.value = ModelCatalog.ALL
+            .filter { it.minRamGb == 0 || deviceRamGb >= it.minRamGb }
+            .map { info ->
+                ModelUiState(
+                    info = info,
+                    isDownloaded = modelManager.isDownloaded(info.key),
+                    downloadPercent = progress[info.key],
+                    hasError = info.key in errors,
+                    isExtracting = info.key in extracting,
+                )
+            }
         _storageUsedBytes.value = modelManager.storageUsedBytes()
+    }
+
+    private fun deviceTotalRamGb(): Long {
+        val actManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memInfo = ActivityManager.MemoryInfo()
+        actManager.getMemoryInfo(memInfo)
+        return memInfo.totalMem / (1024L * 1024L * 1024L)
     }
 
     /**
@@ -150,13 +163,20 @@ class ModelsViewModel @Inject constructor(
                         _downloadProgress.update { it + (modelKey to event.percent) }
                         refreshModels()
                     }
+                    is DownloadProgress.Extracting -> {
+                        _downloadProgress.update { it - modelKey }
+                        _extracting.update { it + modelKey }
+                        refreshModels()
+                    }
                     is DownloadProgress.Complete -> {
                         _downloadProgress.update { it - modelKey }
+                        _extracting.update { it - modelKey }
                         Timber.d("Model '$modelKey' downloaded to ${event.path}")
                         refreshModels()
                     }
                     is DownloadProgress.Error -> {
                         _downloadProgress.update { it - modelKey }
+                        _extracting.update { it - modelKey }
                         _downloadErrors.update { it + modelKey }
                         Timber.e("Download failed for '$modelKey': ${event.message}")
                         refreshModels()
@@ -182,6 +202,17 @@ class ModelsViewModel @Inject constructor(
         val deleted = modelManager.deleteModel(modelKey)
         if (!deleted) {
             Timber.e("Failed to delete model '$modelKey'")
+        }
+        // If we just deleted the active model, switch to the first remaining downloaded model
+        viewModelScope.launch {
+            val currentActive = dataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
+            if (currentActive == modelKey) {
+                val fallback = modelManager.getDownloadedModels().firstOrNull()
+                if (fallback != null) {
+                    Timber.d("Active model deleted, falling back to '%s'", fallback)
+                    dataStore.edit { it[PreferenceKeys.ACTIVE_MODEL] = fallback }
+                }
+            }
         }
         refreshModels()
     }
@@ -224,20 +255,8 @@ class ModelsViewModel @Inject constructor(
         viewModelScope.launch {
             val info = ModelCatalog.findByKey(key) ?: return@launch
 
-            // RAM guard for 0.6B model
-            if (info.key == "parakeet-tdt-0.6b-v2") {
-                val actManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-                val memInfo = ActivityManager.MemoryInfo()
-                actManager.getMemoryInfo(memInfo)
-                val totalGb = memInfo.totalMem / (1024L * 1024L * 1024L)
-                if (totalGb < 8) {
-                    _showRamWarningDialog.value = key
-                    return@launch
-                }
-            }
-
-            // Language mismatch check for all Parakeet models
-            if (info.provider == AiProvider.PARAKEET) {
+            // Language mismatch check for English-only models
+            if (info.isEnglishOnly) {
                 val lang = dataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto"
                 if (lang != "en") {
                     _showParakeetLanguageDialog.value = key
@@ -259,11 +278,6 @@ class ModelsViewModel @Inject constructor(
     /** Dismiss the Parakeet language mismatch dialog without activating the model. */
     fun dismissParakeetDialog() {
         _showParakeetLanguageDialog.value = null
-    }
-
-    /** Dismiss the RAM warning dialog without activating the model. */
-    fun dismissRamWarningDialog() {
-        _showRamWarningDialog.value = null
     }
 
     /**

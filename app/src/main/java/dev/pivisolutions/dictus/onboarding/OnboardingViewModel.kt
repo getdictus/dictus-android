@@ -146,6 +146,11 @@ class OnboardingViewModel @Inject constructor(
                         is DownloadProgress.Progress -> {
                             _downloadProgress.value = progress.percent
                         }
+                        is DownloadProgress.Extracting -> {
+                            // Onboarding only downloads Whisper (no archive extraction),
+                            // but handle for exhaustiveness
+                            _downloadProgress.value = 100
+                        }
                         is DownloadProgress.Complete -> {
                             _downloadProgress.value = 100
                             _modelDownloadComplete.value = true

@@ -1,6 +1,13 @@
 package dev.pivisolutions.dictus.models
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.key
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -72,7 +79,6 @@ fun ModelsScreen(
     val activeModelKey by viewModel.activeModelKey.collectAsState()
     val storageUsedBytes by viewModel.storageUsedBytes.collectAsState()
     val parakeetDialogKey by viewModel.showParakeetLanguageDialog.collectAsState()
-    val ramWarningKey by viewModel.showRamWarningDialog.collectAsState()
 
     val downloadedModels = models.filter { it.isDownloaded }
     val availableModels = models.filter { !it.isDownloaded }
@@ -112,20 +118,6 @@ fun ModelsScreen(
         )
     }
 
-    // RAM insufficient warning dialog
-    if (ramWarningKey != null) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissRamWarningDialog() },
-            title = { Text(stringResource(R.string.ram_warning_dialog_title)) },
-            text = { Text(stringResource(R.string.ram_warning_dialog_message)) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissRamWarningDialog() }) {
-                    Text(stringResource(R.string.dialog_ok))
-                }
-            },
-        )
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
@@ -152,6 +144,7 @@ fun ModelsScreen(
         if (downloadedModels.isNotEmpty()) {
             ModelSection(title = stringResource(R.string.models_section_downloaded)) {
                 downloadedModels.forEach { modelState ->
+                    key(modelState.info.key) {
                     ModelCard(
                         model = modelState.info,
                         isDownloaded = true,
@@ -159,6 +152,7 @@ fun ModelsScreen(
                         downloadProgress = modelState.downloadPercent,
                         canDelete = downloadedModels.size > 1 && modelState.info.key != activeModelKey,
                         hasDownloadError = modelState.hasError,
+                        isExtracting = modelState.isExtracting,
                         onDownload = { viewModel.downloadModel(modelState.info.key) },
                         onDelete = {
                             modelToDelete = modelState
@@ -167,6 +161,7 @@ fun ModelsScreen(
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
                         onSelect = { viewModel.requestSetActiveModel(modelState.info.key) },
                     )
+                    }
                 }
             }
         }
@@ -175,6 +170,7 @@ fun ModelsScreen(
         if (availableModels.isNotEmpty()) {
             ModelSection(title = stringResource(R.string.models_section_available)) {
                 availableModels.forEach { modelState ->
+                    key(modelState.info.key) {
                     ModelCard(
                         model = modelState.info,
                         isDownloaded = false,
@@ -182,10 +178,12 @@ fun ModelsScreen(
                         downloadProgress = modelState.downloadPercent,
                         canDelete = false,
                         hasDownloadError = modelState.hasError,
+                        isExtracting = modelState.isExtracting,
                         onDownload = { viewModel.downloadModel(modelState.info.key) },
                         onDelete = {},
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
                     )
+                    }
                 }
             }
         }
@@ -199,6 +197,19 @@ fun ModelsScreen(
             color = LocalDictusColors.current.textSecondary,
             fontSize = 13.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Provider descriptions
+        ProviderFooterItem(
+            icon = Icons.Default.GraphicEq,
+            text = stringResource(R.string.models_provider_whisper),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        ProviderFooterItem(
+            icon = Icons.Default.Bolt,
+            text = stringResource(R.string.models_provider_parakeet),
         )
     }
 
@@ -294,5 +305,27 @@ private fun DeleteConfirmationSheet(
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ProviderFooterItem(icon: ImageVector, text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = LocalDictusColors.current.textSecondary,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = text,
+            color = LocalDictusColors.current.textSecondary,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            modifier = Modifier.weight(1f),
+        )
     }
 }

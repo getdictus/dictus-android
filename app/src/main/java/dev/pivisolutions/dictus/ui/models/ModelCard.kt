@@ -89,6 +89,7 @@ fun ModelCard(
     downloadProgress: Int?,
     canDelete: Boolean,
     hasDownloadError: Boolean = false,
+    isExtracting: Boolean = false,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onRetry: () -> Unit,
@@ -165,13 +166,13 @@ fun ModelCard(
                 .fillMaxWidth()
                 .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
                 .onSizeChanged { cardHeightPx = it.height.toFloat() }
+                .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surface)
                 .border(
                     if (isActive) 2.dp else 1.dp,
                     borderColor,
                     RoundedCornerShape(16.dp),
                 )
-                .clip(RoundedCornerShape(16.dp))
                 .pointerInput(isDownloaded, isActive, canDelete) {
                     if (isDownloaded && canDelete) {
                         detectHorizontalDragGestures(
@@ -268,8 +269,8 @@ fun ModelCard(
                     }
                 }
 
-                // Persistent amber warning for Parakeet English-only limitation
-                if (model.provider == AiProvider.PARAKEET) {
+                // Persistent amber warning for English-only models
+                if (model.isEnglishOnly) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -324,6 +325,25 @@ fun ModelCard(
 
                 // Download progress or action buttons
                 when {
+                    isExtracting -> {
+                        // Indeterminate progress bar during archive extraction
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = DictusColors.Accent,
+                            trackColor = MaterialTheme.colorScheme.background,
+                            strokeCap = StrokeCap.Round,
+                        )
+                        Text(
+                            text = stringResource(R.string.model_extracting),
+                            color = DictusColors.AccentHighlight,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        )
+                    }
                     isDownloading -> {
                         // Progress bar + percentage
                         val percent = downloadProgress ?: 0
