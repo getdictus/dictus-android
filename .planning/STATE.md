@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Public Beta
 status: completed
 stopped_at: Completed 10-02-PLAN.md (licensee plugin + LicencesScreen update)
-last_updated: "2026-04-01T12:50:56.371Z"
+last_updated: "2026-04-01T12:54:11.397Z"
 last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 progress:
   total_phases: 5

@@ -121,5 +121,5 @@ Plans:
 | 7. Foundation | v1.1 | 3/3 | Complete | 2026-03-30 |
 | 8. Text Prediction | 3/3 | Complete   | 2026-03-31 | - |
 | 9. Parakeet Integration | 3/3 | Complete   | 2026-04-01 | - |
-| 10. Beta Distribution + License Audit | 3/3 | Complete   | 2026-04-01 | - |
+| 10. Beta Distribution + License Audit | 3/3 | Complete    | 2026-04-01 | - |
 | 11. OSS Repository | v1.1 | 0/? | Not started | - |
