@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.licensee)
 }
 
 android {
@@ -73,6 +74,14 @@ android {
             pickFirsts += setOf("**/libc++_shared.so")
         }
     }
+}
+
+licensee {
+    allow("Apache-2.0")
+    allow("MIT")
+    allow("CC-BY-4.0")
+    allow("BSD-2-Clause")
+    allow("BSD-3-Clause")
 }
 
 dependencies {
