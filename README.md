@@ -1,5 +1,10 @@
 # Dictus
 
+[![CI](https://img.shields.io/github/actions/workflow/status/getdictus/dictus-android/ci.yml?branch=main&label=CI)](https://github.com/getdictus/dictus-android/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/actions/workflow/status/getdictus/dictus-android/release.yml?branch=main&label=Release)](https://github.com/getdictus/dictus-android/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/github/license/getdictus/dictus-android)](LICENSE)
+[![Android 10+](https://img.shields.io/badge/Android-10%2B%20(API%2029%2B)-3DDC84?logo=android&logoColor=white)](https://developer.android.com/about/versions/10)
+
 Dictus is a privacy-first Android keyboard for offline voice dictation. All speech recognition runs on-device — no cloud, no data collection.
 
 ## Features
@@ -10,6 +15,12 @@ Dictus is a privacy-first Android keyboard for offline voice dictation. All spee
 - **Personal dictionary** — Learns your frequently typed words
 - **System keyboard** — Works in any app as your default keyboard
 - **AZERTY & QWERTY** — Switchable keyboard layouts
+
+## Screenshots
+
+| Keyboard | Model Manager | Settings |
+|----------|---------------|----------|
+| ![Keyboard in action](screenshots/keyboard.png) | ![Model manager](screenshots/models.png) | ![Settings](screenshots/settings.png) |
 
 ## Beta Installation
 
@@ -32,6 +43,10 @@ Dictus is currently in public beta. You can install it by sideloading the APK fr
 ## Feedback
 
 Found a bug or have a feature request? [Open an issue](https://github.com/getdictus/dictus-android/issues).
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for build setup, module overview, and PR guidelines.
 
 ## Tech Stack
 
