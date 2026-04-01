@@ -26,7 +26,7 @@
 
 - [x] **Phase 7: Foundation** — SttProvider interface + v1.0 tech debt clearance (completed 2026-03-30)
 - [x] **Phase 8: Text Prediction** — Production suggestion engine replacing the stub (gap closure in progress) (completed 2026-03-31)
-- [ ] **Phase 9: Parakeet Integration** — Multi-provider STT with sherpa-onnx
+- [x] **Phase 9: Parakeet Integration** — Multi-provider STT with sherpa-onnx (completed 2026-04-01)
 - [ ] **Phase 10: Beta Distribution + License Audit** — CI pipeline, signed releases, license clean pass
 - [ ] **Phase 11: OSS Repository** — Public repo scaffolding for open contribution
 
@@ -72,7 +72,7 @@ Plans:
   3. The model manager shows a provider badge (Whisper / Parakeet) on each model card with a descriptive note per provider
   4. When a Parakeet model is selected and the UI language is not English, the user sees a visible warning about the English-only limitation
   5. Loading a Parakeet model automatically unloads the Whisper engine (and vice versa) — simultaneous load is blocked
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 09-01-PLAN.md — asr/ module + sherpa-onnx native libs + ParakeetProvider (STT-02)
 - [ ] 09-02-PLAN.md — Parakeet catalog entries + download infrastructure + tests (STT-02, STT-04)
@@ -116,6 +116,6 @@ Plans:
 | 6. Release Readiness | v1.0 | 4/4 | Complete | 2026-03-30 |
 | 7. Foundation | v1.1 | 3/3 | Complete | 2026-03-30 |
 | 8. Text Prediction | 3/3 | Complete   | 2026-03-31 | - |
-| 9. Parakeet Integration | 2/3 | In Progress|  | - |
+| 9. Parakeet Integration | 3/3 | Complete   | 2026-04-01 | - |
 | 10. Beta Distribution + License Audit | v1.1 | 0/? | Not started | - |
 | 11. OSS Repository | v1.1 | 0/? | Not started | - |

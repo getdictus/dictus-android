@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Completed 09-03-PLAN.md tasks 1-2, checkpoint at Task 3 (device verify)
-last_updated: "2026-03-31T16:35:20.797Z"
+stopped_at: Completed 09-03-PLAN.md (all 3 tasks including device verification)
+last_updated: "2026-04-01T11:32:54.094Z"
 last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 progress:
   total_phases: 5
@@ -89,6 +89,11 @@ Key v1.1 architectural decisions (from research):
 - [Phase 09-parakeet-integration]: null AssetManager in OfflineRecognizer routes to newFromFile() JNI path for file-path model loading (not assets)
 - [Phase 09-parakeet-integration]: pickFirsts libc++_shared.so in app packaging block resolves potential whisper.cpp + sherpa-onnx native lib merge conflict
 - [Phase 09-parakeet-integration]: FakeDataStore + direct dataStore.data.first() check in ModelsViewModelTest — SharingStarted.WhileSubscribed StateFlow does not propagate without collector in unit tests
+- [Phase 09-parakeet-integration]: Removed FP16 Parakeet model: redundant with INT8 (4x larger, negligible quality gain)
+- [Phase 09-parakeet-integration]: Upgraded Parakeet 0.6B v2 -> v3: gains 25-language auto-detection instead of EN-only
+- [Phase 09-parakeet-integration]: whisper.cpp native libs forced to Release build variant: Debug JNI DSP paths were 70x slower
+- [Phase 09-parakeet-integration]: key() on LazyColumn model cards to fix stale click handler closures after downloads (Compose reuse bug)
+- [Phase 09-parakeet-integration]: FakeDataStore + direct dataStore.data.first() in ModelsViewModelTest: SharingStarted.WhileSubscribed StateFlow does not propagate without collector in unit tests
 
 ### Research Flags (Phase 9)
 
@@ -105,6 +110,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:35:20.794Z
-Stopped at: Completed 09-03-PLAN.md tasks 1-2, checkpoint at Task 3 (device verify)
+Last session: 2026-04-01T11:32:43.721Z
+Stopped at: Completed 09-03-PLAN.md (all 3 tasks including device verification)
 Resume file: None
