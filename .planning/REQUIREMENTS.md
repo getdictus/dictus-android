@@ -25,7 +25,7 @@ Requirements for v1.1 Public Beta. Each maps to roadmap phases.
 
 - [ ] **BETA-01**: Un workflow CI GitHub Actions exécute lint + tests + build debug sur chaque PR/push main
 - [ ] **BETA-02**: Un workflow release build et signe l'APK automatiquement sur tag push vers GitHub Releases
-- [ ] **BETA-03**: Le README fournit les instructions d'installation de l'APK bêta
+- [x] **BETA-03**: Le README fournit les instructions d'installation de l'APK bêta
 
 ### Repo OSS
 
@@ -97,7 +97,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STT-05 | Phase 9 | Complete |
 | BETA-01 | Phase 10 | Pending |
 | BETA-02 | Phase 10 | Pending |
-| BETA-03 | Phase 10 | Pending |
+| BETA-03 | Phase 10 | Complete |
 | LIC-01 | Phase 10 | Pending |
 | LIC-02 | Phase 10 | Pending |
 | OSS-01 | Phase 11 | Pending |
