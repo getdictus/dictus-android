@@ -5,7 +5,7 @@ milestone_name: Public Beta
 status: completed
 stopped_at: Completed 09-03-PLAN.md (all 3 tasks including device verification)
 last_updated: "2026-04-01T11:32:54.094Z"
-last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
+last_activity: 2026-04-01 — Completed quick task 260401-jdw: Dynamic recommended model in onboarding based on device RAM
 progress:
   total_phases: 5
   completed_phases: 3
@@ -107,6 +107,12 @@ None.
 ### Blockers/Concerns
 
 None at roadmap stage.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260401-jdw | Dynamic recommended model in onboarding based on device RAM | 2026-04-01 | 27791d9 | [260401-jdw-dynamic-recommended-model-in-onboarding-](./quick/260401-jdw-dynamic-recommended-model-in-onboarding-/) |
 
 ## Session Continuity
 
