@@ -57,6 +57,10 @@ import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
  */
 @Composable
 fun OnboardingModelDownloadScreen(
+    modelName: String,
+    modelSize: String,
+    modelQualityLabel: String,
+    isExtracting: Boolean,
     downloadProgress: Int,
     downloadComplete: Boolean,
     downloadError: String?,
@@ -64,7 +68,7 @@ fun OnboardingModelDownloadScreen(
     onRetry: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val isDownloading = downloadProgress in 0..99 && !downloadComplete && downloadError == null
+    val isDownloading = (downloadProgress in 0..99 || isExtracting) && !downloadComplete && downloadError == null
     val hasError = downloadError != null && !downloadComplete
 
     val ctaText = when {
@@ -120,6 +124,10 @@ fun OnboardingModelDownloadScreen(
 
         // Model card
         ModelInfoCard(
+            modelName = modelName,
+            modelSize = modelSize,
+            modelQualityLabel = modelQualityLabel,
+            isExtracting = isExtracting,
             downloadProgress = if (isDownloading) downloadProgress else null,
         )
 
@@ -149,10 +157,16 @@ fun OnboardingModelDownloadScreen(
 }
 
 /**
- * Card showing the default Tiny model info with optional progress bar.
+ * Card showing the recommended model info with optional progress bar.
+ *
+ * All display values (name, size, quality) come from the caller — no hardcoded model data.
  */
 @Composable
 private fun ModelInfoCard(
+    modelName: String,
+    modelSize: String,
+    modelQualityLabel: String,
+    isExtracting: Boolean,
     downloadProgress: Int?,
 ) {
     Column(
@@ -164,9 +178,9 @@ private fun ModelInfoCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Model name — "Tiny" is a proper name, not translated
+        // Model name — dynamic from ModelInfo
         Text(
-            text = "Tiny",
+            text = modelName,
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
@@ -196,7 +210,7 @@ private fun ModelInfoCard(
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    text = stringResource(R.string.onboarding_model_download_size),
+                    text = modelSize,
                     color = LocalDictusColors.current.textSecondary,
                     fontSize = 13.sp,
                 )
@@ -212,15 +226,16 @@ private fun ModelInfoCard(
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    text = stringResource(R.string.onboarding_model_download_fast),
+                    text = modelQualityLabel,
                     color = LocalDictusColors.current.textSecondary,
                     fontSize = 13.sp,
                 )
             }
         }
 
-        // Progress bar (shown during download)
+        // Progress bar (shown during download or extraction)
         if (downloadProgress != null) {
+            val barFraction = if (isExtracting) 1f else downloadProgress / 100f
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -234,7 +249,7 @@ private fun ModelInfoCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(fraction = downloadProgress / 100f)
+                            .fillMaxWidth(fraction = barFraction)
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(DictusColors.Accent),
@@ -244,7 +259,11 @@ private fun ModelInfoCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = stringResource(R.string.onboarding_model_download_progress, downloadProgress),
+                    text = if (isExtracting) {
+                        stringResource(R.string.onboarding_model_download_extracting)
+                    } else {
+                        stringResource(R.string.onboarding_model_download_progress, downloadProgress)
+                    },
                     color = DictusColors.AccentHighlight,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,

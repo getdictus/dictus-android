@@ -32,9 +32,8 @@
     <string name="onboarding_model_download_error">Download failed.</string>
     <string name="onboarding_model_download_retry">Retry</string>
     <string name="onboarding_model_download_recommended">Recommended for your device</string>
-    <string name="onboarding_model_download_size">~77 MB</string>
-    <string name="onboarding_model_download_fast">Fast</string>
     <string name="onboarding_model_download_progress">Downloading \u2014 %1$d%%</string>
+    <string name="onboarding_model_download_extracting">Extracting model files\u2026</string>
 
     <!-- Onboarding: Test recording screen (Step 6) -->
     <string name="onboarding_test_recording_title">Test dictation</string>

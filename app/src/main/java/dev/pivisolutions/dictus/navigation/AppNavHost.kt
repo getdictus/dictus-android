@@ -139,6 +139,9 @@ private fun OnboardingScreen(dictationController: DictationController?) {
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val downloadComplete by viewModel.modelDownloadComplete.collectAsState()
     val downloadError by viewModel.downloadError.collectAsState()
+    val isExtracting by viewModel.isExtracting.collectAsState()
+    val recommendedModel = viewModel.recommendedModelInfo
+    val modelSizeMb = recommendedModel.expectedSizeBytes / (1024 * 1024)
 
     // Re-check IME status on step 3: both when entering the step AND when returning
     // from system Settings (onResume). Without the lifecycle check, the user enables Dictus
@@ -186,6 +189,10 @@ private fun OnboardingScreen(dictationController: DictationController?) {
             onNext = { viewModel.advanceStep() },
         )
         5 -> OnboardingModelDownloadScreen(
+            modelName = recommendedModel.displayName,
+            modelSize = "~$modelSizeMb MB",
+            modelQualityLabel = recommendedModel.qualityLabel,
+            isExtracting = isExtracting,
             downloadProgress = downloadProgress,
             downloadComplete = downloadComplete,
             downloadError = downloadError,

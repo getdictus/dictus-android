@@ -32,9 +32,8 @@
     <string name="onboarding_model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
     <string name="onboarding_model_download_retry">R\u00e9essayer</string>
     <string name="onboarding_model_download_recommended">Recommand\u00e9 pour votre appareil</string>
-    <string name="onboarding_model_download_size">~77 Mo</string>
-    <string name="onboarding_model_download_fast">Rapide</string>
     <string name="onboarding_model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
+    <string name="onboarding_model_download_extracting">Extraction des fichiers\u2026</string>
 
     <!-- Onboarding: Test recording screen (Step 6) -->
     <string name="onboarding_test_recording_title">Testez la dict\u00e9e</string>
