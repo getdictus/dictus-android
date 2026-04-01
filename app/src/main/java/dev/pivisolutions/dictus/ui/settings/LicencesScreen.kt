@@ -18,8 +18,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,16 +34,17 @@ import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
-import androidx.compose.material3.MaterialTheme
 
 /**
  * Dedicated licences screen matching iOS LicensesView.
  *
- * Displays the full MIT license text for each open-source dependency.
- * Accessible from Settings > À propos > Licences.
+ * Displays OSS licenses in two sections:
+ * 1. Auto-generated Maven dependencies from cashapp/licensee artifacts.json
+ * 2. Manual entries for vendored/non-Maven dependencies (whisper.cpp, sherpa-onnx, Parakeet, Dictus)
  *
- * WHY a dedicated screen: Apple and Google both recommend explicit
- * attribution for open-source licenses in the app UI.
+ * WHY this approach: cashapp/licensee auto-discovers all transitive Maven dependencies at
+ * build time and bundles artifacts.json into Android assets. This ensures the license list
+ * never goes stale. Non-Maven deps (NDK source, model weights) are manually listed below.
  */
 @Composable
 fun LicencesScreen(
@@ -83,7 +86,42 @@ fun LicencesScreen(
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         }
 
-        // whisper.cpp
+        // Load auto-generated licenses from licensee plugin (generated at build time)
+        val mavenLicenses = remember {
+            try {
+                val json = context.assets.open("app/cash/licensee/artifacts.json")
+                    .bufferedReader()
+                    .use { it.readText() }
+                parseLicenseeArtifacts(json)
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
+        // Render auto-generated Maven dependency entries first
+        mavenLicenses.forEach { dep ->
+            LicenceBlock(
+                name = "${dep.groupId}:${dep.artifactId}",
+                author = "v${dep.version}",
+                url = dep.scmUrl ?: dep.spdxUrl,
+                licenceText = "${dep.spdxName}\n${dep.spdxUrl}",
+                onLinkClick = openLink,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Section header for vendored / non-Maven dependencies
+        if (mavenLicenses.isNotEmpty()) {
+            Text(
+                text = "Vendored & Non-Maven",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+
+        // whisper.cpp — vendored NDK source in third_party/whisper.cpp (MIT)
         LicenceBlock(
             name = "whisper.cpp",
             author = "Georgi Gerganov",
@@ -94,7 +132,7 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // sherpa-onnx
+        // sherpa-onnx — Kotlin API vendored as source in asr/ module (Apache 2.0)
         LicenceBlock(
             name = "sherpa-onnx",
             author = "Next-gen Kaldi (k2-fsa)",
@@ -105,7 +143,7 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // NVIDIA Parakeet models
+        // NVIDIA Parakeet models — data assets, not code (CC-BY-4.0)
         LicenceBlock(
             name = "NVIDIA Parakeet",
             author = "NVIDIA Corporation",
@@ -116,7 +154,7 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Dictus
+        // Dictus itself
         LicenceBlock(
             name = "Dictus",
             author = "Get Dictus",
@@ -126,6 +164,47 @@ fun LicencesScreen(
         )
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+/**
+ * Parsed representation of a single entry from cashapp/licensee artifacts.json.
+ *
+ * artifacts.json structure:
+ * [{ "groupId": "...", "artifactId": "...", "version": "...",
+ *    "spdxLicenses": [{"identifier": "MIT", "name": "...", "url": "..."}],
+ *    "scm": {"url": "https://..."} }]
+ */
+private data class MavenLicense(
+    val groupId: String,
+    val artifactId: String,
+    val version: String,
+    val spdxId: String,
+    val spdxName: String,
+    val spdxUrl: String,
+    val scmUrl: String?,
+)
+
+/**
+ * Parses the JSON string from cashapp/licensee artifacts.json into a list of MavenLicense entries.
+ *
+ * Uses org.json.JSONArray from the Android SDK (zero new dependency).
+ */
+private fun parseLicenseeArtifacts(json: String): List<MavenLicense> {
+    val array = org.json.JSONArray(json)
+    return (0 until array.length()).map { i ->
+        val obj = array.getJSONObject(i)
+        val spdx = obj.optJSONArray("spdxLicenses")?.optJSONObject(0)
+        val scm = obj.optJSONObject("scm")
+        MavenLicense(
+            groupId = obj.optString("groupId", ""),
+            artifactId = obj.optString("artifactId", ""),
+            version = obj.optString("version", ""),
+            spdxId = spdx?.optString("identifier", "Unknown") ?: "Unknown",
+            spdxName = spdx?.optString("name", "Unknown License") ?: "Unknown License",
+            spdxUrl = spdx?.optString("url", "") ?: "",
+            scmUrl = scm?.optString("url"),
+        )
     }
 }
 
