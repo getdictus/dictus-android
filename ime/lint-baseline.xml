@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.7.3" type="baseline" client="gradle" dependencies="false" name="AGP (8.7.3)" variant="all" version="8.7.3">
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                text = String.format(&quot;%02d:%02d&quot;, elapsedMs / 60000, (elapsedMs % 60000) / 1000),"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/RecordingScreen.kt"
+            line="137"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="FlowOperatorInvokedInComposition"
+        message="Flow operator functions should not be invoked within composition"
+        errorLine1="            .map { it[PreferenceKeys.THEME] ?: &quot;dark&quot; }"
+        errorLine2="             ~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
+            line="272"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlowOperatorInvokedInComposition"
+        message="Flow operator functions should not be invoked within composition"
+        errorLine1="            .map { it[PreferenceKeys.KEYBOARD_MODE] ?: &quot;abc&quot; }"
+        errorLine2="             ~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
+            line="283"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlowOperatorInvokedInComposition"
+        message="Flow operator functions should not be invoked within composition"
+        errorLine1="            .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }"
+        errorLine2="             ~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
+            line="289"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="FlowOperatorInvokedInComposition"
+        message="Flow operator functions should not be invoked within composition"
+        errorLine1="            .map { it[PreferenceKeys.KEYBOARD_LAYOUT] ?: &quot;azerty&quot; }"
+        errorLine2="             ~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
+            line="298"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/EmojiPickerScreen.kt"
+            line="60"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt"
+            line="66"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyRow.kt"
+            line="28"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardView.kt"
+            line="32"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/MicButtonRow.kt"
+            line="40"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MultipleAwaitPointerEventScopes"
+        message="Suspicious use of multiple awaitPointerEventScope blocks. Using multiple awaitPointerEventScope blocks may cause some input events to be dropped."
+        errorLine1="                    awaitPointerEventScope {"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt"
+            line="139"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="MultipleAwaitPointerEventScopes"
+        message="Suspicious use of multiple awaitPointerEventScope blocks. Using multiple awaitPointerEventScope blocks may cause some input events to be dropped."
+        errorLine1="                    awaitPointerEventScope {"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt"
+            line="157"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="VectorPath"
+        message="Very long vector path (904 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector."
+        errorLine1="        android:pathData=&quot;M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94zM12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z&quot; />"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_settings.xml"
+            line="8"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var keyWidthPx by remember { mutableStateOf(0) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt"
+            line="71"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var keyPositionXPx by remember { mutableStateOf(0f) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyButton.kt"
+            line="72"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="    var lastShiftTapTime by remember { mutableStateOf(0L) }"
+        errorLine2="                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardScreen.kt"
+            line="65"
+            column="40"/>
+    </issue>
+
+</issues>

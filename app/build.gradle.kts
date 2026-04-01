@@ -63,6 +63,10 @@ android {
         jvmTarget = "17"
     }
 
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
