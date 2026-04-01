@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.1 Public Beta (Shipped: 2026-04-01)
+
+**Phases completed:** 5 phases (7-11), 15 plans
+**Timeline:** 3 days (2026-03-30 → 2026-04-01)
+**Commits:** 100 | **Files:** 135 | **LOC:** ~18K Kotlin
+
+**Delivered:** Production text suggestions, multi-provider STT (Whisper + Parakeet), CI/CD pipeline, license audit, and OSS repository scaffolding — transforming the v1.0 MVP into a public beta ready for open contribution.
+
+**Key accomplishments:**
+1. Production text prediction engine with AOSP FR+EN dictionaries (50k words) and personal word learning via DataStore
+2. Parakeet/Nvidia STT via sherpa-onnx as second engine alongside Whisper — safe engine switching, no OOM
+3. GitHub Actions CI (lint + tests + build on PR) + signed APK release workflow on v* tags
+4. License audit via cashapp/licensee with auto-generated LicencesScreen from artifacts.json
+5. OSS repository: MIT LICENSE, CONTRIBUTING.md, issue/PR templates, enhanced README with badges
+
+**Git range:** 87d8cc1 → 725872c
+**Requirements:** 19/20 satisfied (1 known deviation: OSS-03 CODE_OF_CONDUCT.md skipped)
+
+### Known Gaps
+- **OSS-03**: CODE_OF_CONDUCT.md — skipped due to content filtering; user-accepted deviation
+
+---
+
 ## v1.0 MVP (Shipped: 2026-03-30)
 
 **Phases completed:** 7 phases (1-6 + 02.1), 29 plans

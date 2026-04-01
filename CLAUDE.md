@@ -11,7 +11,7 @@ Voir PRD.md pour les specs completes.
 - Kotlin + Jetpack Compose
 - WhisperKit / Whisper.cpp pour STT offline
 - Material Design 3 / Material You
-- Minimum SDK: 26 (Android 8.0)
+- Minimum SDK: 29 (Android 10)
 
 ## Design Reference
 
