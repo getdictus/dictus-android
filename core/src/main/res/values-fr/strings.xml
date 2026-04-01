@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">Dictus</string>
     <string name="ime_name">Clavier Dictus</string>
     <string name="subtype_azerty">AZERTY (Fran\u00e7ais)</string>
     <string name="subtype_qwerty">QWERTY (Anglais)</string>
+    <string name="enable_ime_instructions">Activez le clavier Dictus dans Param\u00e8tres &gt; Syst\u00e8me &gt; Langues et saisie &gt; Clavier \u00e0 l\u0027\u00e9cran</string>
 </resources>
