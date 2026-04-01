@@ -79,15 +79,39 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // WhisperKit
+        val openLink = { url: String ->
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        }
+
+        // whisper.cpp
         LicenceBlock(
-            name = "WhisperKit",
-            author = "Argmax, Inc.",
-            url = "https://github.com/argmaxinc/WhisperKit",
-            copyright = "Copyright (c) 2024 Argmax, Inc.",
-            onLinkClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it)))
-            },
+            name = "whisper.cpp",
+            author = "Georgi Gerganov",
+            url = "https://github.com/ggerganov/whisper.cpp",
+            licenceText = mitLicence("Copyright (c) 2023-2026 The ggml authors"),
+            onLinkClick = openLink,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // sherpa-onnx
+        LicenceBlock(
+            name = "sherpa-onnx",
+            author = "Next-gen Kaldi (k2-fsa)",
+            url = "https://github.com/k2-fsa/sherpa-onnx",
+            licenceText = "Apache License, Version 2.0\n\nCopyright (c) 2023-2026 k2-fsa\n\nLicensed under the Apache License, Version 2.0. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0",
+            onLinkClick = openLink,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // NVIDIA Parakeet models
+        LicenceBlock(
+            name = "NVIDIA Parakeet",
+            author = "NVIDIA Corporation",
+            url = "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
+            licenceText = "CC-BY-4.0\n\nCopyright (c) 2024-2026 NVIDIA Corporation\n\nParakeet models are licensed under Creative Commons Attribution 4.0 International (CC-BY-4.0).",
+            onLinkClick = openLink,
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -95,12 +119,10 @@ fun LicencesScreen(
         // Dictus
         LicenceBlock(
             name = "Dictus",
-            author = "PIVI Solutions",
-            url = "https://github.com/Pivii/dictus",
-            copyright = "Copyright (c) 2026 PIVI Solutions",
-            onLinkClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it)))
-            },
+            author = "Get Dictus",
+            url = "https://github.com/getdictus/dictus",
+            licenceText = mitLicence("Copyright (c) 2026 Get Dictus"),
+            onLinkClick = openLink,
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -112,7 +134,7 @@ private fun LicenceBlock(
     name: String,
     author: String,
     url: String,
-    copyright: String,
+    licenceText: String,
     onLinkClick: (String) -> Unit,
 ) {
     Column(
@@ -141,7 +163,7 @@ private fun LicenceBlock(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = mitLicence(copyright),
+            text = licenceText,
             color = LocalDictusColors.current.textSecondary,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
