@@ -36,8 +36,8 @@ Requirements for v1.1 Public Beta. Each maps to roadmap phases.
 
 ### Licences
 
-- [ ] **LIC-01**: L'écran licences référence correctement toutes les dépendances OSS utilisées (whisper.cpp, FlorisBoard, sherpa-onnx, etc.)
-- [ ] **LIC-02**: Le projet utilise gradle-license-plugin pour auditer automatiquement les licences
+- [x] **LIC-01**: L'écran licences référence correctement toutes les dépendances OSS utilisées (whisper.cpp, FlorisBoard, sherpa-onnx, etc.)
+- [x] **LIC-02**: Le projet utilise gradle-license-plugin pour auditer automatiquement les licences
 
 ### Tech Debt
 
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BETA-01 | Phase 10 | Complete |
 | BETA-02 | Phase 10 | Complete |
 | BETA-03 | Phase 10 | Complete |
-| LIC-01 | Phase 10 | Pending |
-| LIC-02 | Phase 10 | Pending |
+| LIC-01 | Phase 10 | Complete |
+| LIC-02 | Phase 10 | Complete |
 | OSS-01 | Phase 11 | Pending |
 | OSS-02 | Phase 11 | Pending |
 | OSS-03 | Phase 11 | Pending |

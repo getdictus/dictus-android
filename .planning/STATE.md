@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Completed 10-01-PLAN.md (CI/CD workflows + signing config)
-last_updated: "2026-04-01T12:45:54.366Z"
+stopped_at: Completed 10-02-PLAN.md (licensee plugin + LicencesScreen update)
+last_updated: "2026-04-01T12:50:56.371Z"
 last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 100
 ---
 
@@ -60,6 +60,7 @@ Progress: [██████████] 100%
 | Phase 09-parakeet-integration P03 | 422 | 2 tasks | 7 files |
 | Phase 10-beta-distribution-license-audit P03 | 2 | 1 tasks | 1 files |
 | Phase 10-beta-distribution-license-audit P01 | 2 | 2 tasks | 4 files |
+| Phase 10-beta-distribution-license-audit P02 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ Key v1.1 architectural decisions (from research):
 - [Phase 10-beta-distribution-license-audit]: Text-only README with sideloading steps; no screenshots per user decision; getdictus/dictus-android repo slug; API 29 minSdk; feedback links to GitHub Issues (templates in Phase 11)
 - [Phase 10-beta-distribution-license-audit]: licenseeDebug/licenseeRelease invoked explicitly before assembleDebug/assembleRelease: plugin wired into check not assemble, so artifacts.json requires explicit invocation
 - [Phase 10-beta-distribution-license-audit]: signingConfigs null guard: if (keystorePath != null) wraps file() call to prevent NPE during Gradle config phase when env vars absent locally
+- [Phase 10-beta-distribution-license-audit]: licensee applied to app module only: aggregates all transitive deps from :core, :ime, :whisper, :asr
+- [Phase 10-beta-distribution-license-audit]: org.json.JSONArray used for artifacts.json parsing in LicencesScreen: zero new dependency from Android SDK
+- [Phase 10-beta-distribution-license-audit]: Graceful emptyList() fallback in LicencesScreen: artifacts.json absent when licenseeDebug skipped locally
 
 ### Research Flags (Phase 9)
 
@@ -121,6 +125,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-04-01T12:45:54.364Z
-Stopped at: Completed 10-01-PLAN.md (CI/CD workflows + signing config)
+Last session: 2026-04-01T12:50:56.369Z
+Stopped at: Completed 10-02-PLAN.md (licensee plugin + LicencesScreen update)
 Resume file: None

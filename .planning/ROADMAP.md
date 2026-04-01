@@ -27,7 +27,7 @@
 - [x] **Phase 7: Foundation** — SttProvider interface + v1.0 tech debt clearance (completed 2026-03-30)
 - [x] **Phase 8: Text Prediction** — Production suggestion engine replacing the stub (gap closure in progress) (completed 2026-03-31)
 - [x] **Phase 9: Parakeet Integration** — Multi-provider STT with sherpa-onnx (completed 2026-04-01)
-- [ ] **Phase 10: Beta Distribution + License Audit** — CI pipeline, signed releases, license clean pass
+- [x] **Phase 10: Beta Distribution + License Audit** — CI pipeline, signed releases, license clean pass (completed 2026-04-01)
 - [ ] **Phase 11: OSS Repository** — Public repo scaffolding for open contribution
 
 ## Phase Details
@@ -88,7 +88,7 @@ Plans:
   3. The README contains step-by-step instructions for downloading and sideloading the beta APK
   4. The in-app licenses screen correctly lists all OSS dependencies (whisper.cpp, sherpa-onnx, FlorisBoard-derived components, etc.) with their licenses
   5. `gradle-license-plugin` runs as part of the build and its audit report shows no GPL-contaminated dependencies
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 10-01-PLAN.md — CI + Release GitHub Actions workflows + APK signing config (BETA-01, BETA-02)
 - [ ] 10-02-PLAN.md — cashapp/licensee license audit plugin + LicencesScreen auto-generation (LIC-01, LIC-02)
@@ -121,5 +121,5 @@ Plans:
 | 7. Foundation | v1.1 | 3/3 | Complete | 2026-03-30 |
 | 8. Text Prediction | 3/3 | Complete   | 2026-03-31 | - |
 | 9. Parakeet Integration | 3/3 | Complete   | 2026-04-01 | - |
-| 10. Beta Distribution + License Audit | 2/3 | In Progress|  | - |
+| 10. Beta Distribution + License Audit | 3/3 | Complete   | 2026-04-01 | - |
 | 11. OSS Repository | v1.1 | 0/? | Not started | - |
