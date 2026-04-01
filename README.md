@@ -1,6 +1,6 @@
 # Dictus
 
-Dictus is a free, privacy-first Android keyboard for offline voice dictation. All speech recognition runs on-device — no cloud, no data collection.
+Dictus is a privacy-first Android keyboard for offline voice dictation. All speech recognition runs on-device — no cloud, no data collection.
 
 ## Features
 
