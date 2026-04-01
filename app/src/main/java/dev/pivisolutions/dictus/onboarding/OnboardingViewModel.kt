@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.onboarding
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -7,8 +8,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.ModelCatalog
+import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.service.DownloadProgress
 import dev.pivisolutions.dictus.service.ModelDownloader
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +47,7 @@ import javax.inject.Inject
  * success screen — only then is onboarding considered "done". Writing earlier would skip the
  * success screen if the app is killed and relaunched.
  *
+ * @param context Application context for device capability checks (RAM-based model recommendation).
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
  * @param modelDownloader Injectable downloader for the default Whisper model.
  * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists step/flags across
@@ -51,10 +55,19 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
+    @ApplicationContext context: Context,
     private val dataStore: DataStore<Preferences>,
     private val modelDownloader: ModelDownloader,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+    // --- Recommended model based on device RAM ---
+
+    /** Stable key for the recommended model (e.g. "parakeet-tdt-0.6b-v3" or "small-q5_1"). */
+    val recommendedKey: String = ModelCatalog.recommendedModelKey(context)
+
+    /** Full ModelInfo for the recommended model, used by the UI to display name/size/quality. */
+    val recommendedModelInfo: ModelInfo = ModelCatalog.findByKey(recommendedKey)!!
 
     // --- Step state machine (SavedStateHandle-backed for process-death survival) ---
 
@@ -89,6 +102,10 @@ class OnboardingViewModel @Inject constructor(
 
     private val _downloadError = MutableStateFlow<String?>(null)
     val downloadError: StateFlow<String?> = _downloadError.asStateFlow()
+
+    /** True while the downloaded archive is being extracted (Parakeet models only). */
+    private val _isExtracting = MutableStateFlow(false)
+    val isExtracting: StateFlow<Boolean> = _isExtracting.asStateFlow()
 
     // --- Public actions ---
 
@@ -139,23 +156,26 @@ class OnboardingViewModel @Inject constructor(
     fun startModelDownload() {
         _downloadProgress.value = 0
         _downloadError.value = null
+        _isExtracting.value = false
         viewModelScope.launch {
-            modelDownloader.downloadWithProgress(ModelCatalog.DEFAULT_KEY)
+            modelDownloader.downloadWithProgress(recommendedKey)
                 .collect { progress ->
                     when (progress) {
                         is DownloadProgress.Progress -> {
                             _downloadProgress.value = progress.percent
                         }
                         is DownloadProgress.Extracting -> {
-                            // Onboarding only downloads Whisper (no archive extraction),
-                            // but handle for exhaustiveness
-                            _downloadProgress.value = 100
+                            // Parakeet models are tar.bz2 archives — show extraction UI
+                            _downloadProgress.value = 99
+                            _isExtracting.value = true
                         }
                         is DownloadProgress.Complete -> {
+                            _isExtracting.value = false
                             _downloadProgress.value = 100
                             _modelDownloadComplete.value = true
                         }
                         is DownloadProgress.Error -> {
+                            _isExtracting.value = false
                             _downloadError.value = progress.message
                             _downloadProgress.value = -1
                         }
@@ -179,7 +199,7 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.KEYBOARD_LAYOUT] = _selectedLayout.value
-                prefs[PreferenceKeys.ACTIVE_MODEL] = ModelCatalog.DEFAULT_KEY
+                prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey
                 prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true
             }
         }

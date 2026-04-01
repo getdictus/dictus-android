@@ -35,6 +35,7 @@ import org.robolectric.RuntimeEnvironment
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
 
+    private lateinit var context: android.content.Context
     private lateinit var fakeDataStore: FakeDataStore
     private lateinit var fakeDownloader: FakeModelDownloader
     private lateinit var viewModel: OnboardingViewModel
@@ -42,10 +43,10 @@ class OnboardingViewModelTest {
 
     @Before
     fun setUp() {
-        val context = RuntimeEnvironment.getApplication()
+        context = RuntimeEnvironment.getApplication()
         fakeDataStore = FakeDataStore()
         fakeDownloader = FakeModelDownloader(ModelManager(context))
-        viewModel = OnboardingViewModel(fakeDataStore, fakeDownloader, SavedStateHandle())
+        viewModel = OnboardingViewModel(context, fakeDataStore, fakeDownloader, SavedStateHandle())
     }
 
     // --- Initial state ---
@@ -85,6 +86,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - restores currentStep from saved state`() = runTest(testDispatcher) {
         val restoredVm = OnboardingViewModel(
+            context,
             fakeDataStore,
             fakeDownloader,
             SavedStateHandle(mapOf("currentStep" to 3)),
@@ -95,6 +97,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - restores micPermissionGranted from saved state`() = runTest(testDispatcher) {
         val restoredVm = OnboardingViewModel(
+            context,
             fakeDataStore,
             fakeDownloader,
             SavedStateHandle(mapOf("micPermissionGranted" to true)),
@@ -105,6 +108,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - restores imeActivated from saved state`() = runTest(testDispatcher) {
         val restoredVm = OnboardingViewModel(
+            context,
             fakeDataStore,
             fakeDownloader,
             SavedStateHandle(mapOf("imeActivated" to true)),
@@ -115,7 +119,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - advanceStep writes to savedStateHandle`() = runTest(testDispatcher) {
         val ssh = SavedStateHandle()
-        val vm = OnboardingViewModel(fakeDataStore, fakeDownloader, ssh)
+        val vm = OnboardingViewModel(context, fakeDataStore, fakeDownloader, ssh)
         vm.advanceStep()
         assertEquals(2, ssh.get<Int>("currentStep"))
     }
@@ -123,7 +127,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - setMicPermissionGranted writes to savedStateHandle`() = runTest(testDispatcher) {
         val ssh = SavedStateHandle()
-        val vm = OnboardingViewModel(fakeDataStore, fakeDownloader, ssh)
+        val vm = OnboardingViewModel(context, fakeDataStore, fakeDownloader, ssh)
         vm.setMicPermissionGranted(true)
         assertEquals(true, ssh.get<Boolean>("micPermissionGranted"))
     }

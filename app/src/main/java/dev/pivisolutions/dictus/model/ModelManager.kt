@@ -168,6 +168,24 @@ object ModelCatalog {
     fun findByKey(key: String): ModelInfo? = ALL.find { it.key == key }
 
     /**
+     * Return the recommended model key for onboarding based on device RAM.
+     *
+     * >= 8 GB total RAM -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
+     * < 8 GB total RAM  -> small-q5_1 (190 MB, best accuracy/size trade-off)
+     *
+     * WHY ActivityManager.MemoryInfo.totalMem: This is the physical RAM reported by
+     * the kernel. It is stable across reboots and does not change with app state.
+     * Available since API 16 (our min is 26).
+     */
+    fun recommendedModelKey(context: Context): String {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val memInfo = android.app.ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memInfo)
+        val totalGb = memInfo.totalMem / (1024L * 1024L * 1024L)
+        return if (totalGb >= 8) "parakeet-tdt-0.6b-v3" else "small-q5_1"
+    }
+
+    /**
      * Returns true if a model uses a directory-based storage layout.
      *
      * Parakeet models are stored in a subdirectory (models/{key}/{fileName}) because
