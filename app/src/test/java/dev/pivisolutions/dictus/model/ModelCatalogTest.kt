@@ -25,7 +25,7 @@ class ModelCatalogTest {
     @Test
     fun `whisper models all have WHISPER provider`() {
         val whisperModels = ModelCatalog.ALL.filter { it.provider == AiProvider.WHISPER }
-        assertEquals(4, whisperModels.size)
+        assertEquals(5, whisperModels.size)
         whisperModels.forEach { model ->
             assertEquals(
                 "Whisper model '${model.key}' should have WHISPER provider",
@@ -102,35 +102,25 @@ class ModelCatalogTest {
         val model = ModelCatalog.findByKey("parakeet-ctc-110m-int8")
         assertNotNull(model)
         assertEquals(AiProvider.PARAKEET, model!!.provider)
-        assertEquals("Parakeet 110M INT8", model.displayName)
-        assertTrue(model.description.contains("Anglais"))
+        assertEquals("Parakeet 110M", model.displayName)
+        assertTrue(model.isEnglishOnly)
+        assertFalse(model.isTransducer)
     }
 
     @Test
-    fun `catalog contains parakeet-ctc-110m-fp16`() {
-        val model = ModelCatalog.findByKey("parakeet-ctc-110m-fp16")
+    fun `catalog contains parakeet-tdt-0_6b-v3`() {
+        val model = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")
         assertNotNull(model)
         assertEquals(AiProvider.PARAKEET, model!!.provider)
+        assertTrue(model.isTransducer)
+        assertFalse(model.isEnglishOnly)
+        assertEquals(8, model.minRamGb)
     }
 
     @Test
-    fun `catalog contains parakeet-tdt-0_6b-v2`() {
-        val model = ModelCatalog.findByKey("parakeet-tdt-0.6b-v2")
-        assertNotNull(model)
-        assertEquals(AiProvider.PARAKEET, model!!.provider)
-        assertTrue(model.description.contains("8+ GB RAM"))
-    }
-
-    @Test
-    fun `all parakeet models have english-only description`() {
+    fun `parakeet models have correct count`() {
         val parakeetModels = ModelCatalog.ALL.filter { it.provider == AiProvider.PARAKEET }
-        assertEquals(3, parakeetModels.size)
-        parakeetModels.forEach { model ->
-            assertTrue(
-                "Parakeet model '${model.key}' should mention Anglais in description",
-                model.description.contains("Anglais"),
-            )
-        }
+        assertEquals(2, parakeetModels.size)
     }
 
     @Test

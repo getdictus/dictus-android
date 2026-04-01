@@ -43,6 +43,9 @@ data class ModelInfo(
     val speed: Float = 0f,
     val provider: AiProvider = AiProvider.WHISPER,
     val isDeprecated: Boolean = false,
+    val isEnglishOnly: Boolean = false,
+    val isTransducer: Boolean = false,
+    val minRamGb: Int = 0,
 )
 
 /**
@@ -65,16 +68,16 @@ object ModelCatalog {
     /**
      * All available models in selection order (fastest → most accurate).
      *
-     * Phase 4 Whisper models (4 entries):
-     *   tiny      — 77 MB  — fastest, good for short commands
-     *   base      — 148 MB — balanced speed and accuracy
-     *   small     — 488 MB — high accuracy, slower
+     * Whisper models (5 entries):
+     *   tiny       — 77 MB  — fastest, good for short commands
+     *   base       — 148 MB — balanced speed and accuracy
+     *   small      — 488 MB — high accuracy, slower
      *   small-q5_1 — 190 MB — quantised small, best accuracy/size trade-off
+     *   medium-q5_0 — 539 MB — highest Whisper accuracy, quantised
      *
-     * Phase 9 Parakeet models (3 entries, English-only, sherpa-onnx):
-     *   parakeet-ctc-110m-int8 — 126 MB — fast quantised model
-     *   parakeet-ctc-110m-fp16 — 220 MB — full precision variant
-     *   parakeet-tdt-0.6b-v2  — 640 MB — large model, requires 8+ GB RAM
+     * Phase 9 Parakeet models (2 entries, sherpa-onnx):
+     *   parakeet-ctc-110m-int8 — 126 MB — fast quantised, English-only (CTC)
+     *   parakeet-tdt-0.6b-v3  — 640 MB — 25 languages, requires 8+ GB RAM (transducer)
      *
      * WHY corrected sizes: The exact byte sizes were confirmed via UAT debug session
      * (Whisper) or from official sherpa-onnx release metadata (Parakeet).
@@ -122,41 +125,42 @@ object ModelCatalog {
             precision = 0.85f,
             speed = 0.55f,
         ),
-        // --- Parakeet models (English-only, sherpa-onnx) ---
-        // Downloaded as tar.bz2 archives; each archive contains model.onnx (or model.int8.onnx)
-        // + tokens.txt. Stored in models/{key}/ directory on device.
+        ModelInfo(
+            key = "medium-q5_0",
+            fileName = "ggml-medium-q5_0.bin",
+            displayName = "Medium",
+            expectedSizeBytes = 539_212_467L,
+            qualityLabel = "Precis",
+            description = "Meilleure precision",
+            precision = 0.9f,
+            speed = 0.3f,
+        ),
+        // --- Parakeet models (sherpa-onnx) ---
+        // Downloaded as tar.bz2 archives, stored in models/{key}/ directory on device.
         ModelInfo(
             key = "parakeet-ctc-110m-int8",
             fileName = "model.int8.onnx",
-            displayName = "Parakeet 110M INT8",
+            displayName = "Parakeet 110M",
             expectedSizeBytes = 131_628_000L,
             qualityLabel = "Rapide",
             description = "Anglais uniquement - Rapide et precis",
             precision = 0.75f,
             speed = 0.85f,
             provider = AiProvider.PARAKEET,
+            isEnglishOnly = true,
         ),
         ModelInfo(
-            key = "parakeet-ctc-110m-fp16",
-            fileName = "model.onnx",
-            displayName = "Parakeet 110M FP16",
-            expectedSizeBytes = 230_000_000L,
-            qualityLabel = "Precis",
-            description = "Anglais uniquement - Haute precision",
-            precision = 0.85f,
-            speed = 0.65f,
-            provider = AiProvider.PARAKEET,
-        ),
-        ModelInfo(
-            key = "parakeet-tdt-0.6b-v2",
-            fileName = "model.onnx",
-            displayName = "Parakeet 0.6B TDT",
-            expectedSizeBytes = 670_000_000L,
+            key = "parakeet-tdt-0.6b-v3",
+            fileName = "encoder.int8.onnx",
+            displayName = "Parakeet 0.6B",
+            expectedSizeBytes = 622_000_000L,
             qualityLabel = "Premium",
-            description = "Anglais uniquement - Necessite 8+ GB RAM",
+            description = "25 langues - Detection automatique",
             precision = 0.95f,
             speed = 0.40f,
             provider = AiProvider.PARAKEET,
+            isTransducer = true,
+            minRamGb = 8,
         ),
     )
 
@@ -187,10 +191,8 @@ object ModelCatalog {
         AiProvider.PARAKEET -> when (info.key) {
             "parakeet-ctc-110m-int8" ->
                 "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2"
-            "parakeet-ctc-110m-fp16" ->
-                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000.tar.bz2"
-            "parakeet-tdt-0.6b-v2" ->
-                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-en.tar.bz2"
+            "parakeet-tdt-0.6b-v3" ->
+                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2"
             else -> error("Unknown Parakeet model key: ${info.key}")
         }
     }
