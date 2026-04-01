@@ -103,7 +103,11 @@ Plans:
   2. Filing a bug or feature request presents the user with a structured YAML template that collects actionable information
   3. CODE_OF_CONDUCT.md (Contributor Covenant 2.1) is present and linked from README
   4. The README provides a complete project description, screenshots, installation instructions, contribution guide, and license notice
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 11-01-PLAN.md — LICENSE, CODE_OF_CONDUCT.md, CONTRIBUTING.md (OSS-01, OSS-03)
+- [ ] 11-02-PLAN.md — Issue templates (bug report, feature request) + PR template (OSS-02)
+- [ ] 11-03-PLAN.md — README enhancement with badges, screenshots, contributing section (OSS-04)
 
 ## Progress
 
@@ -122,4 +126,4 @@ Plans:
 | 8. Text Prediction | 3/3 | Complete   | 2026-03-31 | - |
 | 9. Parakeet Integration | 3/3 | Complete   | 2026-04-01 | - |
 | 10. Beta Distribution + License Audit | 3/3 | Complete    | 2026-04-01 | - |
-| 11. OSS Repository | v1.1 | 0/? | Not started | - |
+| 11. OSS Repository | v1.1 | 0/3 | Not started | - |
