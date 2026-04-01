@@ -30,7 +30,7 @@ Requirements for v1.1 Public Beta. Each maps to roadmap phases.
 ### Repo OSS
 
 - [ ] **OSS-01**: Le repo contient CONTRIBUTING.md avec instructions de build et soumission de PR
-- [ ] **OSS-02**: Le repo contient des issue templates YAML (bug report, feature request) et un PR template
+- [x] **OSS-02**: Le repo contient des issue templates YAML (bug report, feature request) et un PR template
 - [ ] **OSS-03**: Le repo contient CODE_OF_CONDUCT.md (Contributor Covenant)
 - [ ] **OSS-04**: Le README est complet (description, screenshots, installation, contribution, licence)
 
@@ -101,7 +101,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIC-01 | Phase 10 | Complete |
 | LIC-02 | Phase 10 | Complete |
 | OSS-01 | Phase 11 | Pending |
-| OSS-02 | Phase 11 | Pending |
+| OSS-02 | Phase 11 | Complete |
 | OSS-03 | Phase 11 | Pending |
 | OSS-04 | Phase 11 | Pending |
 

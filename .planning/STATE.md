@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Beta
 status: completed
-stopped_at: Phase 11 context gathered
-last_updated: "2026-04-01T18:04:40.911Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-04-01T18:25:26.499Z"
 last_activity: 2026-03-31 — PersonalDictionary wiring verified on device, keyboard learns words after 2 interactions
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
   percent: 100
 ---
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 10-beta-distribution-license-audit P03 | 2 | 1 tasks | 1 files |
 | Phase 10-beta-distribution-license-audit P01 | 2 | 2 tasks | 4 files |
 | Phase 10-beta-distribution-license-audit P02 | 2 | 2 tasks | 4 files |
+| Phase 11 P02 | 1 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Key v1.1 architectural decisions (from research):
 - [Phase 10-beta-distribution-license-audit]: licensee applied to app module only: aggregates all transitive deps from :core, :ime, :whisper, :asr
 - [Phase 10-beta-distribution-license-audit]: org.json.JSONArray used for artifacts.json parsing in LicencesScreen: zero new dependency from Android SDK
 - [Phase 10-beta-distribution-license-audit]: Graceful emptyList() fallback in LicencesScreen: artifacts.json absent when licenseeDebug skipped locally
+- [Phase 11]: No config.yml in ISSUE_TEMPLATE: no external links or Discussions routing per locked decision
+- [Phase 11]: Bug report STT provider as dropdown (Whisper/Parakeet) not free text: ensures consistent triage data
+- [Phase 11]: PR template intentionally minimal: 3 checkboxes only, no elaborate categories or screenshot requirements
 
 ### Research Flags (Phase 9)
 
@@ -125,6 +129,6 @@ None at roadmap stage.
 
 ## Session Continuity
 
-Last session: 2026-04-01T18:04:40.903Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-oss-repository/11-CONTEXT.md
+Last session: 2026-04-01T18:25:26.497Z
+Stopped at: Completed 11-02-PLAN.md
+Resume file: None
