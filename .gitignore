@@ -15,3 +15,8 @@ local.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# Signing keystore — never commit
+*.jks
+*.keystore
+keystore.properties

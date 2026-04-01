@@ -10,12 +10,38 @@ android {
     namespace = "dev.pivisolutions.dictus"
     compileSdk = 35
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("SIGNING_KEYSTORE_PATH")
+            val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            val keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            val storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "dev.pivisolutions.dictus"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+        val ciVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull()
+        val ciVersionName = System.getenv("VERSION_NAME")
+        if (ciVersionCode != null) versionCode = ciVersionCode
+        if (ciVersionName != null) versionName = ciVersionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
