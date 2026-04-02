@@ -113,6 +113,14 @@ androidComponents {
         tasks.matching { it.name == "merge${capitalizedVariant}Assets" }.configureEach {
             dependsOn(copyTask)
         }
+
+        // Lint tasks also scan generated assets — declare dependency to avoid implicit ordering errors.
+        tasks.matching { it.name.startsWith("lintVital") && it.name.contains(capitalizedVariant) }.configureEach {
+            dependsOn(copyTask)
+        }
+        tasks.matching { it.name == "generate${capitalizedVariant}LintVitalReportModel" }.configureEach {
+            dependsOn(copyTask)
+        }
     }
 }
 
