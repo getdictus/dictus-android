@@ -1,5 +1,11 @@
 package dev.pivisolutions.dictus.service
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -98,5 +104,31 @@ class AudioCaptureManagerTest {
         val history = manager.getEnergyHistory()
         assertEquals(5f, history.first(), 0.0001f)
         assertEquals(34f, history.last(), 0.0001f)
+    }
+
+    @Test
+    fun `stop waits for final read reaching exact minimum sample count`() = runBlocking {
+        assertFinalReadIsIncluded(RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT)
+    }
+
+    @Test
+    fun `stop waits for final read above minimum sample count`() = runBlocking {
+        assertFinalReadIsIncluded(RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT + 1)
+    }
+
+    private suspend fun assertFinalReadIsIncluded(finalSampleCount: Int) {
+        val stopSignal = CompletableDeferred<Unit>()
+        val collectedSamples = ArrayList<Float>()
+        val captureJob = CoroutineScope(Dispatchers.Default).launch {
+            stopSignal.await()
+            // Model a blocking AudioRecord read that completes only after stop().
+            delay(20)
+            repeat(finalSampleCount) { collectedSamples.add(0.1f) }
+        }
+
+        manager.stopCaptureAndAwait(captureJob) { stopSignal.complete(Unit) }
+
+        assertEquals(finalSampleCount, collectedSamples.size)
+        assertTrue(RecordingDurationPolicy.canTranscribe(collectedSamples.size))
     }
 }
