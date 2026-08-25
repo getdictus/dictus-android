@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import kotlin.math.sqrt
 
@@ -91,17 +92,16 @@ class AudioCaptureManager {
             val readBuffer = FloatArray(minBufferSize / 4) // Float = 4 bytes
             while (isActive) {
                 val read = recorder?.read(readBuffer, 0, readBuffer.size, AudioRecord.READ_BLOCKING) ?: break
-                if (read > 0) {
-                    synchronized(samples) {
-                        for (i in 0 until read) {
-                            samples.add(readBuffer[i])
-                        }
+                if (read <= 0) break
+                synchronized(samples) {
+                    for (i in 0 until read) {
+                        samples.add(readBuffer[i])
                     }
-                    val rms = calculateRmsEnergy(readBuffer, read)
-                    val normalized = normalizeEnergy(rms)
-                    addEnergyToHistory(normalized)
-                    onEnergyUpdate?.invoke(normalized)
                 }
+                val rms = calculateRmsEnergy(readBuffer, read)
+                val normalized = normalizeEnergy(rms)
+                addEnergyToHistory(normalized)
+                onEnergyUpdate?.invoke(normalized)
             }
         }
     }
@@ -112,10 +112,11 @@ class AudioCaptureManager {
      * @return FloatArray of all captured samples at 16kHz mono.
      */
     fun stop(): FloatArray {
-        captureJob?.cancel()
+        val job = captureJob
+        val activeRecorder = recorder
+        stopCaptureAndAwait(job) { activeRecorder?.stop() }
         captureJob = null
-        recorder?.stop()
-        recorder?.release()
+        activeRecorder?.release()
         recorder = null
         Timber.d("AudioRecord stopped, captured ${samples.size} samples")
         val result: FloatArray
@@ -131,10 +132,12 @@ class AudioCaptureManager {
      * Cancel capturing and discard all audio data.
      */
     fun cancel() {
-        captureJob?.cancel()
+        val job = captureJob
+        val activeRecorder = recorder
+        job?.cancel()
+        stopCaptureAndAwait(job) { activeRecorder?.stop() }
         captureJob = null
-        recorder?.stop()
-        recorder?.release()
+        activeRecorder?.release()
         recorder = null
         synchronized(samples) {
             samples.clear()
@@ -209,5 +212,18 @@ class AudioCaptureManager {
     private fun resetEnergyHistory() {
         energyHistory.clear()
         repeat(MAX_ENERGY_HISTORY) { energyHistory.addLast(0f) }
+    }
+
+    /**
+     * Stop the recorder before waiting for the capture loop. AudioRecord.stop()
+     * releases a blocking read, allowing its final chunk to be appended before
+     * the caller snapshots [samples]. The controller API is synchronous, so the
+     * short join is intentionally bridged here rather than exposing a racy result.
+     */
+    internal fun stopCaptureAndAwait(job: Job?, stopRecorder: () -> Unit) {
+        stopRecorder()
+        if (job != null) {
+            runBlocking { job.join() }
+        }
     }
 }
