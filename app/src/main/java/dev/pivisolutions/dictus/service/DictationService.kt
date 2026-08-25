@@ -291,6 +291,18 @@ class DictationService : Service(), DictationController {
             return null
         }
 
+        if (!RecordingDurationPolicy.canTranscribe(samples.size)) {
+            Timber.w(
+                "confirmAndTranscribe: clip too short (%d samples, minimum=%d)",
+                samples.size,
+                RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT,
+            )
+            _state.value = DictationState.Idle
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return null
+        }
+
         // Play stop cue when audio capture ends and transcription begins.
         if (soundEnabled) soundPlayer.playStop()
 

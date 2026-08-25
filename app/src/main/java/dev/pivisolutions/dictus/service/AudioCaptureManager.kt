@@ -28,7 +28,7 @@ import kotlin.math.sqrt
 class AudioCaptureManager {
 
     companion object {
-        private const val SAMPLE_RATE = 16000
+        private const val SAMPLE_RATE = RecordingDurationPolicy.SAMPLE_RATE_HZ
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
         private const val MAX_ENERGY_HISTORY = 30
