@@ -87,7 +87,9 @@ fun RecordingScreen(
 
     // Auto-start recording on first composition — iOS parity: tapping "Nouvelle dictée"
     // brings the user directly into the recording state without a manual tap.
-    LaunchedEffect(Unit) {
+    // Key the effect to the controller so a screen composed before service binding
+    // starts recording as soon as the controller becomes available.
+    LaunchedEffect(dictationController) {
         dictationController?.startRecording()
     }
 
