@@ -10,6 +10,25 @@ Dictus should use a **three-lane evidence policy**, not a blanket “manual QA�
 
 This follows Android’s distinction between fast local tests and higher-fidelity instrumented tests. Android says automation is faster and more repeatable than manual testing, local tests are normally small and fast, and instrumented tests run on physical or emulated Android devices.[1] It recommends unit tests for ViewModels, repositories/data, domain logic, utilities, and edge cases, plus screen and common-navigation UI tests.[2] Instrumented tests provide more fidelity but are slower, so Android recommends them when device behavior is actually required.[3]
 
+## Status and phased rollout
+
+This policy is effective immediately, but a gate is mandatory only when the repository contains a reproducible command, fixture, and documented oracle for it.
+
+### Enforceable now
+
+- Exact-head clean build, lint, JVM tests, APK assembly, diff checks, and independent review on every code PR.
+- Risk-targeted emulator smoke tests, screenshots, activity state, and logcat checks for changed flows that the current emulator can execute.
+- Physical-Pixel evidence before promotion to `main` or public release when microphone, ARM-native ASR, whole-system IME, or representative performance claims are involved. A change may merge to `develop` while this evidence is queued, but the missing evidence must be explicit and the corresponding claim must not be marked verified.
+
+### Automation rollout
+
+1. Add CI coverage for PRs targeting `develop`, plus an instrumentation runner and focused Compose/UI Automator tests.
+2. Add a pinned screenshot environment and a minimal approved golden set.
+3. Add a dedicated Pixel harness, deterministic audio fixtures, and a repeatable benchmark module.
+4. Add a small Firebase Test Lab matrix, then broaden it before public releases.
+
+Until a phase exists in code, it is a tracked target rather than a fictional green check.
+
 ## Proposed validation matrix
 
 | Dictus claim / change | Agent on host or emulator | Agent on physical Pixel | Human product owner |
@@ -28,7 +47,7 @@ This follows Android’s distinction between fast local tests and higher-fidelit
 
 ## Lane 1 — fully autonomous host/emulator gate
 
-### Required on every pull request
+### Target host/emulator gate
 
 - Build the exact commit and run lint/static analysis and all JVM tests.
 - Unit-test state reducers/ViewModels, repositories, preferences/model metadata, file handling, cancellation, error mapping, and deterministic text-processing logic. Include edge cases rather than relying on exploratory testing; Android explicitly notes that edge cases are where unit tests outperform humans and larger flows.[2]
@@ -39,7 +58,7 @@ This follows Android’s distinction between fast local tests and higher-fidelit
 
 ### What this lane may approve by itself
 
-The agent may approve and merge a change when all applicable gates are green. Hardware-sensitive changes add the physical-Pixel lane; they do not automatically add a human gate. Human approval is required only when product intent is ambiguous, an approved visual or interaction baseline changes deliberately, or a public release is being authorized.
+An authorized maintainer or delegated agent may recommend and merge a change when all currently enforceable gates are green and repository governance permits it. Hardware-sensitive changes add the physical-Pixel lane; they do not automatically add a human gate. Human product approval is required only when intent is ambiguous, an approved visual or interaction baseline changes deliberately, or a public release is being authorized.
 
 The Android Emulator is the default device for breadth: Android describes it as high-fidelity, able to simulate many API levels/configurations and most real-device capabilities, and says it is the best option for most testing needs.[8] That breadth is evidence of functional compatibility—not evidence of real microphone quality, ARM-native execution, or user-perceived performance.
 
@@ -57,13 +76,13 @@ Require this lane for any change touching:
 - startup, animation/jank, recording-to-first-text latency, sustained inference, memory or thermal behavior;
 - a release candidate, even if no hardware-sensitive files changed.
 
-### Minimum physical-Pixel script
+### Minimum physical-Pixel script once the harness exists
 
 1. Install the release-like candidate from a clean state; verify launch and inspect logcat for crashes/ANRs.
-2. Enable/select Dictus through the real system IME path. Exercise text, multiline, search, URL/email, and password-class editors in multiple apps; verify cursor replacement, commit/cancel, back, rotation, app switching, and switching to/from another IME. Android’s IME contract spans `InputMethodService`, `EditorInfo`, multiple input types, `InputConnection`, orientations, and system IME switching, so an in-app keyboard preview is insufficient.[14]
-3. Grant, deny, revoke, and re-grant microphone permission. Record real audio, stop/cancel, background/foreground, lock/unlock, rotate, and repeat. Android classifies `RECORD_AUDIO` as a dangerous runtime permission, notes hardware/audio-source differences, and restricts background microphone access on Android 9+ unless recording is in the foreground or a foreground service is used.[15]
-4. With radios/network disabled, load the shipped model and run a fixed audio corpus plus one live sample. Record success/failure, transcript, latency, peak memory, repeated-run behavior, cancellation, and model reload. This is the release evidence for Dictus’s ARM-only offline path.
-5. Run Macrobenchmark (or an equivalent instrumented measurement) against a non-debuggable, release-like build for startup and the critical record→transcribe→commit flow. Android strongly discourages emulator benchmark numbers because they reflect host hardware rather than realistic user experience and tells CI users to benchmark on physical devices.[10][11]
+2. Enable/select Dictus through the real system IME path. Exercise text, multiline, search, URL/email, and password-class editors in multiple apps; verify cursor replacement, commit/cancel, back, rotation, app switching, and switching to/from another IME. Password tests must use synthetic values, suppress suggestions/transcription/logging where appropriate, never capture password-field screenshots or video, and redact retained artifacts. Android’s IME contract spans `InputMethodService`, `EditorInfo`, multiple input types, `InputConnection`, orientations, system IME switching, and explicit password privacy requirements, so an in-app keyboard preview is insufficient.[14]
+3. Grant, deny, revoke, and re-grant microphone permission. Record, stop/cancel, background/foreground, lock/unlock, rotate, and repeat. Modern microphone foreground services require the `microphone` service type and `FOREGROUND_SERVICE_MICROPHONE`; Android 14+ also enforces while-in-use restrictions and can reject microphone-service creation from the background. Test creation from the visible app and IME paths across supported API levels.[15][16]
+4. With radios/network disabled, load the shipped model and run a versioned fixed-WAV corpus through a deterministic test ingestion path. Pin model revision, normalization rules, expected transcript or WER budget, device/OS, and iteration count. Treat uncontrolled live speech, room noise, headset/Bluetooth, and call-routing checks as exploratory evidence until a repeatable acoustic fixture specifies playback source, distance, volume, routing, and expected outcomes.
+5. Run Macrobenchmark against a non-debuggable, release-like build for startup and the critical record→transcribe→commit flow. Pin the Pixel model/OS and collect at least three cold and ten warm iterations. Establish the initial baseline before enforcing a regression budget; thereafter, changes beyond the documented p50/p95 budget trigger investigation rather than silent acceptance. Android strongly discourages emulator benchmark numbers because they reflect host hardware rather than realistic user experience and tells CI users to benchmark on physical devices.[10] [11]
 
 The emulator’s current extended controls can forward the host microphone when explicitly enabled,[9] while the MediaRecorder guide still says the emulator cannot record audio and directs developers to a real device.[15] The safe policy is therefore: emulator audio may validate plumbing, but **never closes** a microphone, acoustic-quality, latency, or release gate.
 
@@ -88,24 +107,26 @@ Humans should **not** be asked to re-check deterministic regressions, enumerate 
 
 - **No evidence, no claim:** an emulator pass cannot be reported as microphone, ARM-native, or representative performance coverage.
 - **Physical does not mean manual:** default owner of the physical-Pixel lane is the agent.
+- **Sensitive-input privacy:** password-class editor tests use synthetic data, disable inappropriate capture/logging, and retain only redacted artifacts.
 - **Human approval is sticky:** once a visual or interaction baseline is approved, automated tests own regression detection until intent changes.
 - **Risk-based cadence:** host/emulator on every PR; physical Pixel on trigger changes and nightly/release; small Firebase matrix nightly or pre-release; broader matrix before public releases.
 - **Release gate:** all host/emulator checks green, all triggered Pixel checks green on the exact candidate, no unexplained crash/ANR, benchmark thresholds met, and a short product-owner sign-off completed before a public release.
 
 ## Sources
 
-[1] https://developer.android.com/training/testing/fundamentals — Fundamentals of testing Android apps
-[2] https://developer.android.com/training/testing/fundamentals/what-to-test — What to test in Android
-[3] https://developer.android.com/training/testing/instrumented-tests — Build instrumented tests
-[4] https://developer.android.com/develop/ui/compose/testing — Test your Compose layout
-[5] https://developer.android.com/develop/ui/compose/testing/synchronization — Synchronize your Compose tests
-[6] https://developer.android.com/training/testing/ui-tests/screenshot — Screenshot testing
-[7] https://developer.android.com/training/testing/other-components/ui-automator — Write automated tests with UI Automator
-[8] https://developer.android.com/studio/run/emulator — Run apps on the Android Emulator
-[9] https://developer.android.com/studio/run/emulator-extended-controls — Android Emulator extended controls
-[10] https://developer.android.com/topic/performance/benchmarking/benchmarking-in-ci — Benchmark in Continuous Integration
-[11] https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview — Write a Macrobenchmark
-[12] https://firebase.google.com/docs/test-lab/android/get-started — Get started testing for Android with Firebase Test Lab
-[13] https://firebase.google.com/docs/test-lab/android/instrumentation-test — Get started with Test Lab instrumentation tests
-[14] https://developer.android.com/guide/topics/text/creating-input-method — Create an input method
-[15] https://developer.android.com/media/platform/mediarecorder — MediaRecorder overview
+[1]: https://developer.android.com/training/testing/fundamentals "Fundamentals of testing Android apps"
+[2]: https://developer.android.com/training/testing/fundamentals/what-to-test "What to test in Android"
+[3]: https://developer.android.com/training/testing/instrumented-tests "Build instrumented tests"
+[4]: https://developer.android.com/develop/ui/compose/testing "Test your Compose layout"
+[5]: https://developer.android.com/develop/ui/compose/testing/synchronization "Synchronize your Compose tests"
+[6]: https://developer.android.com/training/testing/ui-tests/screenshot "Screenshot testing"
+[7]: https://developer.android.com/training/testing/other-components/ui-automator "Write automated tests with UI Automator"
+[8]: https://developer.android.com/studio/run/emulator "Run apps on the Android Emulator"
+[9]: https://developer.android.com/studio/run/emulator-extended-controls "Android Emulator extended controls"
+[10]: https://developer.android.com/topic/performance/benchmarking/benchmarking-in-ci "Benchmark in Continuous Integration"
+[11]: https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview "Write a Macrobenchmark"
+[12]: https://firebase.google.com/docs/test-lab/android/get-started "Get started testing for Android with Firebase Test Lab"
+[13]: https://firebase.google.com/docs/test-lab/android/instrumentation-test "Get started with Test Lab instrumentation tests"
+[14]: https://developer.android.com/guide/topics/text/creating-input-method "Create an input method"
+[15]: https://developer.android.com/media/platform/mediarecorder "MediaRecorder overview"
+[16]: https://developer.android.com/develop/background-work/services/fgs/service-types#microphone "Foreground service type: microphone"

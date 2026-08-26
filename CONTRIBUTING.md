@@ -36,4 +36,4 @@ cd dictus-android
 - Branch naming: `type/description` (e.g., `fix/keyboard-crash`, `feat/emoji-search`)
 - Commit messages: Conventional Commits suggested (`feat:`, `fix:`, `docs:`) but not enforced
 - Code language: English for comments and variable names; UI strings bilingual FR+EN via `strings.xml`
-- All PRs require maintainer review before merge
+- All PRs require maintainer review or a documented delegated review before merge. Validation evidence must follow [`docs/testing-validation-policy-research.md`](docs/testing-validation-policy-research.md).
