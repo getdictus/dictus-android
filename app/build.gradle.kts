@@ -114,11 +114,11 @@ androidComponents {
             dependsOn(copyTask)
         }
 
-        // Lint tasks also scan generated assets — declare dependency to avoid implicit ordering errors.
-        tasks.matching { it.name.startsWith("lintVital") && it.name.contains(capitalizedVariant) }.configureEach {
-            dependsOn(copyTask)
-        }
-        tasks.matching { it.name == "generate${capitalizedVariant}LintVitalReportModel" }.configureEach {
+        // Every lint task that scans generated assets must wait for the copied report.
+        tasks.matching {
+            (it.name.startsWith("lint") || it.name.contains("Lint")) &&
+                it.name.contains(capitalizedVariant)
+        }.configureEach {
             dependsOn(copyTask)
         }
     }
