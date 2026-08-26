@@ -101,7 +101,7 @@ Human review should be requested only where no objective oracle exists:
 - **Keyboard ergonomics:** Is the IME comfortable, discoverable, appropriately sized, and easy to switch away from in normal use?
 - **Perceived responsiveness:** Does record→feedback→text feel immediate and stable, in addition to meeting measured thresholds?
 - **Speech usefulness:** When a model, language, or decoding policy changes materially, are real-world transcripts acceptable across representative voices, pacing, punctuation expectations, and noise?
-- **Release acceptance:** One short scripted “day-in-the-life” pass on the signed candidate after automated and physical gates are already green.
+- **Release acceptance:** In the current phase, one short scripted “day-in-the-life” pass after all currently enforceable checks are green, with missing Pixel/benchmark evidence and residual risk stated explicitly. After the automation rollout, perform this pass only after all triggered automated and physical gates are green.
 
 Humans should **not** be asked to re-check deterministic regressions, enumerate device configurations, inspect logs, compare pixels manually, or prove microphone/IME/native execution. When human review is triggered, provide a candidate with a one-page evidence bundle: commit/APK, green gate summary, Pixel model/OS, benchmark deltas, representative screenshot/iOS diffs, known limitations, and a 5–10 minute subjective checklist.
 
