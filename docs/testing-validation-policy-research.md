@@ -5,7 +5,7 @@
 Dictus should use a **three-lane evidence policy**, not a blanket “manual QA” rule:
 
 1. **Agent-autonomous, host/emulator:** the default and fastest lane for every change.
-2. **Agent-autonomous, physical Pixel:** mandatory when the claim depends on real microphone hardware, ARM-only native ASR, end-user performance, or whole-system IME behavior. “Physical device” does **not** imply “manual test”; a Pixel reachable through ADB or device-farm instrumentation can be operated and evaluated remotely.
+2. **Agent-autonomous, physical Pixel:** the target evidence lane when a claim depends on real microphone hardware, ARM-only native ASR, end-user performance, or whole-system IME behavior. It becomes a hard automated gate once the dedicated harness and oracles exist. “Physical device” does **not** imply “manual test”; a Pixel reachable through ADB or device-farm instrumentation can be operated and evaluated remotely.
 3. **Human product validation:** reserved for genuine product ambiguity, intentional divergence from an approved reference, subjective ergonomics, and public-release acceptance.
 
 This follows Android’s distinction between fast local tests and higher-fidelity instrumented tests. Android says automation is faster and more repeatable than manual testing, local tests are normally small and fast, and instrumented tests run on physical or emulated Android devices.[1] It recommends unit tests for ViewModels, repositories/data, domain logic, utilities, and edge cases, plus screen and common-navigation UI tests.[2] Instrumented tests provide more fidelity but are slower, so Android recommends them when device behavior is actually required.[3]
@@ -18,7 +18,7 @@ This policy is effective immediately, but a gate is mandatory only when the repo
 
 - Exact-head clean build, lint, JVM tests, APK assembly, diff checks, and independent review on every code PR.
 - Risk-targeted emulator smoke tests, screenshots, activity state, and logcat checks for changed flows that the current emulator can execute.
-- Physical-Pixel evidence before promotion to `main` or public release when microphone, ARM-native ASR, whole-system IME, or representative performance claims are involved. A change may merge to `develop` while this evidence is queued, but the missing evidence must be explicit and the corresponding claim must not be marked verified.
+- Best-effort scripted Pixel smoke evidence, when a reachable device exists, for microphone, ARM-native ASR, whole-system IME, or representative performance changes. Until the dedicated harness and oracles land, this evidence is not a hard automated gate: gaps must be explicit, affected claims remain unverified, and the public-release decision records the residual risk.
 
 ### Automation rollout
 
@@ -30,6 +30,8 @@ This policy is effective immediately, but a gate is mandatory only when the repo
 Until a phase exists in code, it is a tracked target rather than a fictional green check.
 
 ## Proposed validation matrix
+
+The **Required** labels below describe the target state after the corresponding rollout phase exists. The currently mandatory subset is defined in **Enforceable now** above.
 
 | Dictus claim / change | Agent on host or emulator | Agent on physical Pixel | Human product owner |
 |---|---|---|---|
@@ -66,7 +68,7 @@ The Android Emulator is the default device for breadth: Android describes it as 
 
 A dedicated Pixel (local USB/Wi-Fi ADB, lab host, or suitable physical-device service) should be treated as CI infrastructure. The agent installs the exact APK, resets or records device state, runs instrumentation/UI Automator/benchmark commands, captures logcat, screenshots/video, test XML, benchmark JSON/traces, and reports commit + device model + OS.
 
-### Trigger conditions
+### Target trigger conditions after the Pixel harness rollout
 
 Require this lane for any change touching:
 
@@ -109,8 +111,9 @@ Humans should **not** be asked to re-check deterministic regressions, enumerate 
 - **Physical does not mean manual:** default owner of the physical-Pixel lane is the agent.
 - **Sensitive-input privacy:** password-class editor tests use synthetic data, disable inappropriate capture/logging, and retain only redacted artifacts.
 - **Human approval is sticky:** once a visual or interaction baseline is approved, automated tests own regression detection until intent changes.
-- **Risk-based cadence:** host/emulator on every PR; physical Pixel on trigger changes and nightly/release; small Firebase matrix nightly or pre-release; broader matrix before public releases.
-- **Release gate:** all host/emulator checks green, all triggered Pixel checks green on the exact candidate, no unexplained crash/ANR, benchmark thresholds met, and a short product-owner sign-off completed before a public release.
+- **Risk-based cadence:** currently enforceable host/emulator checks run on every PR. Physical Pixel, Firebase, and benchmark cadence becomes mandatory only as each documented rollout phase lands.
+- **Current release gate:** all currently enforceable checks green, no unexplained crash/ANR in available smoke evidence, every missing Pixel/benchmark claim listed as unverified, and a product-owner go/no-go that accepts or rejects the residual risk.
+- **Target release gate after rollout:** all triggered host/emulator and Pixel checks green on the exact candidate, no unexplained crash/ANR, established benchmark budgets met, and a short product-owner sign-off completed before a public release.
 
 ## Sources
 
