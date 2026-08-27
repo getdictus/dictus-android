@@ -32,6 +32,9 @@ fun KeyboardView(
     onAccentSelected: (String) -> Unit,
     hapticsEnabled: Boolean = true,
     onKeySound: (KeyType) -> Unit = {},
+    labelsVisible: Boolean = true,
+    onTrackpadActiveChange: (Boolean) -> Unit = {},
+    onTrackpadMove: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val rows = when (layer) {
@@ -56,6 +59,9 @@ fun KeyboardView(
                 onAccentSelected = onAccentSelected,
                 hapticsEnabled = hapticsEnabled,
                 onKeySound = onKeySound,
+                labelsVisible = labelsVisible,
+                onTrackpadActiveChange = onTrackpadActiveChange,
+                onTrackpadMove = onTrackpadMove,
             )
         }
     }

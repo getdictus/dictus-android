@@ -40,6 +40,7 @@ import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
+import dev.pivisolutions.dictus.ime.input.moveCursorBy
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -430,6 +431,9 @@ class DictusImeService : LifecycleInputMethodService() {
                     hapticsEnabled = hapticsEnabled,
                     onKeySound = { keyType ->
                         keyboardSoundPlayer.play(keyType, keySoundsEnabled)
+                    },
+                    onMoveCursor = { delta ->
+                        currentInputConnection?.let { moveCursorBy(it, delta) }
                     },
                     keyboardLayout = keyboardLayout,
                 )
