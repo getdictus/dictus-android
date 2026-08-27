@@ -26,6 +26,7 @@ fun KeyRow(
     onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     hapticsEnabled: Boolean = true,
+    onKeySound: (KeyType) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -57,6 +58,7 @@ fun KeyRow(
                 accentChars = accentChars,
                 onAccentSelected = onAccentSelected,
                 hapticsEnabled = hapticsEnabled,
+                onSound = onKeySound,
                 modifier = Modifier.weight(key.widthMultiplier),
             )
         }

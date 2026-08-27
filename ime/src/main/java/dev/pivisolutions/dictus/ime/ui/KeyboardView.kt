@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
+import dev.pivisolutions.dictus.ime.model.KeyType
 
 /**
  * Renders the keyboard rows for the currently active layer.
@@ -30,6 +31,7 @@ fun KeyboardView(
     onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     hapticsEnabled: Boolean = true,
+    onKeySound: (KeyType) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val rows = when (layer) {
@@ -53,6 +55,7 @@ fun KeyboardView(
                 onDeleteWord = onDeleteWord,
                 onAccentSelected = onAccentSelected,
                 hapticsEnabled = hapticsEnabled,
+                onKeySound = onKeySound,
             )
         }
     }

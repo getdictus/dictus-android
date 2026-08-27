@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.IBinder
 import android.view.KeyEvent
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
+import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.suggestion.DictionaryEngine
 import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
@@ -78,6 +80,10 @@ class DictusImeService : LifecycleInputMethodService() {
             applicationContext,
             DictusImeEntryPoint::class.java,
         )
+    }
+
+    private val keyboardSoundPlayer: KeyboardSoundPlayer by lazy {
+        KeyboardSoundPlayer(getSystemService(AUDIO_SERVICE) as AudioManager)
     }
 
     // Service binding state
@@ -345,6 +351,12 @@ class DictusImeService : LifecycleInputMethodService() {
             .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
             .collectAsState(initial = true)
 
+        // Distinct from the configurable recording start/stop/cancel sounds.
+        val keySoundsFlow = remember {
+            entryPoint.dataStore().data.map { it[PreferenceKeys.KEY_SOUNDS_ENABLED] ?: true }
+        }
+        val keySoundsEnabled by keySoundsFlow.collectAsState(initial = true)
+
         // Read keyboard layout preference (AZERTY vs QWERTY).
         // WHY collectAsState: This is a Compose composable, so we use the DataStore Flow
         // + collectAsState() pattern (not coroutine-scope collect). When the user toggles
@@ -416,6 +428,9 @@ class DictusImeService : LifecycleInputMethodService() {
                     themeMode = themeMode,
                     initialLayer = initialLayer,
                     hapticsEnabled = hapticsEnabled,
+                    onKeySound = { keyType ->
+                        keyboardSoundPlayer.play(keyType, keySoundsEnabled)
+                    },
                     keyboardLayout = keyboardLayout,
                 )
             }

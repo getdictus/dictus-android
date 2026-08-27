@@ -51,6 +51,7 @@ fun KeyboardScreen(
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
     hapticsEnabled: Boolean = true,
+    onKeySound: (KeyType) -> Unit = {},
     keyboardLayout: String = "azerty",  // NEW — AZERTY/QWERTY from DataStore
 ) {
     // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
@@ -109,6 +110,7 @@ fun KeyboardScreen(
                     layout = currentLayout,
                     onDeleteWord = onDeleteWordBackward,
                     hapticsEnabled = hapticsEnabled,
+                    onKeySound = onKeySound,
                     onKeyPress = { key ->
                         handleKeyPress(
                             key = key,

@@ -82,6 +82,7 @@ fun SettingsScreen(
     val language by viewModel.language.collectAsState()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
+    val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
     val keyboardLayout by viewModel.keyboardLayout.collectAsState()
     val keyboardMode by viewModel.keyboardMode.collectAsState()
     val theme by viewModel.theme.collectAsState()
@@ -144,6 +145,12 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_haptic_feedback),
                 checked = hapticsEnabled,
                 onToggle = { viewModel.toggleHaptics() },
+            )
+            SettingDivider()
+            SettingToggleRow(
+                label = stringResource(R.string.settings_keyboard_sounds),
+                checked = keySoundsEnabled,
+                onToggle = { viewModel.toggleKeySounds() },
             )
             SettingDivider()
             SettingNavRow(
