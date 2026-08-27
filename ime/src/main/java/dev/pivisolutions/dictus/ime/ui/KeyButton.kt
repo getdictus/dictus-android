@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -43,12 +45,14 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.input.BackspaceDeletion
 import dev.pivisolutions.dictus.ime.input.BackspaceRepeatPolicy
+import dev.pivisolutions.dictus.ime.input.TrackpadMotionAccumulator
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 internal val KeyPressedSemantics = SemanticsPropertyKey<Boolean>("KeyPressed")
 internal var SemanticsPropertyReceiver.keyPressed by KeyPressedSemantics
@@ -81,6 +85,9 @@ fun KeyButton(
     onAccentSelected: ((String) -> Unit)? = null,
     hapticsEnabled: Boolean = true,
     onSound: (KeyType) -> Unit = {},
+    labelsVisible: Boolean = true,
+    onTrackpadActiveChange: (Boolean) -> Unit = {},
+    onTrackpadMove: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -141,6 +148,8 @@ fun KeyButton(
     val currentOnAccentSelected = rememberUpdatedState(onAccentSelected)
     val currentHapticsEnabled = rememberUpdatedState(hapticsEnabled)
     val currentOnSound = rememberUpdatedState(onSound)
+    val currentOnTrackpadActiveChange = rememberUpdatedState(onTrackpadActiveChange)
+    val currentOnTrackpadMove = rememberUpdatedState(onTrackpadMove)
 
     fun resolveAccentIndex(pointerX: Float): Int? {
         val accents = accentChars ?: return null
@@ -198,6 +207,77 @@ fun KeyButton(
 
                     isPressed = false
                     repeatJob.cancel()
+                }
+            }
+        }
+    } else if (key.type == KeyType.SPACE) {
+        Modifier.pointerInput(Unit) {
+            coroutineScope {
+                while (isActive) {
+                    awaitPointerEventScope {
+                        val down = awaitPointerEvent()
+                        if (down.type != PointerEventType.Press) return@awaitPointerEventScope
+                        val pointer = down.changes.firstOrNull { it.pressed && !it.previousPressed }
+                            ?: return@awaitPointerEventScope
+
+                        var latestPositionX = pointer.position.x
+                        var trackpadActive = false
+                        var released = false
+                        var tapSucceeded = !pointer.isConsumed
+                        var shouldCommitSpace = false
+                        val motion = TrackpadMotionAccumulator(8.dp.toPx())
+
+                        isPressed = true
+                        if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                        currentOnSound.value(key.type)
+
+                        val activationJob = launch {
+                            delay(300L)
+                            motion.start(latestPositionX)
+                            trackpadActive = true
+                            currentOnTrackpadActiveChange.value(true)
+                            if (currentHapticsEnabled.value) HapticHelper.performMicHaptic(view)
+                        }
+
+                        try {
+                            while (!released) {
+                                val event = awaitPointerEvent()
+                                val trackedPointer = event.changes.firstOrNull { it.id == pointer.id }
+                                if (trackedPointer != null) {
+                                    latestPositionX = trackedPointer.position.x
+                                    if (trackedPointer.isConsumed && !trackpadActive) {
+                                        tapSucceeded = false
+                                        released = true
+                                    } else {
+                                        if (trackpadActive) {
+                                            val steps = motion.moveTo(latestPositionX)
+                                            if (steps != 0) {
+                                                currentOnTrackpadMove.value(steps)
+                                                if (currentHapticsEnabled.value) {
+                                                    repeat(abs(steps)) {
+                                                        HapticHelper.performKeyHaptic(view)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (!trackedPointer.pressed) {
+                                            tapSucceeded = tapSucceeded &&
+                                                trackedPointer.position.x in 0f..size.width.toFloat() &&
+                                                trackedPointer.position.y in 0f..size.height.toFloat()
+                                            released = true
+                                        }
+                                    }
+                                }
+                            }
+                            shouldCommitSpace = !trackpadActive && tapSucceeded
+                        } finally {
+                            activationJob.cancel()
+                            isPressed = false
+                            if (trackpadActive) currentOnTrackpadActiveChange.value(false)
+                        }
+
+                        if (shouldCommitSpace) currentOnPress.value()
+                    }
                 }
             }
         }
@@ -284,6 +364,11 @@ fun KeyButton(
         Modifier
     }
 
+    val labelAlpha by animateFloatAsState(
+        targetValue = if (labelsVisible) 1f else 0f,
+        label = "keyboardLabelAlpha",
+    )
+
     Box(
         modifier = modifier
             .height(48.dp)
@@ -305,6 +390,7 @@ fun KeyButton(
             color = LocalDictusColors.current.keyText,
             fontSize = fontSize,
             textAlign = TextAlign.Center,
+            modifier = Modifier.alpha(labelAlpha),
         )
 
         // Character preview popup (like Gboard) — shown on touch-down

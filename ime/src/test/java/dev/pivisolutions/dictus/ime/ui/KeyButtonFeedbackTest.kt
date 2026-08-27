@@ -1,6 +1,8 @@
 package dev.pivisolutions.dictus.ime.ui
 
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
@@ -68,6 +70,88 @@ class KeyButtonFeedbackTest {
     }
 
     @Test
+    fun `space tap commits once without entering trackpad`() {
+        var commits = 0
+        val activeStates = mutableListOf<Boolean>()
+        setKey(
+            key = KeyDefinition(label = "space", type = KeyType.SPACE, widthMultiplier = 4f),
+            onPress = { commits++ },
+            onTrackpadActiveChange = activeStates::add,
+        )
+
+        composeRule.onNodeWithTag(KEY_TAG).performTouchInput {
+            down(center)
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(1, commits)
+            assertTrue(activeStates.isEmpty())
+        }
+    }
+
+    @Test
+    fun `space hold enters trackpad moves cursor and does not commit space`() {
+        var commits = 0
+        val activeStates = mutableListOf<Boolean>()
+        val moves = mutableListOf<Int>()
+        setKey(
+            key = KeyDefinition(label = "space", type = KeyType.SPACE, widthMultiplier = 4f),
+            onPress = { commits++ },
+            onTrackpadActiveChange = activeStates::add,
+            onTrackpadMove = moves::add,
+        )
+
+        composeRule.onNodeWithTag(KEY_TAG).performTouchInput {
+            down(center)
+            advanceEventTime(310L)
+        }
+        composeRule.mainClock.advanceTimeBy(310L)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(KEY_TAG).performTouchInput {
+            moveTo(center + Offset(24f, 0f))
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(0, commits)
+            assertEquals(listOf(true, false), activeStates)
+            assertTrue("Horizontal movement must produce cursor steps", moves.sum() > 0)
+        }
+    }
+
+    @Test
+    fun `disposing active space gesture always exits trackpad`() {
+        val showKey = mutableStateOf(true)
+        val activeStates = mutableListOf<Boolean>()
+        composeRule.setContent {
+            DictusTheme {
+                if (showKey.value) {
+                    KeyButton(
+                        key = KeyDefinition(label = "space", type = KeyType.SPACE),
+                        isShifted = false,
+                        onPress = {},
+                        hapticsEnabled = false,
+                        onTrackpadActiveChange = activeStates::add,
+                        modifier = Modifier.testTag(KEY_TAG),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(KEY_TAG).performTouchInput {
+            down(center)
+            advanceEventTime(310L)
+        }
+        composeRule.mainClock.advanceTimeBy(310L)
+        composeRule.waitForIdle()
+        composeRule.runOnIdle { showKey.value = false }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle { assertEquals(listOf(true, false), activeStates) }
+    }
+
+    @Test
     fun `accent popup replaces character balloon during long press`() {
         setKey(
             key = KeyDefinition(label = "e"),
@@ -113,6 +197,8 @@ class KeyButtonFeedbackTest {
         key: KeyDefinition,
         accents: List<String>? = null,
         onPress: () -> Unit = {},
+        onTrackpadActiveChange: (Boolean) -> Unit = {},
+        onTrackpadMove: (Int) -> Unit = {},
     ) {
         composeRule.setContent {
             DictusTheme {
@@ -123,6 +209,8 @@ class KeyButtonFeedbackTest {
                     accentChars = accents,
                     onAccentSelected = {},
                     hapticsEnabled = false,
+                    onTrackpadActiveChange = onTrackpadActiveChange,
+                    onTrackpadMove = onTrackpadMove,
                     modifier = Modifier.testTag(KEY_TAG),
                 )
             }

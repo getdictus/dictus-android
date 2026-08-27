@@ -27,6 +27,9 @@ fun KeyRow(
     onAccentSelected: (String) -> Unit,
     hapticsEnabled: Boolean = true,
     onKeySound: (KeyType) -> Unit = {},
+    labelsVisible: Boolean = true,
+    onTrackpadActiveChange: (Boolean) -> Unit = {},
+    onTrackpadMove: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -59,6 +62,9 @@ fun KeyRow(
                 onAccentSelected = onAccentSelected,
                 hapticsEnabled = hapticsEnabled,
                 onSound = onKeySound,
+                labelsVisible = labelsVisible,
+                onTrackpadActiveChange = onTrackpadActiveChange,
+                onTrackpadMove = onTrackpadMove,
                 modifier = Modifier.weight(key.widthMultiplier),
             )
         }

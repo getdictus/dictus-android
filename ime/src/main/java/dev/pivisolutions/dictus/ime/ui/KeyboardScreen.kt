@@ -52,6 +52,7 @@ fun KeyboardScreen(
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
     hapticsEnabled: Boolean = true,
     onKeySound: (KeyType) -> Unit = {},
+    onMoveCursor: (Int) -> Unit = {},
     keyboardLayout: String = "azerty",  // NEW — AZERTY/QWERTY from DataStore
 ) {
     // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
@@ -59,6 +60,7 @@ fun KeyboardScreen(
     var currentLayer by remember(initialLayer) { mutableStateOf(initialLayer) }
     var isShifted by remember { mutableStateOf(false) }
     var isCapsLock by remember { mutableStateOf(false) }
+    var isTrackpadActive by remember { mutableStateOf(false) }
     // keyboardLayout comes from DataStore via DictusImeService.
     // remember(keyboardLayout) resets the state when the preference changes in Settings,
     // so the user sees the new layout immediately without restarting the keyboard.
@@ -111,6 +113,9 @@ fun KeyboardScreen(
                     onDeleteWord = onDeleteWordBackward,
                     hapticsEnabled = hapticsEnabled,
                     onKeySound = onKeySound,
+                    labelsVisible = !isTrackpadActive,
+                    onTrackpadActiveChange = { isTrackpadActive = it },
+                    onTrackpadMove = onMoveCursor,
                     onKeyPress = { key ->
                         handleKeyPress(
                             key = key,
