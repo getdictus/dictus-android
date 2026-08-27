@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,10 +44,14 @@ import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.PendingMicGate
+import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
+import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import kotlinx.coroutines.launch
@@ -80,6 +85,17 @@ fun RecordingScreen(
 
     val dictationState by dictationController?.state?.collectAsState()
         ?: remember { mutableStateOf(DictationState.Idle as DictationState) }
+    val engineState by dictationController?.engineState?.collectAsState()
+        ?: remember { mutableStateOf(SttEngineState.Cold as SttEngineState) }
+    val micGate = remember(dictationController) { PendingMicGate() }
+
+    fun runGateCommand(command: MicGateCommand) {
+        when (command) {
+            MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
+            MicGateCommand.START_RECORDING -> dictationController?.startRecording()
+            MicGateCommand.NONE -> Unit
+        }
+    }
 
     var transcriptionResult by remember { mutableStateOf<String?>(null) }
     var copied by remember { mutableStateOf(false) }
@@ -89,7 +105,10 @@ fun RecordingScreen(
     // Key the effect to the controller so a screen composed before service binding
     // starts recording as soon as the controller becomes available.
     LaunchedEffect(dictationController) {
-        dictationController?.startRecording()
+        if (dictationController != null) runGateCommand(micGate.request(engineState))
+    }
+    LaunchedEffect(engineState) {
+        runGateCommand(micGate.engineChanged(engineState))
     }
 
     // Processing animation driver for the transcribing state.
@@ -110,15 +129,24 @@ fun RecordingScreen(
     val hasResult = transcriptionResult != null
     val isRecording = dictationState is DictationState.Recording
     val isTranscribing = dictationState is DictationState.Transcribing
+    val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
+        engineState is SttEngineState.Failed
 
     val noResultLabel = stringResource(R.string.recording_no_result)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 32.dp),
+            .background(MaterialTheme.colorScheme.background),
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp)
+                .then(
+                    if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
+                ),
+        ) {
         // ── Back button (top-left, always visible) ──
         Box(
             modifier = Modifier
@@ -346,7 +374,7 @@ fun RecordingScreen(
                             .clickable {
                                 transcriptionResult = null
                                 copied = false
-                                dictationController?.startRecording()
+                                runGateCommand(micGate.request(engineState))
                             },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -367,7 +395,7 @@ fun RecordingScreen(
                             .clip(CircleShape)
                             .background(DictusColors.Accent)
                             .clickable {
-                                dictationController?.startRecording()
+                                runGateCommand(micGate.request(engineState))
                             },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -393,5 +421,16 @@ fun RecordingScreen(
                 fontSize = 13.sp,
             )
         }
+
+        }
+
+        ModelLoadingOverlay(
+            engineState = engineState,
+            onRetry = { runGateCommand(micGate.retry()) },
+            onCancel = {
+                micGate.cancel()
+                onBack()
+            },
+        )
     }
 }

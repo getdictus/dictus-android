@@ -106,6 +106,19 @@ internal class SttProviderSlot(
         }
     }
 
+    /** Publish an actionable failure when prewarm cannot start, without retaining a provider. */
+    suspend fun markFailed(requestedModelKey: String) {
+        mutex.withLock {
+            idleReleaseJob?.cancel()
+            idleReleaseJob = null
+            val current = provider
+            provider = null
+            modelKey = null
+            withContext(NonCancellable) { current?.release() }
+            _state.value = SttEngineState.Failed(requestedModelKey)
+        }
+    }
+
     private fun scheduleIdleReleaseLocked() {
         idleReleaseJob?.cancel()
         idleReleaseJob = scope.launch {

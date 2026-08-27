@@ -7,18 +7,29 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
 import android.view.KeyEvent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.PendingMicGate
+import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
+import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.suggestion.DictionaryEngine
 import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
@@ -71,11 +82,13 @@ class DictusImeService : LifecycleInputMethodService() {
     private var dictationController: DictationController? = null
     private var isBound = false
     private var stateCollectionJob: Job? = null
+    private var engineCollectionJob: Job? = null
     private val bindingScope = MainScope()
 
     // Local mirror of the DictationService state, observed by Compose via collectAsState().
     // This MutableStateFlow is updated by collecting the service's StateFlow after binding.
     private val _serviceState = MutableStateFlow<DictationState>(DictationState.Idle)
+    private val _engineState = MutableStateFlow<SttEngineState>(SttEngineState.Cold)
 
     // Emoji picker visibility state, hoisted here so back key can dismiss it via onKeyDown.
     // BackHandler (Compose) does not work in IME context -- back key is not dispatched through
@@ -124,6 +137,11 @@ class DictusImeService : LifecycleInputMethodService() {
                             _serviceState.value = state
                         }
                     }
+                    engineCollectionJob = bindingScope.launch {
+                        service.engineState.collect { state ->
+                            _engineState.value = state
+                        }
+                    }
                 } else {
                     Timber.w("DictationService binder does not implement DictationController")
                 }
@@ -137,7 +155,10 @@ class DictusImeService : LifecycleInputMethodService() {
             isBound = false
             stateCollectionJob?.cancel()
             stateCollectionJob = null
+            engineCollectionJob?.cancel()
+            engineCollectionJob = null
             _serviceState.value = DictationState.Idle
+            _engineState.value = SttEngineState.Cold
             Timber.d("Unbound from DictationService")
         }
     }
@@ -157,6 +178,7 @@ class DictusImeService : LifecycleInputMethodService() {
 
     override fun onDestroy() {
         stateCollectionJob?.cancel()
+        engineCollectionJob?.cancel()
         if (isBound) {
             unbindService(serviceConnection)
             isBound = false
@@ -264,9 +286,39 @@ class DictusImeService : LifecycleInputMethodService() {
     @Composable
     override fun KeyboardContent() {
         val dictationState by _serviceState.collectAsState()
+        val engineState by _engineState.collectAsState()
+        val micGate = remember { PendingMicGate() }
+        var showFailureOverlay by remember { mutableStateOf(true) }
         val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
+
+        fun runGateCommand(command: MicGateCommand) {
+            when (command) {
+                MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
+                MicGateCommand.START_RECORDING -> dictationController?.startRecording()
+                MicGateCommand.NONE -> Unit
+            }
+        }
+        LaunchedEffect(engineState) {
+            if (engineState !is SttEngineState.Failed) showFailureOverlay = true
+            runGateCommand(micGate.engineChanged(engineState))
+        }
+
+        val gatedMicTap = {
+            if (dictationState is DictationState.Idle) {
+                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED
+                ) {
+                    if (engineState is SttEngineState.Failed) showFailureOverlay = true
+                    runGateCommand(micGate.request(engineState))
+                } else {
+                    Timber.w("RECORD_AUDIO permission not granted")
+                }
+            } else {
+                handleMicTap()
+            }
+        }
 
         // Read theme preference from DataStore and map to ThemeMode.
         // The entryPoint provides DataStore access via Hilt SingletonComponent.
@@ -306,6 +358,17 @@ class DictusImeService : LifecycleInputMethodService() {
             imm.showInputMethodPicker()
         }
 
+        val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
+            (engineState is SttEngineState.Failed && showFailureOverlay)
+
+        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
+                ),
+        ) {
         when (dictationState) {
             is DictationState.Idle -> {
                 KeyboardScreen(
@@ -313,7 +376,8 @@ class DictusImeService : LifecycleInputMethodService() {
                     onDeleteBackward = { deleteBackward() },
                     onSendReturn = { sendReturnKey() },
                     onSwitchKeyboard = switchKeyboard,
-                    onMicTap = { handleMicTap() },
+                    onMicTap = gatedMicTap,
+                    isMicEnabled = engineState !is SttEngineState.Loading,
                     isEmojiPickerOpen = isEmojiPickerOpen,
                     onEmojiToggle = { _isEmojiPickerOpen.value = !_isEmojiPickerOpen.value },
                     onEmojiSelected = { emoji -> commitText(emoji) },
@@ -399,7 +463,7 @@ class DictusImeService : LifecycleInputMethodService() {
                             }
                         },
                         onSwitchKeyboard = switchKeyboard,
-                        onMicTap = { handleMicTap() },
+                        onMicTap = gatedMicTap,
                     )
                 }
             }
@@ -410,6 +474,21 @@ class DictusImeService : LifecycleInputMethodService() {
                     TranscribingScreen()
                 }
             }
+        }
+        }
+            ModelLoadingOverlay(
+                engineState = if (engineState is SttEngineState.Failed && !showFailureOverlay) {
+                    SttEngineState.Cold
+                } else {
+                    engineState
+                },
+                onRetry = { runGateCommand(micGate.retry()) },
+                onCancel = {
+                    micGate.cancel()
+                    // Keep the service state authoritative while hiding this local error surface.
+                    showFailureOverlay = false
+                },
+            )
         }
     }
 
