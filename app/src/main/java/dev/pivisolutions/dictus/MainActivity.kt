@@ -201,6 +201,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows Android's system input-method picker after Dictus has been enabled. */
     private fun showKeyboardPicker() {
+        Timber.d("Requesting system input method picker")
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showInputMethodPicker()
     }
