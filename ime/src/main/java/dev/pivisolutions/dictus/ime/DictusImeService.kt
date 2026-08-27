@@ -15,6 +15,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
@@ -384,7 +385,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                     val text = controller.confirmAndTranscribe()
                                     if (text != null) {
                                         commitText(text)
-                                        Timber.d("Transcribed text inserted: '%s'", text)
+                                        Timber.d(PrivacySafeLog.transcriptionInserted(text))
                                         // Clear suggestions after voice transcription so the bar
                                         // does not show stale suggestions from the last typed word.
                                         // Suggestions resume when user types on keyboard.

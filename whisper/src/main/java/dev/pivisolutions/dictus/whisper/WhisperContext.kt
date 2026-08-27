@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.whisper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
+import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import timber.log.Timber
 import java.util.concurrent.Executors
 
@@ -50,7 +51,7 @@ class WhisperContext private constructor(private var ptr: Long) {
             }
 
             val durationMs = System.currentTimeMillis() - startMs
-            Timber.d("Transcription complete: %d segments, %d ms, result='%s'", textCount, durationMs, result)
+            Timber.d(PrivacySafeLog.transcriptionComplete(textCount, durationMs, result))
             return@withContext result
         }
 
