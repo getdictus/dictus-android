@@ -80,6 +80,7 @@ fun SettingsScreen(
     onNavigateToSoundSettings: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
+    val keyboardLanguage by viewModel.keyboardLanguage.collectAsState()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
@@ -93,6 +94,7 @@ fun SettingsScreen(
     // Bottom sheet visibility state
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showKeyboardPicker by remember { mutableStateOf(false) }
+    var showKeyboardLanguagePicker by remember { mutableStateOf(false) }
     var showKeyboardModePicker by remember { mutableStateOf(false) }
     var showThemePicker by remember { mutableStateOf(false) }
     var showUiLanguagePicker by remember { mutableStateOf(false) }
@@ -120,6 +122,13 @@ fun SettingsScreen(
         // ---------- SECTION: CLAVIER ----------
         SectionHeader(text = stringResource(R.string.settings_section_keyboard))
         SettingsCard {
+            SettingPickerRow(
+                label = stringResource(R.string.settings_keyboard_language),
+                value = keyboardLanguageOptions()
+                    .first { it.first == keyboardLanguage }.second,
+                onClick = { showKeyboardLanguagePicker = true },
+            )
+            SettingDivider()
             SettingPickerRow(
                 label = stringResource(R.string.settings_keyboard_layout),
                 value = keyboardLayout.uppercase(),
@@ -271,6 +280,16 @@ fun SettingsScreen(
             selected = language,
             onSelect = { viewModel.setLanguage(it) },
             onDismiss = { showLanguagePicker = false },
+        )
+    }
+
+    if (showKeyboardLanguagePicker) {
+        PickerBottomSheet(
+            title = stringResource(R.string.picker_keyboard_language_title),
+            options = keyboardLanguageOptions(),
+            selected = keyboardLanguage,
+            onSelect = { viewModel.setKeyboardLanguage(it) },
+            onDismiss = { showKeyboardLanguagePicker = false },
         )
     }
 

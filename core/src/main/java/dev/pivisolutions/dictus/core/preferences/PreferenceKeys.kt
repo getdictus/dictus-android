@@ -19,6 +19,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 object PreferenceKeys {
     // --- Keyboard settings (Phase 1-2) ---
     val KEYBOARD_LAYOUT = stringPreferencesKey("keyboard_layout")
+    /** Keyboard correction language. Deliberately independent from ASR language. */
+    val KEYBOARD_LANGUAGE = stringPreferencesKey("keyboard_language")
 
     // --- Model settings (Phase 3) ---
     val ACTIVE_MODEL = stringPreferencesKey("active_model")

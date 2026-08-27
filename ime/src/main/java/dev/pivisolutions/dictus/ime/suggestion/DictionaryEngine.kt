@@ -4,12 +4,21 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 /**
  * Production SuggestionEngine backed by AOSP FR+EN dictionaries loaded from APK assets.
@@ -30,35 +39,62 @@ class DictionaryEngine(
     private val coroutineScope: CoroutineScope,
     private val assetName: String? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val dictionaryLoader: suspend (String) -> List<String> = { name ->
+        context.assets.open(name).bufferedReader().use { it.readLines() }
+    },
 ) : SuggestionEngine {
 
-    // Prefix index: first char of strippedLower → entries sorted by frequency desc.
-    // Reduces scan from 50k to ~2k per keystroke.
-    private var prefixIndex: Map<Char, List<WordEntry>> = emptyMap()
+    /** Language/profile and its complete index are published as one immutable value. */
+    class Activation internal constructor(
+        val language: SupportedLanguage,
+        val profile: LanguageProfile,
+        internal val prefixIndex: Map<Char, List<WordEntry>>,
+    )
 
-    private val _isReady = MutableStateFlow(false)
+    private val _activation = MutableStateFlow<Activation?>(null)
+    val activation: StateFlow<Activation?> = _activation.asStateFlow()
 
     val personalDictionary = PersonalDictionary(dataStore, coroutineScope)
 
     private val COMBINING_DIACRITICALS = Regex("\\p{InCombiningDiacriticalMarks}+")
 
     init {
-        coroutineScope.launch(ioDispatcher) {
-            val name = assetName ?: run {
-                val lang = dataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "fr"
-                if (lang == "en") "dict_en.txt" else "dict_fr.txt"
+        coroutineScope.launch {
+            dataStore.data
+                .map { SupportedLanguage.fromCodeOrDefault(it[PreferenceKeys.KEYBOARD_LANGUAGE]) }
+                .distinctUntilChanged()
+                .collectLatest { language ->
+                    try {
+                        val nextActivation = withContext(ioDispatcher) {
+                            val lines = dictionaryLoader(
+                                assetName ?: language.profile.dictionaryAssetName,
+                            )
+                            val entries = lines.mapNotNull(::parseLine)
+                                .sortedByDescending { it.frequency }
+                            // An empty or wholly malformed file is not a complete dictionary.
+                            // Retain the prior activation just as we do for an I/O failure.
+                            if (entries.isEmpty()) return@withContext null
+                            val index = entries.groupBy { entry ->
+                                entry.strippedLower.firstOrNull() ?: ' '
+                            }
+                            Activation(language, language.profile, index)
+                        }
+                        // Publication is serialized in the collector context. collectLatest cancels
+                        // a superseded load before it can return from withContext and publish.
+                        _activation.value = nextActivation ?: return@collectLatest
+                        Timber.d(
+                            "Keyboard dictionary activated: language=%s, entries=%d",
+                            language.code,
+                            nextActivation.prefixIndex.values.sumOf { it.size },
+                        )
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        // Keep the last complete dictionary. Do not log dictionary/query content.
+                        Timber.w(error, "Keyboard dictionary activation failed: language=%s", language.code)
+                    }
+                }
             }
-            val entries = context.assets.open(name).bufferedReader().useLines { lines ->
-                lines.mapNotNull { parseLine(it) }
-                    .sortedByDescending { it.frequency }
-                    .toList()
-            }
-            // Build prefix index grouped by first character of strippedLower
-            prefixIndex = entries.groupBy { entry ->
-                entry.strippedLower.firstOrNull() ?: ' '
-            }
-            _isReady.value = true
-        }
     }
 
     /**
@@ -68,14 +104,24 @@ class DictionaryEngine(
      * With prefix index + pre-computed strippedLower, this is ~0.1ms for 50k words.
      */
     override fun getSuggestions(input: String, maxResults: Int): List<String> {
-        if (input.isBlank() || !_isReady.value) return emptyList()
+        return getSuggestions(input, maxResults, _activation.value)
+    }
+
+    /** Query a caller-owned activation so dictionary/profile/layout can advance atomically. */
+    internal fun getSuggestions(
+        input: String,
+        maxResults: Int = 3,
+        activation: Activation?,
+    ): List<String> {
+        val live = activation
+        if (input.isBlank() || live == null) return emptyList()
         val lowerInput = input.lowercase()
         val strippedInput = lowerInput.stripAccents()
         val firstChar = strippedInput.firstOrNull() ?: return emptyList()
         val learned = personalDictionary.learnedWords
 
         // Look up only dictionary words sharing the same first character
-        val candidates = prefixIndex[firstChar] ?: emptyList()
+        val candidates = live.prefixIndex[firstChar] ?: emptyList()
 
         // Two-pass: learned words first, then non-learned. Both groups are already
         // sorted by frequency desc (from load time). This avoids re-sorting.
