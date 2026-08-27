@@ -30,6 +30,8 @@ import timber.log.Timber
 
 /** Narrow native handle contract. Unit tests inject this and never initialize JNI. */
 interface NativeTrieHandle : Closeable {
+    fun wordExists(word: String): Boolean = false
+
     fun complete(prefix: String, maxResults: Int): List<String>
 
     fun correct(word: String, maxEditDistance: Float = 2f, maxResults: Int): List<String>
@@ -46,6 +48,8 @@ class AndroidNativeTrieOpener(private val context: Context) : NativeTrieOpener {
         NativeTrieHandleAdapter(NativeTrie.open(context, assetName, layout))
 
     private class NativeTrieHandleAdapter(private val trie: NativeTrie) : NativeTrieHandle {
+        override fun wordExists(word: String): Boolean = trie.wordExists(word)
+
         override fun complete(prefix: String, maxResults: Int): List<String> =
             trie.complete(prefix, maxResults)
 
@@ -72,7 +76,13 @@ class NativeTrieSuggestionEngine(
     private val opener: NativeTrieOpener,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : SuggestionEngine, Closeable {
-    data class SuggestionResult(val input: String, val suggestions: List<String>)
+    data class SuggestionResult(
+        val requestId: Long,
+        val input: String,
+        val isKnownWord: Boolean,
+        val primaryCorrection: String?,
+        val suggestions: List<String>,
+    )
     class Activation internal constructor(
         val language: SupportedLanguage,
         val profile: LanguageProfile,
@@ -94,7 +104,9 @@ class NativeTrieSuggestionEngine(
     private val lock = Any()
     private val _activation = MutableStateFlow<Activation?>(null)
     val activation: StateFlow<Activation?> = _activation.asStateFlow()
-    private val _suggestionResults = MutableStateFlow(SuggestionResult("", emptyList()))
+    private val _suggestionResults = MutableStateFlow(
+        SuggestionResult(0L, "", isKnownWord = false, primaryCorrection = null, emptyList()),
+    )
     val suggestionResults: StateFlow<SuggestionResult> = _suggestionResults.asStateFlow()
 
     val personalDictionary = PersonalDictionary(dataStore, coroutineScope)
@@ -120,12 +132,11 @@ class NativeTrieSuggestionEngine(
                 if (!current) continue
 
                 if (request.input.isBlank() || request.maxResults <= 0) {
-                    publishIfCurrent(request, emptyList())
+                    publishIfCurrent(request, QueryResult(false, null, emptyList()))
                     continue
                 }
 
-                val suggestions = getSuggestions(request.input, request.maxResults)
-                publishIfCurrent(request, suggestions)
+                publishIfCurrent(request, query(request.input, request.maxResults))
             }
         }
         preferenceJob = coroutineScope.launch {
@@ -202,8 +213,17 @@ class NativeTrieSuggestionEngine(
         }
     }
 
-    override fun getSuggestions(input: String, maxResults: Int): List<String> {
-        if (input.isBlank() || maxResults <= 0) return emptyList()
+    override fun getSuggestions(input: String, maxResults: Int): List<String> =
+        query(input, maxResults).suggestions
+
+    private data class QueryResult(
+        val isKnownWord: Boolean,
+        val primaryCorrection: String?,
+        val suggestions: List<String>,
+    )
+
+    private fun query(input: String, maxResults: Int): QueryResult {
+        if (input.isBlank() || maxResults <= 0) return QueryResult(false, null, emptyList())
         val candidateLimit = maxResults
             .coerceIn(1, MAX_NATIVE_RESULTS / CANDIDATE_MULTIPLIER) * CANDIDATE_MULTIPLIER
         val live = synchronized(lock) {
@@ -211,21 +231,29 @@ class NativeTrieSuggestionEngine(
             if (live != null) inFlightQueries++
             live
         }
-        val nativeCandidates = if (live == null) {
-            emptyList()
+        val nativeQuery = if (live == null) {
+            Triple(false, emptyList(), emptyList())
         } else {
             try {
-                live.handle.complete(input, candidateLimit) +
-                    live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit)
+                Triple(
+                    live.handle.wordExists(input),
+                    live.handle.complete(input, candidateLimit),
+                    live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit),
+                )
             } finally {
                 releaseQuery()
             }
         }
+        val (isKnownWord, completions, corrections) = nativeQuery
+        val nativeCandidates = completions + corrections
         if (nativeCandidates.isEmpty() && personalDictionary.learnedWords.value.isEmpty()) {
-            return emptyList()
+            return QueryResult(isKnownWord, null, emptyList())
         }
 
         val normalizedInput = input.canonicalLookupKey()
+        val primaryCorrection = corrections.firstOrNull {
+            it.canonicalLookupKey() != normalizedInput
+        }
         val prefixInput = normalizedInput.stripAccents()
         val learned = personalDictionary.learnedWords.value
         val learnedKeys = learned.mapTo(mutableSetOf()) { it.canonicalLookupKey() }
@@ -244,26 +272,37 @@ class NativeTrieSuggestionEngine(
             if (normalized in learnedKeys) learnedNative += word else normalNative += word
         }
 
-        return (learnedPrefixWords + learnedNative + normalNative).take(maxResults)
+        return QueryResult(
+            isKnownWord = isKnownWord,
+            primaryCorrection = primaryCorrection,
+            suggestions = (learnedPrefixWords + learnedNative + normalNative).take(maxResults),
+        )
     }
 
     /**
      * Conflates rapid input into a single latest-wins worker. At most the currently executing
      * native query can become stale; queued stale requests are discarded before entering JNI.
      */
-    fun requestSuggestions(input: String, maxResults: Int = 3) {
-        synchronized(lock) {
-            if (closed) return
+    fun requestSuggestions(input: String, maxResults: Int = 3): Long? {
+        return synchronized(lock) {
+            if (closed) return@synchronized null
             val request = SuggestionRequest(++queryGeneration, input, maxResults)
             // Sending under the generation lock preserves ordering even for concurrent callers.
             check(queryRequests.trySend(request).isSuccess)
+            request.generation
         }
     }
 
-    private fun publishIfCurrent(request: SuggestionRequest, suggestions: List<String>) {
+    private fun publishIfCurrent(request: SuggestionRequest, result: QueryResult) {
         synchronized(lock) {
             if (!closed && request.generation == queryGeneration) {
-                _suggestionResults.value = SuggestionResult(request.input, suggestions)
+                _suggestionResults.value = SuggestionResult(
+                    requestId = request.generation,
+                    input = request.input,
+                    isKnownWord = result.isKnownWord,
+                    primaryCorrection = result.primaryCorrection,
+                    suggestions = result.suggestions,
+                )
             }
         }
     }

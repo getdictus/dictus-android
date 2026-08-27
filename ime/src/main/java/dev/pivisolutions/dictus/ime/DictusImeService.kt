@@ -138,6 +138,8 @@ class DictusImeService : LifecycleInputMethodService() {
     )
     private val _currentWord = MutableStateFlow("")
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
+    private var latestSuggestionRequestId: Long? = null
+    private var latestSuggestionResult: NativeTrieSuggestionEngine.SuggestionResult? = null
 
     // Waveform animation driver: smooths raw microphone energy for organic bar movement.
     // smoothingFactor=0.3 (fast rise) and decayFactor=0.85 (slow fall) match iOS BrandWaveformDriver.
@@ -200,13 +202,23 @@ class DictusImeService : LifecycleInputMethodService() {
                 .map { it[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true }
                 .collect { enabled ->
                     _suggestionsEnabled.value = enabled
-                    if (enabled) dictionaryEngine.requestSuggestions(_currentWord.value)
-                    else _suggestions.value = emptyList()
+                    if (enabled) {
+                        requestSuggestionsForCurrentWord()
+                    } else {
+                        latestSuggestionRequestId = null
+                        latestSuggestionResult = null
+                        _suggestions.value = emptyList()
+                    }
                 }
         }
         bindingScope.launch {
             dictionaryEngine.suggestionResults.collect { result ->
-                if (_suggestionsEnabled.value && result.input == _currentWord.value) {
+                if (
+                    _suggestionsEnabled.value &&
+                    result.requestId == latestSuggestionRequestId &&
+                    result.input == _currentWord.value
+                ) {
+                    latestSuggestionResult = result
                     _suggestions.value = result.suggestions
                 }
             }
@@ -217,7 +229,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 _activeKeyboardState.value = activeState
                 refreshFrenchAdaptiveKeyState()
                 if (_suggestionsEnabled.value) {
-                    dictionaryEngine.requestSuggestions(_currentWord.value)
+                    requestSuggestionsForCurrentWord()
                 }
             }
         }
@@ -276,10 +288,17 @@ class DictusImeService : LifecycleInputMethodService() {
 
         _currentWord.value = currentWord
         if (_suggestionsEnabled.value) {
-            dictionaryEngine.requestSuggestions(currentWord)
+            requestSuggestionsForCurrentWord()
         } else {
             _suggestions.value = emptyList()
         }
+    }
+
+    /** Starts a request-identified lookup and immediately invalidates the previous snapshot. */
+    private fun requestSuggestionsForCurrentWord() {
+        latestSuggestionResult = null
+        _suggestions.value = emptyList()
+        latestSuggestionRequestId = dictionaryEngine.requestSuggestions(_currentWord.value)
     }
 
     override fun onStartInput(

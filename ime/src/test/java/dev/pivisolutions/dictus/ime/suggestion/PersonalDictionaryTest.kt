@@ -135,6 +135,52 @@ class PersonalDictionaryTest {
     }
 
     @Test
+    fun `learnWord is immediately visible before persistence completes`() = runTest(testDispatcher) {
+        val dict = PersonalDictionary(dataStore, testScope)
+        advanceUntilIdle()
+
+        dict.learnWord("  ÉCOLE  ")
+
+        assertTrue(
+            "Explicit rejection learning must protect the word synchronously",
+            dict.isLearned("école"),
+        )
+        assertTrue(dict.learnedWords.value.contains("école"))
+        advanceUntilIdle()
+        assertTrue(
+            dataStore.data.first()[PreferenceKeys.PERSONAL_DICTIONARY]?.contains("école") == true,
+        )
+    }
+
+    @Test
+    fun `learnWord is idempotent and survives recreation`() = runTest(testDispatcher) {
+        val dict = PersonalDictionary(dataStore, testScope)
+        advanceUntilIdle()
+
+        dict.learnWord("Dictus")
+        dict.learnWord("dictus")
+        advanceUntilIdle()
+
+        val recreated = PersonalDictionary(dataStore, testScope)
+        advanceUntilIdle()
+        assertTrue(recreated.isLearned("DICTUS"))
+        assertTrue(
+            dataStore.data.first()[PreferenceKeys.PERSONAL_DICTIONARY] == setOf("dictus"),
+        )
+    }
+
+    @Test
+    fun `learnWord ignores blank input`() = runTest(testDispatcher) {
+        val dict = PersonalDictionary(dataStore, testScope)
+        advanceUntilIdle()
+
+        dict.learnWord("   ")
+        advanceUntilIdle()
+
+        assertTrue(dict.learnedWords.value.isEmpty())
+    }
+
+    @Test
     fun `DataStore collector safely publishes learned words across dispatchers`() {
         val storeExecutor = Executors.newSingleThreadExecutor()
         val collectorExecutor = Executors.newSingleThreadExecutor()
