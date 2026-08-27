@@ -34,9 +34,10 @@ class OnboardingTestRecordingGateTest {
             }
         }
 
+        composeRule.runOnIdle { assertEquals(1, controller.prewarmCalls) }
         composeRule.onNodeWithContentDescription("Record").performClick()
         composeRule.runOnIdle {
-            assertEquals(1, controller.prewarmCalls)
+            assertEquals(2, controller.prewarmCalls)
             assertEquals(0, controller.startCalls)
         }
 
@@ -50,10 +51,49 @@ class OnboardingTestRecordingGateTest {
         composeRule.runOnIdle { assertEquals(1, controller.startCalls) }
     }
 
-    private class FakeController : DictationController {
+    @Test
+    fun `entering test recording retries stale failure without starting microphone`() {
+        val controller = FakeController(
+            initialEngineState = SttEngineState.Failed("No model available"),
+        )
+
+        composeRule.setContent {
+            DictusTheme {
+                OnboardingTestRecordingScreen(
+                    dictationController = controller,
+                    onNext = {},
+                )
+            }
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(1, controller.prewarmCalls)
+            assertEquals(0, controller.startCalls)
+        }
+
+        composeRule.onNodeWithText("Speech recognition could not start").assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").assertIsDisplayed()
+        composeRule.onNodeWithText("Retry").performClick()
+        composeRule.runOnIdle {
+            assertEquals(2, controller.prewarmCalls)
+            assertEquals(0, controller.startCalls)
+        }
+
+        controller.engine.value = SttEngineState.Loading("small-q5_1")
+        composeRule.onNodeWithText("Preparing speech recognition").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, controller.startCalls) }
+
+        controller.engine.value = SttEngineState.Ready("small-q5_1")
+        composeRule.onNodeWithContentDescription("Record").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, controller.startCalls) }
+    }
+
+    private class FakeController(
+        initialEngineState: SttEngineState = SttEngineState.Cold,
+    ) : DictationController {
         private val dictation = MutableStateFlow<DictationState>(DictationState.Idle)
         override val state: StateFlow<DictationState> = dictation
-        val engine = MutableStateFlow<SttEngineState>(SttEngineState.Cold)
+        val engine = MutableStateFlow(initialEngineState)
         override val engineState: StateFlow<SttEngineState> = engine
 
         var prewarmCalls = 0
