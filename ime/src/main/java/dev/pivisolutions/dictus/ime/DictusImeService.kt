@@ -36,6 +36,8 @@ import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
+import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
+import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -374,6 +376,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 KeyboardScreen(
                     onCommitText = { text -> commitText(text) },
                     onDeleteBackward = { deleteBackward() },
+                    onDeleteWordBackward = { deleteWordBackward() },
                     onSendReturn = { sendReturnKey() },
                     onSwitchKeyboard = switchKeyboard,
                     onMicTap = gatedMicTap,
@@ -503,7 +506,13 @@ class DictusImeService : LifecycleInputMethodService() {
      * Deletes one character before the cursor.
      */
     fun deleteBackward() {
-        currentInputConnection?.deleteSurroundingText(1, 0)
+        currentInputConnection?.let(::deletePrecedingCodePoint)
+    }
+
+    /** Deletes the preceding token during accelerated backspace repetition. */
+    fun deleteWordBackward() {
+        val inputConnection = currentInputConnection ?: return
+        deletePrecedingWord(inputConnection)
     }
 
     /**
