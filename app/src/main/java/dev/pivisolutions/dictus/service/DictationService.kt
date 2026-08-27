@@ -39,7 +39,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import dev.pivisolutions.dictus.asr.ParakeetProvider
-import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelManager
@@ -97,7 +96,7 @@ class DictationService : Service(), DictationController {
         ).dataStore()
     }
 
-    private var currentProvider: SttProvider? = null
+    private val providerSlot = SttProviderSlot()
     private val modelManager by lazy { ModelManager(applicationContext) }
     private val modelDownloader by lazy { ModelDownloader(modelManager) }
 
@@ -116,6 +115,7 @@ class DictationService : Service(), DictationController {
     // Coroutine scope tied to service lifecycle.
     // SupervisorJob ensures one child failure doesn't cancel others.
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private var audioCaptureManager: AudioCaptureManager? = null
     private var timerJob: Job? = null
@@ -335,23 +335,16 @@ class DictationService : Service(), DictationController {
                 return null
             }
 
-            // 4. Get or initialize the correct provider (handles engine switching)
-            val provider = getOrInitProvider(activeModelKey, modelPath)
-            if (provider == null) {
-                Timber.e("Failed to get STT provider for model '%s'", activeModelKey)
-                _state.value = DictationState.Idle
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-                return null
-            }
-
-            // 5. Transcribe with timeout
-            val rawText = withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
-                provider.transcribe(samples, whisperLanguage ?: "fr")
-            }
+            // 4. Initialize and use the selected provider/model under one ownership lock.
+            val rawText = transcribeWithProvider(
+                modelKey = activeModelKey,
+                modelPath = modelPath,
+                samples = samples,
+                language = whisperLanguage ?: "fr",
+            )
 
             if (rawText == null) {
-                Timber.e("Transcription timed out after %d ms", TRANSCRIPTION_TIMEOUT_MS)
+                Timber.e("Provider initialization failed or transcription timed out")
                 _state.value = DictationState.Idle
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -384,36 +377,33 @@ class DictationService : Service(), DictationController {
      * Strict single-engine policy: if the provider type changes, release() the current
      * one before initialize() on the new one — prevents OOM from dual engine loading.
      */
-    private suspend fun getOrInitProvider(modelKey: String, modelPath: String): SttProvider? {
+    private suspend fun transcribeWithProvider(
+        modelKey: String,
+        modelPath: String,
+        samples: FloatArray,
+        language: String,
+    ): String? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
         val neededProviderClass = when (info.provider) {
             AiProvider.WHISPER -> WhisperProvider::class
             AiProvider.PARAKEET -> ParakeetProvider::class
         }
 
-        val current = currentProvider
-        // If provider type changed, release current before creating new
-        if (current != null && current::class != neededProviderClass) {
-            Timber.d("Switching provider: %s -> %s", current.providerId, info.provider)
-            current.release()
-            currentProvider = null
+        return providerSlot.withProvider(
+            requestedModelKey = modelKey,
+            modelPath = modelPath,
+            requiredProviderClass = neededProviderClass,
+            createProvider = {
+                when (info.provider) {
+                    AiProvider.WHISPER -> WhisperProvider()
+                    AiProvider.PARAKEET -> ParakeetProvider()
+                }
+            },
+        ) { provider ->
+            withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
+                provider.transcribe(samples, language)
+            }
         }
-
-        // Reuse existing provider if same type and ready
-        if (currentProvider?.isReady == true) return currentProvider
-
-        // Create and initialize new provider
-        val newProvider = when (info.provider) {
-            AiProvider.WHISPER -> WhisperProvider()
-            AiProvider.PARAKEET -> ParakeetProvider()
-        }
-        val initialized = newProvider.initialize(modelPath)
-        if (!initialized) {
-            Timber.e("Failed to initialize %s provider", info.provider)
-            return null
-        }
-        currentProvider = newProvider
-        return newProvider
     }
 
     /**
@@ -516,11 +506,15 @@ class DictationService : Service(), DictationController {
 
     override fun onDestroy() {
         super.onDestroy()
-        serviceScope.launch {
-            currentProvider?.release()
-        }
         if (::soundPlayer.isInitialized) soundPlayer.release()
         serviceScope.cancel()
+        cleanupScope.launch {
+            try {
+                providerSlot.release()
+            } finally {
+                cleanupScope.cancel()
+            }
+        }
         Timber.d("DictationService destroyed")
     }
 }
