@@ -12,6 +12,7 @@ import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
 import dev.pivisolutions.dictus.ime.model.KeyType
+import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 
 /**
  * Renders the keyboard rows for the currently active layer.
@@ -35,6 +36,8 @@ fun KeyboardView(
     labelsVisible: Boolean = true,
     onTrackpadActiveChange: (Boolean) -> Unit = {},
     onTrackpadMove: (Int) -> Unit = {},
+    frenchAdaptiveKeyState: FrenchAdaptiveKey.State = FrenchAdaptiveKey.DEFAULT,
+    onFrenchAdaptiveVariant: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val rows = when (layer) {
@@ -62,6 +65,8 @@ fun KeyboardView(
                 labelsVisible = labelsVisible,
                 onTrackpadActiveChange = onTrackpadActiveChange,
                 onTrackpadMove = onTrackpadMove,
+                frenchAdaptiveKeyState = frenchAdaptiveKeyState,
+                onFrenchAdaptiveVariant = onFrenchAdaptiveVariant,
             )
         }
     }

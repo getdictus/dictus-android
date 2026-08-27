@@ -282,7 +282,7 @@ fun KeyButton(
             }
         }
     } else {
-        Modifier.pointerInput(Unit) {
+        Modifier.pointerInput(key.type, accentChars) {
             coroutineScope {
                 while (isActive) {
                     awaitPointerEventScope {
@@ -290,7 +290,9 @@ fun KeyButton(
                         val down = awaitPointerEvent()
                         if (down.type != PointerEventType.Press) return@awaitPointerEventScope
 
-                        val supportsAccentPopup = key.type == KeyType.CHARACTER && !accentChars.isNullOrEmpty()
+                        val supportsAccentPopup =
+                            (key.type == KeyType.CHARACTER || key.type == KeyType.ACCENT_ADAPTIVE) &&
+                                !accentChars.isNullOrEmpty()
                         val downPosition = down.changes.firstOrNull()?.position ?: Offset.Zero
                         var accentTrackingActive = false
                         var released = false

@@ -41,6 +41,10 @@ import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
 import dev.pivisolutions.dictus.ime.input.moveCursorBy
+import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveVariant
+import dev.pivisolutions.dictus.ime.input.readFrenchAdaptiveKeyState
+import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -103,6 +107,10 @@ class DictusImeService : LifecycleInputMethodService() {
     // BackHandler (Compose) does not work in IME context -- back key is not dispatched through
     // the Compose back handler stack in an InputMethodService.
     private val _isEmojiPickerOpen = MutableStateFlow(false)
+
+    // Transient editor-derived state only. Context text is never logged or persisted.
+    private val _frenchAdaptiveKeyState = MutableStateFlow(FrenchAdaptiveKey.DEFAULT)
+    private var isEditorSelectionCollapsed = false
 
     // Whether the built-in suggestion bar is enabled. Observed from DataStore
     // so the user can toggle it in settings without restarting the IME.
@@ -229,6 +237,8 @@ class DictusImeService : LifecycleInputMethodService() {
             newSelStart, newSelEnd,
             candidatesStart, candidatesEnd,
         )
+        isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
+        refreshFrenchAdaptiveKeyState()
         val ic = currentInputConnection ?: return
         val beforeCursor = ic.getTextBeforeCursor(50, 0)?.toString() ?: ""
         val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
@@ -239,6 +249,33 @@ class DictusImeService : LifecycleInputMethodService() {
         } else {
             emptyList()
         }
+    }
+
+    override fun onStartInput(
+        attribute: android.view.inputmethod.EditorInfo?,
+        restarting: Boolean,
+    ) {
+        super.onStartInput(attribute, restarting)
+        // EditorInfo supplies the initial selection before onUpdateSelection starts flowing.
+        isEditorSelectionCollapsed = attribute != null &&
+            attribute.initialSelStart >= 0 &&
+            attribute.initialSelStart == attribute.initialSelEnd
+        _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
+        refreshFrenchAdaptiveKeyState()
+    }
+
+    override fun onStartInputView(
+        info: android.view.inputmethod.EditorInfo?,
+        restarting: Boolean,
+    ) {
+        super.onStartInputView(info, restarting)
+        refreshFrenchAdaptiveKeyState()
+    }
+
+    override fun onFinishInput() {
+        isEditorSelectionCollapsed = false
+        _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
+        super.onFinishInput()
     }
 
     /**
@@ -301,6 +338,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
+        val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
 
         fun runGateCommand(command: MicGateCommand) {
             when (command) {
@@ -407,6 +445,7 @@ class DictusImeService : LifecycleInputMethodService() {
                             ic.deleteSurroundingText(word.length, 0)
                         }
                         ic.commitText("$suggestion ", 1)
+                        refreshFrenchAdaptiveKeyState()
                         // Count suggestion selection toward personal dictionary learning (2 taps = learned).
                         // Safe cast: at runtime suggestionEngine is always DictionaryEngine, but the safe
                         // cast avoids a hard coupling on the declared SuggestionEngine interface type.
@@ -422,6 +461,7 @@ class DictusImeService : LifecycleInputMethodService() {
                             // Count the committed raw word toward personal dictionary learning.
                             (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(word)
                             ic.commitText(" ", 1)
+                            refreshFrenchAdaptiveKeyState()
                             _suggestions.value = emptyList()
                             _currentWord.value = ""
                         }
@@ -434,8 +474,12 @@ class DictusImeService : LifecycleInputMethodService() {
                     },
                     onMoveCursor = { delta ->
                         currentInputConnection?.let { moveCursorBy(it, delta) }
+                        refreshFrenchAdaptiveKeyState()
                     },
                     keyboardLayout = keyboardLayout,
+                    frenchAdaptiveKeyState = frenchAdaptiveKeyState,
+                    onFrenchAdaptiveKey = { handleFrenchAdaptiveKey() },
+                    onFrenchAdaptiveVariant = { variant -> handleFrenchAdaptiveVariant(variant) },
                 )
             }
             is DictationState.Recording -> {
@@ -519,6 +563,7 @@ class DictusImeService : LifecycleInputMethodService() {
      */
     fun commitText(text: String) {
         currentInputConnection?.commitText(text, 1)
+        refreshFrenchAdaptiveKeyState()
     }
 
     /**
@@ -526,12 +571,14 @@ class DictusImeService : LifecycleInputMethodService() {
      */
     fun deleteBackward() {
         currentInputConnection?.let(::deletePrecedingCodePoint)
+        refreshFrenchAdaptiveKeyState()
     }
 
     /** Deletes the preceding token during accelerated backspace repetition. */
     fun deleteWordBackward() {
         val inputConnection = currentInputConnection ?: return
         deletePrecedingWord(inputConnection)
+        refreshFrenchAdaptiveKeyState()
     }
 
     /**
@@ -544,5 +591,34 @@ class DictusImeService : LifecycleInputMethodService() {
         currentInputConnection?.sendKeyEvent(
             android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER),
         )
+        refreshFrenchAdaptiveKeyState()
+    }
+
+    private fun refreshFrenchAdaptiveKeyState() {
+        _frenchAdaptiveKeyState.value = readFrenchAdaptiveKeyState(
+            currentInputConnection,
+            selectionCollapsed = isEditorSelectionCollapsed,
+        )
+    }
+
+    private fun handleFrenchAdaptiveKey() {
+        val inputConnection = currentInputConnection ?: return
+        val state = readFrenchAdaptiveKeyState(inputConnection, isEditorSelectionCollapsed)
+        _frenchAdaptiveKeyState.value = state
+        applyFrenchAdaptiveKey(inputConnection, state, isEditorSelectionCollapsed)
+        refreshFrenchAdaptiveKeyState()
+    }
+
+    private fun handleFrenchAdaptiveVariant(variant: String) {
+        val inputConnection = currentInputConnection ?: return
+        // Context may change while the popup is open; never replace from stale display state.
+        val currentState = readFrenchAdaptiveKeyState(inputConnection, isEditorSelectionCollapsed)
+        applyFrenchAdaptiveVariant(
+            inputConnection,
+            currentState,
+            variant,
+            isEditorSelectionCollapsed,
+        )
+        refreshFrenchAdaptiveKeyState()
     }
 }

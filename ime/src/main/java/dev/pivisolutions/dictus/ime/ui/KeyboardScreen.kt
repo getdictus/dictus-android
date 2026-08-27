@@ -16,6 +16,7 @@ import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
+import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import timber.log.Timber
 
 /**
@@ -54,6 +55,9 @@ fun KeyboardScreen(
     onKeySound: (KeyType) -> Unit = {},
     onMoveCursor: (Int) -> Unit = {},
     keyboardLayout: String = "azerty",  // NEW — AZERTY/QWERTY from DataStore
+    frenchAdaptiveKeyState: FrenchAdaptiveKey.State = FrenchAdaptiveKey.DEFAULT,
+    onFrenchAdaptiveKey: () -> Unit = {},
+    onFrenchAdaptiveVariant: (String) -> Unit = {},
 ) {
     // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
     // remember(initialLayer) ensures recomposition resets the layer if the preference changes.
@@ -116,6 +120,7 @@ fun KeyboardScreen(
                     labelsVisible = !isTrackpadActive,
                     onTrackpadActiveChange = { isTrackpadActive = it },
                     onTrackpadMove = onMoveCursor,
+                    frenchAdaptiveKeyState = frenchAdaptiveKeyState,
                     onKeyPress = { key ->
                         handleKeyPress(
                             key = key,
@@ -127,6 +132,7 @@ fun KeyboardScreen(
                             onDeleteBackward = onDeleteBackward,
                             onSendReturn = onSendReturn,
                             onEmojiToggle = onEmojiToggle,
+                            onFrenchAdaptiveKey = onFrenchAdaptiveKey,
                             onShiftChanged = { shifted, caps, tapTime ->
                                 isShifted = shifted
                                 isCapsLock = caps
@@ -151,6 +157,10 @@ fun KeyboardScreen(
                             isShifted = false
                         }
                     },
+                    onFrenchAdaptiveVariant = { accent ->
+                        onFrenchAdaptiveVariant(accent)
+                        if (isShifted && !isCapsLock) isShifted = false
+                    },
                     modifier = Modifier.height(264.dp),
                 )
             }
@@ -174,6 +184,7 @@ private fun handleKeyPress(
     onDeleteBackward: () -> Unit,
     onSendReturn: () -> Unit,
     onEmojiToggle: () -> Unit = {},
+    onFrenchAdaptiveKey: () -> Unit,
     onShiftChanged: (shifted: Boolean, caps: Boolean, tapTime: Long) -> Unit,
     onLayerChanged: (KeyboardLayer) -> Unit,
     onAutoUnshift: () -> Unit,
@@ -221,8 +232,8 @@ private fun handleKeyPress(
             Timber.d("Mic not yet implemented")
         }
         KeyType.ACCENT_ADAPTIVE -> {
-            // Commit the apostrophe character
-            onCommitText(key.output)
+            onFrenchAdaptiveKey()
+            onAutoUnshift()
         }
         KeyType.KEYBOARD_SWITCH -> {
             // Handled by the service directly
