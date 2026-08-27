@@ -6,6 +6,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
@@ -15,11 +18,70 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.reflect.KClass
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SttProviderSlotTest {
 
     @Test
+    fun `provider is released after idle timeout`() = runTest {
+        val provider = FakeWhisperProvider()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 1_000L)
+
+        slot.getOrInitialize("tiny", "/models/tiny.bin", FakeWhisperProvider::class) { provider }
+        advanceTimeBy(999L)
+        runCurrent()
+        assertEquals(0, provider.releaseCount)
+
+        advanceTimeBy(1L)
+        runCurrent()
+        assertEquals(1, provider.releaseCount)
+        assertEquals(dev.pivisolutions.dictus.core.service.SttEngineState.Cold, slot.state.value)
+    }
+
+    @Test
+    fun `provider activity resets idle timeout`() = runTest {
+        val provider = FakeWhisperProvider()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 1_000L)
+
+        slot.getOrInitialize("tiny", "/models/tiny.bin", FakeWhisperProvider::class) { provider }
+        advanceTimeBy(750L)
+        slot.getOrInitialize("tiny", "/models/tiny.bin", FakeWhisperProvider::class) { provider }
+        advanceTimeBy(750L)
+        runCurrent()
+        assertEquals(0, provider.releaseCount)
+
+        advanceTimeBy(250L)
+        runCurrent()
+        assertEquals(1, provider.releaseCount)
+    }
+
+    @Test
+    fun `idle release waits until provider use completes`() = runTest {
+        val provider = FakeWhisperProvider()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 1_000L)
+        val enteredUse = CompletableDeferred<Unit>()
+        val finishUse = CompletableDeferred<Unit>()
+
+        val use = async {
+            slot.withProvider("tiny", "/models/tiny.bin", FakeWhisperProvider::class, { provider }) {
+                enteredUse.complete(Unit)
+                finishUse.await()
+            }
+        }
+        enteredUse.await()
+        advanceTimeBy(1_000L)
+        runCurrent()
+        assertEquals(0, provider.releaseCount)
+
+        finishUse.complete(Unit)
+        use.await()
+        advanceTimeBy(1_000L)
+        runCurrent()
+        assertEquals(1, provider.releaseCount)
+    }
+
+    @Test
     fun `same ready provider and model are reused`() = runTest {
-        val slot = SttProviderSlot()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val created = mutableListOf<FakeWhisperProvider>()
         val factory = {
             FakeWhisperProvider().also(created::add)
@@ -36,7 +98,7 @@ class SttProviderSlotTest {
 
     @Test
     fun `same provider class with a different model releases and reinitializes`() = runTest {
-        val slot = SttProviderSlot()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val created = mutableListOf<FakeWhisperProvider>()
         val factory = {
             FakeWhisperProvider().also(created::add)
@@ -54,7 +116,7 @@ class SttProviderSlotTest {
 
     @Test
     fun `different provider class releases and reinitializes`() = runTest {
-        val slot = SttProviderSlot()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val whisper = FakeWhisperProvider()
         val parakeet = FakeParakeetProvider()
 
@@ -72,7 +134,7 @@ class SttProviderSlotTest {
 
     @Test
     fun `failed initialization releases partial provider and leaves slot empty`() = runTest {
-        val slot = SttProviderSlot()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val failed = FakeWhisperProvider(initializeResult = false)
 
         val result = slot.getOrInitialize("tiny", "/models/tiny.bin", FakeWhisperProvider::class) { failed }
@@ -88,7 +150,7 @@ class SttProviderSlotTest {
 
     @Test
     fun `throwing initialization releases partial provider`() = runTest {
-        val slot = SttProviderSlot()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val failed = FakeWhisperProvider(initializeFailure = IllegalStateException("native load failed"))
         var threwExpectedFailure = false
 
@@ -104,7 +166,7 @@ class SttProviderSlotTest {
 
     @Test
     fun `concurrent requests for the same model initialize only once`() = runTest {
-        val slot = SttProviderSlot()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val created = mutableListOf<FakeWhisperProvider>()
 
         val providers = List(20) {
@@ -117,11 +179,15 @@ class SttProviderSlotTest {
 
         assertEquals(1, created.size)
         providers.forEach { assertSame(created.single(), it) }
+        assertEquals(
+            dev.pivisolutions.dictus.core.service.SttEngineState.Ready("tiny"),
+            slot.state.value,
+        )
     }
 
     @Test
     fun `model switch waits until current provider use completes`() = runTest {
-        val slot = SttProviderSlot()
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val tiny = FakeWhisperProvider()
         val small = FakeWhisperProvider()
         val enteredUse = CompletableDeferred<Unit>()

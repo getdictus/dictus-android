@@ -1,9 +1,17 @@
 package dev.pivisolutions.dictus.service
 
+import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -15,12 +23,20 @@ import kotlin.reflect.KClass
  * Provider type alone is not a sufficient cache key: two Whisper catalog entries
  * use the same provider class but load different native model files. Acquisition,
  * use, replacement, and release share one mutex so native contexts cannot be freed
- * while a transcription is still using them.
+ * while a transcription is still using them. Each completed use renews an idle
+ * lease; expiry releases native memory without racing an active use.
  */
-internal class SttProviderSlot {
+internal class SttProviderSlot(
+    private val scope: CoroutineScope,
+    private val idleTimeoutMs: Long,
+) {
     private val mutex = Mutex()
     private var provider: SttProvider? = null
     private var modelKey: String? = null
+    private var idleReleaseJob: Job? = null
+
+    private val _state = MutableStateFlow<SttEngineState>(SttEngineState.Cold)
+    val state: StateFlow<SttEngineState> = _state.asStateFlow()
 
     suspend fun <T> withProvider(
         requestedModelKey: String,
@@ -28,46 +44,79 @@ internal class SttProviderSlot {
         requiredProviderClass: KClass<out SttProvider>,
         createProvider: () -> SttProvider,
         useProvider: suspend (SttProvider) -> T,
-    ): T? = mutex.withLock {
-        val current = provider
-        val canReuse = current?.isReady == true &&
-            current::class == requiredProviderClass &&
-            modelKey == requestedModelKey
+    ): T? {
+        return mutex.withLock {
+            // Serialize lease changes with provider ownership. If expiry and a new
+            // request arrive together, whichever owns the lock defines the order.
+            idleReleaseJob?.cancel()
+            val current = provider
+            val canReuse = current?.isReady == true &&
+                current::class == requiredProviderClass &&
+                modelKey == requestedModelKey
 
-        val readyProvider = if (canReuse) {
-            current
-        } else {
-            if (current != null) {
-                provider = null
-                modelKey = null
-                withContext(NonCancellable) { current.release() }
-                currentCoroutineContext().ensureActive()
+            val readyProvider = if (canReuse) {
+                current
+            } else {
+                if (current != null) {
+                    provider = null
+                    modelKey = null
+                    _state.value = SttEngineState.Cold
+                    withContext(NonCancellable) { current.release() }
+                    currentCoroutineContext().ensureActive()
+                }
+
+                _state.value = SttEngineState.Loading(requestedModelKey)
+                val replacement = createProvider()
+                val initialized = try {
+                    replacement.initialize(modelPath)
+                } catch (failure: Throwable) {
+                    withContext(NonCancellable) { runCatching { replacement.release() } }
+                    _state.value = SttEngineState.Failed(requestedModelKey)
+                    throw failure
+                }
+                if (!initialized) {
+                    withContext(NonCancellable) { replacement.release() }
+                    _state.value = SttEngineState.Failed(requestedModelKey)
+                    return null
+                }
+
+                provider = replacement
+                modelKey = requestedModelKey
+                _state.value = SttEngineState.Ready(requestedModelKey)
+                replacement
             }
 
-            val replacement = createProvider()
-            val initialized = try {
-                replacement.initialize(modelPath)
-            } catch (failure: Throwable) {
-                withContext(NonCancellable) { runCatching { replacement.release() } }
-                throw failure
+            try {
+                useProvider(readyProvider)
+            } finally {
+                if (provider === readyProvider) scheduleIdleReleaseLocked()
             }
-            if (!initialized) {
-                withContext(NonCancellable) { replacement.release() }
-                return null
-            }
-
-            provider = replacement
-            modelKey = requestedModelKey
-            replacement
         }
-
-        useProvider(readyProvider)
     }
 
-    suspend fun release() = mutex.withLock {
-        val current = provider
-        provider = null
-        modelKey = null
-        withContext(NonCancellable) { current?.release() }
+    suspend fun release() {
+        mutex.withLock {
+            idleReleaseJob?.cancel()
+            idleReleaseJob = null
+            val current = provider
+            provider = null
+            modelKey = null
+            _state.value = SttEngineState.Cold
+            withContext(NonCancellable) { current?.release() }
+        }
+    }
+
+    private fun scheduleIdleReleaseLocked() {
+        idleReleaseJob?.cancel()
+        idleReleaseJob = scope.launch {
+            delay(idleTimeoutMs)
+            mutex.withLock {
+                val current = provider
+                provider = null
+                modelKey = null
+                _state.value = SttEngineState.Cold
+                withContext(NonCancellable) { current?.release() }
+            }
+        }
     }
 }

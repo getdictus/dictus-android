@@ -18,6 +18,12 @@ interface DictationController {
     /** Observable state for the IME to collect via collectAsState(). */
     val state: StateFlow<DictationState>
 
+    /** Observable native engine readiness, independent from recording state. */
+    val engineState: StateFlow<SttEngineState>
+
+    /** Warm the downloaded active model without starting audio or downloading data. */
+    fun prewarmEngine()
+
     /** Start recording via foreground service. */
     fun startRecording()
 

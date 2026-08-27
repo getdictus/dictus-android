@@ -115,6 +115,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 if (service is DictationController) {
                     dictationController = service
                     isBound = true
+                    service.prewarmEngine()
                     Timber.d("Bound to DictationService")
 
                     // Observe service state and mirror to local flow

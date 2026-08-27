@@ -23,7 +23,10 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -83,6 +86,7 @@ class DictationService : Service(), DictationController {
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
         private const val TRANSCRIPTION_TIMEOUT_MS = 120_000L
+        private const val ENGINE_IDLE_TIMEOUT_MS = 10 * 60 * 1_000L
     }
 
     /**
@@ -96,7 +100,9 @@ class DictationService : Service(), DictationController {
         ).dataStore()
     }
 
-    private val providerSlot = SttProviderSlot()
+    private val providerSlot by lazy {
+        SttProviderSlot(serviceScope, ENGINE_IDLE_TIMEOUT_MS)
+    }
     private val modelManager by lazy { ModelManager(applicationContext) }
     private val modelDownloader by lazy { ModelDownloader(modelManager) }
 
@@ -119,6 +125,7 @@ class DictationService : Service(), DictationController {
 
     private var audioCaptureManager: AudioCaptureManager? = null
     private var timerJob: Job? = null
+    private var prewarmJob: Job? = null
     private var elapsedMs: Long = 0L
 
     // Sound feedback for recording lifecycle events.
@@ -136,7 +143,19 @@ class DictationService : Service(), DictationController {
     /** Observable state for the IME to collect. */
     override val state: StateFlow<DictationState> = _state.asStateFlow()
 
-    override fun onBind(intent: Intent): IBinder = binder
+    /** Native engine readiness for IME/UI loading gates. */
+    override val engineState: StateFlow<SttEngineState>
+        get() = providerSlot.state
+
+    override fun onBind(intent: Intent): IBinder {
+        prewarmEngine()
+        return binder
+    }
+
+    override fun prewarmEngine() {
+        if (prewarmJob?.isActive == true) return
+        prewarmJob = serviceScope.launch(Dispatchers.Default) { prewarmActiveModel() }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -383,6 +402,49 @@ class DictationService : Service(), DictationController {
         samples: FloatArray,
         language: String,
     ): String? {
+        return withProviderForModel(modelKey, modelPath) { provider ->
+            withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
+                provider.transcribe(samples, language)
+            }
+        }
+    }
+
+    /**
+     * Initialize the downloaded active model when the first client binds.
+     *
+     * This deliberately uses [ModelManager.getModelPath] instead of the downloader:
+     * showing the keyboard must never trigger an unexpected network transfer. The
+     * same provider slot used by transcription provides the single-flight guarantee.
+     */
+    private suspend fun prewarmActiveModel() {
+        val activeModelKey = dataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
+            ?: ModelCatalog.DEFAULT_KEY
+        val modelPath = modelManager.getModelPath(activeModelKey)
+        if (modelPath == null) {
+            providerSlot.release()
+            Timber.d("Engine prewarm skipped: active model is not downloaded")
+            return
+        }
+
+        try {
+            val ready = withProviderForModel(activeModelKey, modelPath) { true } == true
+            if (ready) {
+                Timber.d("Engine prewarm complete for model=%s", activeModelKey)
+            } else {
+                Timber.w("Engine prewarm failed for model=%s", activeModelKey)
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (failure: Exception) {
+            Timber.e(failure, "Engine prewarm failed for model=%s", activeModelKey)
+        }
+    }
+
+    private suspend fun <T> withProviderForModel(
+        modelKey: String,
+        modelPath: String,
+        block: suspend (SttProvider) -> T,
+    ): T? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
         val neededProviderClass = when (info.provider) {
             AiProvider.WHISPER -> WhisperProvider::class
@@ -399,11 +461,8 @@ class DictationService : Service(), DictationController {
                     AiProvider.PARAKEET -> ParakeetProvider()
                 }
             },
-        ) { provider ->
-            withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
-                provider.transcribe(samples, language)
-            }
-        }
+            useProvider = block,
+        )
     }
 
     /**
