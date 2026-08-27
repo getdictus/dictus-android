@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -485,7 +486,7 @@ class DictationService : Service(), DictationController {
      * Initialize AudioCaptureManager and start the read loop + timer.
      */
     private fun startAudioCapture() {
-        val manager = AudioCaptureManager()
+        val manager = AudioCaptureManager(getSystemService(AudioManager::class.java))
         audioCaptureManager = manager
 
         // Energy updates come from the capture read loop (Dispatchers.Default).

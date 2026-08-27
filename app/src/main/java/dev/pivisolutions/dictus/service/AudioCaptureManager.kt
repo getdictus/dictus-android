@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.service
 
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import kotlinx.coroutines.CoroutineScope
@@ -26,7 +27,9 @@ import kotlin.math.sqrt
  * WHY 16kHz: Whisper models expect 16kHz mono audio. Capturing at this rate
  * avoids resampling.
  */
-class AudioCaptureManager {
+class AudioCaptureManager(
+    private val audioManager: AudioManager? = null,
+) {
 
     companion object {
         private const val SAMPLE_RATE = RecordingDurationPolicy.SAMPLE_RATE_HZ
@@ -81,8 +84,14 @@ class AudioCaptureManager {
                 recorder = null
                 return
             }
+            val routeResult = audioManager?.let { manager ->
+                preferBuiltInMicrophone(AndroidAudioInputRouteBackend(manager, rec))
+            } ?: AudioInputRouteResult.NoBuiltInMic
             rec.startRecording()
-            Timber.d("AudioRecord started: ${SAMPLE_RATE}Hz mono Float32, buffer=$bufferSize")
+            Timber.d(
+                "AudioRecord started: ${SAMPLE_RATE}Hz mono Float32, buffer=$bufferSize, " +
+                    "inputPreference=$routeResult, routedType=${rec.routedDevice?.type ?: "unknown"}",
+            )
         }
 
         // Read loop on a background thread.
