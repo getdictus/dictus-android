@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,9 +47,13 @@ class RecordingScreenControllerBindingTest {
     private class FakeDictationController : DictationController {
         private val mutableState = MutableStateFlow<DictationState>(DictationState.Idle)
         override val state: StateFlow<DictationState> = mutableState
+        override val engineState: StateFlow<SttEngineState> =
+            MutableStateFlow(SttEngineState.Cold)
 
         var startRecordingCallCount = 0
             private set
+
+        override fun prewarmEngine() = Unit
 
         override fun startRecording() {
             startRecordingCallCount++

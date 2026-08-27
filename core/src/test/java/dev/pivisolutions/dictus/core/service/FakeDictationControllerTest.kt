@@ -22,6 +22,14 @@ class FakeDictationControllerTest {
     @Test
     fun `initial state is Idle`() {
         assertTrue(controller.state.value is DictationState.Idle)
+        assertEquals(SttEngineState.Cold, controller.engineState.value)
+    }
+
+    @Test
+    fun `prewarm request is observable by tests`() {
+        controller.prewarmEngine()
+
+        assertEquals(1, controller.prewarmEngineCallCount)
     }
 
     @Test
