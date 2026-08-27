@@ -5,6 +5,7 @@ build/
 
 # Android
 local.properties
+.cxx/
 *.apk
 *.aab
 
