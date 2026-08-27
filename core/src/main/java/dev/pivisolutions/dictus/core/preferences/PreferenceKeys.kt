@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.core.preferences
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 
@@ -39,6 +40,7 @@ object PreferenceKeys {
 
     // --- Last transcription (Phase 4) ---
     val LAST_TRANSCRIPTION = stringPreferencesKey("last_transcription")
+    val LAST_TRANSCRIPTION_SAVED_AT = longPreferencesKey("last_transcription_saved_at")
 
     // --- Keyboard mode (Phase 5) ---
     /** Default keyboard opening mode: "abc" (letters) or "123" (numbers). */

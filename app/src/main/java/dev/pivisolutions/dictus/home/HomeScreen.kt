@@ -47,6 +47,7 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.model.ModelCatalog
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import kotlinx.coroutines.flow.map
 
 /**
@@ -68,7 +69,7 @@ fun HomeScreen(
         .collectAsState(initial = ModelCatalog.DEFAULT_KEY)
 
     val lastTranscription by dataStore.data
-        .map { it[PreferenceKeys.LAST_TRANSCRIPTION] }
+        .map { LastTranscriptionStore.visibleText(it) }
         .collectAsState(initial = null)
 
     val activeModel = ModelCatalog.findByKey(activeModelKey)

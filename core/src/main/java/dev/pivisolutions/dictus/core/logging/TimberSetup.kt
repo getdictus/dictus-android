@@ -22,15 +22,32 @@ import java.io.File
  */
 object TimberSetup {
 
+    private const val PRIVACY_MIGRATION_MARKER = ".privacy-log-v1"
+
     private var logFile: File? = null
 
     fun init(isDebug: Boolean, filesDir: File) {
+        val file = File(filesDir, "dictus.log")
+        logFile = null
+        val fileLoggingIsSafe = purgeLegacySensitiveLogOnce(filesDir, file)
         if (isDebug) {
             Timber.plant(Timber.DebugTree())
         }
-        val file = File(filesDir, "dictus.log")
-        logFile = file
-        Timber.plant(FileLoggingTree(file))
+        if (fileLoggingIsSafe) {
+            logFile = file
+            Timber.plant(FileLoggingTree(file))
+        }
+    }
+
+    /** Existing releases may have persisted dictated or typed text in this file. */
+    private fun purgeLegacySensitiveLogOnce(filesDir: File, file: File): Boolean {
+        val marker = File(filesDir, PRIVACY_MIGRATION_MARKER)
+        if (marker.exists()) return true
+
+        if (file.exists() && !file.delete()) {
+            return false
+        }
+        return marker.createNewFile() || marker.exists()
     }
 
     /**

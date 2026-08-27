@@ -49,7 +49,6 @@ import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
-import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.launch
 
 /**
@@ -302,11 +301,9 @@ fun RecordingScreen(
                                 scope.launch {
                                     val result = dictationController?.confirmAndTranscribe()
                                     transcriptionResult = result ?: noResultLabel
-                                    // Persist last transcription to DataStore for HomeScreen
+                                    // Keep the Home preview for a short, privacy-bounded period.
                                     if (result != null) {
-                                        dataStore?.edit { prefs ->
-                                            prefs[dev.pivisolutions.dictus.core.preferences.PreferenceKeys.LAST_TRANSCRIPTION] = result
-                                        }
+                                        dataStore?.let { LastTranscriptionStore.save(it, result) }
                                     }
                                 }
                             },

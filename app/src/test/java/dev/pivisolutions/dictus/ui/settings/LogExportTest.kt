@@ -1,6 +1,10 @@
 package dev.pivisolutions.dictus.ui.settings
 
 import androidx.test.core.app.ApplicationProvider
+import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
+import dev.pivisolutions.dictus.core.logging.TimberSetup
+import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -9,6 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import timber.log.Timber
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -37,6 +42,11 @@ class LogExportTest {
         // Clean up from previous runs
         logFile.delete()
         File(context.cacheDir, "dictus-logs.zip").delete()
+    }
+
+    @After
+    fun tearDown() {
+        Timber.uprootAll()
     }
 
     @Test
@@ -74,5 +84,21 @@ class LogExportTest {
             "ZIP must contain 'dictus.log' entry but has: $entries",
             entries.contains("dictus.log"),
         )
+    }
+
+    @Test
+    fun `exported log contains metadata but not transcription content`() {
+        val canary = "PRIVATE_TRANSCRIPTION_CANARY"
+        Timber.uprootAll()
+        TimberSetup.init(isDebug = false, filesDir = context.filesDir)
+        Timber.d(PrivacySafeLog.transcriptionProcessed(canary, "$canary."))
+
+        val zipFile = LogExporter.createZip(context, logFile)
+        val exportedText = ZipFile(zipFile!!).use { zip ->
+            zip.getInputStream(zip.getEntry("dictus.log")).bufferedReader().readText()
+        }
+
+        assertFalse(exportedText.contains(canary))
+        assertTrue(exportedText.contains("rawLength=${canary.length}"))
     }
 }

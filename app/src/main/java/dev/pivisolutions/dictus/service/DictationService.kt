@@ -20,6 +20,7 @@ import dagger.hilt.InstallIn
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.audio.DictationSoundPlayer
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -359,7 +360,7 @@ class DictationService : Service(), DictationController {
 
             // 6. Post-process (trim + punctuation)
             val processedText = TextPostProcessor.process(rawText)
-            Timber.d("Transcription result: raw='%s', processed='%s'", rawText, processedText)
+            Timber.d(PrivacySafeLog.transcriptionProcessed(rawText, processedText))
 
             _state.value = DictationState.Idle
             stopForeground(STOP_FOREGROUND_REMOVE)
