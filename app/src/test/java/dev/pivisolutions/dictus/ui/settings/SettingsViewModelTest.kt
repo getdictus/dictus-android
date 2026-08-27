@@ -3,7 +3,9 @@ package dev.pivisolutions.dictus.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +76,42 @@ class SettingsViewModelTest {
         viewModel.setLanguage("fr")
         advanceUntilIdle()
         assertEquals("fr", viewModel.language.value)
+    }
+
+    @Test
+    fun `keyboard language defaults to French and survives ViewModel restart`() = testScope.runTest {
+        assertEquals("fr", viewModel.keyboardLanguage.value)
+        viewModel.setKeyboardLanguage("en")
+        advanceUntilIdle()
+        assertEquals("en", viewModel.keyboardLanguage.value)
+
+        val restarted = SettingsViewModel(fakeDataStore, modelManager)
+        advanceUntilIdle()
+        assertEquals("en", restarted.keyboardLanguage.value)
+    }
+
+    @Test
+    fun `keyboard language is independent from ASR and preserves explicit layout`() = testScope.runTest {
+        viewModel.setLanguage("auto")
+        viewModel.setKeyboardLayout("azerty")
+        viewModel.setKeyboardLanguage("en")
+        advanceUntilIdle()
+
+        assertEquals("auto", viewModel.language.value)
+        assertEquals("en", viewModel.keyboardLanguage.value)
+        assertEquals("azerty", viewModel.keyboardLayout.value)
+    }
+
+    @Test
+    fun `profile layout default follows keyboard language when layout is absent`() = testScope.runTest {
+        viewModel.setKeyboardLanguage("en")
+        advanceUntilIdle()
+        assertEquals("qwerty", viewModel.keyboardLayout.value)
+
+        fakeDataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "unknown" }
+        advanceUntilIdle()
+        assertEquals("fr", viewModel.keyboardLanguage.value)
+        assertEquals("azerty", viewModel.keyboardLayout.value)
     }
 
     @Test

@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,11 @@ class SettingsViewModel @Inject constructor(
         .map { it[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto" }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "auto")
 
+    /** Keyboard correction language, independent from transcription language. */
+    val keyboardLanguage: StateFlow<String> = dataStore.data
+        .map { KeyboardPreferenceResolver.language(it[PreferenceKeys.KEYBOARD_LANGUAGE]).code }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "fr")
+
     /** Key of the currently active Whisper model. */
     val activeModel: StateFlow<String> = dataStore.data
         .map { it[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY }
@@ -78,7 +84,15 @@ class SettingsViewModel @Inject constructor(
 
     /** Currently selected keyboard layout key ("azerty" or "qwerty"). */
     val keyboardLayout: StateFlow<String> = dataStore.data
-        .map { it[PreferenceKeys.KEYBOARD_LAYOUT] ?: "azerty" }
+        .map { preferences ->
+            val language = KeyboardPreferenceResolver.language(
+                preferences[PreferenceKeys.KEYBOARD_LANGUAGE],
+            )
+            KeyboardPreferenceResolver.layout(
+                preferences[PreferenceKeys.KEYBOARD_LAYOUT],
+                language,
+            ).persistedValue
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "azerty")
 
     /**
@@ -97,6 +111,14 @@ class SettingsViewModel @Inject constructor(
     fun setLanguage(lang: String) {
         viewModelScope.launch {
             dataStore.edit { it[PreferenceKeys.TRANSCRIPTION_LANGUAGE] = lang }
+        }
+    }
+
+    /** Persist keyboard language without changing ASR language or an explicit layout. */
+    fun setKeyboardLanguage(languageCode: String) {
+        val resolved = KeyboardPreferenceResolver.language(languageCode)
+        viewModelScope.launch {
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = resolved.code }
         }
     }
 

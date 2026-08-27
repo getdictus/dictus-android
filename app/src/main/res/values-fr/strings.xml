@@ -62,6 +62,7 @@
     <!-- Settings: Row labels -->
     <string name="settings_language">Langue</string>
     <string name="settings_keyboard_layout">Disposition du clavier</string>
+    <string name="settings_keyboard_language">Langue du clavier</string>
     <string name="settings_default_mode">Mode par d\u00e9faut</string>
     <string name="settings_haptic_feedback">Retour haptique</string>
     <string name="settings_keyboard_sounds">Sons du clavier</string>
@@ -95,6 +96,7 @@
     <!-- Settings: Picker bottom sheet titles -->
     <string name="picker_language_title">Choisir la langue</string>
     <string name="picker_keyboard_layout_title">Disposition du clavier</string>
+    <string name="picker_keyboard_language_title">Langue du clavier</string>
     <string name="picker_default_mode_title">Mode par d\u00e9faut du clavier</string>
     <string name="picker_theme_title">Th\u00e8me de l\'application</string>
 

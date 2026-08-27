@@ -62,6 +62,7 @@
     <!-- Settings: Row labels -->
     <string name="settings_language">Language</string>
     <string name="settings_keyboard_layout">Keyboard layout</string>
+    <string name="settings_keyboard_language">Keyboard language</string>
     <string name="settings_default_mode">Default mode</string>
     <string name="settings_haptic_feedback">Haptic feedback</string>
     <string name="settings_keyboard_sounds">Keyboard sounds</string>
@@ -95,6 +96,7 @@
     <!-- Settings: Picker bottom sheet titles -->
     <string name="picker_language_title">Choose language</string>
     <string name="picker_keyboard_layout_title">Keyboard layout</string>
+    <string name="picker_keyboard_language_title">Keyboard language</string>
     <string name="picker_default_mode_title">Default keyboard mode</string>
     <string name="picker_theme_title">App theme</string>
 

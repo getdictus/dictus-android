@@ -4,12 +4,21 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -19,6 +28,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Unit tests for DictionaryEngine using the small test dictionary (dict_test.txt).
@@ -201,5 +213,169 @@ class DictionaryEngineTest {
                 bonbonIndex < bonhommeIndex,
             )
         }
+    }
+
+    @Test
+    fun `live switch keeps old atomic snapshot while pending then publishes complete English`() =
+        runTest(testDispatcher) {
+            val englishLines = CompletableDeferred<List<String>>()
+            val engine = DictionaryEngine(
+                context = context,
+                dataStore = dataStore,
+                coroutineScope = testScope,
+                ioDispatcher = testDispatcher,
+                dictionaryLoader = { name ->
+                    if (name == "dict_fr.txt") {
+                        listOf("word=bonjour,f=20", "word=bonne,f=10")
+                    } else {
+                        englishLines.await()
+                    }
+                },
+            )
+            runCurrent()
+            val frenchActivation = requireNotNull(engine.activation.value)
+            assertEquals(SupportedLanguage.FRENCH, engine.activation.value?.language)
+            assertEquals(listOf("bonjour", "bonne"), engine.getSuggestions("bo"))
+
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+            runCurrent()
+            assertEquals(SupportedLanguage.FRENCH, engine.activation.value?.language)
+            assertEquals(listOf("bonjour", "bonne"), engine.getSuggestions("bo"))
+
+            englishLines.complete(listOf("word=hello,f=20", "word=help,f=10"))
+            runCurrent()
+            assertEquals(SupportedLanguage.ENGLISH, engine.activation.value?.language)
+            assertEquals(SupportedLanguage.ENGLISH.profile, engine.activation.value?.profile)
+            assertEquals(listOf("hello", "help"), engine.getSuggestions("he"))
+            assertTrue(engine.getSuggestions("bo").isEmpty())
+            // A caller can keep querying its old atomic keyboard state until it adopts
+            // the newly published activation and matching profile/layout.
+            assertEquals(
+                listOf("bonjour", "bonne"),
+                engine.getSuggestions("bo", activation = frenchActivation),
+            )
+        }
+
+    @Test
+    fun `failed dictionary switch retains live language profile and suggestions`() =
+        runTest(testDispatcher) {
+            val engine = DictionaryEngine(
+                context = context,
+                dataStore = dataStore,
+                coroutineScope = testScope,
+                ioDispatcher = testDispatcher,
+                dictionaryLoader = { name ->
+                    if (name == "dict_fr.txt") listOf("word=bonjour,f=20")
+                    else error("deterministic load failure")
+                },
+            )
+            runCurrent()
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+            runCurrent()
+
+            assertEquals(SupportedLanguage.FRENCH, engine.activation.value?.language)
+            assertEquals(SupportedLanguage.FRENCH.profile, engine.activation.value?.profile)
+            assertEquals(listOf("bonjour"), engine.getSuggestions("bo"))
+        }
+
+    @Test
+    fun `empty or wholly malformed dictionary switch retains prior activation`() =
+        runTest(testDispatcher) {
+            var englishLoad = 0
+            val engine = DictionaryEngine(
+                context = context,
+                dataStore = dataStore,
+                coroutineScope = testScope,
+                ioDispatcher = testDispatcher,
+                dictionaryLoader = { name ->
+                    if (name == "dict_fr.txt") {
+                        listOf("word=bonjour,f=20")
+                    } else {
+                        englishLoad++
+                        if (englishLoad == 1) emptyList()
+                        else listOf("not-a-word", "word=,f=10", "garbage")
+                    }
+                },
+            )
+            runCurrent()
+
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+            runCurrent()
+            assertEquals(SupportedLanguage.FRENCH, engine.activation.value?.language)
+            assertEquals(listOf("bonjour"), engine.getSuggestions("bo"))
+
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "fr" }
+            runCurrent()
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+            runCurrent()
+            assertEquals(SupportedLanguage.FRENCH, engine.activation.value?.language)
+            assertEquals(listOf("bonjour"), engine.getSuggestions("bo"))
+        }
+
+    @Test
+    fun `blocking loader cannot publish after owning scope is cancelled`() =
+        runTest(testDispatcher) {
+            val loaderStarted = CountDownLatch(1)
+            val releaseLoader = CountDownLatch(1)
+            val executor = Executors.newSingleThreadExecutor()
+            val blockingDispatcher = executor.asCoroutineDispatcher()
+            val engineJob = SupervisorJob()
+            val engineScope = CoroutineScope(engineJob + testDispatcher)
+            try {
+                val engine = DictionaryEngine(
+                    context = context,
+                    dataStore = dataStore,
+                    coroutineScope = engineScope,
+                    ioDispatcher = blockingDispatcher,
+                    dictionaryLoader = {
+                        loaderStarted.countDown()
+                        releaseLoader.await()
+                        listOf("word=bonjour,f=20")
+                    },
+                )
+                runCurrent()
+                assertTrue(loaderStarted.await(5, TimeUnit.SECONDS))
+
+                engineScope.cancel()
+                releaseLoader.countDown()
+                engineJob.join()
+
+                assertEquals(null, engine.activation.value)
+                assertTrue(engine.getSuggestions("bo").isEmpty())
+            } finally {
+                releaseLoader.countDown()
+                engineScope.cancel()
+                blockingDispatcher.close()
+                executor.shutdownNow()
+            }
+        }
+
+    @Test
+    fun `stale completed load cannot replace a newer activation`() = runTest(testDispatcher) {
+        dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+        val delayedFrench = CompletableDeferred<List<String>>()
+        val engine = DictionaryEngine(
+            context = context,
+            dataStore = dataStore,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher,
+            dictionaryLoader = { name ->
+                if (name == "dict_fr.txt") delayedFrench.await()
+                else listOf("word=hello,f=20")
+            },
+        )
+        runCurrent()
+        assertEquals(SupportedLanguage.ENGLISH, engine.activation.value?.language)
+
+        dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "fr" }
+        runCurrent()
+        dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+        runCurrent()
+        delayedFrench.complete(listOf("word=bonjour,f=20"))
+        runCurrent()
+
+        assertEquals(SupportedLanguage.ENGLISH, engine.activation.value?.language)
+        assertEquals(listOf("hello"), engine.getSuggestions("he"))
+        assertTrue(engine.getSuggestions("bo").isEmpty())
     }
 }

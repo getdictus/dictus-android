@@ -34,7 +34,6 @@ import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.suggestion.DictionaryEngine
-import dev.pivisolutions.dictus.ime.suggestion.SuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
@@ -45,10 +44,15 @@ import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveVariant
 import dev.pivisolutions.dictus.ime.input.readFrenchAdaptiveKeyState
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -120,13 +124,21 @@ class DictusImeService : LifecycleInputMethodService() {
     // Dispatchers.IO, performs accent-insensitive prefix matching with frequency
     // ranking, and boosts personal dictionary words. Until dictionary loads
     // (~500ms), returns empty suggestions gracefully.
-    private val suggestionEngine: SuggestionEngine by lazy {
+    private val dictionaryEngine: DictionaryEngine by lazy {
         DictionaryEngine(
             context = applicationContext,
             dataStore = entryPoint.dataStore(),
             coroutineScope = bindingScope,
         )
     }
+    private data class ActiveKeyboardState(
+        val activation: DictionaryEngine.Activation?,
+        val language: SupportedLanguage,
+        val layout: KeyboardLayout,
+    )
+    private val _activeKeyboardState = MutableStateFlow(
+        ActiveKeyboardState(null, SupportedLanguage.FRENCH, KeyboardLayout.AZERTY),
+    )
     private val _currentWord = MutableStateFlow("")
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
 
@@ -191,6 +203,29 @@ class DictusImeService : LifecycleInputMethodService() {
                 .map { it[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true }
                 .collect { enabled -> _suggestionsEnabled.value = enabled }
         }
+        bindingScope.launch {
+            combine(
+                dictionaryEngine.activation.filterNotNull(),
+                entryPoint.dataStore().data.map { it[PreferenceKeys.KEYBOARD_LAYOUT] },
+            ) { activation, persistedLayout ->
+                activation to KeyboardPreferenceResolver.layout(
+                    persistedLayout,
+                    activation.language,
+                )
+            }.collect { (activation, layout) ->
+                val activeState = ActiveKeyboardState(activation, activation.language, layout)
+                _activeKeyboardState.value = activeState
+                refreshFrenchAdaptiveKeyState()
+                _suggestions.value = if (_suggestionsEnabled.value) {
+                    dictionaryEngine.getSuggestions(
+                        _currentWord.value,
+                        activation = activeState.activation,
+                    )
+                } else {
+                    emptyList()
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -244,8 +279,9 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
 
         _currentWord.value = currentWord
+        val activeState = _activeKeyboardState.value
         _suggestions.value = if (_suggestionsEnabled.value) {
-            suggestionEngine.getSuggestions(currentWord)
+            dictionaryEngine.getSuggestions(currentWord, activation = activeState.activation)
         } else {
             emptyList()
         }
@@ -339,6 +375,13 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
+        val activeKeyboardState by _activeKeyboardState.collectAsState()
+        val activeLanguage = activeKeyboardState.language
+        val activeLayout = activeKeyboardState.layout
+        val usesFrenchAdaptiveKey = KeyboardPreferenceResolver.usesFrenchAdaptiveKey(
+            activeLanguage,
+            activeLayout,
+        )
 
         fun runGateCommand(command: MicGateCommand) {
             when (command) {
@@ -396,14 +439,6 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         val keySoundsEnabled by keySoundsFlow.collectAsState(initial = true)
 
-        // Read keyboard layout preference (AZERTY vs QWERTY).
-        // WHY collectAsState: This is a Compose composable, so we use the DataStore Flow
-        // + collectAsState() pattern (not coroutine-scope collect). When the user toggles
-        // the layout in Settings, DataStore emits a new value, Compose recomposes, and
-        // KeyboardScreen receives the updated layout immediately.
-        val keyboardLayout by entryPoint.dataStore().data
-            .map { it[PreferenceKeys.KEYBOARD_LAYOUT] ?: "azerty" }
-            .collectAsState(initial = "azerty")
 
         val switchKeyboard = {
             val imm = getSystemService(INPUT_METHOD_SERVICE)
@@ -447,9 +482,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         ic.commitText("$suggestion ", 1)
                         refreshFrenchAdaptiveKeyState()
                         // Count suggestion selection toward personal dictionary learning (2 taps = learned).
-                        // Safe cast: at runtime suggestionEngine is always DictionaryEngine, but the safe
-                        // cast avoids a hard coupling on the declared SuggestionEngine interface type.
-                        (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(suggestion)
+                        dictionaryEngine.personalDictionary.recordWordTyped(suggestion)
                         _suggestions.value = emptyList()
                         _currentWord.value = ""
                     },
@@ -459,7 +492,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         val word = _currentWord.value
                         if (word.isNotEmpty()) {
                             // Count the committed raw word toward personal dictionary learning.
-                            (suggestionEngine as? DictionaryEngine)?.personalDictionary?.recordWordTyped(word)
+                            dictionaryEngine.personalDictionary.recordWordTyped(word)
                             ic.commitText(" ", 1)
                             refreshFrenchAdaptiveKeyState()
                             _suggestions.value = emptyList()
@@ -476,10 +509,22 @@ class DictusImeService : LifecycleInputMethodService() {
                         currentInputConnection?.let { moveCursorBy(it, delta) }
                         refreshFrenchAdaptiveKeyState()
                     },
-                    keyboardLayout = keyboardLayout,
-                    frenchAdaptiveKeyState = frenchAdaptiveKeyState,
-                    onFrenchAdaptiveKey = { handleFrenchAdaptiveKey() },
-                    onFrenchAdaptiveVariant = { variant -> handleFrenchAdaptiveVariant(variant) },
+                    keyboardLayout = activeLayout.persistedValue,
+                    frenchAdaptiveKeyState = if (usesFrenchAdaptiveKey) {
+                        frenchAdaptiveKeyState
+                    } else {
+                        FrenchAdaptiveKey.DEFAULT
+                    },
+                    onFrenchAdaptiveKey = {
+                        if (usesFrenchAdaptiveKey) {
+                            handleFrenchAdaptiveKey()
+                        } else {
+                            commitText("'")
+                        }
+                    },
+                    onFrenchAdaptiveVariant = { variant ->
+                        if (usesFrenchAdaptiveKey) handleFrenchAdaptiveVariant(variant)
+                    },
                 )
             }
             is DictationState.Recording -> {
@@ -595,6 +640,15 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     private fun refreshFrenchAdaptiveKeyState() {
+        val activeState = _activeKeyboardState.value
+        if (!KeyboardPreferenceResolver.usesFrenchAdaptiveKey(
+                activeState.language,
+                activeState.layout,
+            )
+        ) {
+            _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
+            return
+        }
         _frenchAdaptiveKeyState.value = readFrenchAdaptiveKeyState(
             currentInputConnection,
             selectionCollapsed = isEditorSelectionCollapsed,
