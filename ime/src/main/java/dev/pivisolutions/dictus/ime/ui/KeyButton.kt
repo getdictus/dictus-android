@@ -36,6 +36,8 @@ import androidx.compose.ui.window.PopupProperties
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
+import dev.pivisolutions.dictus.ime.input.BackspaceDeletion
+import dev.pivisolutions.dictus.ime.input.BackspaceRepeatPolicy
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
 import kotlinx.coroutines.coroutineScope
@@ -60,6 +62,7 @@ fun KeyButton(
     isShifted: Boolean,
     isCapsLock: Boolean = false,
     onPress: () -> Unit,
+    onDeleteWord: () -> Unit = onPress,
     accentChars: List<String>? = null,
     onAccentSelected: ((String) -> Unit)? = null,
     hapticsEnabled: Boolean = true,
@@ -117,7 +120,9 @@ fun KeyButton(
     // callbacks even though the coroutine launched by pointerInput(Unit) is
     // long-lived and would otherwise capture stale references.
     val currentOnPress = rememberUpdatedState(onPress)
+    val currentOnDeleteWord = rememberUpdatedState(onDeleteWord)
     val currentOnAccentSelected = rememberUpdatedState(onAccentSelected)
+    val currentHapticsEnabled = rememberUpdatedState(hapticsEnabled)
 
     fun resolveAccentIndex(pointerX: Float): Int? {
         val accents = accentChars ?: return null
@@ -136,21 +141,28 @@ fun KeyButton(
         Modifier.pointerInput(Unit) {
             coroutineScope {
                 while (isActive) {
-                    awaitPointerEventScope {
+                    val initiatingPointerId = awaitPointerEventScope {
                         val event = awaitPointerEvent()
-                        if (event.type != PointerEventType.Press) return@awaitPointerEventScope
+                        if (event.type != PointerEventType.Press) return@awaitPointerEventScope null
+                        event.changes.firstOrNull { it.pressed && !it.previousPressed }?.id
                     }
+                    if (initiatingPointerId == null) continue
 
                     isPressed = true
-                    if (hapticsEnabled) HapticHelper.performKeyHaptic(view)
+                    if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
                     currentOnPress.value()
+                    var deletionCommandIndex = 1
 
                     val repeatJob = launch {
-                        delay(400L)
+                        delay(BackspaceRepeatPolicy.INITIAL_DELAY_MS)
                         while (isActive) {
-                            if (hapticsEnabled) HapticHelper.performKeyHaptic(view)
-                            currentOnPress.value()
-                            delay(50L)
+                            if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                            deletionCommandIndex++
+                            when (BackspaceRepeatPolicy.deletionFor(deletionCommandIndex)) {
+                                BackspaceDeletion.CHARACTER -> currentOnPress.value()
+                                BackspaceDeletion.WORD -> currentOnDeleteWord.value()
+                            }
+                            delay(BackspaceRepeatPolicy.REPEAT_INTERVAL_MS)
                         }
                     }
 
@@ -158,7 +170,7 @@ fun KeyButton(
                         var released = false
                         while (!released) {
                             val event = awaitPointerEvent()
-                            if (event.type == PointerEventType.Release) {
+                            if (event.changes.any { it.id == initiatingPointerId && !it.pressed }) {
                                 released = true
                             }
                         }
@@ -186,7 +198,7 @@ fun KeyButton(
                         isPressed = true
                         showAccentPopup = false
                         highlightedAccentIndex = null
-                        if (hapticsEnabled) HapticHelper.performKeyHaptic(view)
+                        if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
 
                         val longPressJob = launch {
                             if (supportsAccentPopup) {

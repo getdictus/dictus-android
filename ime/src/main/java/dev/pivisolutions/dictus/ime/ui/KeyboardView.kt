@@ -27,6 +27,7 @@ fun KeyboardView(
     isCapsLock: Boolean = false,
     layout: String,
     onKeyPress: (KeyDefinition) -> Unit,
+    onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     hapticsEnabled: Boolean = true,
     modifier: Modifier = Modifier,
@@ -49,6 +50,7 @@ fun KeyboardView(
                 isShifted = isShifted,
                 isCapsLock = isCapsLock,
                 onKeyPress = onKeyPress,
+                onDeleteWord = onDeleteWord,
                 onAccentSelected = onAccentSelected,
                 hapticsEnabled = hapticsEnabled,
             )

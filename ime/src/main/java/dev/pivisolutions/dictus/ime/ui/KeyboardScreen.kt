@@ -36,6 +36,7 @@ import timber.log.Timber
 fun KeyboardScreen(
     onCommitText: (String) -> Unit,
     onDeleteBackward: () -> Unit,
+    onDeleteWordBackward: () -> Unit = onDeleteBackward,
     onSendReturn: () -> Unit,
     onSwitchKeyboard: () -> Unit,
     onMicTap: () -> Unit = {},
@@ -106,6 +107,7 @@ fun KeyboardScreen(
                     isShifted = isShifted,
                     isCapsLock = isCapsLock,
                     layout = currentLayout,
+                    onDeleteWord = onDeleteWordBackward,
                     hapticsEnabled = hapticsEnabled,
                     onKeyPress = { key ->
                         handleKeyPress(
