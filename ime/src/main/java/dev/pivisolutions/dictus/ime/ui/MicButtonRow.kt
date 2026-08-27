@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import androidx.compose.material3.MaterialTheme
@@ -37,9 +38,12 @@ fun MicButtonRow(
     onSwitchKeyboard: () -> Unit,
     onMicTap: () -> Unit = {},
     isRecording: Boolean = false,
+    isMicEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
+    val activeMicColor = if (isRecording) DictusColors.Recording else DictusColors.Accent
+    val micColor = if (isMicEnabled) activeMicColor else activeMicColor.copy(alpha = 0.35f)
 
     Row(
         modifier = modifier
@@ -74,16 +78,14 @@ fun MicButtonRow(
                 .width(56.dp)
                 .height(40.dp)
                 .shadow(
-                    elevation = 12.dp,
+                    elevation = if (isMicEnabled) 12.dp else 0.dp,
                     shape = RoundedCornerShape(20.dp),
-                    ambientColor = if (isRecording) DictusColors.Recording.copy(alpha = 0.25f)
-                        else DictusColors.Accent.copy(alpha = 0.25f),
-                    spotColor = if (isRecording) DictusColors.Recording.copy(alpha = 0.4f)
-                        else DictusColors.Accent.copy(alpha = 0.4f),
+                    ambientColor = activeMicColor.copy(alpha = 0.25f),
+                    spotColor = activeMicColor.copy(alpha = 0.4f),
                 )
                 .clip(RoundedCornerShape(20.dp))
-                .background(if (isRecording) DictusColors.Recording else DictusColors.Accent)
-                .clickable {
+                .background(micColor)
+                .clickable(enabled = isMicEnabled) {
                     HapticHelper.performMicHaptic(view)
                     onMicTap()
                 },
@@ -91,7 +93,9 @@ fun MicButtonRow(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_mic),
-                contentDescription = "Microphone",
+                contentDescription = stringResource(
+                    if (isMicEnabled) R.string.mic_button_description else R.string.mic_button_loading_description,
+                ),
                 tint = Color.White,
                 modifier = Modifier.size(22.dp),
             )

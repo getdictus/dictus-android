@@ -23,7 +23,7 @@ class RecordingScreenControllerBindingTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun `recording starts when controller binds after screen composition`() {
+    fun `cold controller prewarms then starts exactly once when ready`() {
         var controller by mutableStateOf<DictationController?>(null)
         val lateController = FakeDictationController()
 
@@ -41,19 +41,40 @@ class RecordingScreenControllerBindingTest {
         controller = lateController
         composeTestRule.waitForIdle()
 
+        assertEquals(1, lateController.prewarmEngineCallCount)
+        assertEquals(0, lateController.startRecordingCallCount)
+
+        lateController.emitEngineState(SttEngineState.Loading("tiny"))
+        composeTestRule.waitForIdle()
+        assertEquals(0, lateController.startRecordingCallCount)
+
+        lateController.emitEngineState(SttEngineState.Ready("tiny"))
+        composeTestRule.waitForIdle()
+        assertEquals(1, lateController.startRecordingCallCount)
+
+        lateController.emitEngineState(SttEngineState.Ready("tiny"))
+        composeTestRule.waitForIdle()
         assertEquals(1, lateController.startRecordingCallCount)
     }
 
     private class FakeDictationController : DictationController {
         private val mutableState = MutableStateFlow<DictationState>(DictationState.Idle)
         override val state: StateFlow<DictationState> = mutableState
-        override val engineState: StateFlow<SttEngineState> =
-            MutableStateFlow(SttEngineState.Cold)
+        private val mutableEngineState = MutableStateFlow<SttEngineState>(SttEngineState.Cold)
+        override val engineState: StateFlow<SttEngineState> = mutableEngineState
 
         var startRecordingCallCount = 0
             private set
+        var prewarmEngineCallCount = 0
+            private set
 
-        override fun prewarmEngine() = Unit
+        override fun prewarmEngine() {
+            prewarmEngineCallCount++
+        }
+
+        fun emitEngineState(state: SttEngineState) {
+            mutableEngineState.value = state
+        }
 
         override fun startRecording() {
             startRecordingCallCount++

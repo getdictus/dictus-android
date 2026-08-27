@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,10 +43,14 @@ import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
+import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.PendingMicGate
+import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
+import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingCTAButton
@@ -75,6 +80,20 @@ fun OnboardingTestRecordingScreen(
 
     val dictationState by dictationController?.state?.collectAsState()
         ?: remember { mutableStateOf(DictationState.Idle as DictationState) }
+    val engineState by dictationController?.engineState?.collectAsState()
+        ?: remember { mutableStateOf(SttEngineState.Cold as SttEngineState) }
+    val micGate = remember(dictationController) { PendingMicGate() }
+
+    fun runGateCommand(command: MicGateCommand) {
+        when (command) {
+            MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
+            MicGateCommand.START_RECORDING -> dictationController?.startRecording()
+            MicGateCommand.NONE -> Unit
+        }
+    }
+    LaunchedEffect(engineState) {
+        runGateCommand(micGate.engineChanged(engineState))
+    }
 
     var transcriptionResult by remember { mutableStateOf<String?>(null) }
     var copied by remember { mutableStateOf(false) }
@@ -96,13 +115,22 @@ fun OnboardingTestRecordingScreen(
     val hasResult = transcriptionResult != null
     val isRecording = dictationState is DictationState.Recording
     val isTranscribing = dictationState is DictationState.Transcribing
+    val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
+        engineState is SttEngineState.Failed
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 32.dp),
+            .background(MaterialTheme.colorScheme.background),
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp)
+                .then(
+                    if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
+                ),
+        ) {
         // ── Layer 1: Upper content (idle text OR result card) ──
         // Only used for idle and result states. Recording/transcribing put everything
         // in the bottom block to match the iOS layout.
@@ -304,7 +332,7 @@ fun OnboardingTestRecordingScreen(
                                 .clip(CircleShape)
                                 .background(DictusColors.Accent)
                                 .clickable {
-                                    dictationController?.startRecording()
+                                        runGateCommand(micGate.request(engineState))
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -350,5 +378,16 @@ fun OnboardingTestRecordingScreen(
 
             OnboardingProgressDots(currentStep = 6)
         }
+
+        }
+
+        ModelLoadingOverlay(
+            engineState = engineState,
+            onRetry = { runGateCommand(micGate.retry()) },
+            onCancel = {
+                micGate.cancel()
+                onNext()
+            },
+        )
     }
 }

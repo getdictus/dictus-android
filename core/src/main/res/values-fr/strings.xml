@@ -5,4 +5,12 @@
     <string name="subtype_azerty">AZERTY (Fran\u00e7ais)</string>
     <string name="subtype_qwerty">QWERTY (Anglais)</string>
     <string name="enable_ime_instructions">Activez le clavier Dictus dans Param\u00e8tres &gt; Syst\u00e8me &gt; Langues et saisie &gt; Clavier \u00e0 l\u0027\u00e9cran</string>
+    <string name="model_loading_title">Préparation de la reconnaissance vocale</string>
+    <string name="model_loading_body">Tout reste sur votre appareil. Cette opération peut prendre un instant.</string>
+    <string name="model_loading_failed_title">Impossible de démarrer la reconnaissance vocale</string>
+    <string name="model_loading_failed_body">Réessayez de charger le modèle ou annulez pour revenir.</string>
+    <string name="model_loading_retry">Réessayer</string>
+    <string name="model_loading_cancel">Annuler</string>
+    <string name="model_loading_accessibility">Chargement du modèle de reconnaissance vocale. Microphone indisponible.</string>
+    <string name="model_loading_failed_accessibility">Échec du chargement du modèle de reconnaissance vocale.</string>
 </resources>

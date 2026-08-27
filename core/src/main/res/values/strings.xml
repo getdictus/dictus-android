@@ -5,4 +5,12 @@
     <string name="subtype_azerty">AZERTY (French)</string>
     <string name="subtype_qwerty">QWERTY (English)</string>
     <string name="enable_ime_instructions">Enable Dictus Keyboard in Settings &gt; System &gt; Languages &amp; Input &gt; On-screen keyboard</string>
+    <string name="model_loading_title">Preparing speech recognition</string>
+    <string name="model_loading_body">This stays on your device and may take a moment.</string>
+    <string name="model_loading_failed_title">Speech recognition could not start</string>
+    <string name="model_loading_failed_body">Try loading the model again, or cancel to return.</string>
+    <string name="model_loading_retry">Retry</string>
+    <string name="model_loading_cancel">Cancel</string>
+    <string name="model_loading_accessibility">Speech recognition model is loading. Microphone unavailable.</string>
+    <string name="model_loading_failed_accessibility">Speech recognition model failed to load.</string>
 </resources>

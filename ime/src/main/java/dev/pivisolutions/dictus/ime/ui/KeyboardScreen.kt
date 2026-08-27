@@ -39,6 +39,7 @@ fun KeyboardScreen(
     onSendReturn: () -> Unit,
     onSwitchKeyboard: () -> Unit,
     onMicTap: () -> Unit = {},
+    isMicEnabled: Boolean = true,
     isEmojiPickerOpen: Boolean = false,
     onEmojiToggle: () -> Unit = {},
     onEmojiSelected: (String) -> Unit = {},
@@ -96,6 +97,7 @@ fun KeyboardScreen(
                     onSwitchKeyboard = onSwitchKeyboard,
                     onMicTap = onMicTap,
                     isRecording = false,
+                    isMicEnabled = isMicEnabled,
                 )
 
                 // Keyboard area (264.dp) for 48.dp keys with existing row spacing.
