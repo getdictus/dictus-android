@@ -113,19 +113,25 @@ class ParakeetProvider : SttProvider {
     override suspend fun transcribe(samples: FloatArray, language: String): String {
         val r = recognizer ?: throw IllegalStateException("ParakeetProvider not initialized — call initialize() first")
         val stream = r.createStream()
-        stream.acceptWaveform(samples, sampleRate = 16000)
-        r.decode(stream)
-        return r.getResult(stream).text
+        return try {
+            stream.acceptWaveform(samples, sampleRate = 16000)
+            r.decode(stream)
+            r.getResult(stream).text
+        } finally {
+            stream.release()
+        }
     }
 
     /**
      * Release native resources.
      *
-     * Sets recognizer to null so isReady returns false. The OfflineRecognizer's
-     * finalize() method handles native ONNX Runtime object cleanup via JNI.
+     * Explicitly frees the native ONNX Runtime recognizer before clearing the reference.
+     * Relying on finalization would retain large native allocations across model switches.
      */
     override suspend fun release() {
+        val current = recognizer
         recognizer = null
+        current?.release()
         Timber.d("ParakeetProvider released")
     }
 }
