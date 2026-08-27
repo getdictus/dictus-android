@@ -1,0 +1,37 @@
+package dev.pivisolutions.dictus.ime.language
+
+/** French profile, data-equivalent to the approved iOS correction reference. */
+val frenchLanguageProfile = LanguageProfile(
+    code = "fr",
+    displayName = "Français",
+    shortCode = "FR",
+    defaultLayout = KeyboardLayout.AZERTY,
+    spaceLabel = "espace",
+    returnLabel = "retour",
+    dictionaryAssetName = "dict_fr.txt",
+    overrides = mapOf(
+        "ca" to "ça",
+        "tres" to "très",
+        "apres" to "après",
+        "deja" to "déjà",
+        "ete" to "été",
+        "etre" to "être",
+        "voila" to "voilà",
+        "bientot" to "bientôt",
+        "plutot" to "plutôt",
+        "probleme" to "problème",
+        "systeme" to "système",
+        "etait" to "était",
+        "etaient" to "étaient",
+        "evenement" to "événement",
+    ),
+    accentMap = mapOf(
+        'e' to listOf('é', 'è', 'ê', 'ë'),
+        'a' to listOf('à', 'â'),
+        'i' to listOf('î', 'ï'),
+        'o' to listOf('ô'),
+        'u' to listOf('ù', 'û', 'ü'),
+        'c' to listOf('ç'),
+    ),
+    contractionPrefixes = listOf("l'", "d'", "c'", "j'", "n'", "s'", "m'", "t'", "qu'"),
+)
