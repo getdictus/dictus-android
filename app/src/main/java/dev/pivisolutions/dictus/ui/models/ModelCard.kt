@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -304,12 +305,14 @@ fun ModelCard(
                     SegmentedMetricBar(
                         label = stringResource(R.string.model_precision),
                         value = model.precision,
+                        segmentTestTag = "model_precision_segment",
                         color = DictusColors.Accent,
                         modifier = Modifier.weight(1f),
                     )
                     SegmentedMetricBar(
                         label = stringResource(R.string.model_speed),
                         value = model.speed,
+                        segmentTestTag = "model_speed_segment",
                         color = DictusColors.AccentHighlight,
                         modifier = Modifier.weight(1f),
                     )
@@ -437,6 +440,7 @@ fun ModelCard(
 private fun SegmentedMetricBar(
     label: String,
     value: Float,
+    segmentTestTag: String,
     color: Color = DictusColors.Accent,
     modifier: Modifier = Modifier,
 ) {
@@ -462,6 +466,7 @@ private fun SegmentedMetricBar(
             for (i in 0 until segmentCount) {
                 Box(
                     modifier = Modifier
+                        .testTag(segmentTestTag)
                         .weight(1f)
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
