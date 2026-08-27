@@ -14,8 +14,9 @@
 
     <!-- Onboarding: Keyboard setup screen (Step 3) -->
     <string name="onboarding_keyboard_setup_title">Ajouter le clavier</string>
-    <string name="onboarding_keyboard_setup_body">Activez le clavier Dictus dans les r\u00e9glages de votre appareil.</string>
-    <string name="onboarding_keyboard_setup_cta_open_settings">Ouvrir les R\u00e9glages</string>
+    <string name="onboarding_keyboard_setup_body">Activez le clavier Dictus dans les paramètres de votre appareil.</string>
+    <string name="onboarding_keyboard_setup_cta_open_settings">Ouvrir les paramètres</string>
+    <string name="onboarding_keyboard_setup_cta_select">Sélectionner Dictus</string>
     <string name="onboarding_keyboard_setup_cta_continue">Continuer</string>
 
     <!-- Onboarding: Mode selection screen (Step 4) -->

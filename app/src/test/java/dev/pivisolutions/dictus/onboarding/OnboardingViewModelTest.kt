@@ -66,10 +66,6 @@ class OnboardingViewModelTest {
         assertEquals("azerty", viewModel.selectedLayout.value)
     }
 
-    @Test
-    fun `initial state - imeActivated is false`() = runTest(testDispatcher) {
-        assertFalse(viewModel.imeActivated.value)
-    }
 
     @Test
     fun `initial state - downloadProgress is -1`() = runTest(testDispatcher) {
@@ -105,16 +101,6 @@ class OnboardingViewModelTest {
         assertTrue(restoredVm.micPermissionGranted.value)
     }
 
-    @Test
-    fun `savedStateHandle - restores imeActivated from saved state`() = runTest(testDispatcher) {
-        val restoredVm = OnboardingViewModel(
-            context,
-            fakeDataStore,
-            fakeDownloader,
-            SavedStateHandle(mapOf("imeActivated" to true)),
-        )
-        assertTrue(restoredVm.imeActivated.value)
-    }
 
     @Test
     fun `savedStateHandle - advanceStep writes to savedStateHandle`() = runTest(testDispatcher) {
@@ -230,11 +216,6 @@ class OnboardingViewModelTest {
             assertTrue(viewModel.micPermissionGranted.value)
         }
 
-    @Test
-    fun `setImeActivated true sets imeActivated to true`() = runTest(testDispatcher) {
-        viewModel.setImeActivated(true)
-        assertTrue(viewModel.imeActivated.value)
-    }
 
     // --- Download ---
 

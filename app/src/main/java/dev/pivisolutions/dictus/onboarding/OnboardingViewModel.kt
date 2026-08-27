@@ -33,7 +33,7 @@ import javax.inject.Inject
  * (e.g. screen rotation during download). The ViewModel holds the download coroutine so a
  * rotation does not cancel an in-progress download.
  *
- * WHY SavedStateHandle for currentStep/micPermissionGranted/imeActivated: The system can kill
+ * WHY SavedStateHandle for currentStep/micPermissionGranted: The system can kill
  * the app process when showing a system dialog (e.g. the mic permission prompt on step 2).
  * SavedStateHandle persists these values in the Activity's saved instance state bundle so that
  * when the user returns to the app, the onboarding resumes at the correct step instead of
@@ -80,9 +80,6 @@ class OnboardingViewModel @Inject constructor(
     val micPermissionGranted: StateFlow<Boolean> =
         savedStateHandle.getStateFlow("micPermissionGranted", false)
 
-    /** True once the Dictus IME appears in the system's enabled input method list. Survives process death. */
-    val imeActivated: StateFlow<Boolean> =
-        savedStateHandle.getStateFlow("imeActivated", false)
 
     // --- Keyboard layout selection (transient — user can re-select after process death) ---
 
@@ -114,10 +111,6 @@ class OnboardingViewModel @Inject constructor(
         savedStateHandle["micPermissionGranted"] = granted
     }
 
-    /** Mark whether the Dictus IME is enabled in system settings. Persisted via SavedStateHandle. */
-    fun setImeActivated(activated: Boolean) {
-        savedStateHandle["imeActivated"] = activated
-    }
 
     /** Change the selected keyboard layout preference. */
     fun setLayout(layout: String) {

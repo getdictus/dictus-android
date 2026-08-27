@@ -1,21 +1,14 @@
 package dev.pivisolutions.dictus.navigation
 
-import android.content.Context
-import android.provider.Settings
-import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -76,6 +69,7 @@ fun AppNavHost(
     imeEnabled: Boolean,
     imeSelected: Boolean,
     onOpenKeyboardSettings: () -> Unit,
+    onShowKeyboardPicker: () -> Unit,
     onOpenAppSettings: () -> Unit,
 ) {
     val hasCompletedOnboarding by dataStore.data
@@ -93,7 +87,13 @@ fun AppNavHost(
         }
         false -> {
             // Onboarding not complete — show the full 7-step onboarding flow
-            OnboardingScreen(dictationController = dictationController)
+            OnboardingScreen(
+                dictationController = dictationController,
+                imeEnabled = imeEnabled,
+                imeSelected = imeSelected,
+                onOpenKeyboardSettings = onOpenKeyboardSettings,
+                onShowKeyboardPicker = onShowKeyboardPicker,
+            )
         }
         true -> {
             MainTabsScreen(
@@ -123,18 +123,21 @@ fun AppNavHost(
  * the transitions are purely sequential. A simple when keeps the code easy to read and
  * avoids navigation graph complexity for a one-time, non-navigable flow.
  *
- * WHY LaunchedEffect for IME check: IME status must be re-checked when the user returns
- * from system settings. The context and imeEnabled/imeSelected values from MainActivity
- * are not directly available here, so we check via the Settings.Secure API on step 3.
+ * IME state comes from MainActivity, which re-reads Android's system state after settings
+ * and picker round trips. The system remains the source of truth across process recreation.
  */
 @Composable
-private fun OnboardingScreen(dictationController: DictationController?) {
+private fun OnboardingScreen(
+    dictationController: DictationController?,
+    imeEnabled: Boolean,
+    imeSelected: Boolean,
+    onOpenKeyboardSettings: () -> Unit,
+    onShowKeyboardPicker: () -> Unit,
+) {
     val viewModel: OnboardingViewModel = hiltViewModel()
-    val context = LocalContext.current
 
     val currentStep by viewModel.currentStep.collectAsState()
     val micGranted by viewModel.micPermissionGranted.collectAsState()
-    val imeActivated by viewModel.imeActivated.collectAsState()
     val selectedLayout by viewModel.selectedLayout.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val downloadComplete by viewModel.modelDownloadComplete.collectAsState()
@@ -143,27 +146,6 @@ private fun OnboardingScreen(dictationController: DictationController?) {
     val recommendedModel = viewModel.recommendedModelInfo
     val modelSizeMb = recommendedModel.expectedSizeBytes / (1024 * 1024)
 
-    // Re-check IME status on step 3: both when entering the step AND when returning
-    // from system Settings (onResume). Without the lifecycle check, the user enables Dictus
-    // in Settings but the onboarding doesn't detect it.
-    // WHY InputMethodManager (not Settings.Secure.ENABLED_INPUT_METHODS): Android 15 (SDK 35)
-    // throws SecurityException when reading ENABLED_INPUT_METHODS directly.
-    LaunchedEffect(currentStep) {
-        if (currentStep == 3) {
-            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            val isEnabled = imm.enabledInputMethodList.any { it.packageName == context.packageName }
-            viewModel.setImeActivated(isEnabled)
-        }
-    }
-
-    // Re-check on resume (user returns from system Settings after enabling Dictus)
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        if (currentStep == 3) {
-            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            val isEnabled = imm.enabledInputMethodList.any { it.packageName == context.packageName }
-            viewModel.setImeActivated(isEnabled)
-        }
-    }
 
     when (currentStep) {
         1 -> OnboardingWelcomeScreen(
@@ -175,12 +157,10 @@ private fun OnboardingScreen(dictationController: DictationController?) {
             onNext = { viewModel.advanceStep() },
         )
         3 -> OnboardingKeyboardSetupScreen(
-            imeActivated = imeActivated,
-            onOpenSettings = {
-                val intent = android.content.Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
-                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            },
+            imeEnabled = imeEnabled,
+            imeSelected = imeSelected,
+            onOpenSettings = onOpenKeyboardSettings,
+            onOpenPicker = onShowKeyboardPicker,
             onNext = { viewModel.advanceStep() },
         )
         4 -> OnboardingModeSelectionScreen(

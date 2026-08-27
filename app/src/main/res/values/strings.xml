@@ -16,6 +16,7 @@
     <string name="onboarding_keyboard_setup_title">Add the keyboard</string>
     <string name="onboarding_keyboard_setup_body">Enable the Dictus keyboard in your device settings.</string>
     <string name="onboarding_keyboard_setup_cta_open_settings">Open Settings</string>
+    <string name="onboarding_keyboard_setup_cta_select">Select Dictus</string>
     <string name="onboarding_keyboard_setup_cta_continue">Continue</string>
 
     <!-- Onboarding: Mode selection screen (Step 4) -->

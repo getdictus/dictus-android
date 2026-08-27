@@ -5,9 +5,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.KeyboardAlt
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,44 +20,56 @@ import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
-import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ui.onboarding.FakeSettingsCard
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 
 /**
  * Onboarding Step 3 — Keyboard activation setup.
  *
- * Guides the user to enable the Dictus IME in Android's system settings.
- * A decorative FakeSettingsCard shows what to toggle, and the CTA opens the
- * "Input methods" settings screen.
+ * Android exposes IME setup as two distinct system actions. Users must first enable
+ * Dictus in keyboard settings, then select it from the input-method picker. Continuing
+ * before both states are true would leave onboarding complete with another keyboard active.
  *
- * CTA state:
- * - Before activation: "Ouvrir les Reglages" with external-link icon → calls [onOpenSettings]
- * - After activation: "Continuer" with no icon → calls [onNext]
- *
- * WHY check on resume (not here): IME activation is checked in onResume() of MainActivity
- * so that when the user returns from the system settings screen, the ViewModel state
- * updates automatically. This screen reacts to that state via the [imeActivated] param.
- *
- * @param imeActivated    True if the Dictus IME is enabled in system settings.
- * @param onOpenSettings  Called to open Android input method settings.
- * @param onNext          Called when the user taps "Continuer" after activating.
+ * IME state is re-read from the system by MainActivity after settings/picker round trips,
+ * so it remains correct after activity or process recreation rather than trusting saved UI state.
  */
 @Composable
 fun OnboardingKeyboardSetupScreen(
-    imeActivated: Boolean,
+    imeEnabled: Boolean,
+    imeSelected: Boolean,
     onOpenSettings: () -> Unit,
+    onOpenPicker: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val ctaText = if (imeActivated) stringResource(R.string.onboarding_keyboard_setup_cta_continue) else stringResource(R.string.onboarding_keyboard_setup_cta_open_settings)
-    val ctaIcon = if (imeActivated) null else Icons.Default.OpenInNew
+    val state = when {
+        !imeEnabled -> KeyboardSetupState.NOT_ENABLED
+        !imeSelected -> KeyboardSetupState.NOT_SELECTED
+        else -> KeyboardSetupState.READY
+    }
+    val ctaText = when (state) {
+        KeyboardSetupState.NOT_ENABLED ->
+            stringResource(R.string.onboarding_keyboard_setup_cta_open_settings)
+        KeyboardSetupState.NOT_SELECTED ->
+            stringResource(R.string.onboarding_keyboard_setup_cta_select)
+        KeyboardSetupState.READY ->
+            stringResource(R.string.onboarding_keyboard_setup_cta_continue)
+    }
+    val ctaIcon = if (state == KeyboardSetupState.NOT_ENABLED) {
+        Icons.AutoMirrored.Filled.OpenInNew
+    } else {
+        null
+    }
 
     OnboardingStepScaffold(
         currentStep = 3,
         ctaText = ctaText,
         ctaIcon = ctaIcon,
         onCtaClick = {
-            if (imeActivated) onNext() else onOpenSettings()
+            when (state) {
+                KeyboardSetupState.NOT_ENABLED -> onOpenSettings()
+                KeyboardSetupState.NOT_SELECTED -> onOpenPicker()
+                KeyboardSetupState.READY -> onNext()
+            }
         },
     ) {
         Icon(
@@ -88,8 +101,12 @@ fun OnboardingKeyboardSetupScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        FakeSettingsCard(
-            modifier = Modifier.fillMaxWidth(),
-        )
+        FakeSettingsCard(modifier = Modifier.fillMaxWidth())
     }
+}
+
+private enum class KeyboardSetupState {
+    NOT_ENABLED,
+    NOT_SELECTED,
+    READY,
 }
