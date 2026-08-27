@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.onboarding
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
@@ -11,6 +12,7 @@ import dev.pivisolutions.dictus.service.ModelDownloader
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -234,6 +236,49 @@ class OnboardingViewModelTest {
 
             assertEquals(100, viewModel.downloadProgress.value)
             assertTrue(viewModel.modelDownloadComplete.value)
+        }
+
+    @Test
+    fun `successful download selects recommended model before test recording`() =
+        runTest(testDispatcher) {
+            fakeDownloader.nextFlow = flowOf(DownloadProgress.Complete("/path/to/model"))
+
+            viewModel.startModelDownload()
+            advanceUntilIdle()
+
+            val activeModel = fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
+            assertEquals(viewModel.recommendedKey, activeModel)
+        }
+
+    @Test
+    fun `failed download does not change active model`() =
+        runTest(testDispatcher) {
+            fakeDataStore.edit { prefs ->
+                prefs[PreferenceKeys.ACTIVE_MODEL] = "existing-model"
+            }
+            fakeDownloader.nextFlow = flowOf(DownloadProgress.Error("Network failure"))
+
+            viewModel.startModelDownload()
+            advanceUntilIdle()
+
+            val activeModel = fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
+            assertEquals("existing-model", activeModel)
+        }
+
+    @Test
+    fun `incomplete download does not change active model`() =
+        runTest(testDispatcher) {
+            fakeDataStore.edit { prefs ->
+                prefs[PreferenceKeys.ACTIVE_MODEL] = "existing-model"
+            }
+            fakeDownloader.nextFlow = flowOf(DownloadProgress.Progress(50))
+
+            viewModel.startModelDownload()
+            advanceUntilIdle()
+
+            val activeModel = fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
+            assertEquals("existing-model", activeModel)
+            assertFalse(viewModel.modelDownloadComplete.value)
         }
 
     @Test

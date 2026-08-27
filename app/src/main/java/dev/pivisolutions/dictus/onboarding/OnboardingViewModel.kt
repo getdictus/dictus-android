@@ -21,13 +21,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel for the 6-step onboarding flow.
+ * ViewModel for the 7-step onboarding flow.
  *
  * Manages state transitions between onboarding steps with validation guards:
  * - Step 2 (Mic): user must grant RECORD_AUDIO permission
  * - Step 3 (Keyboard): user must enable the Dictus IME
  * - Step 5 (Download): model download must complete before advancing
- * - Step 6 (Success): tapping "Commencer" writes HAS_COMPLETED_ONBOARDING=true to DataStore
+ * - Step 7 (Success): tapping "Commencer" writes HAS_COMPLETED_ONBOARDING=true to DataStore
  *
  * WHY ViewModel (not stateless composable): Onboarding state survives configuration changes
  * (e.g. screen rotation during download). The ViewModel holds the download coroutine so a
@@ -43,9 +43,10 @@ import javax.inject.Inject
  * These are transient: layout can be re-chosen, and a partial download restarts anyway on process
  * death. Persisting them would add complexity with no user-visible benefit.
  *
- * WHY DataStore write at step 6 (not step 5): The user has completed the flow and seen the
- * success screen — only then is onboarding considered "done". Writing earlier would skip the
- * success screen if the app is killed and relaunched.
+ * WHY active model at step 5 but onboarding completion at step 7: The test recording in step 6
+ * must use the exact recommended model that step 5 downloaded. Selecting that model when the
+ * download completes makes it available to DictationService without prematurely marking the
+ * onboarding flow complete; HAS_COMPLETED_ONBOARDING is still written only on the success screen.
  *
  * @param context Application context for device capability checks (RAM-based model recommendation).
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
@@ -71,7 +72,7 @@ class OnboardingViewModel @Inject constructor(
 
     // --- Step state machine (SavedStateHandle-backed for process-death survival) ---
 
-    /** Current onboarding step (1–6). Survives process death via SavedStateHandle. */
+    /** Current onboarding step (1–7). Survives process death via SavedStateHandle. */
     val currentStep: StateFlow<Int> = savedStateHandle.getStateFlow("currentStep", 1)
 
     // --- Permission / activation flags (SavedStateHandle-backed) ---
@@ -120,7 +121,7 @@ class OnboardingViewModel @Inject constructor(
     /**
      * Advance to the next onboarding step, respecting validation guards:
      * - Step 5: blocked until model download completes.
-     * - Step 6: triggers DataStore persistence and completes onboarding.
+     * - Step 7: triggers DataStore persistence and completes onboarding.
      */
     fun advanceStep() {
         val step = currentStep.value
@@ -163,6 +164,9 @@ class OnboardingViewModel @Inject constructor(
                             _isExtracting.value = true
                         }
                         is DownloadProgress.Complete -> {
+                            dataStore.edit { prefs ->
+                                prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey
+                            }
                             _isExtracting.value = false
                             _downloadProgress.value = 100
                             _modelDownloadComplete.value = true
@@ -185,7 +189,7 @@ class OnboardingViewModel @Inject constructor(
     /**
      * Persist the selected layout, active model, and onboarding completion flag to DataStore.
      *
-     * Called when the user taps "Commencer" on step 6. The DataStore write causes AppNavHost
+     * Called when the user taps "Commencer" on step 7. The DataStore write causes AppNavHost
      * to recompose and switch from the onboarding flow to the main tab layout.
      */
     private fun completeOnboarding() {
