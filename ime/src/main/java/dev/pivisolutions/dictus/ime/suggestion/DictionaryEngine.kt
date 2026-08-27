@@ -118,7 +118,7 @@ class DictionaryEngine(
         val lowerInput = input.lowercase()
         val strippedInput = lowerInput.stripAccents()
         val firstChar = strippedInput.firstOrNull() ?: return emptyList()
-        val learned = personalDictionary.learnedWords
+        val learned = personalDictionary.learnedWords.value
 
         // Look up only dictionary words sharing the same first character
         val candidates = live.prefixIndex[firstChar] ?: emptyList()

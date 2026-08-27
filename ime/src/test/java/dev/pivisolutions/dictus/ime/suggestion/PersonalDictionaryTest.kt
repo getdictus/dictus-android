@@ -3,19 +3,29 @@ package dev.pivisolutions.dictus.ime.suggestion
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.util.concurrent.Executors
 
 /**
  * Unit tests for PersonalDictionary.
@@ -54,7 +64,7 @@ class PersonalDictionaryTest {
 
         assertFalse(
             "Word typed only once should NOT be in learnedWords",
-            dict.learnedWords.contains("hello"),
+            dict.learnedWords.value.contains("hello"),
         )
     }
 
@@ -69,7 +79,7 @@ class PersonalDictionaryTest {
 
         assertTrue(
             "Word typed twice should be in learnedWords",
-            dict.learnedWords.contains("hello"),
+            dict.learnedWords.value.contains("hello"),
         )
     }
 
@@ -84,7 +94,7 @@ class PersonalDictionaryTest {
 
         assertTrue(
             "learnedWords should remain empty after blank inputs",
-            dict.learnedWords.isEmpty(),
+            dict.learnedWords.value.isEmpty(),
         )
     }
 
@@ -120,7 +130,50 @@ class PersonalDictionaryTest {
 
         assertTrue(
             "New PersonalDictionary instance should load 'bonjour' from DataStore",
-            dict2.learnedWords.contains("bonjour"),
+            dict2.learnedWords.value.contains("bonjour"),
         )
+    }
+
+    @Test
+    fun `DataStore collector safely publishes learned words across dispatchers`() {
+        val storeExecutor = Executors.newSingleThreadExecutor()
+        val collectorExecutor = Executors.newSingleThreadExecutor()
+        val writerExecutor = Executors.newSingleThreadExecutor()
+        val readerExecutor = Executors.newSingleThreadExecutor()
+        val storeDispatcher = storeExecutor.asCoroutineDispatcher()
+        val collectorDispatcher = collectorExecutor.asCoroutineDispatcher()
+        val writerDispatcher = writerExecutor.asCoroutineDispatcher()
+        val readerDispatcher = readerExecutor.asCoroutineDispatcher()
+        val storeScope = CoroutineScope(SupervisorJob() + storeDispatcher)
+        val collectorScope = CoroutineScope(SupervisorJob() + collectorDispatcher)
+        try {
+            val crossDispatcherStore = PreferenceDataStoreFactory.create(
+                scope = storeScope,
+                produceFile = { tempFolder.newFile("cross_dispatcher.preferences_pb") },
+            )
+            val dictionary = PersonalDictionary(crossDispatcherStore, collectorScope)
+
+            runBlocking(writerDispatcher) {
+                crossDispatcherStore.edit { preferences ->
+                    preferences[PreferenceKeys.PERSONAL_DICTIONARY] = setOf("visible")
+                }
+            }
+            runBlocking {
+                withTimeout(5_000) {
+                    dictionary.learnedWords.filter { "visible" in it }.first()
+                }
+                val observedOnReader = withContext(readerDispatcher) {
+                    dictionary.learnedWords.value
+                }
+                assertTrue("IO reader must observe collector update", "visible" in observedOnReader)
+            }
+        } finally {
+            collectorScope.cancel()
+            storeScope.cancel()
+            readerDispatcher.close()
+            writerDispatcher.close()
+            collectorDispatcher.close()
+            storeDispatcher.close()
+        }
     }
 }

@@ -6,6 +6,8 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.text.Normalizer
+import java.util.Locale
 
 enum class TrieKeyboardLayout(internal val nativeValue: Int) {
     AZERTY(0),
@@ -37,12 +39,19 @@ class NativeTrie private constructor(
             require(assetName in setOf("fr_spellcheck.dict", "en_spellcheck.dict")) {
                 "Unsupported dictionary asset"
             }
+            return openPath(copyAssetAtomically(context, assetName), layout)
+        }
+
+        /** Test seam for malformed native fixtures; production callers use verified assets. */
+        internal fun openPathForTesting(file: File, layout: TrieKeyboardLayout): NativeTrie =
+            openPath(file, layout)
+
+        private fun openPath(file: File, layout: TrieKeyboardLayout): NativeTrie {
             val nativeTrie = NativeTrie(0L)
             val handle = nativeTrie.nativeCreate()
             check(handle != 0L) { "Unable to allocate native trie" }
             nativeTrie.nativeHandle = handle
             try {
-                val file = copyAssetAtomically(context, assetName)
                 check(nativeTrie.nativeLoad(handle, file.absolutePath)) {
                     "Invalid trie dictionary"
                 }
@@ -98,7 +107,9 @@ class NativeTrie private constructor(
     @Synchronized
     fun wordExists(word: String): Boolean {
         check(nativeHandle != 0L) { "Trie is closed" }
-        return nativeWordExists(nativeHandle, word)
+        val canonical = word.canonicalLookup()
+        if (canonical.isEmpty() || canonical.length > MAX_INPUT_LENGTH) return false
+        return nativeWordExists(nativeHandle, canonical)
     }
 
     @Synchronized
@@ -110,8 +121,24 @@ class NativeTrie private constructor(
         check(nativeHandle != 0L) { "Trie is closed" }
         require(maxEditDistance > 0f && maxEditDistance <= MAX_EDIT_DISTANCE)
         require(maxResults in 1..20)
-        if (word.isEmpty() || word.length > MAX_INPUT_LENGTH) return emptyList()
-        return nativeCorrect(nativeHandle, word, maxEditDistance, maxResults).toList()
+        val canonical = word.canonicalLookup()
+        if (canonical.isEmpty() || canonical.length > MAX_INPUT_LENGTH) return emptyList()
+        return nativeCorrect(
+            nativeHandle,
+            canonical,
+            maxEditDistance,
+            maxResults,
+        ).toList()
+    }
+
+    /** Returns bounded, deterministic highest-frequency completions, excluding [prefix] itself. */
+    @Synchronized
+    fun complete(prefix: String, maxResults: Int = 3): List<String> {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        require(maxResults in 1..20)
+        val canonical = prefix.canonicalLookup()
+        if (canonical.isEmpty() || canonical.length > MAX_INPUT_LENGTH) return emptyList()
+        return nativeComplete(nativeHandle, canonical, maxResults).toList()
     }
 
     @Synchronized
@@ -133,4 +160,12 @@ class NativeTrie private constructor(
         maxEditDistance: Float,
         maxResults: Int,
     ): Array<String>
+    private external fun nativeComplete(
+        handle: Long,
+        prefix: String,
+        maxResults: Int,
+    ): Array<String>
+
+    private fun String.canonicalLookup(): String =
+        Normalizer.normalize(lowercase(Locale.ROOT), Normalizer.Form.NFC)
 }

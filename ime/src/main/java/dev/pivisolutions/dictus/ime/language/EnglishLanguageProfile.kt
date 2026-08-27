@@ -9,6 +9,7 @@ val englishLanguageProfile = LanguageProfile(
     spaceLabel = "space",
     returnLabel = "return",
     dictionaryAssetName = "dict_en.txt",
+    nativeDictionaryAssetName = "en_spellcheck.dict",
     overrides = mapOf(
         "im" to "i'm",
         "ive" to "i've",

@@ -129,3 +129,39 @@ Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeCorrect(
     }
     return result;
 }
+
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeComplete(
+    JNIEnv* env,
+    jobject,
+    jlong handle,
+    jstring prefix,
+    jint maxResults
+) {
+    jclass stringClass = env->FindClass("java/lang/String");
+    if (stringClass == nullptr) return nullptr;
+    Engine* engine = fromHandle(handle);
+    const std::u16string input = toUtf16(env, prefix);
+    if (engine == nullptr || input.empty() || input.size() > 32 ||
+        maxResults <= 0 || maxResults > 20) {
+        return env->NewObjectArray(0, stringClass, nullptr);
+    }
+    const std::vector<std::u16string> completions = engine->trie.complete(
+        reinterpret_cast<const uint16_t*>(input.data()),
+        static_cast<int>(input.size()),
+        maxResults
+    );
+    jobjectArray result = env->NewObjectArray(
+        static_cast<jsize>(completions.size()), stringClass, nullptr);
+    if (result == nullptr) return nullptr;
+    for (size_t index = 0; index < completions.size(); ++index) {
+        const std::u16string& completion = completions[index];
+        jstring value = env->NewString(
+            reinterpret_cast<const jchar*>(completion.data()),
+            static_cast<jsize>(completion.size()));
+        if (value == nullptr) return result;
+        env->SetObjectArrayElement(result, static_cast<jsize>(index), value);
+        env->DeleteLocalRef(value);
+    }
+    return result;
+}

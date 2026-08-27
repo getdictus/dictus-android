@@ -71,13 +71,7 @@ void Scorer::setProximityMap(const ProximityMap* map) {
 
 // Compute node byte size for sibling iteration.
 static uint32_t computeNodeSize(const TrieNode& node) {
-    uint32_t sz = 1; // flags
-    if (node.flags & FLAG_MULTI_CHAR) sz += 1;
-    sz += node.charCount * 2;
-    if (node.flags & FLAG_TERMINAL) sz += 2;
-    int ptrSize = childrenPtrSize(node.flags);
-    if (ptrSize > 0) sz += 1 + ptrSize;
-    return sz;
+    return node.byteSize;
 }
 
 // Insert candidate maintaining sorted order (descending by score).
@@ -140,8 +134,9 @@ static void searchRecursive(const Trie& trie,
                             float cost, float maxEditDist,
                             std::vector<Candidate>& results, int maxResults,
                             const ProximityMap* proxMap,
-                            int nodeCharPos) {
-    if (cost > maxEditDist) return;
+                            int nodeCharPos, uint32_t& states) {
+    if (++states > Trie::MAX_FUZZY_STATES || cost > maxEditDist ||
+        wordLen < 0 || wordLen > Trie::MAX_WORD_CODE_UNITS) return;
 
     // We process characters of this node one at a time (nodeCharPos tracks position).
     // For patricia nodes with multiple chars, we must match/edit each char.
@@ -155,7 +150,7 @@ static void searchRecursive(const Trie& trie,
             wordBuf[wordLen] = trieChar;
             searchRecursive(trie, node, input, inputLen, inputPos + 1,
                             wordBuf, wordLen + 1, cost, maxEditDist,
-                            results, maxResults, proxMap, nodeCharPos + 1);
+                            results, maxResults, proxMap, nodeCharPos + 1, states);
         }
 
         // 2. SUBSTITUTION: input char != trie char
@@ -165,7 +160,7 @@ static void searchRecursive(const Trie& trie,
                 wordBuf[wordLen] = trieChar;
                 searchRecursive(trie, node, input, inputLen, inputPos + 1,
                                 wordBuf, wordLen + 1, cost + sc, maxEditDist,
-                                results, maxResults, proxMap, nodeCharPos + 1);
+                                results, maxResults, proxMap, nodeCharPos + 1, states);
             }
         }
 
@@ -175,7 +170,7 @@ static void searchRecursive(const Trie& trie,
             if (cost + ic <= maxEditDist) {
                 searchRecursive(trie, node, input, inputLen, inputPos + 1,
                                 wordBuf, wordLen, cost + ic, maxEditDist,
-                                results, maxResults, proxMap, nodeCharPos);
+                                results, maxResults, proxMap, nodeCharPos, states);
             }
         }
 
@@ -186,7 +181,7 @@ static void searchRecursive(const Trie& trie,
                 wordBuf[wordLen] = trieChar;
                 searchRecursive(trie, node, input, inputLen, inputPos,
                                 wordBuf, wordLen + 1, cost + dc, maxEditDist,
-                                results, maxResults, proxMap, nodeCharPos + 1);
+                                results, maxResults, proxMap, nodeCharPos + 1, states);
             }
         }
 
@@ -201,8 +196,30 @@ static void searchRecursive(const Trie& trie,
                     wordBuf[wordLen + 1] = nextTrieChar;
                     searchRecursive(trie, node, input, inputLen, inputPos + 2,
                                     wordBuf, wordLen + 2, cost + tc, maxEditDist,
-                                    results, maxResults, proxMap, nodeCharPos + 2);
+                                    results, maxResults, proxMap, nodeCharPos + 2, states);
                 }
+            }
+        }
+
+        // A Patricia edge must not hide adjacency from Damerau transposition.
+        // When this is the node's final character, pair it with each child's
+        // first character and continue inside the matching child.
+        if (inputPos + 1 < inputLen && nodeCharPos + 1 == node.charCount &&
+            node.childCount > 0 && cost + 0.7f <= maxEditDist) {
+            uint32_t childOffset = node.childrenOffset;
+            for (int childIndex = 0; childIndex < node.childCount; ++childIndex) {
+                const TrieNode child = trie.readNode(childOffset);
+                if (!child.valid) break;
+                uint16_t childFirstChar;
+                std::memcpy(&childFirstChar, &child.chars[0], 2);
+                if (input[inputPos] == childFirstChar && input[inputPos + 1] == trieChar) {
+                    wordBuf[wordLen] = trieChar;
+                    wordBuf[wordLen + 1] = childFirstChar;
+                    searchRecursive(trie, child, input, inputLen, inputPos + 2,
+                                    wordBuf, wordLen + 2, cost + 0.7f, maxEditDist,
+                                    results, maxResults, proxMap, 1, states);
+                }
+                childOffset += computeNodeSize(child);
             }
         }
 
@@ -247,7 +264,7 @@ static void searchRecursive(const Trie& trie,
 
             searchRecursive(trie, child, input, inputLen, inputPos,
                             wordBuf, wordLen, cost, maxEditDist,
-                            results, maxResults, proxMap, 0);
+                            results, maxResults, proxMap, 0, states);
 
             childOff += computeNodeSize(child);
         }
@@ -261,7 +278,8 @@ std::vector<Candidate> Scorer::correct(const Trie& trie,
     std::vector<Candidate> results;
     if (inputLen <= 0 || !trie.rootData()) return results;
 
-    uint16_t wordBuf[128];
+    uint16_t wordBuf[Trie::MAX_WORD_CODE_UNITS + 1];
+    uint32_t states = 0;
 
     // Root children start at HEADER_SIZE with known count from header.
     uint32_t offset = HEADER_SIZE;
@@ -272,8 +290,9 @@ std::vector<Candidate> Scorer::correct(const Trie& trie,
 
         searchRecursive(trie, node, input, inputLen, 0,
                         wordBuf, 0, 0.0f, maxEditDist,
-                        results, maxResults, proximityMap_, 0);
+                        results, maxResults, proximityMap_, 0, states);
 
+        if (states > Trie::MAX_FUZZY_STATES) break;
         offset += computeNodeSize(node);
     }
 
