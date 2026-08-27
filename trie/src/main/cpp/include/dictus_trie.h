@@ -4,6 +4,8 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <string>
+#include <vector>
 
 namespace dictus {
 
@@ -16,6 +18,7 @@ struct TrieNode {
     uint16_t frequency;     // 0 if not terminal
     uint32_t childrenOffset;// absolute offset to first child
     uint8_t childCount;     // number of direct children
+    uint32_t byteSize;      // validated encoded size of this node
 };
 
 /// Read-only trie loaded via mmap from a .dict file.
@@ -41,6 +44,15 @@ public:
     /// Get frequency of a word (0 if not found).
     uint16_t getFrequency(const uint16_t* chars, int len) const;
 
+    /// Return the highest-frequency words beginning with prefix. The exact
+    /// prefix is excluded. Frequency ties are ordered lexicographically.
+    std::vector<std::u16string> complete(const uint16_t* prefix, int len,
+                                         int maxResults) const;
+
+    static constexpr uint32_t MAX_COMPLETION_VISITS = 20000;
+    static constexpr uint32_t MAX_FUZZY_STATES = 100000;
+    static constexpr int MAX_WORD_CODE_UNITS = 127;
+
     /// Pointer to first node data (past header).
     const uint8_t* rootData() const;
 
@@ -63,6 +75,8 @@ private:
     const uint8_t* data_;
     size_t size_;
     int fd_;
+
+    bool validateStructure() const;
 
     /// Traverse trie matching chars. Returns terminal node frequency, or 0.
     uint16_t traverse(const uint16_t* chars, int len) const;

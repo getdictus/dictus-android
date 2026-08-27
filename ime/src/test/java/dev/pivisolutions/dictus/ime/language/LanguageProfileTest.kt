@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime.language
 
+import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -38,6 +39,7 @@ class LanguageProfileTest {
         assertEquals("espace", frenchLanguageProfile.spaceLabel)
         assertEquals("retour", frenchLanguageProfile.returnLabel)
         assertEquals("dict_fr.txt", frenchLanguageProfile.dictionaryAssetName)
+        assertEquals("fr_spellcheck.dict", frenchLanguageProfile.nativeDictionaryAssetName)
         assertEquals(
             mapOf(
                 "ca" to "ça",
@@ -85,6 +87,7 @@ class LanguageProfileTest {
         assertEquals("space", englishLanguageProfile.spaceLabel)
         assertEquals("return", englishLanguageProfile.returnLabel)
         assertEquals("dict_en.txt", englishLanguageProfile.dictionaryAssetName)
+        assertEquals("en_spellcheck.dict", englishLanguageProfile.nativeDictionaryAssetName)
         assertEquals(
             mapOf(
                 "im" to "i'm", "ive" to "i've", "dont" to "don't",
@@ -106,5 +109,11 @@ class LanguageProfileTest {
         assertTrue(englishLanguageProfile.contractionPrefixes.isEmpty())
         assertTrue(englishLanguageProfile.collapseRules.isEmpty())
         assertTrue(englishLanguageProfile.seedBigrams.isEmpty())
+    }
+
+    @Test
+    fun `IME layouts map explicitly to native trie layouts`() {
+        assertEquals(TrieKeyboardLayout.AZERTY, KeyboardLayout.AZERTY.toNativeTrieLayout())
+        assertEquals(TrieKeyboardLayout.QWERTY, KeyboardLayout.QWERTY.toNativeTrieLayout())
     }
 }

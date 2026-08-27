@@ -9,6 +9,8 @@ data class LanguageProfile(
     val spaceLabel: String,
     val returnLabel: String,
     val dictionaryAssetName: String,
+    /** Binary mmap-ready dictionary packaged by the trie module. */
+    val nativeDictionaryAssetName: String,
     val overrides: Map<String, String>,
     val accentMap: Map<Char, List<Char>>,
     val contractionPrefixes: List<String>,

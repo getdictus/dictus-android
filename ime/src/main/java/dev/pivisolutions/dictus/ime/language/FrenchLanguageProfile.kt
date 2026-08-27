@@ -9,6 +9,7 @@ val frenchLanguageProfile = LanguageProfile(
     spaceLabel = "espace",
     returnLabel = "retour",
     dictionaryAssetName = "dict_fr.txt",
+    nativeDictionaryAssetName = "fr_spellcheck.dict",
     overrides = mapOf(
         "ca" to "ça",
         "tres" to "très",

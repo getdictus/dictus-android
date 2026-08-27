@@ -5,6 +5,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -39,11 +42,13 @@ class PersonalDictionary(
 
     /**
      * Set of words the user has typed at least [LEARN_THRESHOLD] times.
-     * Observed by DictionaryEngine for frequency boost ranking.
+     * Observed by suggestion engines for learned-word ranking.
      * Updated reactively when DataStore emits new values.
      */
-    var learnedWords: Set<String> = emptySet()
-        private set
+    private val _learnedWords = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Thread-safe snapshot stream; StateFlow safely publishes collector updates to IO readers. */
+    val learnedWords: StateFlow<Set<String>> = _learnedWords.asStateFlow()
 
     init {
         // Collect DataStore changes reactively — no blocking reads needed in getSuggestions().
@@ -52,7 +57,7 @@ class PersonalDictionary(
         // current without blocking the main thread.
         scope.launch {
             dataStore.data.collect { prefs ->
-                learnedWords = prefs[PreferenceKeys.PERSONAL_DICTIONARY] ?: emptySet()
+                _learnedWords.value = prefs[PreferenceKeys.PERSONAL_DICTIONARY] ?: emptySet()
             }
         }
     }
@@ -68,7 +73,7 @@ class PersonalDictionary(
         val lower = word.lowercase()
         val count = (typeCount[lower] ?: 0) + 1
         typeCount[lower] = count
-        if (count >= LEARN_THRESHOLD && !learnedWords.contains(lower)) {
+        if (count >= LEARN_THRESHOLD && !learnedWords.value.contains(lower)) {
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.PERSONAL_DICTIONARY] =

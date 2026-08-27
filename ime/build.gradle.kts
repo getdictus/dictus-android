@@ -40,6 +40,7 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":trie"))
     implementation(libs.datastore.preferences)
 
     implementation(platform(libs.compose.bom))
