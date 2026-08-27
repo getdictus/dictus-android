@@ -84,6 +84,10 @@ fun OnboardingTestRecordingScreen(
         ?: remember { mutableStateOf(SttEngineState.Cold as SttEngineState) }
     val micGate = remember(dictationController) { PendingMicGate() }
 
+    LaunchedEffect(dictationController) {
+        dictationController?.prewarmEngine()
+    }
+
     fun runGateCommand(command: MicGateCommand) {
         when (command) {
             MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
