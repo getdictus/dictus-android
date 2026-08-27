@@ -71,6 +71,14 @@ class OnboardingTestRecordingGateTest {
             assertEquals(0, controller.startCalls)
         }
 
+        composeRule.onNodeWithText("Speech recognition could not start").assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").assertIsDisplayed()
+        composeRule.onNodeWithText("Retry").performClick()
+        composeRule.runOnIdle {
+            assertEquals(2, controller.prewarmCalls)
+            assertEquals(0, controller.startCalls)
+        }
+
         controller.engine.value = SttEngineState.Loading("small-q5_1")
         composeRule.onNodeWithText("Preparing speech recognition").assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(0, controller.startCalls) }
