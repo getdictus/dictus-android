@@ -39,6 +39,14 @@ class KeyboardLayoutTest {
     }
 
     @Test
+    fun `adaptive key exists only on AZERTY letters`() {
+        assertEquals(1, KeyboardLayouts.azertyLetters.flatten().count { it.type == KeyType.ACCENT_ADAPTIVE })
+        assertEquals(0, KeyboardLayouts.qwertyLetters.flatten().count { it.type == KeyType.ACCENT_ADAPTIVE })
+        assertEquals(0, KeyboardLayouts.numbersRows.flatten().count { it.type == KeyType.ACCENT_ADAPTIVE })
+        assertEquals(0, KeyboardLayouts.symbolsRows.flatten().count { it.type == KeyType.ACCENT_ADAPTIVE })
+    }
+
+    @Test
     fun `row 4 has layer switch, emoji, space, and return`() {
         val row4 = KeyboardLayouts.azertyLetters[3]
         val types = row4.map { it.type }
