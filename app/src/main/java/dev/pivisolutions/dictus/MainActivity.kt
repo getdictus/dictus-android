@@ -8,6 +8,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
+import android.view.View
+import android.view.ViewGroup
+import android.widget.EditText
 import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
@@ -69,6 +72,10 @@ class MainActivity : AppCompatActivity() {
     // Checked in onResume because user may toggle IME in system settings.
     private var imeEnabled by mutableStateOf(false)
     private var imeSelected by mutableStateOf(false)
+    private var pickerTarget: EditText? = null
+    private var awaitingKeyboardPickerReturn = false
+    private var showKeyboardPickerRunnable: Runnable? = null
+    private var keyboardPickerTimeoutRunnable: Runnable? = null
 
     /**
      * ServiceConnection callback for DictationService binding.
@@ -145,10 +152,16 @@ class MainActivity : AppCompatActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         // The system picker does not reliably trigger onResume. Refresh when its window closes.
-        if (hasFocus) checkImeStatus()
+        if (hasFocus) {
+            if (awaitingKeyboardPickerReturn) {
+                finishKeyboardPickerRequest()
+            }
+            checkImeStatus()
+        }
     }
 
     override fun onDestroy() {
+        finishKeyboardPickerRequest()
         if (isBound) {
             unbindService(serviceConnection)
             isBound = false
@@ -201,9 +214,60 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows Android's system input-method picker after Dictus has been enabled. */
     private fun showKeyboardPicker() {
+        if (awaitingKeyboardPickerReturn || showKeyboardPickerRunnable != null) return
+
         Timber.d("Requesting system input method picker")
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showInputMethodPicker()
+        // Android 15 ignores showInputMethodPicker() when this Compose-only activity has no
+        // served editor. Give InputMethodManager a temporary, invisible editor target; remove
+        // it as soon as the system picker returns focus to the activity.
+        val target = EditText(this).apply {
+            alpha = 0f
+            isSingleLine = true
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+        }
+        pickerTarget = target
+        addContentView(target, ViewGroup.LayoutParams(1, 1))
+        target.requestFocus()
+        imm.showSoftInput(target, InputMethodManager.SHOW_IMPLICIT)
+        val showPicker = Runnable {
+            showKeyboardPickerRunnable = null
+            if (!isFinishing && !isDestroyed && pickerTarget === target && target.isAttachedToWindow) {
+                awaitingKeyboardPickerReturn = true
+                imm.showInputMethodPicker()
+
+                // A no-op picker request does not produce a focus callback. Release all temporary
+                // state eventually so the user can retry without leaking the synthetic editor.
+                val timeout = Runnable {
+                    keyboardPickerTimeoutRunnable = null
+                    finishKeyboardPickerRequest()
+                    checkImeStatus()
+                }
+                keyboardPickerTimeoutRunnable = timeout
+                window.decorView.postDelayed(timeout, 60_000L)
+            } else {
+                removePickerTarget()
+            }
+        }
+        showKeyboardPickerRunnable = showPicker
+        target.postDelayed(showPicker, 200L)
+    }
+
+    private fun removePickerTarget() {
+        pickerTarget?.let { target ->
+            showKeyboardPickerRunnable?.let(target::removeCallbacks)
+            (target.parent as? ViewGroup)?.removeView(target)
+        }
+        pickerTarget = null
+        showKeyboardPickerRunnable = null
+    }
+
+    private fun finishKeyboardPickerRequest() {
+        removePickerTarget()
+        keyboardPickerTimeoutRunnable?.let(window.decorView::removeCallbacks)
+        keyboardPickerTimeoutRunnable = null
+        awaitingKeyboardPickerReturn = false
     }
 
     /** Opens app detail settings for manual permission grant after denial. */
