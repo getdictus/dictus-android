@@ -19,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -26,6 +28,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -45,6 +50,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+internal val KeyPressedSemantics = SemanticsPropertyKey<Boolean>("KeyPressed")
+internal var SemanticsPropertyReceiver.keyPressed by KeyPressedSemantics
+
+internal fun pressedKeyBackground(
+    releasedColor: Color,
+    keyTextColor: Color,
+    isPressed: Boolean,
+): Color = if (isPressed) lerp(releasedColor, keyTextColor, 0.18f) else releasedColor
+
 /**
  * Renders a single keyboard key with appropriate styling and gesture handling.
  *
@@ -54,7 +68,7 @@ import kotlinx.coroutines.launch
  * Gesture handling varies by key type:
  * - Character keys: tap to type, long-press to open a local accent strip when available
  * - Other keys: tap on release
- * - DELETE: custom pointer input for key-repeat (400ms delay, then every 50ms)
+ * - DELETE: custom pointer input for key-repeat (400ms delay, then every 100ms)
  */
 @Composable
 fun KeyButton(
@@ -96,12 +110,14 @@ fun KeyButton(
     }
 
     // Caps lock check must come before isShifted since caps lock also sets isShifted=true
-    val backgroundColor = when {
+    val releasedBackgroundColor = when {
         key.type == KeyType.SHIFT && isCapsLock -> DictusColors.AccentHighlight
         key.type == KeyType.SHIFT && isShifted -> DictusColors.Accent
         key.type == KeyType.CHARACTER || key.type == KeyType.SPACE -> LocalDictusColors.current.keyBackground
         else -> LocalDictusColors.current.keySpecialBackground
     }
+    val keyTextColor = LocalDictusColors.current.keyText
+    val backgroundColor = pressedKeyBackground(releasedBackgroundColor, keyTextColor, isPressed)
 
     val displayLabel = when (key.type) {
         KeyType.CHARACTER -> if (isShifted) key.label.uppercase() else key.label.lowercase()
@@ -253,9 +269,6 @@ fun KeyButton(
         }
     }
 
-    // Capture key text color for use in non-composable drawBehind scope
-    val keyTextColor = LocalDictusColors.current.keyText
-
     // Draw an underline on the shift key when caps lock is active
     val capsLockUnderline = if (key.type == KeyType.SHIFT && isCapsLock) {
         Modifier.drawBehind {
@@ -283,6 +296,7 @@ fun KeyButton(
             .clip(shape)
             .background(backgroundColor)
             .then(capsLockUnderline)
+            .semantics { keyPressed = isPressed }
             .then(gestureModifier),
         contentAlignment = Alignment.Center,
     ) {
