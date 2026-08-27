@@ -147,10 +147,36 @@ class ModelCatalogTest {
     }
 
     @Test
-    fun `parakeet models have non-zero precision and speed scores`() {
-        ModelCatalog.ALL.filter { it.provider == AiProvider.PARAKEET }.forEach { model ->
-            assertTrue("${model.key} should have precision > 0", model.precision > 0f)
-            assertTrue("${model.key} should have speed > 0", model.speed > 0f)
+    fun `all models have descriptions and bounded metric scores`() {
+        ModelCatalog.ALL.forEach { model ->
+            assertTrue("${model.key} should have a description", model.description.isNotBlank())
+            assertTrue("${model.key} precision should be in 0 to 1", model.precision in 0f..1f)
+            assertTrue("${model.key} speed should be in 0 to 1", model.speed in 0f..1f)
         }
+    }
+
+    @Test
+    fun `whisper speed scores preserve expected device ordering`() {
+        val expectedFastestToSlowest = listOf(
+            "tiny",
+            "base",
+            "small-q5_1",
+            "small",
+            "medium-q5_0",
+        )
+        val actualFastestToSlowest = ModelCatalog.ALL
+            .filter { it.provider == AiProvider.WHISPER }
+            .sortedByDescending { it.speed }
+            .map { it.key }
+
+        assertEquals(expectedFastestToSlowest, actualFastestToSlowest)
+    }
+
+    @Test
+    fun `parakeet speed scores preserve expected device ordering`() {
+        val parakeet110m = ModelCatalog.findByKey("parakeet-ctc-110m-int8")!!
+        val parakeet600m = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!
+
+        assertTrue(parakeet110m.speed > parakeet600m.speed)
     }
 }
