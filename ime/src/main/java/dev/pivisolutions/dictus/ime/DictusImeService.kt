@@ -7,7 +7,9 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.IBinder
+import android.text.InputType
 import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -40,6 +42,9 @@ import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
+import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
+import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
+import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
 import dev.pivisolutions.dictus.ime.input.moveCursorBy
 import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveVariant
@@ -115,6 +120,7 @@ class DictusImeService : LifecycleInputMethodService() {
     // Transient editor-derived state only. Context text is never logged or persisted.
     private val _frenchAdaptiveKeyState = MutableStateFlow(FrenchAdaptiveKey.DEFAULT)
     private var isEditorSelectionCollapsed = false
+    private var isCurrentEditorSuggestionEligible = false
 
     // Whether the built-in suggestion bar is enabled. Observed from DataStore
     // so the user can toggle it in settings without restarting the IME.
@@ -139,7 +145,9 @@ class DictusImeService : LifecycleInputMethodService() {
     private val _currentWord = MutableStateFlow("")
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     private var latestSuggestionRequestId: Long? = null
-    private var latestSuggestionResult: NativeTrieSuggestionEngine.SuggestionResult? = null
+    private val autocorrectCoordinator: AutocorrectInputCoordinator by lazy {
+        AutocorrectInputCoordinator(dictionaryEngine.personalDictionary::learnWord)
+    }
 
     // Waveform animation driver: smooths raw microphone energy for organic bar movement.
     // smoothingFactor=0.3 (fast rise) and decayFactor=0.85 (slow fall) match iOS BrandWaveformDriver.
@@ -205,8 +213,8 @@ class DictusImeService : LifecycleInputMethodService() {
                     if (enabled) {
                         requestSuggestionsForCurrentWord()
                     } else {
+                        autocorrectCoordinator.onOtherInput()
                         latestSuggestionRequestId = null
-                        latestSuggestionResult = null
                         _suggestions.value = emptyList()
                     }
                 }
@@ -218,13 +226,22 @@ class DictusImeService : LifecycleInputMethodService() {
                     result.requestId == latestSuggestionRequestId &&
                     result.input == _currentWord.value
                 ) {
-                    latestSuggestionResult = result
+                    autocorrectCoordinator.suggestionPublished(
+                        AutocorrectSuggestionSnapshot(
+                            requestId = result.requestId,
+                            input = result.input,
+                            isKnownWord = result.isKnownWord,
+                            primaryCorrection = result.primaryCorrection,
+                            isLearnedWord = dictionaryEngine.personalDictionary.isLearned(result.input),
+                        ),
+                    )
                     _suggestions.value = result.suggestions
                 }
             }
         }
         bindingScope.launch {
             dictionaryEngine.activation.filterNotNull().collect { activation ->
+                autocorrectCoordinator.onOtherInput()
                 val activeState = ActiveKeyboardState(activation.language, activation.layout)
                 _activeKeyboardState.value = activeState
                 refreshFrenchAdaptiveKeyState()
@@ -256,6 +273,7 @@ class DictusImeService : LifecycleInputMethodService() {
      * Overriding onKeyDown is the correct approach for IME services.
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        autocorrectCoordinator.onOtherInput()
         if (keyCode == KeyEvent.KEYCODE_BACK && _isEmojiPickerOpen.value) {
             _isEmojiPickerOpen.value = false
             return true // Consume the back key
@@ -280,8 +298,15 @@ class DictusImeService : LifecycleInputMethodService() {
             newSelStart, newSelEnd,
             candidatesStart, candidatesEnd,
         )
+        autocorrectCoordinator.onEditorSelectionChanged()
         isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
+        if (!isCurrentEditorSuggestionEligible) {
+            _currentWord.value = ""
+            _suggestions.value = emptyList()
+            latestSuggestionRequestId = null
+            return
+        }
         val ic = currentInputConnection ?: return
         val beforeCursor = ic.getTextBeforeCursor(50, 0)?.toString() ?: ""
         val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
@@ -296,16 +321,21 @@ class DictusImeService : LifecycleInputMethodService() {
 
     /** Starts a request-identified lookup and immediately invalidates the previous snapshot. */
     private fun requestSuggestionsForCurrentWord() {
-        latestSuggestionResult = null
         _suggestions.value = emptyList()
         latestSuggestionRequestId = dictionaryEngine.requestSuggestions(_currentWord.value)
+        autocorrectCoordinator.suggestionRequested(latestSuggestionRequestId, _currentWord.value)
     }
 
     override fun onStartInput(
-        attribute: android.view.inputmethod.EditorInfo?,
+        attribute: EditorInfo?,
         restarting: Boolean,
     ) {
         super.onStartInput(attribute, restarting)
+        isCurrentEditorSuggestionEligible = attribute.isSuggestionEligibleEditor()
+        autocorrectCoordinator.startSession(isCurrentEditorSuggestionEligible)
+        latestSuggestionRequestId = null
+        _currentWord.value = ""
+        _suggestions.value = emptyList()
         // EditorInfo supplies the initial selection before onUpdateSelection starts flowing.
         isEditorSelectionCollapsed = attribute != null &&
             attribute.initialSelStart >= 0 &&
@@ -323,6 +353,11 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     override fun onFinishInput() {
+        autocorrectCoordinator.finishSession()
+        isCurrentEditorSuggestionEligible = false
+        latestSuggestionRequestId = null
+        _currentWord.value = ""
+        _suggestions.value = emptyList()
         isEditorSelectionCollapsed = false
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         super.onFinishInput()
@@ -410,6 +445,7 @@ class DictusImeService : LifecycleInputMethodService() {
         }
 
         val gatedMicTap = {
+            autocorrectCoordinator.onOtherInput()
             if (dictationState is DictationState.Idle) {
                 if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED
@@ -455,6 +491,7 @@ class DictusImeService : LifecycleInputMethodService() {
 
 
         val switchKeyboard = {
+            autocorrectCoordinator.onOtherInput()
             val imm = getSystemService(INPUT_METHOD_SERVICE)
                 as android.view.inputmethod.InputMethodManager
             imm.showInputMethodPicker()
@@ -482,11 +519,15 @@ class DictusImeService : LifecycleInputMethodService() {
                     onMicTap = gatedMicTap,
                     isMicEnabled = engineState !is SttEngineState.Loading,
                     isEmojiPickerOpen = isEmojiPickerOpen,
-                    onEmojiToggle = { _isEmojiPickerOpen.value = !_isEmojiPickerOpen.value },
+                    onEmojiToggle = {
+                        autocorrectCoordinator.onOtherInput()
+                        _isEmojiPickerOpen.value = !_isEmojiPickerOpen.value
+                    },
                     onEmojiSelected = { emoji -> commitText(emoji) },
                     currentWord = currentWord,
                     suggestions = suggestions,
                     onSuggestionSelected = { suggestion ->
+                        autocorrectCoordinator.onOtherInput()
                         // Replace the current word fragment with the selected suggestion + space
                         val ic = currentInputConnection ?: return@KeyboardScreen
                         val word = _currentWord.value
@@ -501,6 +542,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         _currentWord.value = ""
                     },
                     onCurrentWordSelected = {
+                        autocorrectCoordinator.onOtherInput()
                         // Commit the raw input as-is + space (user accepts what they typed)
                         val ic = currentInputConnection ?: return@KeyboardScreen
                         val word = _currentWord.value
@@ -520,6 +562,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         keyboardSoundPlayer.play(keyType, keySoundsEnabled)
                     },
                     onMoveCursor = { delta ->
+                        autocorrectCoordinator.onOtherInput()
                         currentInputConnection?.let { moveCursorBy(it, delta) }
                         refreshFrenchAdaptiveKeyState()
                     },
@@ -621,7 +664,15 @@ class DictusImeService : LifecycleInputMethodService() {
      * Commits text to the currently focused editor field.
      */
     fun commitText(text: String) {
-        currentInputConnection?.commitText(text, 1)
+        val inputConnection = currentInputConnection ?: return
+        if (text == " ") {
+            autocorrectCoordinator.onSpace(InputConnectionAutocorrectEditor(inputConnection)) {
+                inputConnection.commitText(" ", 1)
+            }
+        } else {
+            autocorrectCoordinator.onOtherInput()
+            inputConnection.commitText(text, 1)
+        }
         refreshFrenchAdaptiveKeyState()
     }
 
@@ -629,13 +680,17 @@ class DictusImeService : LifecycleInputMethodService() {
      * Deletes one character before the cursor.
      */
     fun deleteBackward() {
-        currentInputConnection?.let(::deletePrecedingCodePoint)
+        val inputConnection = currentInputConnection ?: return
+        autocorrectCoordinator.onBackspace(InputConnectionAutocorrectEditor(inputConnection)) {
+            deletePrecedingCodePoint(inputConnection)
+        }
         refreshFrenchAdaptiveKeyState()
     }
 
     /** Deletes the preceding token during accelerated backspace repetition. */
     fun deleteWordBackward() {
         val inputConnection = currentInputConnection ?: return
+        autocorrectCoordinator.onOtherInput()
         deletePrecedingWord(inputConnection)
         refreshFrenchAdaptiveKeyState()
     }
@@ -644,6 +699,7 @@ class DictusImeService : LifecycleInputMethodService() {
      * Sends an Enter/Return key event to the editor.
      */
     fun sendReturnKey() {
+        autocorrectCoordinator.onOtherInput()
         currentInputConnection?.sendKeyEvent(
             android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER),
         )
@@ -671,6 +727,7 @@ class DictusImeService : LifecycleInputMethodService() {
 
     private fun handleFrenchAdaptiveKey() {
         val inputConnection = currentInputConnection ?: return
+        autocorrectCoordinator.onOtherInput()
         val state = readFrenchAdaptiveKeyState(inputConnection, isEditorSelectionCollapsed)
         _frenchAdaptiveKeyState.value = state
         applyFrenchAdaptiveKey(inputConnection, state, isEditorSelectionCollapsed)
@@ -679,6 +736,7 @@ class DictusImeService : LifecycleInputMethodService() {
 
     private fun handleFrenchAdaptiveVariant(variant: String) {
         val inputConnection = currentInputConnection ?: return
+        autocorrectCoordinator.onOtherInput()
         // Context may change while the popup is open; never replace from stale display state.
         val currentState = readFrenchAdaptiveKeyState(inputConnection, isEditorSelectionCollapsed)
         applyFrenchAdaptiveVariant(
@@ -688,5 +746,21 @@ class DictusImeService : LifecycleInputMethodService() {
             isEditorSelectionCollapsed,
         )
         refreshFrenchAdaptiveKeyState()
+    }
+
+    private fun EditorInfo?.isSuggestionEligibleEditor(): Boolean {
+        if (this == null || inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) {
+            return false
+        }
+        return when (inputType and InputType.TYPE_MASK_VARIATION) {
+            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+            InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS,
+            InputType.TYPE_TEXT_VARIATION_URI,
+            InputType.TYPE_TEXT_VARIATION_PASSWORD,
+            InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+            InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
+            -> false
+            else -> true
+        }
     }
 }
