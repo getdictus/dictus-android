@@ -191,9 +191,11 @@ class AudioCaptureManager {
      * for the 30-bar waveform visualization.
      */
     fun addEnergyToHistory(energy: Float) {
-        energyHistory.addLast(energy)
-        if (energyHistory.size > MAX_ENERGY_HISTORY) {
-            energyHistory.removeFirst()
+        synchronized(energyHistory) {
+            energyHistory.addLast(energy)
+            if (energyHistory.size > MAX_ENERGY_HISTORY) {
+                energyHistory.removeFirst()
+            }
         }
     }
 
@@ -202,7 +204,9 @@ class AudioCaptureManager {
      *
      * @return Immutable list of up to 30 normalized energy values.
      */
-    fun getEnergyHistory(): List<Float> = energyHistory.toList()
+    fun getEnergyHistory(): List<Float> = synchronized(energyHistory) {
+        energyHistory.toList()
+    }
 
     /**
      * Reset energy history to 30 zero entries.
@@ -210,8 +214,10 @@ class AudioCaptureManager {
      * instead of bars sliding in from the left.
      */
     private fun resetEnergyHistory() {
-        energyHistory.clear()
-        repeat(MAX_ENERGY_HISTORY) { energyHistory.addLast(0f) }
+        synchronized(energyHistory) {
+            energyHistory.clear()
+            repeat(MAX_ENERGY_HISTORY) { energyHistory.addLast(0f) }
+        }
     }
 
     /**

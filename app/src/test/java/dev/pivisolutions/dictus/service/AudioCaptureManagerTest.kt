@@ -9,6 +9,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
 
 class AudioCaptureManagerTest {
 
@@ -104,6 +107,42 @@ class AudioCaptureManagerTest {
         val history = manager.getEnergyHistory()
         assertEquals(5f, history.first(), 0.0001f)
         assertEquals(34f, history.last(), 0.0001f)
+    }
+
+    @Test
+    fun `energy history snapshots stay valid during concurrent updates`() {
+        val start = CountDownLatch(1)
+        val failures = ConcurrentLinkedQueue<Throwable>()
+        val writers = List(2) { writerIndex ->
+            thread(start = true) {
+                start.await()
+                repeat(100_000) { index ->
+                    runCatching {
+                        manager.addEnergyToHistory((writerIndex + index).toFloat())
+                    }.exceptionOrNull()?.let(failures::add)
+                }
+            }
+        }
+        val readers = List(2) {
+            thread(start = true) {
+                start.await()
+                repeat(100_000) {
+                    runCatching {
+                        val snapshot = manager.getEnergyHistory()
+                        assertEquals(30, snapshot.size)
+                        snapshot.forEach { energy -> assertTrue(energy.isFinite()) }
+                    }.exceptionOrNull()?.let(failures::add)
+                }
+            }
+        }
+
+        start.countDown()
+        (writers + readers).forEach { worker ->
+            worker.join(10_000)
+            assertTrue("Concurrent history worker did not finish", !worker.isAlive)
+        }
+
+        assertTrue("Concurrent history access failed: ${failures.firstOrNull()}", failures.isEmpty())
     }
 
     @Test
