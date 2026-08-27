@@ -130,6 +130,7 @@ class MainActivity : AppCompatActivity() {
                     imeEnabled = imeEnabled,
                     imeSelected = imeSelected,
                     onOpenKeyboardSettings = { openKeyboardSettings() },
+                    onShowKeyboardPicker = { showKeyboardPicker() },
                     onOpenAppSettings = { openAppSettings() },
                 )
             }
@@ -139,6 +140,12 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         checkImeStatus()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // The system picker does not reliably trigger onResume. Refresh when its window closes.
+        if (hasFocus) checkImeStatus()
     }
 
     override fun onDestroy() {
@@ -179,7 +186,7 @@ class MainActivity : AppCompatActivity() {
                 contentResolver,
                 Settings.Secure.DEFAULT_INPUT_METHOD,
             )
-            currentIme?.startsWith(packageName) == true
+            isImeComponentForPackage(currentIme, packageName)
         } catch (_: SecurityException) {
             Timber.w("Cannot read DEFAULT_INPUT_METHOD on this SDK level")
             false
@@ -192,6 +199,12 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
     }
 
+    /** Shows Android's system input-method picker after Dictus has been enabled. */
+    private fun showKeyboardPicker() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showInputMethodPicker()
+    }
+
     /** Opens app detail settings for manual permission grant after denial. */
     private fun openAppSettings() {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -200,3 +213,9 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 }
+
+/** Matches Android's flattened IME component by exact package, not a shared prefix. */
+internal fun isImeComponentForPackage(
+    flattenedComponent: String?,
+    expectedPackage: String,
+): Boolean = ComponentName.unflattenFromString(flattenedComponent ?: "")?.packageName == expectedPackage
