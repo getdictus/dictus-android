@@ -101,6 +101,18 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `keySoundsEnabled defaults to true`() = testScope.runTest {
+        assertTrue(viewModel.keySoundsEnabled.value)
+    }
+
+    @Test
+    fun `toggleKeySounds flips keySoundsEnabled to false`() = testScope.runTest {
+        viewModel.toggleKeySounds()
+        advanceUntilIdle()
+        assertFalse(viewModel.keySoundsEnabled.value)
+    }
+
+    @Test
     fun `soundEnabled defaults to false`() = testScope.runTest {
         assertFalse(viewModel.soundEnabled.value)
     }

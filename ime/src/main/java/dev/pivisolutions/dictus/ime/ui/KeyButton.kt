@@ -66,6 +66,7 @@ fun KeyButton(
     accentChars: List<String>? = null,
     onAccentSelected: ((String) -> Unit)? = null,
     hapticsEnabled: Boolean = true,
+    onSound: (KeyType) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -123,6 +124,7 @@ fun KeyButton(
     val currentOnDeleteWord = rememberUpdatedState(onDeleteWord)
     val currentOnAccentSelected = rememberUpdatedState(onAccentSelected)
     val currentHapticsEnabled = rememberUpdatedState(hapticsEnabled)
+    val currentOnSound = rememberUpdatedState(onSound)
 
     fun resolveAccentIndex(pointerX: Float): Int? {
         val accents = accentChars ?: return null
@@ -150,6 +152,7 @@ fun KeyButton(
 
                     isPressed = true
                     if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                    currentOnSound.value(key.type)
                     currentOnPress.value()
                     var deletionCommandIndex = 1
 
@@ -157,6 +160,7 @@ fun KeyButton(
                         delay(BackspaceRepeatPolicy.INITIAL_DELAY_MS)
                         while (isActive) {
                             if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                            currentOnSound.value(key.type)
                             deletionCommandIndex++
                             when (BackspaceRepeatPolicy.deletionFor(deletionCommandIndex)) {
                                 BackspaceDeletion.CHARACTER -> currentOnPress.value()
@@ -199,6 +203,7 @@ fun KeyButton(
                         showAccentPopup = false
                         highlightedAccentIndex = null
                         if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                        currentOnSound.value(key.type)
 
                         val longPressJob = launch {
                             if (supportsAccentPopup) {

@@ -66,6 +66,11 @@ class SettingsViewModel @Inject constructor(
         .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** Whether platform keyboard sound effects are enabled for IME key presses. */
+    val keySoundsEnabled: StateFlow<Boolean> = dataStore.data
+        .map { it[PreferenceKeys.KEY_SOUNDS_ENABLED] ?: true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
     /** Whether the audio dictation start/stop sound is enabled. */
     val soundEnabled: StateFlow<Boolean> = dataStore.data
         .map { it[PreferenceKeys.SOUND_ENABLED] ?: false }
@@ -116,6 +121,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.HAPTICS_ENABLED] = !(prefs[PreferenceKeys.HAPTICS_ENABLED] ?: true)
+            }
+        }
+    }
+
+    /** Toggle keyboard key sounds independently from recording lifecycle sounds. */
+    fun toggleKeySounds() {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[PreferenceKeys.KEY_SOUNDS_ENABLED] =
+                    !(prefs[PreferenceKeys.KEY_SOUNDS_ENABLED] ?: true)
             }
         }
     }
