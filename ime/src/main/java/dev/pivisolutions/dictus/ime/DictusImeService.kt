@@ -237,7 +237,7 @@ class DictusImeService : LifecycleInputMethodService() {
             newSelStart, newSelEnd,
             candidatesStart, candidatesEnd,
         )
-        isEditorSelectionCollapsed = newSelStart == newSelEnd
+        isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
         val ic = currentInputConnection ?: return
         val beforeCursor = ic.getTextBeforeCursor(50, 0)?.toString() ?: ""
@@ -605,7 +605,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val inputConnection = currentInputConnection ?: return
         val state = readFrenchAdaptiveKeyState(inputConnection, isEditorSelectionCollapsed)
         _frenchAdaptiveKeyState.value = state
-        applyFrenchAdaptiveKey(inputConnection, state)
+        applyFrenchAdaptiveKey(inputConnection, state, isEditorSelectionCollapsed)
         refreshFrenchAdaptiveKeyState()
     }
 
@@ -613,7 +613,12 @@ class DictusImeService : LifecycleInputMethodService() {
         val inputConnection = currentInputConnection ?: return
         // Context may change while the popup is open; never replace from stale display state.
         val currentState = readFrenchAdaptiveKeyState(inputConnection, isEditorSelectionCollapsed)
-        applyFrenchAdaptiveVariant(inputConnection, currentState, variant)
+        applyFrenchAdaptiveVariant(
+            inputConnection,
+            currentState,
+            variant,
+            isEditorSelectionCollapsed,
+        )
         refreshFrenchAdaptiveKeyState()
     }
 }

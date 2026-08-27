@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime.input
 
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 
@@ -20,24 +21,52 @@ fun readFrenchAdaptiveKeyState(
 fun applyFrenchAdaptiveKey(
     inputConnection: InputConnection,
     state: FrenchAdaptiveKey.State,
-): Boolean = applyFrenchAdaptiveText(inputConnection, state, state.label)
+    selectionCollapsed: Boolean,
+): Boolean = selectionCollapsed && applyFrenchAdaptiveText(inputConnection, state, state.label)
 
 /** Applies a long-press choice as one editor transaction. */
 fun applyFrenchAdaptiveVariant(
     inputConnection: InputConnection,
     state: FrenchAdaptiveKey.State,
     variant: String,
-): Boolean = variant in state.variants && applyFrenchAdaptiveText(inputConnection, state, variant)
+    selectionCollapsed: Boolean,
+): Boolean = selectionCollapsed &&
+    variant in state.variants &&
+    applyFrenchAdaptiveText(inputConnection, state, variant)
 
 private fun applyFrenchAdaptiveText(
     inputConnection: InputConnection,
     state: FrenchAdaptiveKey.State,
     text: String,
 ): Boolean {
+    val extracted = inputConnection.getExtractedText(ExtractedTextRequest(), 0) ?: return false
+    if (extracted.selectionStart < 0 || extracted.selectionStart != extracted.selectionEnd) return false
+
     inputConnection.beginBatchEdit()
     try {
-        if (state.replacesPrevious && !inputConnection.deleteSurroundingText(1, 0)) return false
-        return inputConnection.commitText(text, 1)
+        if (!state.replacesPrevious) return inputConnection.commitText(text, 1)
+
+        val sourceVowel = state.vowel ?: return false
+        val expectedSource = if (state.label.firstOrNull()?.isUpperCase() == true) {
+            sourceVowel.uppercase()
+        } else {
+            sourceVowel
+        }
+        val snapshot = extracted.text?.toString() ?: return false
+        val localCursor = extracted.selectionStart
+        if (localCursor !in 1..snapshot.length ||
+            snapshot.substring(localCursor - 1, localCursor) != expectedSource
+        ) return false
+
+        val cursor = extracted.startOffset + extracted.selectionStart
+        if (cursor <= extracted.startOffset) return false
+        if (!inputConnection.setComposingRegion(cursor - 1, cursor)) return false
+        return inputConnection.commitText(text, 1).also { committed ->
+            if (!committed) {
+                // Marking a composing region leaves source text intact; clear the mark on failure.
+                inputConnection.finishComposingText()
+            }
+        }
     } finally {
         inputConnection.endBatchEdit()
     }

@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime.input
 
+import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.InputConnection
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import java.lang.reflect.Proxy
@@ -35,10 +36,16 @@ class FrenchAdaptiveInputTest {
         val calls = mutableListOf<String>()
         val connection = connection("e", calls)
 
-        applyFrenchAdaptiveKey(connection, FrenchAdaptiveKey.fromContext("e"))
+        applyFrenchAdaptiveKey(connection, FrenchAdaptiveKey.fromContext("e"), selectionCollapsed = true)
 
         assertEquals(
-            listOf("beginBatchEdit", "deleteSurroundingText(1,0)", "commitText(é,1)", "endBatchEdit"),
+            listOf(
+                "getExtractedText(0)",
+                "beginBatchEdit",
+                "setComposingRegion(0,1)",
+                "commitText(é,1)",
+                "endBatchEdit",
+            ),
             calls,
         )
     }
@@ -48,9 +55,12 @@ class FrenchAdaptiveInputTest {
         val calls = mutableListOf<String>()
         val connection = connection("qu", calls)
 
-        applyFrenchAdaptiveKey(connection, FrenchAdaptiveKey.fromContext("qu"))
+        applyFrenchAdaptiveKey(connection, FrenchAdaptiveKey.fromContext("qu"), selectionCollapsed = true)
 
-        assertEquals(listOf("beginBatchEdit", "commitText(',1)", "endBatchEdit"), calls)
+        assertEquals(
+            listOf("getExtractedText(0)", "beginBatchEdit", "commitText(',1)", "endBatchEdit"),
+            calls,
+        )
     }
 
     @Test
@@ -58,23 +68,45 @@ class FrenchAdaptiveInputTest {
         val calls = mutableListOf<String>()
         val connection = connection("A", calls)
 
-        applyFrenchAdaptiveVariant(connection, FrenchAdaptiveKey.fromContext("A"), "Â")
+        applyFrenchAdaptiveVariant(
+            connection,
+            FrenchAdaptiveKey.fromContext("A"),
+            "Â",
+            selectionCollapsed = true,
+        )
 
         assertEquals(
-            listOf("beginBatchEdit", "deleteSurroundingText(1,0)", "commitText(Â,1)", "endBatchEdit"),
+            listOf(
+                "getExtractedText(0)",
+                "beginBatchEdit",
+                "setComposingRegion(0,1)",
+                "commitText(Â,1)",
+                "endBatchEdit",
+            ),
             calls,
         )
     }
 
     @Test
-    fun `failed deletion does not append an accent`() {
+    fun `failed composing region does not append an accent`() {
         val calls = mutableListOf<String>()
-        val connection = connection("e", calls, deleteSucceeds = false)
+        val connection = connection("e", calls, composingRegionSucceeds = false)
 
-        assertFalse(applyFrenchAdaptiveKey(connection, FrenchAdaptiveKey.fromContext("e")))
+        assertFalse(
+            applyFrenchAdaptiveKey(
+                connection,
+                FrenchAdaptiveKey.fromContext("e"),
+                selectionCollapsed = true,
+            ),
+        )
 
         assertEquals(
-            listOf("beginBatchEdit", "deleteSurroundingText(1,0)", "endBatchEdit"),
+            listOf(
+                "getExtractedText(0)",
+                "beginBatchEdit",
+                "setComposingRegion(0,1)",
+                "endBatchEdit",
+            ),
             calls,
         )
     }
@@ -84,14 +116,140 @@ class FrenchAdaptiveInputTest {
         val calls = mutableListOf<String>()
         val connection = connection("u", calls)
 
-        assertFalse(applyFrenchAdaptiveVariant(connection, FrenchAdaptiveKey.fromContext("u"), "é"))
+        assertFalse(
+            applyFrenchAdaptiveVariant(
+                connection,
+                FrenchAdaptiveKey.fromContext("u"),
+                "é",
+                selectionCollapsed = true,
+            ),
+        )
         assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun `non collapsed selection is never replaced by adaptive input`() {
+        val calls = mutableListOf<String>()
+        val connection = connection("e", calls)
+
+        assertFalse(
+            applyFrenchAdaptiveKey(
+                connection,
+                FrenchAdaptiveKey.DEFAULT,
+                selectionCollapsed = false,
+            ),
+        )
+
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun `action time selection check fails closed when cached selection is stale`() {
+        val calls = mutableListOf<String>()
+        val connection = connection("test", calls, selectionStart = 1, selectionEnd = 4)
+
+        assertFalse(
+            applyFrenchAdaptiveKey(
+                connection,
+                FrenchAdaptiveKey.DEFAULT,
+                selectionCollapsed = true,
+            ),
+        )
+
+        assertEquals(listOf("getExtractedText(0)"), calls)
+    }
+
+    @Test
+    fun `unknown action time selection fails closed`() {
+        val calls = mutableListOf<String>()
+        val connection = connection("e", calls, selectionStart = -1, selectionEnd = -1)
+
+        assertFalse(
+            applyFrenchAdaptiveKey(
+                connection,
+                FrenchAdaptiveKey.DEFAULT,
+                selectionCollapsed = true,
+            ),
+        )
+
+        assertEquals(listOf("getExtractedText(0)"), calls)
+    }
+
+    @Test
+    fun `stale vowel state never replaces a different preceding character`() {
+        val calls = mutableListOf<String>()
+        val connection = connection("ex", calls)
+
+        assertFalse(
+            applyFrenchAdaptiveKey(
+                connection,
+                FrenchAdaptiveKey.fromContext("e"),
+                selectionCollapsed = true,
+            ),
+        )
+
+        assertEquals(listOf("getExtractedText(0)", "beginBatchEdit", "endBatchEdit"), calls)
+    }
+
+    @Test
+    fun `partial extracted snapshot uses absolute composing offsets`() {
+        val calls = mutableListOf<String>()
+        val connection = connection("e", calls, startOffset = 41)
+
+        assertTrue(
+            applyFrenchAdaptiveKey(
+                connection,
+                FrenchAdaptiveKey.fromContext("e"),
+                selectionCollapsed = true,
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                "getExtractedText(0)",
+                "beginBatchEdit",
+                "setComposingRegion(41,42)",
+                "commitText(é,1)",
+                "endBatchEdit",
+            ),
+            calls,
+        )
+    }
+
+    @Test
+    fun `failed accent commit preserves original text and clears composing region`() {
+        val calls = mutableListOf<String>()
+        val connection = connection("E", calls, commitResults = mutableListOf(false))
+
+        assertFalse(
+            applyFrenchAdaptiveKey(
+                connection,
+                FrenchAdaptiveKey.fromContext("E"),
+                selectionCollapsed = true,
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                "getExtractedText(0)",
+                "beginBatchEdit",
+                "setComposingRegion(0,1)",
+                "commitText(É,1)",
+                "finishComposingText",
+                "endBatchEdit",
+            ),
+            calls,
+        )
     }
 
     private fun connection(
         context: String,
         calls: MutableList<String>,
-        deleteSucceeds: Boolean = true,
+        composingRegionSucceeds: Boolean = true,
+        commitResults: MutableList<Boolean> = mutableListOf(true),
+        selectionStart: Int = context.length,
+        selectionEnd: Int = selectionStart,
+        startOffset: Int = 0,
     ): InputConnection =
         Proxy.newProxyInstance(
             InputConnection::class.java.classLoader,
@@ -102,17 +260,30 @@ class FrenchAdaptiveInputTest {
                     calls += "getTextBeforeCursor(${args!![0]},${args[1]})"
                     context
                 }
+                "getExtractedText" -> {
+                    calls += "getExtractedText(${args!![1]})"
+                    ExtractedText().apply {
+                        text = context
+                        this.startOffset = startOffset
+                        this.selectionStart = selectionStart
+                        this.selectionEnd = selectionEnd
+                    }
+                }
                 "beginBatchEdit", "endBatchEdit" -> {
                     calls += method.name
                     true
                 }
-                "deleteSurroundingText" -> {
-                    calls += "deleteSurroundingText(${args!![0]},${args[1]})"
-                    deleteSucceeds
+                "setComposingRegion" -> {
+                    calls += "setComposingRegion(${args!![0]},${args[1]})"
+                    composingRegionSucceeds
+                }
+                "finishComposingText" -> {
+                    calls += "finishComposingText"
+                    true
                 }
                 "commitText" -> {
                     calls += "commitText(${args!![0]},${args[1]})"
-                    true
+                    if (commitResults.size > 1) commitResults.removeAt(0) else commitResults.first()
                 }
                 else -> defaultValue(method.returnType)
             }
