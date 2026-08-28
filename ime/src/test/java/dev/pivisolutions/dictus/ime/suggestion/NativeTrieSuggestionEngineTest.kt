@@ -5,6 +5,10 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.input.AutocorrectEditorSnapshot
+import dev.pivisolutions.dictus.ime.input.CorrectionContext
+import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
+import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
@@ -231,6 +235,89 @@ class NativeTrieSuggestionEngineTest {
     }
 
     @Test
+    fun `context score reranks only existing native candidates with deterministic bounded ties`() =
+        runTest(dispatcher) {
+            val handle = FakeHandle(
+                prefix = listOf("bonjour", "bonsoir"),
+                fuzzy = listOf("bonheur", "bonjor"),
+                hasNgram = true,
+                scores = mapOf("salut" to mapOf("bonjor" to 50_000, "bonsoir" to 50_000)),
+            )
+            val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+            advanceUntilIdle()
+            val context = correctionContext("salut bonjr", "bonjr")
+
+            engine.requestSuggestions("bonjr", context = context, maxResults = 4)
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf("bonsoir", "bonjour", "bonjor", "bonheur"),
+                engine.suggestionResults.value.suggestions,
+            )
+            assertEquals("bonjor", engine.suggestionResults.value.primaryCorrection)
+            assertEquals(context.identity, engine.suggestionResults.value.contextIdentity)
+            assertEquals(
+                listOf("bonjour", "bonsoir", "bonheur", "bonjor"),
+                handle.scoreRequests.map { it.second },
+            )
+        }
+
+    @Test
+    fun `zero scores preserve fallback and known words cannot be context reranked`() = runTest(dispatcher) {
+        val handle = FakeHandle(
+            knownWords = setOf("bonjour"),
+            prefix = listOf("bonjour", "bonsoir"),
+            fuzzy = listOf("bonheur"),
+            hasNgram = true,
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("bonjr", context = correctionContext("salut bonjr", "bonjr"))
+        advanceUntilIdle()
+        assertEquals(listOf("bonjour", "bonsoir", "bonheur"), engine.suggestionResults.value.suggestions)
+        assertEquals("bonheur", engine.suggestionResults.value.primaryCorrection)
+
+        handle.scoreRequests.clear()
+        engine.requestSuggestions("bonjour", context = correctionContext("salut bonjour", "bonjour"))
+        advanceUntilIdle()
+        assertTrue(engine.suggestionResults.value.isKnownWord)
+        assertTrue(handle.scoreRequests.isEmpty())
+    }
+
+    @Test
+    fun `context from another language or handle without ngrams is ignored`() = runTest(dispatcher) {
+        val handle = FakeHandle(prefix = listOf("first", "second"), hasNgram = true)
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+        val englishContext = correctionContext(
+            "hello frst",
+            "frst",
+            CorrectionLanguageIdentity(SupportedLanguage.ENGLISH, KeyboardLayout.QWERTY),
+        )
+
+        engine.requestSuggestions("frst", context = englishContext)
+        advanceUntilIdle()
+
+        assertEquals(listOf("first", "second"), engine.suggestionResults.value.suggestions)
+        assertTrue(handle.scoreRequests.isEmpty())
+        assertEquals(null, engine.suggestionResults.value.contextIdentity)
+
+        engine.close()
+        val noNgram = FakeHandle(
+            prefix = listOf("first", "second"),
+            scores = mapOf("hello" to mapOf("second" to 10_000)),
+        )
+        val fallbackEngine = createEngine(FakeOpener(mutableListOf(Result.success(noNgram))))
+        advanceUntilIdle()
+        fallbackEngine.requestSuggestions("frst", context = correctionContext("hello frst", "frst"))
+        advanceUntilIdle()
+        assertEquals(listOf("first", "second"), fallbackEngine.suggestionResults.value.suggestions)
+        assertTrue(noNgram.scoreRequests.isEmpty())
+        assertEquals(null, fallbackEngine.suggestionResults.value.contextIdentity)
+    }
+
+    @Test
     fun `two word prediction uses trigram then deduplicated bigram backoff`() = runTest(dispatcher) {
         val handle = FakeHandle(
             hasNgram = true,
@@ -401,6 +488,64 @@ class NativeTrieSuggestionEngineTest {
     }
 
     @Test
+    fun `replacement retires handle while context scoring is in flight`() = runTest(dispatcher) {
+        val scoreEntered = CountDownLatch(1)
+        val releaseScore = CountDownLatch(1)
+        val old = object : NativeTrieHandle {
+            override val hasNgram = true
+            var closeCount = 0
+
+            override fun complete(prefix: String, maxResults: Int) = listOf("first", "second")
+
+            override fun correct(
+                word: String,
+                maxEditDistance: Float,
+                maxResults: Int,
+            ) = emptyList<String>()
+
+            override fun bigramScore(previousWord: String, word: String): Int {
+                scoreEntered.countDown()
+                check(releaseScore.await(5, TimeUnit.SECONDS))
+                return 1
+            }
+
+            override fun close() {
+                closeCount++
+            }
+        }
+        val replacement = FakeHandle()
+        val calls = AtomicInteger()
+        val executor = Executors.newFixedThreadPool(2)
+        val ioDispatcher = executor.asCoroutineDispatcher()
+        try {
+            val engine = NativeTrieSuggestionEngine(
+                dataStore,
+                scope,
+                NativeTrieOpener { _, _ -> if (calls.incrementAndGet() == 1) old else replacement },
+                ioDispatcher,
+            ).also(engines::add)
+            runCurrent()
+            while (engine.activation.value == null) Thread.yield()
+            engine.requestSuggestions("frst", context = correctionContext("salut frst", "frst"))
+            assertTrue(scoreEntered.await(5, TimeUnit.SECONDS))
+
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+            runCurrent()
+            while (engine.activation.value?.language != SupportedLanguage.ENGLISH) Thread.yield()
+            assertEquals(0, old.closeCount)
+
+            releaseScore.countDown()
+            while (old.closeCount == 0) Thread.yield()
+            assertEquals(1, old.closeCount)
+            assertEquals(0L, engine.suggestionResults.value.requestId)
+        } finally {
+            releaseScore.countDown()
+            ioDispatcher.close()
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
     fun `close returns promptly but defers handle destruction until in flight query ends`() = runTest(dispatcher) {
         val queryEntered = CountDownLatch(1)
         val releaseQuery = CountDownLatch(1)
@@ -525,6 +670,29 @@ class NativeTrieSuggestionEngineTest {
         ioDispatcher = dispatcher,
     ).also(engines::add)
 
+    private fun correctionContext(
+        text: String,
+        currentWord: String,
+        language: CorrectionLanguageIdentity = CorrectionLanguageIdentity(
+            SupportedLanguage.FRENCH,
+            KeyboardLayout.AZERTY,
+        ),
+    ): CorrectionContext = requireNotNull(
+        CorrectionContextExtractor.extract(
+            AutocorrectEditorSnapshot(
+                text = text,
+                startOffset = 0,
+                selectionStart = text.length,
+                selectionEnd = text.length,
+                textStartsAtDocumentStart = true,
+                textEndsAtDocumentEnd = true,
+            ),
+            currentWord,
+            sessionId = 1L,
+            language = language,
+        ),
+    )
+
     private data class OpenRequest(val assetName: String, val layout: TrieKeyboardLayout)
 
     private class FakeOpener(
@@ -546,12 +714,14 @@ class NativeTrieSuggestionEngineTest {
         override val hasNgram: Boolean = false,
         private val bigram: List<String> = emptyList(),
         private val trigram: List<String> = emptyList(),
+        private val scores: Map<String, Map<String, Int>> = emptyMap(),
     ) : NativeTrieHandle {
         var closeCount = 0
         val requestedLimits = mutableListOf<Int>()
         var fuzzyOverride: List<String>? = null
         val bigramRequests = mutableListOf<String>()
         val trigramRequests = mutableListOf<List<String>>()
+        val scoreRequests = mutableListOf<Pair<String, String>>()
 
         override fun wordExists(word: String): Boolean = word in knownWords
 
@@ -577,6 +747,11 @@ class NativeTrieSuggestionEngineTest {
         ): List<String> {
             trigramRequests += listOf(firstWord, secondWord)
             return trigram.take(maxResults)
+        }
+
+        override fun bigramScore(previousWord: String, word: String): Int {
+            scoreRequests += previousWord to word
+            return scores[previousWord]?.get(word) ?: 0
         }
 
         override fun close() {

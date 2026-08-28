@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.input.CorrectionContext
+import dev.pivisolutions.dictus.ime.input.CorrectionContextIdentity
+import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
@@ -43,6 +46,8 @@ interface NativeTrieHandle : Closeable {
 
     fun predictAfterWords(firstWord: String, secondWord: String, maxResults: Int): List<String> =
         emptyList()
+
+    fun bigramScore(previousWord: String, word: String): Int = 0
 }
 
 /** Opens a fully loaded handle for one binary asset and keyboard layout. */
@@ -78,6 +83,9 @@ class AndroidNativeTrieOpener(private val context: Context) : NativeTrieOpener {
             maxResults: Int,
         ): List<String> = trie.predictAfterWords(firstWord, secondWord, maxResults).map { it.word }
 
+        override fun bigramScore(previousWord: String, word: String): Int =
+            trie.bigramScore(previousWord, word)
+
         override fun close() = trie.close()
     }
 }
@@ -104,6 +112,7 @@ class NativeTrieSuggestionEngine(
         val isKnownWord: Boolean,
         val primaryCorrection: String?,
         val suggestions: List<String>,
+        val contextIdentity: CorrectionContextIdentity? = null,
     )
     class Activation internal constructor(
         val language: SupportedLanguage,
@@ -124,6 +133,7 @@ class NativeTrieSuggestionEngine(
         val mode: SuggestionMode,
         val words: List<String>,
         val maxResults: Int,
+        val context: CorrectionContext? = null,
     ) {
         val input: String = words.joinToString(" ")
     }
@@ -171,7 +181,7 @@ class NativeTrieSuggestionEngine(
                 }
 
                 val result = when (request.mode) {
-                    SuggestionMode.COMPLETION -> query(request.input, request.maxResults)
+                    SuggestionMode.COMPLETION -> query(request.input, request.maxResults, request.context)
                     SuggestionMode.PREDICTION -> queryPredictions(request.words, request.maxResults)
                 }
                 publishIfCurrent(request, result)
@@ -259,43 +269,81 @@ class NativeTrieSuggestionEngine(
         val isKnownWord: Boolean,
         val primaryCorrection: String?,
         val suggestions: List<String>,
+        val contextIdentity: CorrectionContextIdentity? = null,
     )
 
-    private fun query(input: String, maxResults: Int): QueryResult {
+    private data class NativeQuery(
+        val isKnownWord: Boolean,
+        val completions: List<String>,
+        val corrections: List<String>,
+        val contextScores: Map<String, Int>,
+        val contextIdentity: CorrectionContextIdentity?,
+    )
+
+    private fun query(
+        input: String,
+        maxResults: Int,
+        context: CorrectionContext? = null,
+    ): QueryResult {
         if (input.isBlank() || maxResults <= 0) return QueryResult(false, null, emptyList())
         val candidateLimit = maxResults
             .coerceIn(1, MAX_NATIVE_RESULTS / CANDIDATE_MULTIPLIER) * CANDIDATE_MULTIPLIER
+        val learned = personalDictionary.learnedWords.value
+        val learnedKeys = learned.mapTo(mutableSetOf()) { it.canonicalLookupKey() }
         val live = synchronized(lock) {
             val live = if (closed) null else _activation.value
             if (live != null) inFlightQueries++
             live
         }
         val nativeQuery = if (live == null) {
-            Triple(false, emptyList(), emptyList())
+            NativeQuery(false, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
-                Triple(
-                    live.handle.wordExists(input),
-                    live.handle.complete(input, candidateLimit),
-                    live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit),
+                val isKnownWord = live.handle.wordExists(input)
+                val completions = live.handle.complete(input, candidateLimit)
+                val corrections = live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit)
+                val usableContext = context?.takeIf {
+                    !isKnownWord &&
+                        it.currentWord == input &&
+                        live.hasNgram &&
+                        it.identity.language == CorrectionLanguageIdentity(live.language, live.layout)
+                }
+                val scores = if (usableContext == null) {
+                    emptyMap()
+                } else {
+                    (completions + corrections)
+                        .distinctBy { it.canonicalLookupKey() }
+                        .associate { word ->
+                            val key = word.canonicalLookupKey()
+                            key to if (key in learnedKeys) {
+                                0
+                            } else {
+                                live.handle.bigramScore(usableContext.previousWord, word)
+                            }
+                        }
+                }
+                NativeQuery(
+                    isKnownWord,
+                    completions,
+                    corrections,
+                    scores,
+                    usableContext?.identity,
                 )
             } finally {
                 releaseQuery()
             }
         }
-        val (isKnownWord, completions, corrections) = nativeQuery
-        val nativeCandidates = completions + corrections
-        if (nativeCandidates.isEmpty() && personalDictionary.learnedWords.value.isEmpty()) {
-            return QueryResult(isKnownWord, null, emptyList())
+        val (isKnownWord, completions, corrections, contextScores, contextIdentity) = nativeQuery
+        val nativeCandidates = rerank(completions + corrections, contextScores)
+        if (nativeCandidates.isEmpty() && learned.isEmpty()) {
+            return QueryResult(isKnownWord, null, emptyList(), contextIdentity)
         }
 
         val normalizedInput = input.canonicalLookupKey()
-        val primaryCorrection = corrections.firstOrNull {
+        val primaryCorrection = rerank(corrections, contextScores).firstOrNull {
             it.canonicalLookupKey() != normalizedInput
         }
         val prefixInput = normalizedInput.stripAccents()
-        val learned = personalDictionary.learnedWords.value
-        val learnedKeys = learned.mapTo(mutableSetOf()) { it.canonicalLookupKey() }
         val seen = mutableSetOf(normalizedInput)
         val learnedPrefixWords = learned.asSequence()
             .filter { it.canonicalLookupKey().stripAccents().startsWith(prefixInput) }
@@ -315,7 +363,19 @@ class NativeTrieSuggestionEngine(
             isKnownWord = isKnownWord,
             primaryCorrection = primaryCorrection,
             suggestions = (learnedPrefixWords + learnedNative + normalNative).take(maxResults),
+            contextIdentity = contextIdentity,
         )
+    }
+
+    /** A context score may improve a candidate by fewer than two original rank positions. */
+    private fun rerank(candidates: List<String>, scores: Map<String, Int>): List<String> {
+        if (scores.values.none { it > 0 }) return candidates
+        return candidates.withIndex().sortedWith(
+            compareBy<IndexedValue<String>> {
+                val score = scores[it.value.canonicalLookupKey()]?.coerceAtLeast(0) ?: 0
+                it.index - MAX_CONTEXT_RANK_BOOST * score.toDouble() / (score + CONTEXT_SCORE_SCALE)
+            }.thenBy { it.index },
+        ).map { it.value }
     }
 
     private fun queryPredictions(words: List<String>, maxResults: Int): QueryResult {
@@ -350,7 +410,11 @@ class NativeTrieSuggestionEngine(
      * Conflates rapid input into a single latest-wins worker. At most the currently executing
      * native query can become stale; queued stale requests are discarded before entering JNI.
      */
-    fun requestSuggestions(input: String, maxResults: Int = 3): Long? {
+    fun requestSuggestions(
+        input: String,
+        maxResults: Int = 3,
+        context: CorrectionContext? = null,
+    ): Long? {
         return synchronized(lock) {
             if (closed) return@synchronized null
             val request = SuggestionRequest(
@@ -358,6 +422,7 @@ class NativeTrieSuggestionEngine(
                 SuggestionMode.COMPLETION,
                 listOf(input),
                 maxResults,
+                context,
             )
             // Sending under the generation lock preserves ordering even for concurrent callers.
             check(queryRequests.trySend(request).isSuccess)
@@ -396,6 +461,7 @@ class NativeTrieSuggestionEngine(
                     isKnownWord = result.isKnownWord,
                     primaryCorrection = result.primaryCorrection,
                     suggestions = result.suggestions,
+                    contextIdentity = result.contextIdentity,
                 )
             }
         }
@@ -447,5 +513,7 @@ class NativeTrieSuggestionEngine(
         const val MAX_NATIVE_RESULTS = 20
         const val MAX_EDIT_DISTANCE = 2f
         const val MAX_PREDICTION_RESULTS = 3
+        const val MAX_CONTEXT_RANK_BOOST = 2.0
+        const val CONTEXT_SCORE_SCALE = 1_000.0
     }
 }
