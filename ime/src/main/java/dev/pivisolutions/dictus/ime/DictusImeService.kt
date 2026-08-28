@@ -7,7 +7,6 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.IBinder
-import android.text.InputType
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.layout.Box
@@ -40,11 +39,12 @@ import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
-import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
-import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
+import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
 import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
+import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
+import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
 import dev.pivisolutions.dictus.ime.input.moveCursorBy
 import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveVariant
@@ -298,7 +298,7 @@ class DictusImeService : LifecycleInputMethodService() {
             newSelStart, newSelEnd,
             candidatesStart, candidatesEnd,
         )
-        autocorrectCoordinator.onEditorSelectionChanged()
+        autocorrectCoordinator.onEditorSelectionChanged(newSelStart, newSelEnd)
         isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
         if (!isCurrentEditorSuggestionEligible) {
@@ -331,8 +331,14 @@ class DictusImeService : LifecycleInputMethodService() {
         restarting: Boolean,
     ) {
         super.onStartInput(attribute, restarting)
-        isCurrentEditorSuggestionEligible = attribute.isSuggestionEligibleEditor()
-        autocorrectCoordinator.startSession(isCurrentEditorSuggestionEligible)
+        val editorPolicy = attribute?.let {
+            EditorEligibilityPolicy.resolve(it.inputType, it.imeOptions)
+        }
+        isCurrentEditorSuggestionEligible = editorPolicy?.suggestionEligible == true
+        autocorrectCoordinator.startSession(
+            autocorrectEligible = isCurrentEditorSuggestionEligible,
+            personalizedLearningAllowed = editorPolicy?.personalizedLearningAllowed == true,
+        )
         latestSuggestionRequestId = null
         _currentWord.value = ""
         _suggestions.value = emptyList()
@@ -748,19 +754,4 @@ class DictusImeService : LifecycleInputMethodService() {
         refreshFrenchAdaptiveKeyState()
     }
 
-    private fun EditorInfo?.isSuggestionEligibleEditor(): Boolean {
-        if (this == null || inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) {
-            return false
-        }
-        return when (inputType and InputType.TYPE_MASK_VARIATION) {
-            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
-            InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS,
-            InputType.TYPE_TEXT_VARIATION_URI,
-            InputType.TYPE_TEXT_VARIATION_PASSWORD,
-            InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
-            InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
-            -> false
-            else -> true
-        }
-    }
 }

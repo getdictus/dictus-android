@@ -62,6 +62,8 @@ data class AutocorrectUndo(
     val original: String,
     /** Exact correction inserted in the editor, without its trailing space. */
     val correction: String,
+    /** Absolute collapsed selection after inserting the correction and its owned trailing space. */
+    val correctedSelection: Int,
 )
 
 enum class AutocorrectBatchCleanup {
@@ -122,6 +124,10 @@ object AutocorrectEditorTransaction {
         val match = matchTokenAtCursor(snapshot, normalizedOriginal) ?: return snapshotValidationFailure(snapshot, normalizedOriginal)
 
         val insertedCorrection = normalizedCorrection
+        val correctedSelection = match.absoluteStart.toLong() + insertedCorrection.length + 1
+        if (correctedSelection > Int.MAX_VALUE) {
+            return rejected(AutocorrectRejection.CONTEXT_UNAVAILABLE)
+        }
         return replace(
             editor,
             AutocorrectReplacement(
@@ -133,7 +139,7 @@ object AutocorrectEditorTransaction {
             ),
         ) { cleanup ->
             AutocorrectTransactionResult.Applied(
-                AutocorrectUndo(match.editorText, insertedCorrection),
+                AutocorrectUndo(match.editorText, insertedCorrection, correctedSelection.toInt()),
                 cleanup,
             )
         }

@@ -34,20 +34,25 @@ class AutocorrectInputCoordinator(
     private data class PendingUndo(
         val session: Long,
         val undo: AutocorrectUndo,
-        var acceptsOwnSelectionUpdate: Boolean = true,
+        val personalizedLearningAllowed: Boolean,
     )
 
     private var session = 0L
     private var sessionActive = false
     private var autocorrectEligible = false
+    private var personalizedLearningAllowed = true
     private var expectedSuggestion: ExpectedSuggestion? = null
     private var suggestionSnapshot: AutocorrectSuggestionSnapshot? = null
     private var pendingUndo: PendingUndo? = null
 
-    fun startSession(autocorrectEligible: Boolean = true) {
+    fun startSession(
+        autocorrectEligible: Boolean = true,
+        personalizedLearningAllowed: Boolean = true,
+    ) {
         session++
         sessionActive = true
         this.autocorrectEligible = autocorrectEligible
+        this.personalizedLearningAllowed = personalizedLearningAllowed
         clearTransientState()
     }
 
@@ -55,6 +60,7 @@ class AutocorrectInputCoordinator(
         session++
         sessionActive = false
         autocorrectEligible = false
+        personalizedLearningAllowed = false
         clearTransientState()
     }
 
@@ -111,7 +117,7 @@ class AutocorrectInputCoordinator(
             )
         ) {
             is AutocorrectTransactionResult.Applied -> {
-                pendingUndo = PendingUndo(session, result.undo)
+                pendingUndo = PendingUndo(session, result.undo, personalizedLearningAllowed)
                 AutocorrectSpaceResult.CORRECTED
             }
             is AutocorrectTransactionResult.IndeterminateMutation ->
@@ -142,7 +148,9 @@ class AutocorrectInputCoordinator(
         ) {
             is AutocorrectTransactionResult.Restored -> {
                 // This callback must update in-memory learning before returning from Backspace.
-                learnRejectedWord(pending.undo.original)
+                if (pending.personalizedLearningAllowed) {
+                    learnRejectedWord(pending.undo.original)
+                }
                 AutocorrectBackspaceResult.UNDONE
             }
             is AutocorrectTransactionResult.IndeterminateMutation ->
@@ -161,17 +169,15 @@ class AutocorrectInputCoordinator(
         suggestionSnapshot = null
     }
 
-    /**
-     * The replacement itself normally produces one selection callback. Preserve undo through that
-     * callback only; any subsequent cursor/editor selection update invalidates it.
-     */
-    fun onEditorSelectionChanged() {
+    /** Preserve undo across any duplicate callbacks for the verified post-correction selection. */
+    fun onEditorSelectionChanged(newSelectionStart: Int, newSelectionEnd: Int) {
         expectedSuggestion = null
         suggestionSnapshot = null
         val pending = pendingUndo ?: return
-        if (pending.acceptsOwnSelectionUpdate) {
-            pending.acceptsOwnSelectionUpdate = false
-        } else {
+        if (
+            newSelectionStart != pending.undo.correctedSelection ||
+            newSelectionEnd != pending.undo.correctedSelection
+        ) {
             pendingUndo = null
         }
     }
