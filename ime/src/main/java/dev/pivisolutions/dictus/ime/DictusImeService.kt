@@ -639,7 +639,13 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         LaunchedEffect(engineState) {
             if (engineState !is SttEngineState.Failed) showFailureOverlay = true
-            if (engineState !is SttEngineState.ModelMissing) showModelMissingOverlay = false
+            if (engineState is SttEngineState.ModelMissing) {
+                // A tap made while the engine was still Cold or Loading deserves the answer it
+                // was waiting for, so read the pending flag before engineChanged clears it.
+                if (micGate.isPending) showModelMissingOverlay = true
+            } else {
+                showModelMissingOverlay = false
+            }
             runGateCommand(micGate.engineChanged(engineState))
         }
 

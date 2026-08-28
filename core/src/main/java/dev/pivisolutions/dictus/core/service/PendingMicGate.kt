@@ -34,10 +34,12 @@ class PendingMicGate {
             MicGateCommand.NONE
         }
         is SttEngineState.ModelMissing -> {
-            // Nothing to wait for: prewarming again cannot conjure a model that was never
-            // downloaded. Leaving the request pending would silently swallow the next Ready.
+            // Re-check the disk: the user may have downloaded a model since this state was
+            // published, and without a Retry button this tap is the only refresh path.
+            // Never stay pending — a queued intent would start recording on a later Ready
+            // the user never asked for.
             isPending = false
-            MicGateCommand.NONE
+            MicGateCommand.PREWARM
         }
     }
 
@@ -47,6 +49,12 @@ class PendingMicGate {
             is SttEngineState.Ready -> {
                 isPending = false
                 MicGateCommand.START_RECORDING
+            }
+            is SttEngineState.ModelMissing -> {
+                // A prewarm that discovers no model must not leave the tap queued: a later
+                // Ready would then start a recording the user never asked for.
+                isPending = false
+                MicGateCommand.NONE
             }
             else -> MicGateCommand.NONE
         }
