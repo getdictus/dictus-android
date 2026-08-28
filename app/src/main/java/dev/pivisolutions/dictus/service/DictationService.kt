@@ -452,8 +452,8 @@ class DictationService : Service(), DictationController {
             ?: ModelCatalog.DEFAULT_KEY
         val modelPath = modelManager.getModelPath(activeModelKey)
         if (modelPath == null) {
-            providerSlot.markFailed(activeModelKey)
-            Timber.w("Engine prewarm failed: active model is not downloaded")
+            providerSlot.markModelMissing(activeModelKey)
+            Timber.i("Engine prewarm skipped: model=%s is not downloaded yet", activeModelKey)
             return
         }
 

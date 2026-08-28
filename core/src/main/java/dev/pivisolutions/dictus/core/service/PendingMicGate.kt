@@ -33,6 +33,12 @@ class PendingMicGate {
             // Failure requires an explicit user choice from the overlay.
             MicGateCommand.NONE
         }
+        is SttEngineState.ModelMissing -> {
+            // Nothing to wait for: prewarming again cannot conjure a model that was never
+            // downloaded. Leaving the request pending would silently swallow the next Ready.
+            isPending = false
+            MicGateCommand.NONE
+        }
     }
 
     fun engineChanged(engineState: SttEngineState): MicGateCommand {

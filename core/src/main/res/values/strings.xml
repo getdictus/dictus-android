@@ -13,4 +13,7 @@
     <string name="model_loading_cancel">Cancel</string>
     <string name="model_loading_accessibility">Speech recognition model is loading. Microphone unavailable.</string>
     <string name="model_loading_failed_accessibility">Speech recognition model failed to load.</string>
+    <string name="model_missing_title">No voice model yet</string>
+    <string name="model_missing_body">Download a voice model to start dictating.</string>
+    <string name="model_missing_accessibility">No speech recognition model is downloaded. Microphone unavailable.</string>
 </resources>

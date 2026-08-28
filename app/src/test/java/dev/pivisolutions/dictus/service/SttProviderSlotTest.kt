@@ -165,6 +165,21 @@ class SttProviderSlotTest {
     }
 
     @Test
+    fun `undownloaded model publishes model-missing state, not a failure`() = runTest {
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
+        val provider = FakeWhisperProvider()
+        slot.getOrInitialize("tiny", "/models/tiny.bin", FakeWhisperProvider::class) { provider }
+
+        slot.markModelMissing("small-q5_1")
+
+        assertEquals(1, provider.releaseCount)
+        assertEquals(
+            dev.pivisolutions.dictus.core.service.SttEngineState.ModelMissing("small-q5_1"),
+            slot.state.value,
+        )
+    }
+
+    @Test
     fun `unavailable prewarm publishes failed state and releases retained provider`() = runTest {
         val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val provider = FakeWhisperProvider()

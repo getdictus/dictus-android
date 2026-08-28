@@ -613,6 +613,9 @@ class DictusImeService : LifecycleInputMethodService() {
         val engineState by _engineState.collectAsState()
         val micGate = remember { PendingMicGate() }
         var showFailureOverlay by remember { mutableStateOf(true) }
+        // Only a real mic tap may surface the "no model" panel. A background prewarm must
+        // never blanket the keyboard, which is what covered onboarding before the download step.
+        var showModelMissingOverlay by remember { mutableStateOf(false) }
         val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
@@ -636,6 +639,7 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         LaunchedEffect(engineState) {
             if (engineState !is SttEngineState.Failed) showFailureOverlay = true
+            if (engineState !is SttEngineState.ModelMissing) showModelMissingOverlay = false
             runGateCommand(micGate.engineChanged(engineState))
         }
 
@@ -650,6 +654,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         isPersonalizedLearningAllowed,
                     )
                     if (engineState is SttEngineState.Failed) showFailureOverlay = true
+                    if (engineState is SttEngineState.ModelMissing) showModelMissingOverlay = true
                     runGateCommand(micGate.request(engineState))
                 } else {
                     Timber.w("RECORD_AUDIO permission not granted")
@@ -722,7 +727,8 @@ class DictusImeService : LifecycleInputMethodService() {
         }
 
         val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
-            (engineState is SttEngineState.Failed && showFailureOverlay)
+            (engineState is SttEngineState.Failed && showFailureOverlay) ||
+            (engineState is SttEngineState.ModelMissing && showModelMissingOverlay)
 
         ImeOverlayHost(
             content = {
@@ -924,16 +930,19 @@ class DictusImeService : LifecycleInputMethodService() {
             },
             overlay = {
                 ModelLoadingOverlay(
-                    engineState = if (engineState is SttEngineState.Failed && !showFailureOverlay) {
-                        SttEngineState.Cold
-                    } else {
-                        engineState
+                    engineState = when {
+                        engineState is SttEngineState.Failed && !showFailureOverlay ->
+                            SttEngineState.Cold
+                        engineState is SttEngineState.ModelMissing && !showModelMissingOverlay ->
+                            SttEngineState.Cold
+                        else -> engineState
                     },
                     onRetry = { runGateCommand(micGate.retry()) },
                     onCancel = {
                         micGate.cancel()
-                        // Keep the service state authoritative while hiding this local error surface.
+                        // Keep the service state authoritative while hiding these local surfaces.
                         showFailureOverlay = false
+                        showModelMissingOverlay = false
                     },
                 )
             },

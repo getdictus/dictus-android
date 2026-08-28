@@ -28,6 +28,15 @@ class PendingMicGateTest {
         assertFalse(gate.isPending)
     }
 
+    @Test fun `missing model neither prewarms nor keeps the intent pending`() {
+        val gate = PendingMicGate()
+        assertEquals(MicGateCommand.NONE, gate.request(SttEngineState.ModelMissing("tiny")))
+        // Prewarming again cannot download a model, and a lingering pending intent would
+        // silently start recording on the next unrelated Ready.
+        assertFalse(gate.isPending)
+        assertEquals(MicGateCommand.NONE, gate.engineChanged(SttEngineState.Ready("tiny")))
+    }
+
     @Test fun `failed retry prewarms and cancel clears pending intent`() {
         val gate = PendingMicGate()
         assertEquals(MicGateCommand.NONE, gate.request(SttEngineState.Failed("tiny")))
