@@ -202,6 +202,34 @@ class InputConnectionAutocorrectEditorTest {
         assertTrue(connection.calls.contains("setComposingRegion(9,12)"))
     }
 
+    @Test
+    fun `prediction insertion verifies exact word space postcondition through production adapter`() {
+        val connection = StatefulConnection("hello ")
+        val editor = connection.editor()
+        val expected = editor.snapshot()!!
+
+        assertEquals(
+            NextWordPredictionInsertResult.APPLIED,
+            NextWordPredictionEditorTransaction.insert(editor, expected, "world"),
+        )
+        assertEquals("hello world ", connection.text)
+        assertTrue(connection.calls.contains("setComposingRegion(6,6)"))
+        assertTrue(connection.calls.contains("commitText(world ,1)"))
+    }
+
+    @Test
+    fun `prediction commit Boolean cannot override failed exact postcondition`() {
+        val connection = StatefulConnection("hello ", behavior = Behavior.WRONG_SELECTION)
+        val editor = connection.editor()
+        val expected = editor.snapshot()!!
+
+        assertEquals(
+            NextWordPredictionInsertResult.FAILED_UNCHANGED,
+            NextWordPredictionEditorTransaction.insert(editor, expected, "world"),
+        )
+        assertEquals("hello ", connection.text)
+    }
+
     private fun request(expected: AutocorrectEditorSnapshot) =
         AutocorrectReplacement(expected, 0, 3, "teh", "the ")
 

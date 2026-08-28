@@ -17,6 +17,7 @@ import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
 import timber.log.Timber
 
 /**
@@ -47,7 +48,9 @@ fun KeyboardScreen(
     onEmojiSelected: (String) -> Unit = {},
     currentWord: String = "",
     suggestions: List<String> = emptyList(),
-    onSuggestionSelected: (String) -> Unit = {},
+    suggestionMode: SuggestionPresentationMode = SuggestionPresentationMode.COMPLETION,
+    onSuggestionSelected: (String, NextWordPredictionToken?) -> Unit = { _, _ -> },
+    predictionToken: NextWordPredictionToken? = null,
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
@@ -96,7 +99,9 @@ fun KeyboardScreen(
                 SuggestionBar(
                     currentWord = currentWord,
                     suggestions = suggestions,
+                    mode = suggestionMode,
                     onSuggestionSelected = onSuggestionSelected,
+                    predictionToken = predictionToken,
                     onCurrentWordSelected = onCurrentWordSelected,
                 )
 
