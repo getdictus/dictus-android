@@ -43,6 +43,8 @@ import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
+import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
+import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
 import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionCoordinator
@@ -157,6 +159,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     private val _suggestionMode = MutableStateFlow(SuggestionPresentationMode.COMPLETION)
     private var latestSuggestionRequestId: Long? = null
+    private var correctionSessionId = 0L
     private val _predictionToken = MutableStateFlow<NextWordPredictionToken?>(null)
     private val predictionCoordinator = NextWordPredictionCoordinator()
     private val autocorrectCoordinator: AutocorrectInputCoordinator by lazy {
@@ -249,6 +252,19 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         bindingScope.launch {
             dictionaryEngine.suggestionResults.collect { result ->
+                val correctionContextCurrent = result.contextIdentity?.let { identity ->
+                    shouldRequestSuggestions() && CorrectionContextExtractor.isCurrent(
+                        identity = identity,
+                        sessionId = correctionSessionId,
+                        language = currentCorrectionLanguage(),
+                        snapshot = ImeServicePrivacyPolicy.readEditorContextIfEligible(
+                            isCurrentEditorSuggestionEligible,
+                            null,
+                        ) {
+                            currentInputConnection?.let(::InputConnectionAutocorrectEditor)?.snapshot()
+                        },
+                    )
+                } ?: true
                 val predictionPublication = if (
                     result.mode == NativeTrieSuggestionEngine.SuggestionMode.PREDICTION
                 ) {
@@ -265,6 +281,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 }
                 if (
                     result.requestId == latestSuggestionRequestId &&
+                    correctionContextCurrent &&
                     (
                         result.mode == NativeTrieSuggestionEngine.SuggestionMode.COMPLETION &&
                             result.input == _currentWord.value ||
@@ -383,8 +400,33 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun requestSuggestionsForCurrentWord() {
         _suggestions.value = emptyList()
         _suggestionMode.value = SuggestionPresentationMode.COMPLETION
-        latestSuggestionRequestId = dictionaryEngine.requestSuggestions(_currentWord.value)
+        val activation = dictionaryEngine.activation.value
+        val context = activation?.takeIf { it.hasNgram && _suggestionsEnabled.value }?.let {
+            ImeServicePrivacyPolicy.readEditorContextIfEligible(
+                isCurrentEditorSuggestionEligible,
+                null,
+            ) {
+                val snapshot = currentInputConnection
+                    ?.let(::InputConnectionAutocorrectEditor)
+                    ?.snapshot()
+                CorrectionContextExtractor.extract(
+                    snapshot = snapshot,
+                    currentWord = _currentWord.value,
+                    sessionId = correctionSessionId,
+                    language = CorrectionLanguageIdentity(it.language, it.layout),
+                )
+            }
+        }
+        latestSuggestionRequestId = dictionaryEngine.requestSuggestions(
+            _currentWord.value,
+            context = context,
+        )
         autocorrectCoordinator.suggestionRequested(latestSuggestionRequestId, _currentWord.value)
+    }
+
+    private fun currentCorrectionLanguage(): CorrectionLanguageIdentity {
+        val active = _activeKeyboardState.value
+        return CorrectionLanguageIdentity(active.language, active.layout)
     }
 
     private fun requestNextWordPredictions(spaceResult: AutocorrectSpaceResult? = null) {
@@ -455,6 +497,7 @@ class DictusImeService : LifecycleInputMethodService() {
         restarting: Boolean,
     ) {
         super.onStartInput(attribute, restarting)
+        correctionSessionId++
         val editorPolicy = attribute?.let {
             EditorEligibilityPolicy.resolve(it.inputType, it.imeOptions)
         }
@@ -486,6 +529,7 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     override fun onFinishInput() {
+        correctionSessionId++
         autocorrectCoordinator.finishSession()
         predictionCoordinator.finishSession()
         isCurrentEditorSuggestionEligible = false
