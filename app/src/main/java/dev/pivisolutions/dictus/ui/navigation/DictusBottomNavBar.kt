@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,6 +47,11 @@ import dev.pivisolutions.dictus.navigation.AppDestination
  * WHY Memory icon for Modèles: Chip/processor icon better represents "model management"
  * semantics than a download arrow. Matches iOS visual parity for the models tab.
  *
+ * WHY equal-weight tabs: The three labels have different widths ("Home" vs "Settings"),
+ * so Arrangement.SpaceEvenly left the middle tab off the screen's centre axis. Each tab now
+ * occupies an equal 1/3 cell and centres its content inside it, which puts the middle tab
+ * exactly on the centre axis regardless of label length or locale.
+ *
  * WHY filled pill indicator: Replaces the small 8dp dot with a translucent filled pill
  * behind the active tab for improved visibility and iOS visual parity.
  *
@@ -70,7 +76,6 @@ fun DictusBottomNavBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             NavTab(
@@ -96,7 +101,7 @@ fun DictusBottomNavBar(
 }
 
 @Composable
-private fun NavTab(
+private fun RowScope.NavTab(
     label: String,
     icon: ImageVector,
     isActive: Boolean,
@@ -108,33 +113,39 @@ private fun NavTab(
     val iconTint = if (isActive) DictusColors.AccentHighlight else unselectedColor
     val labelColor = if (isActive) DictusColors.AccentHighlight else unselectedColor
 
-    // Filled pill background behind active tab for iOS visual parity and improved visibility
+    // Equal-width cell: each tab owns exactly 1/3 of the bar and centres its pill inside it
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (isActive) DictusColors.Accent.copy(alpha = 0.15f) else Color.Transparent
-            )
-            .clickable(role = Role.Tab, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.weight(1f),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        // Filled pill background behind active tab for iOS visual parity and improved visibility
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    if (isActive) DictusColors.Accent.copy(alpha = 0.15f) else Color.Transparent
+                )
+                .clickable(role = Role.Tab, onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = iconTint,
-                modifier = Modifier.padding(0.dp),
-            )
-            Text(
-                text = label,
-                color = labelColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = iconTint,
+                    modifier = Modifier.padding(0.dp),
+                )
+                Text(
+                    text = label,
+                    color = labelColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }
