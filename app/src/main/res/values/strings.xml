@@ -194,6 +194,12 @@
     <string name="history_delete_confirm">Delete</string>
     <string name="history_delete_cancel">Cancel</string>
     <string name="history_error">History is unavailable. Please try again.</string>
+    <string name="history_detail_title">Transcription</string>
+    <string name="history_copy_cd">Copy transcription</string>
+    <string name="history_share_cd">Share transcription</string>
+    <string name="history_copied">Transcription copied</string>
+    <string name="history_clip_label">Dictus transcription</string>
+    <string name="history_share_title">Share transcription</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">Result</string>

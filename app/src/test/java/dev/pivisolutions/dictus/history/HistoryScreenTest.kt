@@ -167,6 +167,69 @@ class HistoryScreenTest {
         assertEquals(0, confirmed)
     }
 
+    @Test
+    fun `card opens full detail and explicit copy share use exact text`() {
+        val fullText = "Synthetic complete transcription that is longer than its two-line card preview."
+        var openedId: Long? = null
+        var copied: String? = null
+        var shared: String? = null
+        var state by mutableStateOf(HistoryUiState(isLoading = false, entries = listOf(entry(9, fullText))))
+        composeRule.setContent {
+            DictusTheme {
+                HistoryScreen(
+                    state = state,
+                    onBack = {},
+                    onOpenDetail = { openedId = it },
+                    onCloseDetail = { state = state.copy(selectedEntryId = null) },
+                    onCopy = { copied = it },
+                    onShare = { shared = it },
+                    onRequestDelete = {},
+                    onCancelDelete = {},
+                    onConfirmDelete = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("history_card_9").performClick()
+        assertEquals(9L, openedId)
+        composeRule.runOnIdle { state = state.copy(selectedEntryId = 9) }
+
+        composeRule.onNodeWithTag("history_detail").assertIsDisplayed()
+        composeRule.onNodeWithText(fullText).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Copy transcription").performClick()
+        composeRule.onNodeWithText("Transcription copied").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Share transcription").performClick()
+        composeRule.onNodeWithContentDescription("Delete transcription").assertDoesNotExist()
+        assertEquals(fullText, copied)
+        assertEquals(fullText, shared)
+
+        composeRule.onNodeWithContentDescription("Back").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("history_list").assertIsDisplayed()
+    }
+
+    @Test
+    fun `missing selected entry fails closed to list`() {
+        composeRule.setContent {
+            DictusTheme {
+                HistoryScreen(
+                    state = HistoryUiState(
+                        isLoading = false,
+                        entries = listOf(entry(1, "available")),
+                        selectedEntryId = 999,
+                    ),
+                    onBack = {},
+                    onRequestDelete = {},
+                    onCancelDelete = {},
+                    onConfirmDelete = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("history_detail").assertDoesNotExist()
+        composeRule.onNodeWithTag("history_list").assertIsDisplayed()
+    }
+
     private fun entry(id: Long, text: String) = TranscriptionHistoryEntry(
         id = id,
         text = text,

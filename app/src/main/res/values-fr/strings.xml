@@ -194,6 +194,12 @@
     <string name="history_delete_confirm">Supprimer</string>
     <string name="history_delete_cancel">Annuler</string>
     <string name="history_error">L\u2019historique est indisponible. Veuillez r\u00e9essayer.</string>
+    <string name="history_detail_title">Transcription</string>
+    <string name="history_copy_cd">Copier la transcription</string>
+    <string name="history_share_cd">Partager la transcription</string>
+    <string name="history_copied">Transcription copi\u00e9e</string>
+    <string name="history_clip_label">Transcription Dictus</string>
+    <string name="history_share_title">Partager la transcription</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">R\u00e9sultat</string>
