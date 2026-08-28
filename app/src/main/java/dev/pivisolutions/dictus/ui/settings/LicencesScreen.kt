@@ -159,7 +159,7 @@ fun LicencesScreen(
             name = "Google Books Ngram Corpus",
             author = "Google Books / orgtre frequency extracts",
             url = "https://github.com/orgtre/google-books-ngram-frequency",
-            licenceText = "CC BY 3.0 Unported\n\nFrench and English frequency extracts were filtered, normalized, seeded, capped, and converted to Dictus NGRM v1 assets. Spanish 1-, 2-, and 3-gram extracts were filtered and normalized, with no authored Spanish n-gram seeds, and converted to Dictus DTRI v1 and NGRM v1 assets. Exact source revisions and hashes are documented in docs/ngram-assets-provenance.md.\n\nhttps://creativecommons.org/licenses/by/3.0/",
+            licenceText = "CC BY 3.0 Unported\n\nFrench and English frequency extracts were filtered, normalized, seeded, capped, and converted to Dictus NGRM v1 assets. Spanish and German 1-, 2-, and 3-gram extracts were filtered and normalized, with no authored Spanish or German n-gram seeds, and converted to Dictus DTRI v1 and NGRM v1 assets. Exact source revisions and hashes are documented in docs/ngram-assets-provenance.md.\n\nhttps://creativecommons.org/licenses/by/3.0/",
             onLinkClick = openLink,
         )
 

@@ -16,6 +16,20 @@ class NativeTrieInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Test
+    fun germanDictionaryPreservesUmlautsAndSharpSAndCorrectsUber() {
+        NativeTrie.open(context, "de_spellcheck.dict", TrieKeyboardLayout.QWERTY).use { trie ->
+            assertTrue(trie.wordExists("über"))
+            assertTrue(trie.wordExists("männer"))
+            assertTrue(trie.wordExists("schön"))
+            assertTrue(trie.wordExists("straße"))
+            assertTrue(trie.wordExists("grüße"))
+            assertTrue(trie.wordExists("muss"))
+            assertTrue(trie.wordExists("muß"))
+            assertTrue(trie.correct("uber", maxResults = 20).contains("über"))
+        }
+    }
+
+    @Test
     fun spanishDictionarySupportsAccentsAndRejectsMalformedCopy() {
         NativeTrie.open(context, "es_spellcheck.dict", TrieKeyboardLayout.QWERTY).use { trie ->
             assertTrue(trie.wordExists("español"))
@@ -166,6 +180,7 @@ class NativeTrieInstrumentedTest {
         val lookupNanos = mutableListOf<Long>()
         val switchNanos = mutableListOf<Long>()
         val dictionaries = listOf(
+            Triple("de_spellcheck.dict", TrieKeyboardLayout.QWERTY, "üb" to "uber"),
             Triple("fr_spellcheck.dict", TrieKeyboardLayout.AZERTY, "bon" to "bonjr"),
             Triple("en_spellcheck.dict", TrieKeyboardLayout.QWERTY, "hel" to "helo"),
         )

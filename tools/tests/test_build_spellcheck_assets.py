@@ -69,6 +69,52 @@ class SpellcheckAssetBuilderTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "source integrity mismatch"):
                 BUILDER.acquire_source("es", cache)
 
+    def test_german_fixture_preserves_umlauts_and_sharp_s_without_casefolding(self):
+        source = (
+            "ngram,freq\n"
+            "Über,30\n"
+            "u\u0308ber,20\n"
+            "Ärger,18\n"
+            "a\u0308rger,17\n"
+            "Öl,16\n"
+            "o\u0308l,15\n"
+            "Straße,25\n"
+            "STRAẞE,15\n"
+            "STRASSE,10\n"
+            "grüße,8\n"
+        ).encode()
+        words = BUILDER.parse_csv(source)
+        first = BUILDER.serialize(words)
+        second = BUILDER.serialize(dict(reversed(list(words.items()))))
+
+        self.assertEqual(
+            {
+                "über": 30,
+                "ärger": 18,
+                "öl": 16,
+                "straße": 25,
+                "strasse": 10,
+                "grüße": 8,
+            },
+            words,
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(
+            "4a4c3c7de8552c9dc930f2ff97596a2ca159d71ae8c18afda5ab0a2ea8a785f4",
+            hashlib.sha256(first).hexdigest(),
+        )
+        self.assertEqual(
+            {"words": 6, "nodes": 7, "maxFrequency": 30, "bytes": 111},
+            BUILDER.inspect(first),
+        )
+
+    def test_german_source_hash_mismatch_is_rejected_before_parsing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory)
+            (cache / "1grams_german.csv").write_bytes(b"tampered")
+            with self.assertRaisesRegex(ValueError, "source integrity mismatch"):
+                BUILDER.acquire_source("de", cache)
+
     def test_checked_in_spanish_asset_has_pinned_hash_and_counts(self):
         binary = (ROOT / "trie/src/main/assets/es_spellcheck.dict").read_bytes()
         self.assertEqual(
@@ -76,6 +122,17 @@ class SpellcheckAssetBuilderTest(unittest.TestCase):
             hashlib.sha256(binary).hexdigest(),
         )
         self.assertEqual(10_000, BUILDER.inspect(binary)["words"])
+
+    def test_checked_in_german_asset_has_pinned_hash_and_counts(self):
+        binary = (ROOT / "trie/src/main/assets/de_spellcheck.dict").read_bytes()
+        self.assertEqual(
+            "663b8945ac8d94b4c1da322965454e4ae52fc9adac04b4206b41b96b1199a18a",
+            hashlib.sha256(binary).hexdigest(),
+        )
+        self.assertEqual(
+            {"words": 9_999, "nodes": 12_420, "maxFrequency": 1_382_028_889, "bytes": 114_612},
+            BUILDER.inspect(binary),
+        )
 
 
 if __name__ == "__main__":

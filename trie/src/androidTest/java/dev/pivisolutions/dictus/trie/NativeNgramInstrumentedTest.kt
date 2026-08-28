@@ -118,6 +118,16 @@ class NativeNgramInstrumentedTest {
     fun productionLanguagePairsLoadExactAssetsAndStayBelowLookupBudget() {
         val cases = listOf(
             ProductionCase(
+                asset = "de_spellcheck.dict",
+                layout = TrieKeyboardLayout.QWERTY,
+                firstWord = "auf",
+                secondWord = "der",
+                expectedBigram = "habe",
+                expectedTrigram = "anderen",
+                bigramContext = "ich",
+                expectedTrigramMember = "straße",
+            ),
+            ProductionCase(
                 asset = "fr_spellcheck.dict",
                 layout = TrieKeyboardLayout.AZERTY,
                 firstWord = "a",
@@ -156,6 +166,13 @@ class NativeNgramInstrumentedTest {
                     case.expectedTrigram,
                     trie.predictAfterWords(case.firstWord, case.secondWord, 3).first().word,
                 )
+                case.expectedTrigramMember?.let { expected ->
+                    assertTrue(
+                        "${case.asset} trigram candidates must contain $expected",
+                        trie.predictAfterWords(case.firstWord, case.secondWord, 16)
+                            .any { it.word == expected },
+                    )
+                }
                 repeat(100) { trie.predictAfterWords(case.firstWord, case.secondWord, 3) }
                 val timings = MutableList(1_000) {
                     val started = SystemClock.elapsedRealtimeNanos()
@@ -206,6 +223,7 @@ class NativeNgramInstrumentedTest {
         val expectedBigram: String,
         val expectedTrigram: String,
         val bigramContext: String = "je",
+        val expectedTrigramMember: String? = null,
     )
 
     private fun buildFixture(): ByteArray {
