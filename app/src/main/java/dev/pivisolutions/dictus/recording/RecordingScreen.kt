@@ -54,6 +54,7 @@ import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
+import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
 import kotlinx.coroutines.launch
 
 /**
@@ -117,12 +118,14 @@ fun RecordingScreen(
         WaveformDriver().apply { isProcessing = true }
     }
     val processingPhase by processingDriver.processingPhase.collectAsState()
+    val syntheticMotionEnabled by rememberSyntheticMotionEnabled()
 
-    // Run the processing animation loop when transcribing.
-    // LaunchedEffect cancels when isTranscribing becomes false.
-    if (dictationState is DictationState.Transcribing) {
-        LaunchedEffect(Unit) {
+    // Keep transcription feedback static when Android asks to reduce motion or save power.
+    LaunchedEffect(dictationState is DictationState.Transcribing, syntheticMotionEnabled) {
+        if (dictationState is DictationState.Transcribing && syntheticMotionEnabled) {
             processingDriver.runLoop()
+        } else {
+            processingDriver.reset()
         }
     }
 

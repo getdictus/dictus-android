@@ -20,6 +20,7 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
+import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 
 /**
@@ -48,10 +49,11 @@ fun OnboardingWelcomeScreen(
         WaveformDriver().apply { isProcessing = true }
     }
     val phase by driver.processingPhase.collectAsState()
+    val syntheticMotionEnabled by rememberSyntheticMotionEnabled()
 
-    // Run the animation loop. Cancels when OnboardingWelcomeScreen leaves composition.
-    LaunchedEffect(Unit) {
-        driver.runLoop()
+    // Keep a static, recognizable waveform when Android asks to reduce motion or save power.
+    LaunchedEffect(syntheticMotionEnabled) {
+        if (syntheticMotionEnabled) driver.runLoop() else driver.reset()
     }
 
     OnboardingStepScaffold(
