@@ -53,6 +53,7 @@ import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
+import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingCTAButton
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingProgressDots
 import dev.pivisolutions.dictus.ui.onboarding.accentGradient
@@ -108,11 +109,14 @@ fun OnboardingTestRecordingScreen(
         WaveformDriver().apply { isProcessing = true }
     }
     val processingPhase by processingDriver.processingPhase.collectAsState()
+    val syntheticMotionEnabled by rememberSyntheticMotionEnabled()
 
-    // Run the processing animation loop when transcribing.
-    if (dictationState is DictationState.Transcribing) {
-        LaunchedEffect(Unit) {
+    // Keep transcription feedback static when Android asks to reduce motion or save power.
+    LaunchedEffect(dictationState is DictationState.Transcribing, syntheticMotionEnabled) {
+        if (dictationState is DictationState.Transcribing && syntheticMotionEnabled) {
             processingDriver.runLoop()
+        } else {
+            processingDriver.reset()
         }
     }
 

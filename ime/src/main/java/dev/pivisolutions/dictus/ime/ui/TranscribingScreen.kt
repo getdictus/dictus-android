@@ -23,6 +23,7 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
+import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
 
 /**
  * Transcribing overlay shown while whisper.cpp processes audio.
@@ -48,11 +49,11 @@ fun TranscribingScreen(
     }
 
     val phase by driver.processingPhase.collectAsState()
+    val syntheticMotionEnabled by rememberSyntheticMotionEnabled()
 
-    // Run the driver's animation loop. Cancels automatically when this
-    // composable leaves composition (i.e. when state changes from Transcribing).
-    LaunchedEffect(Unit) {
-        driver.runLoop()
+    // Keep the state visible but static when Android asks to reduce motion or save power.
+    LaunchedEffect(syntheticMotionEnabled) {
+        if (syntheticMotionEnabled) driver.runLoop() else driver.reset()
     }
 
     Column(
