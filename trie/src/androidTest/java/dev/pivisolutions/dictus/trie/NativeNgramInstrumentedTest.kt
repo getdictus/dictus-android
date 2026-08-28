@@ -114,6 +114,72 @@ class NativeNgramInstrumentedTest {
         }
     }
 
+    @Test
+    fun productionLanguagePairsLoadExactAssetsAndStayBelowLookupBudget() {
+        val cases = listOf(
+            ProductionCase(
+                asset = "fr_spellcheck.dict",
+                layout = TrieKeyboardLayout.AZERTY,
+                firstWord = "a",
+                secondWord = "besoin",
+                expectedBigram = "ne",
+                expectedTrigram = "de",
+            ),
+            ProductionCase(
+                asset = "en_spellcheck.dict",
+                layout = TrieKeyboardLayout.QWERTY,
+                firstWord = "a",
+                secondWord = "bit",
+                expectedBigram = "can",
+                expectedTrigram = "of",
+                bigramContext = "you",
+            ),
+        )
+
+        cases.forEach { case ->
+            NativeTrie.open(context, case.asset, case.layout).use { trie ->
+                assertTrue("${case.asset} must activate its matching n-gram", trie.hasNgram)
+                assertEquals(
+                    case.expectedBigram,
+                    trie.predictAfterWord(case.bigramContext, 3).first().word,
+                )
+                assertEquals(
+                    case.expectedTrigram,
+                    trie.predictAfterWords(case.firstWord, case.secondWord, 3).first().word,
+                )
+                repeat(100) { trie.predictAfterWords(case.firstWord, case.secondWord, 3) }
+                val timings = MutableList(1_000) {
+                    val started = SystemClock.elapsedRealtimeNanos()
+                    trie.predictAfterWords(case.firstWord, case.secondWord, 3)
+                    SystemClock.elapsedRealtimeNanos() - started
+                }.sorted()
+                val p50Ms = timings[499] / 1_000_000.0
+                val p95Ms = timings[949] / 1_000_000.0
+                val report = "issue75-production-ngram asset=${case.asset} device=${Build.MODEL} " +
+                    "samples=${timings.size} lookupMs[p50=$p50Ms,p95=$p95Ms,oracle<10]"
+                Log.i("NativeNgramSmoke", report)
+                println(report)
+                assertTrue(report, p95Ms < 10.0)
+            }
+        }
+    }
+
+    @Test
+    fun corruptOptionalNgramKeepsSpellTrieUsable() {
+        val spell = File(context.cacheDir, "fr-spell-fixture.dict").also { output ->
+            context.assets.open("fr_spellcheck.dict").use { input ->
+                output.outputStream().use { destination -> input.copyTo(destination) }
+            }
+        }
+        val corruptNgram = fixtureFile("corrupt-production.ngrm", "not-an-ngrm".toByteArray())
+
+        NativeTrie.openPathsForTesting(spell, TrieKeyboardLayout.AZERTY, corruptNgram).use { trie ->
+            assertFalse(trie.hasNgram)
+            assertTrue(trie.wordExists("bonjour"))
+            assertTrue(trie.predictAfterWord("je").isEmpty())
+        }
+    }
+
     private fun withTrie(block: (NativeTrie) -> Unit) {
         NativeTrie.open(context, "fr_spellcheck.dict", TrieKeyboardLayout.AZERTY).use(block)
     }
@@ -123,6 +189,15 @@ class NativeNgramInstrumentedTest {
 
     private data class FixtureResult(val word: String, val score: Int)
     private data class FixtureEntry(val key: ByteArray, val results: List<FixtureResult>)
+    private data class ProductionCase(
+        val asset: String,
+        val layout: TrieKeyboardLayout,
+        val firstWord: String,
+        val secondWord: String,
+        val expectedBigram: String,
+        val expectedTrigram: String,
+        val bigramContext: String = "je",
+    )
 
     private fun buildFixture(): ByteArray {
         val bigrams = listOf(

@@ -154,6 +154,17 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Google Books n-gram frequency data packaged as transformed offline assets (CC BY 3.0)
+        LicenceBlock(
+            name = "Google Books Ngram Corpus",
+            author = "Google Books / orgtre frequency extracts",
+            url = "https://github.com/orgtre/google-books-ngram-frequency",
+            licenceText = "CC BY 3.0 Unported\n\nFrench and English frequency extracts were filtered, normalized, seeded, capped, and converted to Dictus NGRM v1 assets. Exact source revisions and hashes are documented in docs/ngram-assets-provenance.md.\n\nhttps://creativecommons.org/licenses/by/3.0/",
+            onLinkClick = openLink,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         // Dictus itself
         LicenceBlock(
             name = "Dictus",

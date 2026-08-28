@@ -24,6 +24,8 @@ data class NgramPrediction(
 class NativeTrie private constructor(
     private var nativeHandle: Long,
 ) : Closeable {
+    var hasNgram: Boolean = false
+        private set
     companion object {
         private const val MAX_INPUT_LENGTH = 32
         private const val MAX_EDIT_DISTANCE = 2f
@@ -31,6 +33,12 @@ class NativeTrie private constructor(
         private val assetHashes = mapOf(
             "en_spellcheck.dict" to "2721a68a1dca369b6a23d149405c99bbff5071caa973843b896fad088912b11c",
             "fr_spellcheck.dict" to "4f52b3cd584ff1844ad09719d21751d93ebc76e506bde0b9b958d876b886f92d",
+            "en_ngrams.dict" to "eecdf421c71c39e9f7822cb48a8624efb9ae8d86c6a01e976c6fa506f2fc71bd",
+            "fr_ngrams.dict" to "ba8f8b3ea9ade673eeb158e4aaeebcb129647938b8cb619189393cbb1c6da712",
+        )
+        private val ngramAssets = mapOf(
+            "en_spellcheck.dict" to "en_ngrams.dict",
+            "fr_spellcheck.dict" to "fr_ngrams.dict",
         )
 
         init {
@@ -45,14 +53,31 @@ class NativeTrie private constructor(
             require(assetName in setOf("fr_spellcheck.dict", "en_spellcheck.dict")) {
                 "Unsupported dictionary asset"
             }
-            return openPath(copyAssetAtomically(context, assetName), layout)
+            val spellFile = copyAssetAtomically(context, assetName)
+            // N-grams are optional enrichment. Integrity, copy, or native format failure must
+            // never prevent the matching spell trie from becoming the complete activation.
+            val ngramFile = runCatching {
+                copyAssetAtomically(context, ngramAssets.getValue(assetName))
+            }.getOrNull()
+            return openPath(spellFile, layout, ngramFile)
         }
 
         /** Test seam for malformed native fixtures; production callers use verified assets. */
         internal fun openPathForTesting(file: File, layout: TrieKeyboardLayout): NativeTrie =
-            openPath(file, layout)
+            openPath(file, layout, null)
 
-        private fun openPath(file: File, layout: TrieKeyboardLayout): NativeTrie {
+        /** Test seam for production-pair lifecycle and corrupt optional n-gram fallback. */
+        internal fun openPathsForTesting(
+            spellFile: File,
+            layout: TrieKeyboardLayout,
+            ngramFile: File?,
+        ): NativeTrie = openPath(spellFile, layout, ngramFile)
+
+        private fun openPath(
+            file: File,
+            layout: TrieKeyboardLayout,
+            ngramFile: File?,
+        ): NativeTrie {
             val nativeTrie = NativeTrie(0L)
             val handle = nativeTrie.nativeCreate()
             check(handle != 0L) { "Unable to allocate native trie" }
@@ -62,6 +87,13 @@ class NativeTrie private constructor(
                     "Invalid trie dictionary"
                 }
                 nativeTrie.nativeSetLayout(handle, layout.nativeValue)
+                val loadedNgram = ngramFile != null && nativeTrie.nativeLoadNgram(
+                    handle,
+                    ngramFile.absolutePath.toByteArray(StandardCharsets.UTF_8),
+                )
+                if (loadedNgram) {
+                    nativeTrie.hasNgram = true
+                }
                 return nativeTrie
             } catch (error: Throwable) {
                 nativeTrie.close()
@@ -89,6 +121,9 @@ class NativeTrie private constructor(
                         StandardCopyOption.ATOMIC_MOVE,
                         StandardCopyOption.REPLACE_EXISTING,
                     )
+                    check(destination.setReadOnly() || !destination.canWrite()) {
+                        "Unable to protect installed dictionary asset"
+                    }
                     destination
                 } finally {
                     temporary.delete()
@@ -147,17 +182,21 @@ class NativeTrie private constructor(
         return nativeComplete(nativeHandle, canonical, maxResults).toList()
     }
 
-    /** Test-only path seam until reviewed corpus assets are packaged by a follow-up issue. */
+    /** Test-only path seam for malformed and replacement native fixtures. */
     @Synchronized
     internal fun loadNgramForTesting(file: File): Boolean {
         check(nativeHandle != 0L) { "Trie is closed" }
-        return nativeLoadNgram(nativeHandle, file.absolutePath.toByteArray(StandardCharsets.UTF_8))
+        return nativeLoadNgram(
+            nativeHandle,
+            file.absolutePath.toByteArray(StandardCharsets.UTF_8),
+        ).also { hasNgram = it }
     }
 
     @Synchronized
     internal fun unloadNgramForTesting() {
         check(nativeHandle != 0L) { "Trie is closed" }
         nativeUnloadNgram(nativeHandle)
+        hasNgram = false
     }
 
     @Synchronized

@@ -65,7 +65,7 @@ class NativeTrieSuggestionEngineTest {
                 it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en"
                 it[PreferenceKeys.KEYBOARD_LAYOUT] = "azerty"
             }
-            val opener = FakeOpener()
+            val opener = FakeOpener(mutableListOf(Result.success(FakeHandle(hasNgram = true))))
             val engine = createEngine(opener)
             advanceUntilIdle()
 
@@ -73,6 +73,7 @@ class NativeTrieSuggestionEngineTest {
             assertEquals(SupportedLanguage.ENGLISH, activation.language)
             assertEquals(KeyboardLayout.AZERTY, activation.layout)
             assertEquals("en_spellcheck.dict", activation.profile.nativeDictionaryAssetName)
+            assertTrue(activation.hasNgram)
             assertEquals(
                 OpenRequest("en_spellcheck.dict", TrieKeyboardLayout.AZERTY),
                 opener.requests.single(),
@@ -460,6 +461,7 @@ class NativeTrieSuggestionEngineTest {
         private val knownWords: Set<String> = emptySet(),
         private val prefix: List<String> = emptyList(),
         private val fuzzy: List<String> = emptyList(),
+        override val hasNgram: Boolean = false,
     ) : NativeTrieHandle {
         var closeCount = 0
         val requestedLimits = mutableListOf<Int>()
