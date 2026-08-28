@@ -5,6 +5,7 @@ data class AutocorrectSuggestionSnapshot(
     val requestId: Long,
     val input: String,
     val isKnownWord: Boolean,
+    val knownInputDominance: Boolean,
     val primaryCorrection: String?,
     val isLearnedWord: Boolean,
 )
@@ -111,7 +112,7 @@ class AutocorrectInputCoordinator(
         val correction = offered?.primaryCorrection
         if (
             !identityEligible ||
-            offered.isKnownWord ||
+            (offered.isKnownWord && !offered.knownInputDominance) ||
             offered.isLearnedWord ||
             correction == null
         ) {

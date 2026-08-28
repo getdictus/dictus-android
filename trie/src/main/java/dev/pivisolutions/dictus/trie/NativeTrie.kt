@@ -166,6 +166,22 @@ class NativeTrie private constructor(
         return nativeWordExists(nativeHandle, canonical)
     }
 
+    /** Returns the dictionary's encoded uint16 log-frequency score, or zero when absent. */
+    @Synchronized
+    fun frequency(word: String): Int {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        val canonical = word.canonicalLookup()
+        if (canonical.isEmpty() || canonical.length > MAX_INPUT_LENGTH) return 0
+        return nativeFrequency(nativeHandle, canonical)
+    }
+
+    /** Raw maximum frequency used when the dictionary encoded its log-frequency scores. */
+    @Synchronized
+    fun maxFrequency(): Long {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        return nativeMaxFrequency(nativeHandle)
+    }
+
     @Synchronized
     fun correct(
         word: String,
@@ -278,6 +294,8 @@ class NativeTrie private constructor(
     private external fun nativeLoad(handle: Long, path: String): Boolean
     private external fun nativeSetLayout(handle: Long, layout: Int)
     private external fun nativeWordExists(handle: Long, word: String): Boolean
+    private external fun nativeFrequency(handle: Long, word: String): Int
+    private external fun nativeMaxFrequency(handle: Long): Long
     private external fun nativeCorrect(
         handle: Long,
         word: String,

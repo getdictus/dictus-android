@@ -48,6 +48,22 @@ class AutocorrectInputCoordinatorTest {
     }
 
     @Test
+    fun `explicit dominance evidence permits known input without weakening known guard`() {
+        val coordinator = AutocorrectInputCoordinator {}
+        val editor = FakeEditor(tokenSnapshot("schon"))
+        coordinator.startSession()
+        coordinator.suggestionRequested(1L, "schon")
+        assertTrue(
+            coordinator.suggestionPublished(
+                snapshot(1L, "schon", known = true, dominant = true, correction = "schön"),
+            ),
+        )
+
+        assertEquals(AutocorrectSpaceResult.CORRECTED, coordinator.onSpace(editor) {})
+        assertEquals("schön ", editor.snapshotValue.text)
+    }
+
+    @Test
     fun `new request invalidates a previously published snapshot`() {
         val coordinator = AutocorrectInputCoordinator {}
         val editor = FakeEditor(tokenSnapshot("help"))
@@ -257,9 +273,10 @@ class AutocorrectInputCoordinatorTest {
         requestId: Long,
         input: String,
         known: Boolean = false,
+        dominant: Boolean = false,
         correction: String?,
         learned: Boolean = false,
-    ) = AutocorrectSuggestionSnapshot(requestId, input, known, correction, learned)
+    ) = AutocorrectSuggestionSnapshot(requestId, input, known, dominant, correction, learned)
 
     private fun tokenSnapshot(token: String) = AutocorrectEditorSnapshot(
         text = token,

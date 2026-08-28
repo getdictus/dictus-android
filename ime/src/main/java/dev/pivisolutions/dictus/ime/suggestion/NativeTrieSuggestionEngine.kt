@@ -38,6 +38,10 @@ interface NativeTrieHandle : Closeable {
 
     fun wordExists(word: String): Boolean = false
 
+    fun frequency(word: String): Int = 0
+
+    fun maxFrequency(): Long = 0L
+
     fun complete(prefix: String, maxResults: Int): List<String>
 
     fun correct(word: String, maxEditDistance: Float = 2f, maxResults: Int): List<String>
@@ -64,6 +68,10 @@ class AndroidNativeTrieOpener(private val context: Context) : NativeTrieOpener {
         override val hasNgram: Boolean = trie.hasNgram
 
         override fun wordExists(word: String): Boolean = trie.wordExists(word)
+
+        override fun frequency(word: String): Int = trie.frequency(word)
+
+        override fun maxFrequency(): Long = trie.maxFrequency()
 
         override fun complete(prefix: String, maxResults: Int): List<String> =
             trie.complete(prefix, maxResults)
@@ -110,6 +118,7 @@ class NativeTrieSuggestionEngine(
         val mode: SuggestionMode,
         val input: String,
         val isKnownWord: Boolean,
+        val knownInputDominance: Boolean,
         val primaryCorrection: String?,
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
@@ -147,6 +156,7 @@ class NativeTrieSuggestionEngine(
             SuggestionMode.COMPLETION,
             "",
             isKnownWord = false,
+            knownInputDominance = false,
             primaryCorrection = null,
             emptyList(),
         ),
@@ -176,7 +186,7 @@ class NativeTrieSuggestionEngine(
                 if (!current) continue
 
                 if (request.words.any(String::isBlank) || request.maxResults <= 0) {
-                    publishIfCurrent(request, QueryResult(false, null, emptyList()))
+                    publishIfCurrent(request, QueryResult(false, false, null, emptyList()))
                     continue
                 }
 
@@ -267,6 +277,7 @@ class NativeTrieSuggestionEngine(
 
     private data class QueryResult(
         val isKnownWord: Boolean,
+        val knownInputDominance: Boolean,
         val primaryCorrection: String?,
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
@@ -274,6 +285,7 @@ class NativeTrieSuggestionEngine(
 
     private data class NativeQuery(
         val isKnownWord: Boolean,
+        val profileCorrection: AccentCollapseCandidateSelector.Selection?,
         val completions: List<String>,
         val corrections: List<String>,
         val contextScores: Map<String, Int>,
@@ -285,7 +297,7 @@ class NativeTrieSuggestionEngine(
         maxResults: Int,
         context: CorrectionContext? = null,
     ): QueryResult {
-        if (input.isBlank() || maxResults <= 0) return QueryResult(false, null, emptyList())
+        if (input.isBlank() || maxResults <= 0) return QueryResult(false, false, null, emptyList())
         val candidateLimit = maxResults
             .coerceIn(1, MAX_NATIVE_RESULTS / CANDIDATE_MULTIPLIER) * CANDIDATE_MULTIPLIER
         val learned = personalDictionary.learnedWords.value
@@ -296,10 +308,22 @@ class NativeTrieSuggestionEngine(
             live
         }
         val nativeQuery = if (live == null) {
-            NativeQuery(false, emptyList(), emptyList(), emptyMap(), null)
+            NativeQuery(false, null, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
                 val isKnownWord = live.handle.wordExists(input)
+                val profileCorrection = AccentCollapseCandidateSelector.select(
+                    input = input,
+                    profile = live.profile,
+                    inputKnown = isKnownWord,
+                    maxRawFrequency = live.handle.maxFrequency(),
+                ) { word ->
+                    if (live.handle.wordExists(word)) {
+                        AccentCollapseCandidateSelector.WordFrequency(live.handle.frequency(word))
+                    } else {
+                        null
+                    }
+                }
                 val completions = live.handle.complete(input, candidateLimit)
                 val corrections = live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit)
                 val usableContext = context?.takeIf {
@@ -324,6 +348,7 @@ class NativeTrieSuggestionEngine(
                 }
                 NativeQuery(
                     isKnownWord,
+                    profileCorrection,
                     completions,
                     corrections,
                     scores,
@@ -333,14 +358,18 @@ class NativeTrieSuggestionEngine(
                 releaseQuery()
             }
         }
-        val (isKnownWord, completions, corrections, contextScores, contextIdentity) = nativeQuery
-        val nativeCandidates = rerank(completions + corrections, contextScores)
+        val (isKnownWord, profileCorrection, completions, corrections, contextScores, contextIdentity) =
+            nativeQuery
+        val nativeCandidates = rerank(
+            listOfNotNull(profileCorrection?.word) + completions + corrections,
+            contextScores,
+        )
         if (nativeCandidates.isEmpty() && learned.isEmpty()) {
-            return QueryResult(isKnownWord, null, emptyList(), contextIdentity)
+            return QueryResult(isKnownWord, false, null, emptyList(), contextIdentity)
         }
 
         val normalizedInput = input.canonicalLookupKey()
-        val primaryCorrection = rerank(corrections, contextScores).firstOrNull {
+        val primaryCorrection = profileCorrection?.word ?: rerank(corrections, contextScores).firstOrNull {
             it.canonicalLookupKey() != normalizedInput
         }
         val prefixInput = normalizedInput.stripAccents()
@@ -361,6 +390,7 @@ class NativeTrieSuggestionEngine(
 
         return QueryResult(
             isKnownWord = isKnownWord,
+            knownInputDominance = profileCorrection?.knownInputDominance == true,
             primaryCorrection = primaryCorrection,
             suggestions = (learnedPrefixWords + learnedNative + normalNative).take(maxResults),
             contextIdentity = contextIdentity,
@@ -379,13 +409,15 @@ class NativeTrieSuggestionEngine(
     }
 
     private fun queryPredictions(words: List<String>, maxResults: Int): QueryResult {
-        if (words.size !in 1..2 || maxResults <= 0) return QueryResult(false, null, emptyList())
+        if (words.size !in 1..2 || maxResults <= 0) {
+            return QueryResult(false, false, null, emptyList())
+        }
         val limit = maxResults.coerceIn(1, MAX_PREDICTION_RESULTS)
         val live = synchronized(lock) {
             val live = if (closed) null else _activation.value?.takeIf { it.hasNgram }
             if (live != null) inFlightQueries++
             live
-        } ?: return QueryResult(false, null, emptyList())
+        } ?: return QueryResult(false, false, null, emptyList())
         val predictions = try {
             val seen = mutableSetOf<String>()
             val result = mutableListOf<String>()
@@ -403,7 +435,7 @@ class NativeTrieSuggestionEngine(
         } finally {
             releaseQuery()
         }
-        return QueryResult(false, null, predictions)
+        return QueryResult(false, false, null, predictions)
     }
 
     /**
@@ -459,6 +491,7 @@ class NativeTrieSuggestionEngine(
                     mode = request.mode,
                     input = request.input,
                     isKnownWord = result.isKnownWord,
+                    knownInputDominance = result.knownInputDominance,
                     primaryCorrection = result.primaryCorrection,
                     suggestions = result.suggestions,
                     contextIdentity = result.contextIdentity,
