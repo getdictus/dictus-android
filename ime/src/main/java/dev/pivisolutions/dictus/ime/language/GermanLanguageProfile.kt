@@ -19,6 +19,7 @@ val germanLanguageProfile = LanguageProfile(
         'a' to listOf('ä'),
         'o' to listOf('ö'),
         'u' to listOf('ü'),
+        's' to listOf('ß'),
     ),
     contractionPrefixes = emptyList(),
     collapseRules = listOf(

@@ -24,6 +24,7 @@ class GermanLanguageProfileTest {
                 'a' to listOf('ä'),
                 'o' to listOf('ö'),
                 'u' to listOf('ü'),
+                's' to listOf('ß'),
             ),
             germanLanguageProfile.accentMap,
         )
