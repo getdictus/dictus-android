@@ -1,12 +1,17 @@
 package dev.pivisolutions.dictus.di
 
 import android.content.Context
+import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.pivisolutions.dictus.model.ModelManager
+import dev.pivisolutions.dictus.history.RoomTranscriptionHistoryRepository
+import dev.pivisolutions.dictus.history.TranscriptionHistoryDatabase
+import dev.pivisolutions.dictus.history.TranscriptionHistoryRepository
+import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
 import dev.pivisolutions.dictus.service.ModelDownloader
 import javax.inject.Singleton
 
@@ -35,4 +40,28 @@ object AppModule {
     @Singleton
     fun provideModelDownloader(modelManager: ModelManager): ModelDownloader =
         ModelDownloader(modelManager)
+
+    @Provides
+    @Singleton
+    fun provideTranscriptionHistoryDatabase(
+        @ApplicationContext context: Context,
+    ): TranscriptionHistoryDatabase = Room.databaseBuilder(
+        context,
+        TranscriptionHistoryDatabase::class.java,
+        TranscriptionHistoryDatabase.NAME,
+    ).build()
+
+    @Provides
+    @Singleton
+    fun provideTranscriptionHistoryRepository(
+        database: TranscriptionHistoryDatabase,
+    ): TranscriptionHistoryRepository = RoomTranscriptionHistoryRepository(
+        database.transcriptionHistoryDao(),
+    )
+
+    @Provides
+    @Singleton
+    fun provideTranscriptionHistoryWriter(
+        repository: TranscriptionHistoryRepository,
+    ): TranscriptionHistoryWriter = TranscriptionHistoryWriter(repository)
 }

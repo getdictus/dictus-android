@@ -47,9 +47,11 @@ class FakeDictationController : DictationController {
 
     var confirmAndTranscribeCallCount = 0; private set
     var transcriptionResult: String? = "Fake transcription result. "
+    var lastRetention: TranscriptionRetention? = null; private set
 
-    override suspend fun confirmAndTranscribe(): String? {
+    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
         confirmAndTranscribeCallCount++
+        lastRetention = retention
         _state.value = DictationState.Transcribing
         val result = transcriptionResult
         _state.value = DictationState.Idle

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +50,9 @@ class OnboardingTestRecordingGateTest {
         controller.engine.value = SttEngineState.Ready("tiny")
         composeRule.waitForIdle()
         composeRule.runOnIdle { assertEquals(1, controller.startCalls) }
+        composeRule.onNodeWithContentDescription("Stop").performClick()
+        composeRule.waitForIdle()
+        assertEquals(TranscriptionRetention.EPHEMERAL, controller.lastRetention)
     }
 
     @Test
@@ -98,6 +102,7 @@ class OnboardingTestRecordingGateTest {
 
         var prewarmCalls = 0
         var startCalls = 0
+        var lastRetention: TranscriptionRetention? = null
 
         override fun prewarmEngine() {
             prewarmCalls++
@@ -112,6 +117,10 @@ class OnboardingTestRecordingGateTest {
         override fun cancelRecording() {
             dictation.value = DictationState.Idle
         }
-        override suspend fun confirmAndTranscribe(): String? = null
+        override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
+            lastRetention = retention
+            dictation.value = DictationState.Idle
+            return null
+        }
     }
 }
