@@ -77,6 +77,30 @@ class NgramAssetBuilderTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "source integrity mismatch"):
                 BUILDER.acquire_source("es", 2, cache)
 
+    def test_german_has_no_authored_seeds_and_checked_in_output_is_pinned(self):
+        parsed = BUILDER.parse_csv("ich über,20\nauf der straße,10\n".encode(), 2)
+        before = {key: dict(value) for key, value in parsed.items()}
+        BUILDER.inject_seeds(parsed, "de")
+        self.assertEqual(before, parsed)
+        self.assertEqual({"ich": {"über": 20}}, parsed)
+
+        binary = (ROOT / "trie/src/main/assets/de_ngrams.dict").read_bytes()
+        self.assertEqual(
+            "89219a332ed98b651abde529f9156ebf9f3e251355d9a880468bddbbfb3a303d",
+            hashlib.sha256(binary).hexdigest(),
+        )
+        self.assertEqual(
+            {"bigramKeys": 656, "trigramKeys": 1112, "bytes": 41172},
+            BUILDER.inspect(binary),
+        )
+
+    def test_german_source_hash_mismatch_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory)
+            (cache / "3grams_german.csv").write_bytes(b"tampered")
+            with self.assertRaisesRegex(ValueError, "source integrity mismatch"):
+                BUILDER.acquire_source("de", 3, cache)
+
 
 if __name__ == "__main__":
     unittest.main()

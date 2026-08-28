@@ -18,9 +18,10 @@ from pathlib import Path
 REVISION = "8e16017414d88aa75cba348416ba877a9135889a"
 BASE_URL = f"https://raw.githubusercontent.com/orgtre/google-books-ngram-frequency/{REVISION}/ngrams"
 SOURCE_SHA256 = {
+    "de": "28bd694f5c9bbe6e4b106fe6f731ea65acb21056bacf4e7ddea43930bb4a4982",
     "es": "9b94729d538b4335b14f5776c8451d48a0b3fa23237bc5bc0da7224efa421fae",
 }
-LANG_NAME = {"es": "spanish"}
+LANG_NAME = {"de": "german", "es": "spanish"}
 MAGIC = b"DTRI"
 VERSION = 1
 HEADER_SIZE = 32

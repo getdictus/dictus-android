@@ -17,6 +17,10 @@ from pathlib import Path
 REVISION = "8e16017414d88aa75cba348416ba877a9135889a"
 BASE_URL = f"https://raw.githubusercontent.com/orgtre/google-books-ngram-frequency/{REVISION}/ngrams"
 SOURCE_SHA256 = {
+    "de": {
+        2: "a9b5e20c707337d01106014263ae6ee3b6769ce03934e2e0279b1c84614175bc",
+        3: "51c53108407278fb77ecd58e429c2417d61b91c154faa20e0fd9a42a810db867",
+    },
     "es": {
         2: "fa2b6368b08744d03d604cdacdaab1c15834dfe2f1d81c9a3ad2f102a6643774",
         3: "85b49f0521c57dd8bc2718c367c326397a06e45a0b36cdbf86b0f06cdf80258d",
@@ -30,8 +34,10 @@ SOURCE_SHA256 = {
         3: "6cfdd4cc65cbd0df606d174df00274843c81eb430cfbeddce4711fb07f4e12df",
     },
 }
-LANG_NAME = {"fr": "french", "en": "english", "es": "spanish"}
+LANG_NAME = {"de": "german", "fr": "french", "en": "english", "es": "spanish"}
 SEEDS = {
+    # ADR 0001 deliberately defines no authored seed pairs for German.
+    "de": [],
     # ADR 0001 deliberately defines no authored seed pairs for Spanish.
     "es": [],
     "fr": [
