@@ -106,6 +106,19 @@ internal class SttProviderSlot(
         }
     }
 
+    /** Publish "no model on disk yet" without retaining a provider. Not a failure. */
+    suspend fun markModelMissing(requestedModelKey: String) {
+        mutex.withLock {
+            idleReleaseJob?.cancel()
+            idleReleaseJob = null
+            val current = provider
+            provider = null
+            modelKey = null
+            withContext(NonCancellable) { current?.release() }
+            _state.value = SttEngineState.ModelMissing(requestedModelKey)
+        }
+    }
+
     /** Publish an actionable failure when prewarm cannot start, without retaining a provider. */
     suspend fun markFailed(requestedModelKey: String) {
         mutex.withLock {

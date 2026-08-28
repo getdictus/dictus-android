@@ -33,10 +33,15 @@ fun ModelLoadingOverlay(
 ) {
     val loading = engineState is SttEngineState.Loading
     val failed = engineState is SttEngineState.Failed
-    if (!loading && !failed) return
+    val modelMissing = engineState is SttEngineState.ModelMissing
+    if (!loading && !failed && !modelMissing) return
 
     val accessibilityLabel = stringResource(
-        if (loading) R.string.model_loading_accessibility else R.string.model_loading_failed_accessibility,
+        when {
+            loading -> R.string.model_loading_accessibility
+            modelMissing -> R.string.model_missing_accessibility
+            else -> R.string.model_loading_failed_accessibility
+        },
     )
     Box(
         modifier = modifier
@@ -69,6 +74,21 @@ fun ModelLoadingOverlay(
                     color = Color(0xFFB8C5D6),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+            } else if (modelMissing) {
+                // No Retry: prewarming again cannot download a model the user never fetched.
+                Text(
+                    text = stringResource(R.string.model_missing_title),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = stringResource(R.string.model_missing_body),
+                    color = Color(0xFFB8C5D6),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                OutlinedButton(onClick = onCancel) {
+                    Text(stringResource(R.string.model_loading_cancel))
+                }
             } else {
                 Text(
                     text = stringResource(R.string.model_loading_failed_title),

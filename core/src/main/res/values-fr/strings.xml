@@ -13,4 +13,7 @@
     <string name="model_loading_cancel">Annuler</string>
     <string name="model_loading_accessibility">Chargement du modèle de reconnaissance vocale. Microphone indisponible.</string>
     <string name="model_loading_failed_accessibility">Échec du chargement du modèle de reconnaissance vocale.</string>
+    <string name="model_missing_title">Aucun modèle vocal</string>
+    <string name="model_missing_body">Téléchargez un modèle vocal pour commencer à dicter.</string>
+    <string name="model_missing_accessibility">Aucun modèle de reconnaissance vocale n\u0027est téléchargé. Micro indisponible.</string>
 </resources>

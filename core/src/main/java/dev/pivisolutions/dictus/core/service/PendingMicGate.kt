@@ -33,6 +33,14 @@ class PendingMicGate {
             // Failure requires an explicit user choice from the overlay.
             MicGateCommand.NONE
         }
+        is SttEngineState.ModelMissing -> {
+            // Re-check the disk: the user may have downloaded a model since this state was
+            // published, and without a Retry button this tap is the only refresh path.
+            // Never stay pending — a queued intent would start recording on a later Ready
+            // the user never asked for.
+            isPending = false
+            MicGateCommand.PREWARM
+        }
     }
 
     fun engineChanged(engineState: SttEngineState): MicGateCommand {
@@ -41,6 +49,12 @@ class PendingMicGate {
             is SttEngineState.Ready -> {
                 isPending = false
                 MicGateCommand.START_RECORDING
+            }
+            is SttEngineState.ModelMissing -> {
+                // A prewarm that discovers no model must not leave the tap queued: a later
+                // Ready would then start a recording the user never asked for.
+                isPending = false
+                MicGateCommand.NONE
             }
             else -> MicGateCommand.NONE
         }
