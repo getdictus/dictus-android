@@ -8,6 +8,7 @@ enum class SupportedLanguage(
     FRENCH("fr", frenchLanguageProfile),
     ENGLISH("en", englishLanguageProfile),
     SPANISH("es", spanishLanguageProfile),
+    GERMAN("de", germanLanguageProfile),
     ;
 
     /** Toolbar order is the canonical registry order and wraps at the end. */
