@@ -107,6 +107,28 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `detail selection accepts only a current entry and closes when entry disappears`() = runTest(dispatcher) {
+        val repository = FakeRepository()
+        val viewModel = HistoryViewModel(repository)
+        repository.emit(listOf(entry(1, 1), entry(2, 2)))
+        advanceUntilIdle()
+
+        viewModel.openDetail(999)
+        assertNull(viewModel.uiState.value.selectedEntryId)
+
+        viewModel.openDetail(2)
+        assertEquals(2L, viewModel.uiState.value.selectedEntryId)
+
+        repository.emit(listOf(entry(1, 1)))
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.selectedEntryId)
+
+        viewModel.openDetail(1)
+        viewModel.closeDetail()
+        assertNull(viewModel.uiState.value.selectedEntryId)
+    }
+
+    @Test
     fun `delete failure is generic and cancellation does not become failure`() = runTest(dispatcher) {
         val repository = FakeRepository()
         val viewModel = HistoryViewModel(repository)

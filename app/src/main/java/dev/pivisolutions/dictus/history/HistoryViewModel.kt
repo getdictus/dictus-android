@@ -15,6 +15,7 @@ data class HistoryUiState(
     val isLoading: Boolean = true,
     val entries: List<TranscriptionHistoryEntry> = emptyList(),
     val pendingDeleteId: Long? = null,
+    val selectedEntryId: Long? = null,
     val failure: HistoryFailure? = null,
 )
 
@@ -31,12 +32,16 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.observeAll().collect { entries ->
+                    val selectedEntryId = _uiState.value.selectedEntryId
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         entries = entries.sortedWith(
                             compareByDescending<TranscriptionHistoryEntry> { it.createdAtEpochMillis }
                                 .thenByDescending { it.id },
                         ),
+                        selectedEntryId = selectedEntryId?.takeIf { selectedId ->
+                            entries.any { it.id == selectedId }
+                        },
                         failure = null,
                     )
                 }
@@ -53,6 +58,16 @@ class HistoryViewModel @Inject constructor(
         if (_uiState.value.entries.any { it.id == id }) {
             _uiState.value = _uiState.value.copy(pendingDeleteId = id)
         }
+    }
+
+    fun openDetail(id: Long) {
+        if (_uiState.value.entries.any { it.id == id }) {
+            _uiState.value = _uiState.value.copy(selectedEntryId = id)
+        }
+    }
+
+    fun closeDetail() {
+        _uiState.value = _uiState.value.copy(selectedEntryId = null)
     }
 
     fun cancelDelete() {

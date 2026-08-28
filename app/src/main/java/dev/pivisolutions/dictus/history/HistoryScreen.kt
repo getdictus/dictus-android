@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.history
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +18,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -31,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
@@ -57,6 +62,7 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryRoute(
@@ -64,12 +70,17 @@ fun HistoryRoute(
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val historyActions = rememberHistoryActions()
     HistoryScreen(
         state = state,
         onBack = onBack,
         onRequestDelete = viewModel::requestDelete,
         onCancelDelete = viewModel::cancelDelete,
         onConfirmDelete = viewModel::confirmDelete,
+        onOpenDetail = viewModel::openDetail,
+        onCloseDetail = viewModel::closeDetail,
+        onCopy = historyActions::copy,
+        onShare = historyActions::share,
         onFailureShown = viewModel::consumeFailure,
     )
 }
@@ -81,9 +92,14 @@ fun HistoryScreen(
     onRequestDelete: (Long) -> Unit,
     onCancelDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
+    onOpenDetail: (Long) -> Unit = {},
+    onCloseDetail: () -> Unit = {},
+    onCopy: (String) -> Unit = {},
+    onShare: (String) -> Unit = {},
     onFailureShown: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val currentOnBack by rememberUpdatedState(onBack)
     val pullThresholdPx = with(LocalDensity.current) { 96.dp.toPx() }
@@ -151,11 +167,30 @@ fun HistoryScreen(
         )
     }
     val failureMessage = state.failure?.let { stringResource(R.string.history_error) }
+    val copiedMessage = stringResource(R.string.history_copied)
     LaunchedEffect(failureMessage) {
         if (failureMessage != null) {
             snackbarHostState.showSnackbar(failureMessage)
             if (state.failure == HistoryFailure.DELETE) onFailureShown()
         }
+    }
+
+    val selectedEntry = state.selectedEntryId?.let { selectedId ->
+        state.entries.firstOrNull { it.id == selectedId }
+    }
+    BackHandler(enabled = selectedEntry != null, onBack = onCloseDetail)
+    if (selectedEntry != null) {
+        HistoryDetailScreen(
+            entry = selectedEntry,
+            onBack = onCloseDetail,
+            onCopy = {
+                onCopy(selectedEntry.text)
+                coroutineScope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+            },
+            onShare = { onShare(selectedEntry.text) },
+            snackbarHostState = snackbarHostState,
+        )
+        return
     }
 
     Scaffold(
@@ -208,7 +243,11 @@ fun HistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(state.entries, key = { it.id }) { entry ->
-                        HistoryCard(entry = entry, onDelete = { onRequestDelete(entry.id) })
+                        HistoryCard(
+                            entry = entry,
+                            onOpen = { onOpenDetail(entry.id) },
+                            onDelete = { onRequestDelete(entry.id) },
+                        )
                     }
                 }
             }
@@ -231,7 +270,11 @@ fun HistoryScreen(
 }
 
 @Composable
-private fun HistoryCard(entry: TranscriptionHistoryEntry, onDelete: () -> Unit) {
+private fun HistoryCard(
+    entry: TranscriptionHistoryEntry,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val locale = Locale.getDefault()
     val dateTime = remember(entry.createdAtEpochMillis, locale) {
         DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale)
@@ -246,7 +289,12 @@ private fun HistoryCard(entry: TranscriptionHistoryEntry, onDelete: () -> Unit) 
     val seconds = (entry.durationMillis.coerceAtLeast(0L) / 1000.0).roundToInt()
     val duration = pluralStringResource(R.plurals.history_duration_seconds, seconds, seconds)
 
-    GlassCard(modifier = Modifier.fillMaxWidth().testTag("history_card_${entry.id}")) {
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpen)
+            .testTag("history_card_${entry.id}"),
+    ) {
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -273,4 +321,83 @@ private fun HistoryCard(entry: TranscriptionHistoryEntry, onDelete: () -> Unit) 
             }
         }
     }
+}
+
+@Composable
+private fun HistoryDetailScreen(
+    entry: TranscriptionHistoryEntry,
+    onBack: () -> Unit,
+    onCopy: () -> Unit,
+    onShare: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+) {
+    val metadata = historyMetadata(entry)
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        modifier = Modifier.testTag("history_detail"),
+        topBar = {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.history_back_cd))
+                }
+                Text(
+                    stringResource(R.string.history_detail_title),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                IconButton(onClick = onCopy) {
+                    Icon(Icons.Default.ContentCopy, stringResource(R.string.history_copy_cd))
+                }
+                IconButton(onClick = onShare) {
+                    Icon(Icons.Default.Share, stringResource(R.string.history_share_cd))
+                }
+            }
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Text(
+                    metadata,
+                    color = LocalDictusColors.current.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = entry.text,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun historyMetadata(entry: TranscriptionHistoryEntry): String {
+    val locale = Locale.getDefault()
+    val dateTime = remember(entry.createdAtEpochMillis, locale) {
+        DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale)
+            .format(Date(entry.createdAtEpochMillis))
+    }
+    val language = when (entry.requestedLanguage.lowercase(Locale.ROOT)) {
+        "auto" -> stringResource(R.string.history_language_automatic)
+        "fr" -> Locale.FRENCH.getDisplayLanguage(locale)
+        "en" -> Locale.ENGLISH.getDisplayLanguage(locale)
+        else -> entry.requestedLanguage.uppercase(locale)
+    }
+    val seconds = (entry.durationMillis.coerceAtLeast(0L) / 1000.0).roundToInt()
+    val duration = pluralStringResource(R.plurals.history_duration_seconds, seconds, seconds)
+    return stringResource(R.string.history_metadata, dateTime, language, duration)
 }
