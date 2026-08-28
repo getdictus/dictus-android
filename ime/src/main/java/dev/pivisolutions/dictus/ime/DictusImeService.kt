@@ -10,7 +10,7 @@ import android.os.IBinder
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,6 +38,7 @@ import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.suggestion.AndroidNativeTrieOpener
 import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
+import dev.pivisolutions.dictus.ime.ui.ImeOverlayHost
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
@@ -723,15 +724,16 @@ class DictusImeService : LifecycleInputMethodService() {
         val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
             (engineState is SttEngineState.Failed && showFailureOverlay)
 
-        Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
-                ),
-        ) {
-        when (dictationState) {
+        ImeOverlayHost(
+            content = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
+                        ),
+                ) {
+                    when (dictationState) {
             is DictationState.Idle -> {
                 KeyboardScreen(
                     onCommitText = { text -> commitText(text) },
@@ -917,22 +919,25 @@ class DictusImeService : LifecycleInputMethodService() {
                     TranscribingScreen()
                 }
             }
-        }
-        }
-            ModelLoadingOverlay(
-                engineState = if (engineState is SttEngineState.Failed && !showFailureOverlay) {
-                    SttEngineState.Cold
-                } else {
-                    engineState
-                },
-                onRetry = { runGateCommand(micGate.retry()) },
-                onCancel = {
-                    micGate.cancel()
-                    // Keep the service state authoritative while hiding this local error surface.
-                    showFailureOverlay = false
-                },
-            )
-        }
+                    }
+                }
+            },
+            overlay = {
+                ModelLoadingOverlay(
+                    engineState = if (engineState is SttEngineState.Failed && !showFailureOverlay) {
+                        SttEngineState.Cold
+                    } else {
+                        engineState
+                    },
+                    onRetry = { runGateCommand(micGate.retry()) },
+                    onCancel = {
+                        micGate.cancel()
+                        // Keep the service state authoritative while hiding this local error surface.
+                        showFailureOverlay = false
+                    },
+                )
+            },
+        )
     }
 
     /**
