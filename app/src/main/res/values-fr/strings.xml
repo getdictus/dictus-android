@@ -176,6 +176,24 @@
     <string name="home_last_transcription">Derni\u00e8re transcription</string>
     <string name="home_copy_cd">Copier</string>
     <string name="home_new_dictation">Nouvelle dict\u00e9e</string>
+    <string name="home_history_hint">Balayez vers le haut pour l\u2019historique</string>
+
+    <!-- HistoryScreen -->
+    <string name="history_title">Historique</string>
+    <string name="history_back_cd">Retour</string>
+    <string name="history_empty">Votre historique de transcriptions est vide.</string>
+    <string name="history_language_automatic">Automatique</string>
+    <string name="history_metadata">%1$s · %2$s · %3$s</string>
+    <plurals name="history_duration_seconds">
+        <item quantity="one">%d seconde</item>
+        <item quantity="other">%d secondes</item>
+    </plurals>
+    <string name="history_delete_cd">Supprimer la transcription</string>
+    <string name="history_delete_title">Supprimer cette transcription\u00a0?</string>
+    <string name="history_delete_body">Cette action est irr\u00e9versible.</string>
+    <string name="history_delete_confirm">Supprimer</string>
+    <string name="history_delete_cancel">Annuler</string>
+    <string name="history_error">L\u2019historique est indisponible. Veuillez r\u00e9essayer.</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">R\u00e9sultat</string>

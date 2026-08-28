@@ -8,6 +8,7 @@ import timber.log.Timber
 interface TranscriptionHistoryRepository {
     suspend fun insert(entry: TranscriptionHistoryEntry): Long
     fun observeAll(): Flow<List<TranscriptionHistoryEntry>>
+    suspend fun deleteById(id: Long): Boolean
 }
 
 class RoomTranscriptionHistoryRepository(
@@ -15,6 +16,7 @@ class RoomTranscriptionHistoryRepository(
 ) : TranscriptionHistoryRepository {
     override suspend fun insert(entry: TranscriptionHistoryEntry): Long = dao.insert(entry)
     override fun observeAll(): Flow<List<TranscriptionHistoryEntry>> = dao.observeAll()
+    override suspend fun deleteById(id: Long): Boolean = dao.deleteById(id) == 1
 }
 
 data class TranscriptionHistoryMetadata(

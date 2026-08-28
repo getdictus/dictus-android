@@ -176,6 +176,24 @@
     <string name="home_last_transcription">Last transcription</string>
     <string name="home_copy_cd">Copy</string>
     <string name="home_new_dictation">New dictation</string>
+    <string name="home_history_hint">Swipe up for history</string>
+
+    <!-- HistoryScreen -->
+    <string name="history_title">History</string>
+    <string name="history_back_cd">Back</string>
+    <string name="history_empty">Your transcription history is empty.</string>
+    <string name="history_language_automatic">Automatic</string>
+    <string name="history_metadata">%1$s · %2$s · %3$s</string>
+    <plurals name="history_duration_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+    <string name="history_delete_cd">Delete transcription</string>
+    <string name="history_delete_title">Delete this transcription?</string>
+    <string name="history_delete_body">This action cannot be undone.</string>
+    <string name="history_delete_confirm">Delete</string>
+    <string name="history_delete_cancel">Cancel</string>
+    <string name="history_error">History is unavailable. Please try again.</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">Result</string>
