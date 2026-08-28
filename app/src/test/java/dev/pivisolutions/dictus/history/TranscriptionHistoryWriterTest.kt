@@ -97,5 +97,7 @@ class TranscriptionHistoryWriterTest {
         }
 
         override fun observeAll(): Flow<List<TranscriptionHistoryEntry>> = emptyFlow()
+
+        override suspend fun deleteById(id: Long): Boolean = false
     }
 }

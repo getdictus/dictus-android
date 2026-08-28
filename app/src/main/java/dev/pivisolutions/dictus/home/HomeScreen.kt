@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -33,6 +35,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +68,7 @@ import kotlinx.coroutines.flow.map
 fun HomeScreen(
     dataStore: DataStore<Preferences>,
     onNewDictation: () -> Unit,
+    onOpenHistory: () -> Unit = {},
 ) {
     val activeModelKey by dataStore.data
         .map { it[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY }
@@ -74,11 +80,27 @@ fun HomeScreen(
 
     val activeModel = ModelCatalog.findByKey(activeModelKey)
     val context = LocalContext.current
+    val historySwipeThresholdPx = with(LocalDensity.current) { 120.dp.toPx() }
 
+    var upwardDrag = 0f
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("home_screen")
             .background(MaterialTheme.colorScheme.background)
+            .pointerInput(onOpenHistory, historySwipeThresholdPx) {
+                detectVerticalDragGestures(
+                    onDragStart = { upwardDrag = 0f },
+                    onVerticalDrag = { change, amount ->
+                        if (amount < 0f) upwardDrag -= amount else upwardDrag = 0f
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        if (upwardDrag > historySwipeThresholdPx) onOpenHistory()
+                        upwardDrag = 0f
+                    },
+                )
+            }
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -222,6 +244,27 @@ fun HomeScreen(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        Column(
+            modifier = Modifier
+                .clickable(
+                    onClickLabel = stringResource(R.string.home_history_hint),
+                    onClick = onOpenHistory,
+                )
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowUp,
+                contentDescription = null,
+                tint = DictusColors.Accent,
+            )
+            Text(
+                text = stringResource(R.string.home_history_hint),
+                color = LocalDictusColors.current.textSecondary,
+                fontSize = 13.sp,
+            )
+        }
     }
 }
 

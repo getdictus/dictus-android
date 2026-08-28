@@ -25,6 +25,9 @@ sealed class AppDestination(val route: String) {
     /** Home tab — quick dictation and recent transcriptions. */
     data object Home : AppDestination("home")
 
+    /** Private local transcription history; content is never carried in the route. */
+    data object History : AppDestination("history")
+
     /** Model management tab — download, select, and delete models. */
     data object Models : AppDestination("models")
 

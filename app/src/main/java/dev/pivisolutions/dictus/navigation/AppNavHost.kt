@@ -1,6 +1,8 @@
 package dev.pivisolutions.dictus.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,6 +22,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
+import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
 import dev.pivisolutions.dictus.recording.RecordingScreen
@@ -237,6 +240,7 @@ private fun MainTabsScreen(
     // is no animation spec for the nav bar in the design.
     val showBottomBar = showMainNavigation &&
         currentRoute != AppDestination.Recording.route &&
+        currentRoute != AppDestination.History.route &&
         currentRoute != AppDestination.Licences.route &&
         currentRoute != AppDestination.DebugLogs.route &&
         currentRoute != AppDestination.SoundSettings.route &&
@@ -274,7 +278,19 @@ private fun MainTabsScreen(
                     onNewDictation = {
                         navController.navigate(AppDestination.Recording.route)
                     },
+                    onOpenHistory = {
+                        navController.navigate(AppDestination.History.route) { launchSingleTop = true }
+                    },
                 )
+            }
+            composable(
+                route = AppDestination.History.route,
+                enterTransition = { slideInVertically(initialOffsetY = { it }) },
+                exitTransition = { slideOutVertically(targetOffsetY = { it }) },
+                popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
+                popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
+            ) {
+                HistoryRoute(onBack = { navController.popBackStack() })
             }
             composable(AppDestination.Models.route) {
                 ModelsScreen()
