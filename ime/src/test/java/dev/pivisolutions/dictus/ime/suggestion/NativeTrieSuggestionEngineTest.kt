@@ -231,6 +231,88 @@ class NativeTrieSuggestionEngineTest {
     }
 
     @Test
+    fun `two word prediction uses trigram then deduplicated bigram backoff`() = runTest(dispatcher) {
+        val handle = FakeHandle(
+            hasNgram = true,
+            bigram = listOf("sûr", "ici", "encore"),
+            trigram = listOf("sûr", "un"),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val request = requireNotNull(engine.requestPredictions(listOf("je", "suis")))
+        advanceUntilIdle()
+
+        val result = engine.suggestionResults.value
+        assertEquals(request, result.requestId)
+        assertEquals(NativeTrieSuggestionEngine.SuggestionMode.PREDICTION, result.mode)
+        assertEquals("je suis", result.input)
+        assertEquals(listOf("sûr", "un", "ici"), result.suggestions)
+        assertEquals(listOf(listOf("je", "suis")), handle.trigramRequests)
+        assertEquals(listOf("suis"), handle.bigramRequests)
+    }
+
+    @Test
+    fun `one word prediction uses bigram and missing ngram fails closed`() = runTest(dispatcher) {
+        val ngram = FakeHandle(hasNgram = true, bigram = listOf("world"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(ngram))))
+        advanceUntilIdle()
+        engine.requestPredictions(listOf("hello"))
+        advanceUntilIdle()
+        assertEquals(listOf("world"), engine.suggestionResults.value.suggestions)
+        assertTrue(ngram.trigramRequests.isEmpty())
+
+        engine.close()
+        val noNgram = FakeHandle(hasNgram = false, bigram = listOf("must-not-run"))
+        val noNgramEngine = createEngine(FakeOpener(mutableListOf(Result.success(noNgram))))
+        advanceUntilIdle()
+        noNgramEngine.requestPredictions(listOf("hello"))
+        advanceUntilIdle()
+        assertTrue(noNgramEngine.suggestionResults.value.suggestions.isEmpty())
+        assertTrue(noNgram.bigramRequests.isEmpty())
+    }
+
+    @Test
+    fun `newer completion identity invalidates blocked prediction publication`() = runTest(dispatcher) {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val executor = Executors.newSingleThreadExecutor()
+        val ioDispatcher = executor.asCoroutineDispatcher()
+        val handle = object : NativeTrieHandle {
+            override val hasNgram = true
+            override fun complete(prefix: String, maxResults: Int) = listOf("newest")
+            override fun correct(word: String, maxEditDistance: Float, maxResults: Int) = emptyList<String>()
+            override fun predictAfterWord(word: String, maxResults: Int): List<String> {
+                entered.countDown()
+                check(release.await(5, TimeUnit.SECONDS))
+                return listOf("stale")
+            }
+            override fun close() = Unit
+        }
+        try {
+            val engine = NativeTrieSuggestionEngine(
+                dataStore, scope, NativeTrieOpener { _, _ -> handle }, ioDispatcher,
+            ).also(engines::add)
+            runCurrent()
+            while (engine.activation.value == null) Thread.yield()
+            engine.requestPredictions(listOf("hello"))
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            val newest = requireNotNull(engine.requestSuggestions("ne"))
+            release.countDown()
+            while (engine.suggestionResults.value.requestId != newest) Thread.yield()
+            assertEquals(
+                NativeTrieSuggestionEngine.SuggestionMode.COMPLETION,
+                engine.suggestionResults.value.mode,
+            )
+            assertEquals(listOf("newest"), engine.suggestionResults.value.suggestions)
+        } finally {
+            release.countDown()
+            ioDispatcher.close()
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
     fun `accepted activation prevents blocked old handle query from publishing`() =
         runTest(dispatcher) {
             val oldQueryEntered = CountDownLatch(1)
@@ -462,10 +544,14 @@ class NativeTrieSuggestionEngineTest {
         private val prefix: List<String> = emptyList(),
         private val fuzzy: List<String> = emptyList(),
         override val hasNgram: Boolean = false,
+        private val bigram: List<String> = emptyList(),
+        private val trigram: List<String> = emptyList(),
     ) : NativeTrieHandle {
         var closeCount = 0
         val requestedLimits = mutableListOf<Int>()
         var fuzzyOverride: List<String>? = null
+        val bigramRequests = mutableListOf<String>()
+        val trigramRequests = mutableListOf<List<String>>()
 
         override fun wordExists(word: String): Boolean = word in knownWords
 
@@ -477,6 +563,20 @@ class NativeTrieSuggestionEngineTest {
         override fun correct(word: String, maxEditDistance: Float, maxResults: Int): List<String> {
             requestedLimits += maxResults
             return (fuzzyOverride ?: fuzzy).take(maxResults)
+        }
+
+        override fun predictAfterWord(word: String, maxResults: Int): List<String> {
+            bigramRequests += word
+            return bigram.take(maxResults)
+        }
+
+        override fun predictAfterWords(
+            firstWord: String,
+            secondWord: String,
+            maxResults: Int,
+        ): List<String> {
+            trigramRequests += listOf(firstWord, secondWord)
+            return trigram.take(maxResults)
         }
 
         override fun close() {

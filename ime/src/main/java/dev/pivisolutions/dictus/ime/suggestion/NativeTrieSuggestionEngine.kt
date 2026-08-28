@@ -38,6 +38,11 @@ interface NativeTrieHandle : Closeable {
     fun complete(prefix: String, maxResults: Int): List<String>
 
     fun correct(word: String, maxEditDistance: Float = 2f, maxResults: Int): List<String>
+
+    fun predictAfterWord(word: String, maxResults: Int): List<String> = emptyList()
+
+    fun predictAfterWords(firstWord: String, secondWord: String, maxResults: Int): List<String> =
+        emptyList()
 }
 
 /** Opens a fully loaded handle for one binary asset and keyboard layout. */
@@ -64,6 +69,15 @@ class AndroidNativeTrieOpener(private val context: Context) : NativeTrieOpener {
             maxResults: Int,
         ): List<String> = trie.correct(word, maxEditDistance, maxResults)
 
+        override fun predictAfterWord(word: String, maxResults: Int): List<String> =
+            trie.predictAfterWord(word, maxResults).map { it.word }
+
+        override fun predictAfterWords(
+            firstWord: String,
+            secondWord: String,
+            maxResults: Int,
+        ): List<String> = trie.predictAfterWords(firstWord, secondWord, maxResults).map { it.word }
+
         override fun close() = trie.close()
     }
 }
@@ -81,8 +95,11 @@ class NativeTrieSuggestionEngine(
     private val opener: NativeTrieOpener,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : SuggestionEngine, Closeable {
+    enum class SuggestionMode { COMPLETION, PREDICTION }
+
     data class SuggestionResult(
         val requestId: Long,
+        val mode: SuggestionMode,
         val input: String,
         val isKnownWord: Boolean,
         val primaryCorrection: String?,
@@ -104,15 +121,25 @@ class NativeTrieSuggestionEngine(
 
     private data class SuggestionRequest(
         val generation: Long,
-        val input: String,
+        val mode: SuggestionMode,
+        val words: List<String>,
         val maxResults: Int,
-    )
+    ) {
+        val input: String = words.joinToString(" ")
+    }
 
     private val lock = Any()
     private val _activation = MutableStateFlow<Activation?>(null)
     val activation: StateFlow<Activation?> = _activation.asStateFlow()
     private val _suggestionResults = MutableStateFlow(
-        SuggestionResult(0L, "", isKnownWord = false, primaryCorrection = null, emptyList()),
+        SuggestionResult(
+            0L,
+            SuggestionMode.COMPLETION,
+            "",
+            isKnownWord = false,
+            primaryCorrection = null,
+            emptyList(),
+        ),
     )
     val suggestionResults: StateFlow<SuggestionResult> = _suggestionResults.asStateFlow()
 
@@ -138,12 +165,16 @@ class NativeTrieSuggestionEngine(
                 }
                 if (!current) continue
 
-                if (request.input.isBlank() || request.maxResults <= 0) {
+                if (request.words.any(String::isBlank) || request.maxResults <= 0) {
                     publishIfCurrent(request, QueryResult(false, null, emptyList()))
                     continue
                 }
 
-                publishIfCurrent(request, query(request.input, request.maxResults))
+                val result = when (request.mode) {
+                    SuggestionMode.COMPLETION -> query(request.input, request.maxResults)
+                    SuggestionMode.PREDICTION -> queryPredictions(request.words, request.maxResults)
+                }
+                publishIfCurrent(request, result)
             }
         }
         preferenceJob = coroutineScope.launch {
@@ -287,6 +318,34 @@ class NativeTrieSuggestionEngine(
         )
     }
 
+    private fun queryPredictions(words: List<String>, maxResults: Int): QueryResult {
+        if (words.size !in 1..2 || maxResults <= 0) return QueryResult(false, null, emptyList())
+        val limit = maxResults.coerceIn(1, MAX_PREDICTION_RESULTS)
+        val live = synchronized(lock) {
+            val live = if (closed) null else _activation.value?.takeIf { it.hasNgram }
+            if (live != null) inFlightQueries++
+            live
+        } ?: return QueryResult(false, null, emptyList())
+        val predictions = try {
+            val seen = mutableSetOf<String>()
+            val result = mutableListOf<String>()
+            if (words.size == 2) {
+                live.handle.predictAfterWords(words[0], words[1], limit).forEach { word ->
+                    if (seen.add(word.canonicalLookupKey())) result += word
+                }
+            }
+            if (result.size < limit) {
+                live.handle.predictAfterWord(words.last(), limit).forEach { word ->
+                    if (seen.add(word.canonicalLookupKey())) result += word
+                }
+            }
+            result.take(limit)
+        } finally {
+            releaseQuery()
+        }
+        return QueryResult(false, null, predictions)
+    }
+
     /**
      * Conflates rapid input into a single latest-wins worker. At most the currently executing
      * native query can become stale; queued stale requests are discarded before entering JNI.
@@ -294,10 +353,36 @@ class NativeTrieSuggestionEngine(
     fun requestSuggestions(input: String, maxResults: Int = 3): Long? {
         return synchronized(lock) {
             if (closed) return@synchronized null
-            val request = SuggestionRequest(++queryGeneration, input, maxResults)
+            val request = SuggestionRequest(
+                ++queryGeneration,
+                SuggestionMode.COMPLETION,
+                listOf(input),
+                maxResults,
+            )
             // Sending under the generation lock preserves ordering even for concurrent callers.
             check(queryRequests.trySend(request).isSuccess)
             request.generation
+        }
+    }
+
+    /** Requests bounded trigram predictions with bigram backoff. */
+    fun requestPredictions(words: List<String>, maxResults: Int = 3): Long? = synchronized(lock) {
+        if (closed) return@synchronized null
+        require(words.size in 1..2)
+        val request = SuggestionRequest(
+            ++queryGeneration,
+            SuggestionMode.PREDICTION,
+            words.toList(),
+            maxResults,
+        )
+        check(queryRequests.trySend(request).isSuccess)
+        request.generation
+    }
+
+    /** Invalidates queued and in-flight work even when native cancellation is ignored. */
+    fun invalidateSuggestions() {
+        synchronized(lock) {
+            if (!closed) queryGeneration++
         }
     }
 
@@ -306,6 +391,7 @@ class NativeTrieSuggestionEngine(
             if (!closed && request.generation == queryGeneration) {
                 _suggestionResults.value = SuggestionResult(
                     requestId = request.generation,
+                    mode = request.mode,
                     input = request.input,
                     isKnownWord = result.isKnownWord,
                     primaryCorrection = result.primaryCorrection,
@@ -360,5 +446,6 @@ class NativeTrieSuggestionEngine(
         const val CANDIDATE_MULTIPLIER = 2
         const val MAX_NATIVE_RESULTS = 20
         const val MAX_EDIT_DISTANCE = 2f
+        const val MAX_PREDICTION_RESULTS = 3
     }
 }
