@@ -32,12 +32,15 @@ class NativeTrie private constructor(
         private val installLock = Any()
         private val assetHashes = mapOf(
             "en_spellcheck.dict" to "2721a68a1dca369b6a23d149405c99bbff5071caa973843b896fad088912b11c",
+            "es_spellcheck.dict" to "39015e063ea69282ff6ac3099e852fe06b94118f41a69a680f75582899bb9ab4",
             "fr_spellcheck.dict" to "4f52b3cd584ff1844ad09719d21751d93ebc76e506bde0b9b958d876b886f92d",
             "en_ngrams.dict" to "eecdf421c71c39e9f7822cb48a8624efb9ae8d86c6a01e976c6fa506f2fc71bd",
+            "es_ngrams.dict" to "d48691aa2c8c95fff9f831f32e3ae565917f17352ea696f1fd6d655fb320750e",
             "fr_ngrams.dict" to "ba8f8b3ea9ade673eeb158e4aaeebcb129647938b8cb619189393cbb1c6da712",
         )
         private val ngramAssets = mapOf(
             "en_spellcheck.dict" to "en_ngrams.dict",
+            "es_spellcheck.dict" to "es_ngrams.dict",
             "fr_spellcheck.dict" to "fr_ngrams.dict",
         )
 
@@ -50,7 +53,7 @@ class NativeTrie private constructor(
             assetName: String,
             layout: TrieKeyboardLayout,
         ): NativeTrie {
-            require(assetName in setOf("fr_spellcheck.dict", "en_spellcheck.dict")) {
+            require(assetName in setOf("fr_spellcheck.dict", "en_spellcheck.dict", "es_spellcheck.dict")) {
                 "Unsupported dictionary asset"
             }
             val spellFile = copyAssetAtomically(context, assetName)

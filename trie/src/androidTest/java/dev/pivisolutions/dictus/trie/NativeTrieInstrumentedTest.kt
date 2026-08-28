@@ -16,6 +16,27 @@ class NativeTrieInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Test
+    fun spanishDictionarySupportsAccentsAndRejectsMalformedCopy() {
+        NativeTrie.open(context, "es_spellcheck.dict", TrieKeyboardLayout.QWERTY).use { trie ->
+            assertTrue(trie.wordExists("español"))
+            assertTrue(trie.wordExists("también"))
+            assertTrue(trie.correct("espanol", maxResults = 20).contains("español"))
+        }
+
+        val valid = context.assets.open("es_spellcheck.dict").use { it.readBytes() }
+        val malformed = File(context.cacheDir, "malformed-es.dict").apply {
+            writeBytes(valid.copyOf(valid.size - 1))
+        }
+        try {
+            assertThrows(IllegalStateException::class.java) {
+                NativeTrie.openPathForTesting(malformed, TrieKeyboardLayout.QWERTY)
+            }
+        } finally {
+            malformed.delete()
+        }
+    }
+
+    @Test
     fun frenchDictionarySupportsExactFuzzyAndDeterministicPrefixLookup() {
         NativeTrie.open(
             context,

@@ -134,6 +134,15 @@ class NativeNgramInstrumentedTest {
                 expectedTrigram = "of",
                 bigramContext = "you",
             ),
+            ProductionCase(
+                asset = "es_spellcheck.dict",
+                layout = TrieKeyboardLayout.QWERTY,
+                firstWord = "a",
+                secondWord = "través",
+                expectedBigram = "se",
+                expectedTrigram = "de",
+                bigramContext = "también",
+            ),
         )
 
         cases.forEach { case ->
@@ -166,17 +175,17 @@ class NativeNgramInstrumentedTest {
 
     @Test
     fun corruptOptionalNgramKeepsSpellTrieUsable() {
-        val spell = File(context.cacheDir, "fr-spell-fixture.dict").also { output ->
-            context.assets.open("fr_spellcheck.dict").use { input ->
+        val spell = File(context.cacheDir, "es-spell-fixture.dict").also { output ->
+            context.assets.open("es_spellcheck.dict").use { input ->
                 output.outputStream().use { destination -> input.copyTo(destination) }
             }
         }
         val corruptNgram = fixtureFile("corrupt-production.ngrm", "not-an-ngrm".toByteArray())
 
-        NativeTrie.openPathsForTesting(spell, TrieKeyboardLayout.AZERTY, corruptNgram).use { trie ->
+        NativeTrie.openPathsForTesting(spell, TrieKeyboardLayout.QWERTY, corruptNgram).use { trie ->
             assertFalse(trie.hasNgram)
-            assertTrue(trie.wordExists("bonjour"))
-            assertTrue(trie.predictAfterWord("je").isEmpty())
+            assertTrue(trie.wordExists("español"))
+            assertTrue(trie.predictAfterWord("también").isEmpty())
         }
     }
 

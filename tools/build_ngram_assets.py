@@ -17,6 +17,10 @@ from pathlib import Path
 REVISION = "8e16017414d88aa75cba348416ba877a9135889a"
 BASE_URL = f"https://raw.githubusercontent.com/orgtre/google-books-ngram-frequency/{REVISION}/ngrams"
 SOURCE_SHA256 = {
+    "es": {
+        2: "fa2b6368b08744d03d604cdacdaab1c15834dfe2f1d81c9a3ad2f102a6643774",
+        3: "85b49f0521c57dd8bc2718c367c326397a06e45a0b36cdbf86b0f06cdf80258d",
+    },
     "fr": {
         2: "63f48cc4f9511306cdd15dacd93d2550447ba789c6a58b1ee302bbf3f562d48d",
         3: "0e1829c66c2244b567c2a18ca088daf1797770c90047855f8b04ee162aa84b90",
@@ -26,8 +30,10 @@ SOURCE_SHA256 = {
         3: "6cfdd4cc65cbd0df606d174df00274843c81eb430cfbeddce4711fb07f4e12df",
     },
 }
-LANG_NAME = {"fr": "french", "en": "english"}
+LANG_NAME = {"fr": "french", "en": "english", "es": "spanish"}
 SEEDS = {
+    # ADR 0001 deliberately defines no authored seed pairs for Spanish.
+    "es": [],
     "fr": [
         ("ça", "va"), ("ça", "marche"), ("en", "fait"), ("bien", "sûr"),
         ("au", "revoir"), ("merci", "beaucoup"), ("je", "vais"),
