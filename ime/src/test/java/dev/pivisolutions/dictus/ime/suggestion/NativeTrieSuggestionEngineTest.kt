@@ -273,6 +273,43 @@ class NativeTrieSuggestionEngineTest {
     }
 
     @Test
+    fun `German profile corrections cover required collapses and protect absent or non-dominant words`() =
+        runTest(dispatcher) {
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "de" }
+            val scores = mapOf(
+                "tür" to 50_751, "mädchen" to 49_962, "können" to 55_946,
+                "straße" to 48_560, "weiss" to 41_500, "weiß" to 52_401,
+                "groß" to 48_586,
+                "schon" to 56_001, "schön" to 48_916,
+                "muss" to 53_572, "muß" to 50_340,
+            )
+            val handle = FakeHandle(
+                knownWords = scores.keys,
+                frequencies = scores,
+                rawMaxFrequency = 1_382_028_889L,
+            )
+            val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+            advanceUntilIdle()
+
+            mapOf(
+                "tuer" to "tür", "maedchen" to "mädchen", "koennen" to "können",
+                "strasse" to "straße", "weiss" to "weiß", "gross" to "groß",
+            ).forEach { (input, correction) ->
+                engine.requestSuggestions(input)
+                advanceUntilIdle()
+                assertEquals(correction, engine.suggestionResults.value.primaryCorrection)
+                assertEquals(input == "weiss", engine.suggestionResults.value.knownInputDominance)
+            }
+
+            listOf("bauer", "schon", "muss").forEach { input ->
+                engine.requestSuggestions(input)
+                advanceUntilIdle()
+                assertEquals(input, null, engine.suggestionResults.value.primaryCorrection)
+                assertTrue(!engine.suggestionResults.value.knownInputDominance)
+            }
+        }
+
+    @Test
     fun `context score reranks only existing native candidates with deterministic bounded ties`() =
         runTest(dispatcher) {
             val handle = FakeHandle(
@@ -747,6 +784,8 @@ class NativeTrieSuggestionEngineTest {
 
     private class FakeHandle(
         private val knownWords: Set<String> = emptySet(),
+        private val frequencies: Map<String, Int> = emptyMap(),
+        private val rawMaxFrequency: Long = 1_000_000L,
         private val prefix: List<String> = emptyList(),
         private val fuzzy: List<String> = emptyList(),
         override val hasNgram: Boolean = false,
@@ -762,6 +801,10 @@ class NativeTrieSuggestionEngineTest {
         val scoreRequests = mutableListOf<Pair<String, String>>()
 
         override fun wordExists(word: String): Boolean = word in knownWords
+
+        override fun frequency(word: String): Int = frequencies[word] ?: 0
+
+        override fun maxFrequency(): Long = rawMaxFrequency
 
         override fun complete(prefix: String, maxResults: Int): List<String> {
             requestedLimits += maxResults

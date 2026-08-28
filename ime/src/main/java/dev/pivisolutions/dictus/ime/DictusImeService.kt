@@ -298,6 +298,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                 requestId = result.requestId,
                                 input = result.input,
                                 isKnownWord = result.isKnownWord,
+                                knownInputDominance = result.knownInputDominance,
                                 primaryCorrection = result.primaryCorrection,
                                 isLearnedWord = dictionaryEngine.personalDictionary.isLearned(result.input),
                             ),

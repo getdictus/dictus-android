@@ -25,6 +25,11 @@ class NativeTrieInstrumentedTest {
             assertTrue(trie.wordExists("grüße"))
             assertTrue(trie.wordExists("muss"))
             assertTrue(trie.wordExists("muß"))
+            assertEquals(48_560, trie.frequency("straße"))
+            assertEquals(41_500, trie.frequency("weiss"))
+            assertEquals(52_401, trie.frequency("weiß"))
+            assertEquals(0, trie.frequency("not-a-german-word"))
+            assertEquals(1_382_028_889L, trie.maxFrequency())
             assertTrue(trie.correct("uber", maxResults = 20).contains("über"))
         }
     }
@@ -103,6 +108,8 @@ class NativeTrieInstrumentedTest {
             )
         }
         assertThrows(IllegalStateException::class.java) { trie.wordExists("hello") }
+        assertThrows(IllegalStateException::class.java) { trie.frequency("hello") }
+        assertThrows(IllegalStateException::class.java) { trie.maxFrequency() }
         assertThrows(IllegalStateException::class.java) { trie.complete("hel") }
 
         NativeTrie.open(

@@ -183,6 +183,25 @@ Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeWordExists(
     ) ? JNI_TRUE : JNI_FALSE;
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeFrequency(
+    JNIEnv* env, jobject, jlong handle, jstring word
+) {
+    Engine* engine = fromHandle(handle);
+    const std::u16string input = toUtf16(env, word);
+    if (engine == nullptr || input.empty() || input.size() > 32) return 0;
+    return static_cast<jint>(engine->trie.getFrequency(
+        reinterpret_cast<const uint16_t*>(input.data()), static_cast<int>(input.size())));
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeMaxFrequency(
+    JNIEnv*, jobject, jlong handle
+) {
+    Engine* engine = fromHandle(handle);
+    return engine == nullptr ? 0 : static_cast<jlong>(engine->trie.maxFreq());
+}
+
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeCorrect(
     JNIEnv* env,
