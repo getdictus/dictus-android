@@ -11,6 +11,6 @@ class KeyboardLanguageOptionsTest {
             SupportedLanguage.entries.map { it.code to it.profile.displayName },
             keyboardLanguageOptions(),
         )
-        assertEquals(listOf("fr", "en"), keyboardLanguageOptions().map { it.first })
+        assertEquals(listOf("fr", "en", "es"), keyboardLanguageOptions().map { it.first })
     }
 }

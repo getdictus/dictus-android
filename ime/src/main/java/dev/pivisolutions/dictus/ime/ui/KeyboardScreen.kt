@@ -18,6 +18,8 @@ import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
+import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
 import timber.log.Timber
 
 /**
@@ -40,7 +42,9 @@ fun KeyboardScreen(
     onDeleteBackward: () -> Unit,
     onDeleteWordBackward: () -> Unit = onDeleteBackward,
     onSendReturn: () -> Unit,
-    onSwitchKeyboard: () -> Unit,
+    languageProfile: LanguageProfile = frenchLanguageProfile,
+    onCycleLanguage: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     onMicTap: () -> Unit = {},
     isMicEnabled: Boolean = true,
     isEmojiPickerOpen: Boolean = false,
@@ -107,7 +111,9 @@ fun KeyboardScreen(
 
                 // Mic button row above keyboard (46.dp)
                 MicButtonRow(
-                    onSwitchKeyboard = onSwitchKeyboard,
+                    languageShortCode = languageProfile.shortCode,
+                    onCycleLanguage = onCycleLanguage,
+                    onOpenSettings = onOpenSettings,
                     onMicTap = onMicTap,
                     isRecording = false,
                     isMicEnabled = isMicEnabled,
@@ -119,6 +125,7 @@ fun KeyboardScreen(
                     isShifted = isShifted,
                     isCapsLock = isCapsLock,
                     layout = currentLayout,
+                    languageProfile = languageProfile,
                     onDeleteWord = onDeleteWordBackward,
                     hapticsEnabled = hapticsEnabled,
                     onKeySound = onKeySound,

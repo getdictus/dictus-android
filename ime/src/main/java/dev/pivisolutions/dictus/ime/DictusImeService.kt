@@ -28,6 +28,8 @@ import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
+import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
+import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
@@ -63,6 +65,7 @@ import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import dev.pivisolutions.dictus.ime.language.cycleKeyboardLanguage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -676,6 +679,31 @@ class DictusImeService : LifecycleInputMethodService() {
                 as android.view.inputmethod.InputMethodManager
             imm.showInputMethodPicker()
         }
+        val cycleKeyboardLanguage = {
+            autocorrectCoordinator.onOtherInput()
+            clearSuggestionState()
+            dictionaryEngine.invalidateSuggestions()
+            bindingScope.launch {
+                cycleKeyboardLanguage(entryPoint.dataStore())
+            }
+            Unit
+        }
+        val openDictusSettings = {
+            autocorrectCoordinator.onOtherInput()
+            clearSuggestionState()
+            val authorization = SettingsLaunchAuthorization.issue()
+            val intent = Intent(AppLaunchContract.ACTION_OPEN_SETTINGS).apply {
+                component = ComponentName(packageName, AppLaunchContract.MAIN_ACTIVITY_CLASS)
+                putExtra(AppLaunchContract.EXTRA_AUTHORIZATION, authorization)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            try {
+                startActivity(intent)
+            } catch (error: RuntimeException) {
+                SettingsLaunchAuthorization.revoke(authorization)
+                Timber.e(error, "Unable to open Dictus Settings from IME")
+            }
+        }
 
         val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
             (engineState is SttEngineState.Failed && showFailureOverlay)
@@ -695,7 +723,9 @@ class DictusImeService : LifecycleInputMethodService() {
                     onDeleteBackward = { deleteBackward() },
                     onDeleteWordBackward = { deleteWordBackward() },
                     onSendReturn = { sendReturnKey() },
-                    onSwitchKeyboard = switchKeyboard,
+                    languageProfile = activeLanguage.profile,
+                    onCycleLanguage = cycleKeyboardLanguage,
+                    onOpenSettings = openDictusSettings,
                     onMicTap = gatedMicTap,
                     isMicEnabled = engineState !is SttEngineState.Loading,
                     isEmojiPickerOpen = isEmojiPickerOpen,

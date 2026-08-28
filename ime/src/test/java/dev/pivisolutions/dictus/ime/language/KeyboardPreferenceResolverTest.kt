@@ -24,6 +24,10 @@ class KeyboardPreferenceResolverTest {
             KeyboardPreferenceResolver.layout("invalid", SupportedLanguage.ENGLISH),
         )
         assertEquals(
+            KeyboardLayout.QWERTY,
+            KeyboardPreferenceResolver.layout(null, SupportedLanguage.SPANISH),
+        )
+        assertEquals(
             KeyboardLayout.AZERTY,
             KeyboardPreferenceResolver.layout("azerty", SupportedLanguage.ENGLISH),
         )

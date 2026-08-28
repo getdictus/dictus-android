@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.ime.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,8 +21,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import androidx.compose.material3.MaterialTheme
@@ -28,14 +35,16 @@ import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 
 /**
- * Top bar above the keyboard: settings gear on the left, mic pill button on the right.
+ * Top bar above the keyboard: active-language control on the left, mic pill on the right.
  *
- * No globe icon — Android provides its own language switcher in the system navigation bar.
+ * A tap cycles Dictus's correction language; a hold opens Dictus Settings.
  * Mic pill matches the mockup: 56x40dp, cornerRadius 20, accent blue with glow shadow.
  */
 @Composable
 fun MicButtonRow(
-    onSwitchKeyboard: () -> Unit,
+    languageShortCode: String,
+    onCycleLanguage: () -> Unit,
+    onOpenSettings: () -> Unit,
     onMicTap: () -> Unit = {},
     isRecording: Boolean = false,
     isMicEnabled: Boolean = true,
@@ -54,21 +63,39 @@ fun MicButtonRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // Settings gear button (left)
+        // Active language: one down haptic, then mutually exclusive tap/long-press actions.
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .clickable {
-                    HapticHelper.performKeyHaptic(view)
-                    onSwitchKeyboard()
+                .semantics {
+                    contentDescription = "Keyboard language $languageShortCode"
+                    onClick("Cycle keyboard language") {
+                        HapticHelper.performKeyHaptic(view)
+                        onCycleLanguage()
+                        true
+                    }
+                    onLongClick("Open Dictus Settings") {
+                        HapticHelper.performKeyHaptic(view)
+                        onOpenSettings()
+                        true
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            HapticHelper.performKeyHaptic(view)
+                            tryAwaitRelease()
+                        },
+                        onTap = { onCycleLanguage() },
+                        onLongPress = { onOpenSettings() },
+                    )
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_settings),
-                contentDescription = "Settings",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp),
+            Text(
+                text = languageShortCode,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                style = MaterialTheme.typography.labelLarge,
             )
         }
 

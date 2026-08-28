@@ -7,7 +7,11 @@ enum class SupportedLanguage(
 ) {
     FRENCH("fr", frenchLanguageProfile),
     ENGLISH("en", englishLanguageProfile),
+    SPANISH("es", spanishLanguageProfile),
     ;
+
+    /** Toolbar order is the canonical registry order and wraps at the end. */
+    fun next(): SupportedLanguage = entries[(ordinal + 1) % entries.size]
 
     companion object {
         fun fromCodeOrDefault(code: String?): SupportedLanguage =

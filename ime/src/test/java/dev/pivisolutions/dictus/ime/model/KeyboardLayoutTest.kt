@@ -81,6 +81,21 @@ class KeyboardLayoutTest {
     }
 
     @Test
+    fun `utility labels are localized without mutating shared layouts`() {
+        val localized = KeyboardLayouts.localizeUtilityLabels(
+            KeyboardLayouts.qwertyLetters,
+            spaceLabel = "espacio",
+            returnLabel = "intro",
+        ).flatten()
+        assertEquals("espacio", localized.first { it.type == KeyType.SPACE }.label)
+        assertEquals("intro", localized.first { it.type == KeyType.RETURN }.label)
+        assertEquals(
+            "space",
+            KeyboardLayouts.qwertyLetters.flatten().first { it.type == KeyType.SPACE }.label,
+        )
+    }
+
+    @Test
     fun `numbers layout has 4 rows`() {
         assertEquals(4, KeyboardLayouts.numbersRows.size)
     }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.pivisolutions.dictus.ime.model.AccentMap
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
@@ -26,6 +25,7 @@ fun KeyRow(
     onKeyPress: (KeyDefinition) -> Unit,
     onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
+    accentMap: Map<Char, List<Char>> = emptyMap(),
     hapticsEnabled: Boolean = true,
     onKeySound: (KeyType) -> Unit = {},
     labelsVisible: Boolean = true,
@@ -62,7 +62,11 @@ fun KeyRow(
                 }
                 else -> null
             }
-            val accentChars = renderedKey.accents ?: displayChar?.let(AccentMap::accentsFor)
+            val accentChars = renderedKey.accents ?: displayChar?.let { character ->
+                accentMap[character.lowercaseChar()]?.map { accent ->
+                    if (character.isUpperCase()) accent.uppercase() else accent.toString()
+                }
+            }
 
             KeyButton(
                 key = renderedKey,

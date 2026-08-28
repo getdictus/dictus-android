@@ -13,6 +13,8 @@ import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
 
 /**
  * Renders the keyboard rows for the currently active layer.
@@ -28,6 +30,7 @@ fun KeyboardView(
     isShifted: Boolean,
     isCapsLock: Boolean = false,
     layout: String,
+    languageProfile: LanguageProfile = frenchLanguageProfile,
     onKeyPress: (KeyDefinition) -> Unit,
     onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
@@ -40,11 +43,16 @@ fun KeyboardView(
     onFrenchAdaptiveVariant: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val rows = when (layer) {
+    val baseRows = when (layer) {
         KeyboardLayer.LETTERS -> KeyboardLayouts.lettersForLayout(layout)
         KeyboardLayer.NUMBERS -> KeyboardLayouts.numbersRows
         KeyboardLayer.SYMBOLS -> KeyboardLayouts.symbolsRows
     }
+    val rows = KeyboardLayouts.localizeUtilityLabels(
+        baseRows,
+        languageProfile.spaceLabel,
+        languageProfile.returnLabel,
+    )
 
     Column(
         modifier = modifier
@@ -60,6 +68,7 @@ fun KeyboardView(
                 onKeyPress = onKeyPress,
                 onDeleteWord = onDeleteWord,
                 onAccentSelected = onAccentSelected,
+                accentMap = languageProfile.accentMap,
                 hapticsEnabled = hapticsEnabled,
                 onKeySound = onKeySound,
                 labelsVisible = labelsVisible,
