@@ -30,6 +30,9 @@ import timber.log.Timber
 
 /** Narrow native handle contract. Unit tests inject this and never initialize JNI. */
 interface NativeTrieHandle : Closeable {
+    val hasNgram: Boolean
+        get() = false
+
     fun wordExists(word: String): Boolean = false
 
     fun complete(prefix: String, maxResults: Int): List<String>
@@ -48,6 +51,8 @@ class AndroidNativeTrieOpener(private val context: Context) : NativeTrieOpener {
         NativeTrieHandleAdapter(NativeTrie.open(context, assetName, layout))
 
     private class NativeTrieHandleAdapter(private val trie: NativeTrie) : NativeTrieHandle {
+        override val hasNgram: Boolean = trie.hasNgram
+
         override fun wordExists(word: String): Boolean = trie.wordExists(word)
 
         override fun complete(prefix: String, maxResults: Int): List<String> =
@@ -88,7 +93,9 @@ class NativeTrieSuggestionEngine(
         val profile: LanguageProfile,
         val layout: KeyboardLayout,
         internal val handle: NativeTrieHandle,
-    )
+    ) {
+        val hasNgram: Boolean = handle.hasNgram
+    }
 
     private data class RequestedActivation(
         val language: SupportedLanguage,
@@ -203,9 +210,10 @@ class NativeTrieSuggestionEngine(
             if (accepted) {
                 replaced?.let(::closeOrRetire)
                 Timber.d(
-                    "Native keyboard dictionary activated: language=%s layout=%s",
+                    "Native keyboard dictionary activated: language=%s layout=%s ngram=%s",
                     request.language.code,
                     request.layout.persistedValue,
+                    candidate.hasNgram,
                 )
             } else {
                 candidate.close()
