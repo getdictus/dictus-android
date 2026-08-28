@@ -116,6 +116,38 @@ class LanguageProfileTest {
     }
 
     @Test
+    fun `Spanish profile matches the iOS reference contract without runtime registration`() {
+        assertEquals("es", spanishLanguageProfile.code)
+        assertEquals("Español", spanishLanguageProfile.displayName)
+        assertEquals("ES", spanishLanguageProfile.shortCode)
+        assertEquals(KeyboardLayout.QWERTY, spanishLanguageProfile.defaultLayout)
+        assertEquals("espacio", spanishLanguageProfile.spaceLabel)
+        assertEquals("intro", spanishLanguageProfile.returnLabel)
+        assertEquals("dict_es.txt", spanishLanguageProfile.dictionaryAssetName)
+        assertEquals("es_spellcheck.dict", spanishLanguageProfile.nativeDictionaryAssetName)
+        assertTrue(spanishLanguageProfile.supportsAutocorrect)
+        assertTrue(spanishLanguageProfile.autocorrectEnabledByDefault)
+        assertTrue(spanishLanguageProfile.overrides.isEmpty())
+        assertEquals(
+            mapOf(
+                'a' to listOf('á'),
+                'e' to listOf('é'),
+                'i' to listOf('í'),
+                'o' to listOf('ó'),
+                'u' to listOf('ú', 'ü'),
+                'n' to listOf('ñ'),
+            ),
+            spanishLanguageProfile.accentMap,
+        )
+        assertTrue(spanishLanguageProfile.contractionPrefixes.isEmpty())
+        assertTrue(spanishLanguageProfile.collapseRules.isEmpty())
+        assertTrue(spanishLanguageProfile.seedBigrams.isEmpty())
+
+        assertEquals(listOf("fr", "en"), SupportedLanguage.entries.map { it.code })
+        assertEquals(SupportedLanguage.FRENCH, SupportedLanguage.fromCodeOrDefault("es"))
+    }
+
+    @Test
     fun `IME layouts map explicitly to native trie layouts`() {
         assertEquals(TrieKeyboardLayout.AZERTY, KeyboardLayout.AZERTY.toNativeTrieLayout())
         assertEquals(TrieKeyboardLayout.QWERTY, KeyboardLayout.QWERTY.toNativeTrieLayout())
