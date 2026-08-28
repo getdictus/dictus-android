@@ -47,6 +47,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -330,7 +331,9 @@ fun RecordingScreen(
                             .background(DictusColors.Recording)
                             .clickable {
                                 scope.launch {
-                                    val result = dictationController?.confirmAndTranscribe()
+                                    val result = dictationController?.confirmAndTranscribe(
+                                        TranscriptionRetention.PERSIST_HISTORY,
+                                    )
                                     transcriptionResult = result ?: noResultLabel
                                     // Keep the Home preview for a short, privacy-bounded period.
                                     if (result != null) {

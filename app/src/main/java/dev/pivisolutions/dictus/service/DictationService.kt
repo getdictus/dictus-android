@@ -25,8 +25,11 @@ import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
+import dev.pivisolutions.dictus.history.TranscriptionHistoryMetadata
+import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +80,7 @@ import timber.log.Timber
 @InstallIn(SingletonComponent::class)
 interface DictationServiceEntryPoint {
     fun dataStore(): DataStore<Preferences>
+    fun transcriptionHistoryWriter(): TranscriptionHistoryWriter
 }
 
 class DictationService : Service(), DictationController {
@@ -99,6 +103,13 @@ class DictationService : Service(), DictationController {
             applicationContext,
             DictationServiceEntryPoint::class.java,
         ).dataStore()
+    }
+
+    private val transcriptionHistoryWriter: TranscriptionHistoryWriter by lazy {
+        EntryPointAccessors.fromApplication(
+            applicationContext,
+            DictationServiceEntryPoint::class.java,
+        ).transcriptionHistoryWriter()
     }
 
     private val providerSlot by lazy {
@@ -296,7 +307,7 @@ class DictationService : Service(), DictationController {
      * typical dictation (5-30s audio). 30s covers worst-case long recordings.
      * A stuck JNI call should not block the UI indefinitely.
      */
-    override suspend fun confirmAndTranscribe(): String? {
+    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
         // 1. Stop recording and get audio samples
         val samples = audioCaptureManager?.stop() ?: FloatArray(0)
         timerJob?.cancel()
@@ -375,11 +386,30 @@ class DictationService : Service(), DictationController {
             val processedText = TextPostProcessor.process(rawText)
             Timber.d(PrivacySafeLog.transcriptionProcessed(rawText, processedText))
 
+            if (processedText.isNotEmpty()) {
+                val model = ModelCatalog.findByKey(activeModelKey)
+                transcriptionHistoryWriter.persist(
+                    retention = retention,
+                    text = processedText,
+                    metadata = TranscriptionHistoryMetadata(
+                        requestedLanguage = languagePref,
+                        durationMillis = samples.size * 1_000L / RecordingDurationPolicy.SAMPLE_RATE_HZ,
+                        modelKey = activeModelKey,
+                        provider = model?.provider?.name ?: "UNKNOWN",
+                    ),
+                )
+            }
+
             _state.value = DictationState.Idle
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
 
             if (processedText.isEmpty()) null else processedText
+        } catch (cancellation: CancellationException) {
+            _state.value = DictationState.Idle
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            throw cancellation
         } catch (e: Exception) {
             Timber.e(e, "Transcription failed")
             _state.value = DictationState.Idle

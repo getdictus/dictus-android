@@ -4,9 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +55,10 @@ class RecordingScreenControllerBindingTest {
         composeTestRule.waitForIdle()
         assertEquals(1, lateController.startRecordingCallCount)
 
+        composeTestRule.onNodeWithContentDescription("Stop").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(TranscriptionRetention.PERSIST_HISTORY, lateController.lastRetention)
+
         lateController.emitEngineState(SttEngineState.Ready("tiny"))
         composeTestRule.waitForIdle()
         assertEquals(1, lateController.startRecordingCallCount)
@@ -66,6 +73,8 @@ class RecordingScreenControllerBindingTest {
         var startRecordingCallCount = 0
             private set
         var prewarmEngineCallCount = 0
+            private set
+        var lastRetention: TranscriptionRetention? = null
             private set
 
         override fun prewarmEngine() {
@@ -87,6 +96,10 @@ class RecordingScreenControllerBindingTest {
             mutableState.value = DictationState.Idle
         }
 
-        override suspend fun confirmAndTranscribe(): String? = null
+        override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
+            lastRetention = retention
+            mutableState.value = DictationState.Idle
+            return null
+        }
     }
 }

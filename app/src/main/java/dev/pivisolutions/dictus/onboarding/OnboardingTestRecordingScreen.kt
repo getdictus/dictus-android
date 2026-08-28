@@ -46,6 +46,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -301,7 +302,9 @@ fun OnboardingTestRecordingScreen(
                                 .background(DictusColors.Recording)
                                 .clickable {
                                     scope.launch {
-                                        val result = dictationController?.confirmAndTranscribe()
+                                        val result = dictationController?.confirmAndTranscribe(
+                                            TranscriptionRetention.EPHEMERAL,
+                                        )
                                         transcriptionResult = result ?: context.getString(R.string.onboarding_test_recording_no_result)
                                     }
                                 },

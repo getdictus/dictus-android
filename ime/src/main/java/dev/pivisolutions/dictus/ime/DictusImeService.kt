@@ -54,6 +54,7 @@ import dev.pivisolutions.dictus.ime.input.NextWordPredictionInsertResult
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
 import dev.pivisolutions.dictus.ime.input.AutocorrectSpaceResult
 import dev.pivisolutions.dictus.ime.input.ImeServicePrivacyPolicy
+import dev.pivisolutions.dictus.ime.input.ImeTranscriptionRetentionSession
 import dev.pivisolutions.dictus.ime.input.PersonalizedLearningEntryPoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
@@ -135,6 +136,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private var isEditorSelectionCollapsed = false
     private var isCurrentEditorSuggestionEligible = false
     private var isPersonalizedLearningAllowed = false
+    private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
 
     // Whether the built-in suggestion bar is enabled. Observed from DataStore
     // so the user can toggle it in settings without restarting the IME.
@@ -507,6 +509,10 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         isCurrentEditorSuggestionEligible = editorPolicy?.suggestionEligible == true
         isPersonalizedLearningAllowed = editorPolicy?.personalizedLearningAllowed == true
+        transcriptionRetentionSession.restrict(
+            isCurrentEditorSuggestionEligible,
+            isPersonalizedLearningAllowed,
+        )
         autocorrectCoordinator.startSession(
             autocorrectEligible = isCurrentEditorSuggestionEligible,
             personalizedLearningAllowed = isPersonalizedLearningAllowed,
@@ -538,6 +544,10 @@ class DictusImeService : LifecycleInputMethodService() {
         predictionCoordinator.finishSession()
         isCurrentEditorSuggestionEligible = false
         isPersonalizedLearningAllowed = false
+        transcriptionRetentionSession.restrict(
+            editorEligible = false,
+            personalizedLearningAllowed = false,
+        )
         _currentWord.value = ""
         clearSuggestionState()
         isEditorSelectionCollapsed = false
@@ -634,6 +644,10 @@ class DictusImeService : LifecycleInputMethodService() {
                 if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED
                 ) {
+                    transcriptionRetentionSession.begin(
+                        isCurrentEditorSuggestionEligible,
+                        isPersonalizedLearningAllowed,
+                    )
                     if (engineState is SttEngineState.Failed) showFailureOverlay = true
                     runGateCommand(micGate.request(engineState))
                 } else {
@@ -868,13 +882,15 @@ class DictusImeService : LifecycleInputMethodService() {
                         energy = smoothedEnergy,
                         onCancel = {
                             dictationController?.cancelRecording()
+                            transcriptionRetentionSession.reset()
                             Timber.d("Recording cancelled")
                         },
                         onConfirm = {
                             val controller = dictationController
                             if (controller != null) {
+                                val retention = transcriptionRetentionSession.consume()
                                 bindingScope.launch {
-                                    val text = controller.confirmAndTranscribe()
+                                    val text = controller.confirmAndTranscribe(retention)
                                     if (text != null) {
                                         commitText(text)
                                         Timber.d(PrivacySafeLog.transcriptionInserted(text))
