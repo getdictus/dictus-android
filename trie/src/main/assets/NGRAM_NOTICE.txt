@@ -1,10 +1,10 @@
 Dictus Android n-gram assets
 
-French and English NGRM assets are derived from the Google Books Ngram Corpus Version 3 and the orgtre/google-books-ngram-frequency extracts.
+French and English NGRM assets and the Spanish DTRI/NGRM assets are derived from the Google Books Ngram Corpus Version 3 and the orgtre/google-books-ngram-frequency extracts.
 
 Source: https://github.com/orgtre/google-books-ngram-frequency
 Original dataset: https://storage.googleapis.com/books/ngrams/books/datasetsv3.html
 License: Creative Commons Attribution 3.0 Unported
 License text: https://creativecommons.org/licenses/by/3.0/legalcode
 
-Dictus filtered, normalized, added Dictus-authored seed pairs, capped results, normalized scores, and converted the source frequencies to the NGRM v1 binary format. Exact revisions, hashes, transformations, and reproduction commands are documented in docs/ngram-assets-provenance.md.
+Dictus filtered and normalized the source frequencies and converted them to DTRI v1 and NGRM v1 binary formats. N-gram results were capped and score-normalized. French and English include Dictus-authored seed pairs; Spanish has no authored seeds. Exact revisions, hashes, transformations, and reproduction commands are documented in docs/ngram-assets-provenance.md.
