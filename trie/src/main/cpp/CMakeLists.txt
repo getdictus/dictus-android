@@ -7,6 +7,7 @@ add_library(
     src/dictus_trie.cpp
     src/dictus_scorer.cpp
     src/dictus_proximity.cpp
+    src/dictus_ngram.cpp
     dictus_trie_jni.cpp
 )
 

@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.trie
 import android.content.Context
 import java.io.Closeable
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
@@ -13,6 +14,11 @@ enum class TrieKeyboardLayout(internal val nativeValue: Int) {
     AZERTY(0),
     QWERTY(1),
 }
+
+data class NgramPrediction(
+    val word: String,
+    val score: Int,
+)
 
 /** Owns one native mmap-backed dictionary. Instances must be closed. */
 class NativeTrie private constructor(
@@ -141,6 +147,72 @@ class NativeTrie private constructor(
         return nativeComplete(nativeHandle, canonical, maxResults).toList()
     }
 
+    /** Test-only path seam until reviewed corpus assets are packaged by a follow-up issue. */
+    @Synchronized
+    internal fun loadNgramForTesting(file: File): Boolean {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        return nativeLoadNgram(nativeHandle, file.absolutePath.toByteArray(StandardCharsets.UTF_8))
+    }
+
+    @Synchronized
+    internal fun unloadNgramForTesting() {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        nativeUnloadNgram(nativeHandle)
+    }
+
+    @Synchronized
+    internal fun isNgramLoadedForTesting(): Boolean {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        return nativeIsNgramLoaded(nativeHandle)
+    }
+
+    @Synchronized
+    fun predictAfterWord(word: String, maxResults: Int = 3): List<NgramPrediction> {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        require(maxResults in 1..16)
+        val canonical = word.canonicalLookup()
+        if (!canonical.isNgramContext()) return emptyList()
+        return nativePredictAfterWord(
+            nativeHandle,
+            canonical.toByteArray(StandardCharsets.UTF_8),
+            maxResults,
+        ).toList()
+    }
+
+    @Synchronized
+    fun predictAfterWords(
+        firstWord: String,
+        secondWord: String,
+        maxResults: Int = 3,
+    ): List<NgramPrediction> {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        require(maxResults in 1..16)
+        val canonicalFirst = firstWord.canonicalLookup()
+        val canonicalSecond = secondWord.canonicalLookup()
+        if (!canonicalFirst.isNgramContext() || !canonicalSecond.isNgramContext()) {
+            return emptyList()
+        }
+        return nativePredictAfterWords(
+            nativeHandle,
+            canonicalFirst.toByteArray(StandardCharsets.UTF_8),
+            canonicalSecond.toByteArray(StandardCharsets.UTF_8),
+            maxResults,
+        ).toList()
+    }
+
+    @Synchronized
+    fun bigramScore(previousWord: String, word: String): Int {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        val canonicalPrevious = previousWord.canonicalLookup()
+        val canonicalWord = word.canonicalLookup()
+        if (!canonicalPrevious.isNgramContext() || !canonicalWord.isNgramContext()) return 0
+        return nativeBigramScore(
+            nativeHandle,
+            canonicalPrevious.toByteArray(StandardCharsets.UTF_8),
+            canonicalWord.toByteArray(StandardCharsets.UTF_8),
+        )
+    }
+
     @Synchronized
     override fun close() {
         if (nativeHandle != 0L) {
@@ -165,7 +237,30 @@ class NativeTrie private constructor(
         prefix: String,
         maxResults: Int,
     ): Array<String>
+    private external fun nativeLoadNgram(handle: Long, path: ByteArray): Boolean
+    private external fun nativeUnloadNgram(handle: Long)
+    private external fun nativeIsNgramLoaded(handle: Long): Boolean
+    private external fun nativePredictAfterWord(
+        handle: Long,
+        word: ByteArray,
+        maxResults: Int,
+    ): Array<NgramPrediction>
+    private external fun nativePredictAfterWords(
+        handle: Long,
+        firstWord: ByteArray,
+        secondWord: ByteArray,
+        maxResults: Int,
+    ): Array<NgramPrediction>
+    private external fun nativeBigramScore(
+        handle: Long,
+        previousWord: ByteArray,
+        word: ByteArray,
+    ): Int
 
     private fun String.canonicalLookup(): String =
         Normalizer.normalize(lowercase(Locale.ROOT), Normalizer.Form.NFC)
+
+    private fun String.isNgramContext(): Boolean =
+        isNotEmpty() && '\u0000' !in this &&
+            toByteArray(StandardCharsets.UTF_8).size <= 255
 }
