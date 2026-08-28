@@ -24,21 +24,15 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Extract and validate version from tag
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: .github/scripts/derive-android-version.sh "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
       - name: Decode keystore
         run: |
           echo "${{ secrets.SIGNING_KEYSTORE }}" | base64 -d > ${{ github.workspace }}/release.jks
-
-      - name: Extract version from tag
-        id: version
-        run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          PATCH=$(echo $VERSION | cut -d. -f3)
-          VERSION_CODE=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
-          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
-          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
 
       - name: Build signed release APK
         env:
