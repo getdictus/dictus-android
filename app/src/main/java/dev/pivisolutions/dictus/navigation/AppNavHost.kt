@@ -71,10 +71,27 @@ fun AppNavHost(
     onOpenKeyboardSettings: () -> Unit,
     onShowKeyboardPicker: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    openSettingsRequested: Boolean = false,
 ) {
     val hasCompletedOnboarding by dataStore.data
         .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
         .collectAsState(initial = null)
+
+    if (openSettingsRequested) {
+        // The IME entry point intentionally has no bottom navigation. This allows Settings and
+        // its child screens without exposing Home/Models or mutating onboarding completion.
+        MainTabsScreen(
+            dataStore = dataStore,
+            dictationController = dictationController,
+            imeEnabled = imeEnabled,
+            imeSelected = imeSelected,
+            onOpenKeyboardSettings = onOpenKeyboardSettings,
+            onOpenAppSettings = onOpenAppSettings,
+            startDestination = AppDestination.Settings.route,
+            showMainNavigation = false,
+        )
+        return
+    }
 
     when (hasCompletedOnboarding) {
         null -> {
@@ -208,6 +225,8 @@ private fun MainTabsScreen(
     imeSelected: Boolean,
     onOpenKeyboardSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    startDestination: String = AppDestination.Home.route,
+    showMainNavigation: Boolean = true,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -216,7 +235,8 @@ private fun MainTabsScreen(
     // Hide the bottom nav bar when on the Recording screen so it gets full-screen immersion.
     // WHY conditional (not AnimatedVisibility): simple show/hide is sufficient here; there
     // is no animation spec for the nav bar in the design.
-    val showBottomBar = currentRoute != AppDestination.Recording.route &&
+    val showBottomBar = showMainNavigation &&
+        currentRoute != AppDestination.Recording.route &&
         currentRoute != AppDestination.Licences.route &&
         currentRoute != AppDestination.DebugLogs.route &&
         currentRoute != AppDestination.SoundSettings.route &&
@@ -243,7 +263,7 @@ private fun MainTabsScreen(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = AppDestination.Home.route,
+            startDestination = startDestination,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),

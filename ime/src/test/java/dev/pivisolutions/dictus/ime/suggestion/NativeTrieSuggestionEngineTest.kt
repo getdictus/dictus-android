@@ -85,6 +85,25 @@ class NativeTrieSuggestionEngineTest {
         }
 
     @Test
+    fun `Spanish activation publishes matching profile assets and QWERTY default atomically`() =
+        runTest(dispatcher) {
+            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "es" }
+            val opener = FakeOpener(mutableListOf(Result.success(FakeHandle(hasNgram = true))))
+            val engine = createEngine(opener)
+            advanceUntilIdle()
+
+            val activation = requireNotNull(engine.activation.value)
+            assertEquals(SupportedLanguage.SPANISH, activation.language)
+            assertEquals(KeyboardLayout.QWERTY, activation.layout)
+            assertEquals("es_spellcheck.dict", activation.profile.nativeDictionaryAssetName)
+            assertTrue(activation.hasNgram)
+            assertEquals(
+                OpenRequest("es_spellcheck.dict", TrieKeyboardLayout.QWERTY),
+                opener.requests.single(),
+            )
+        }
+
+    @Test
     fun `failed switch retains the previous complete activation and handle`() = runTest(dispatcher) {
         val french = FakeHandle(prefix = listOf("bonjour"))
         val opener = FakeOpener(mutableListOf(Result.success(french), Result.failure(Error("no en"))))

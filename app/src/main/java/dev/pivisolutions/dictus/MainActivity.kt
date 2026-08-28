@@ -24,6 +24,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.AndroidEntryPoint
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
+import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
@@ -61,6 +63,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private const val STATE_RESTRICTED_SETTINGS_LAUNCH = "restricted_settings_launch"
+    }
+
     @Inject
     lateinit var dataStore: DataStore<Preferences>
 
@@ -76,6 +82,7 @@ class MainActivity : AppCompatActivity() {
     private var awaitingKeyboardPickerReturn = false
     private var showKeyboardPickerRunnable: Runnable? = null
     private var keyboardPickerTimeoutRunnable: Runnable? = null
+    private var restrictedSettingsLaunch = false
 
     /**
      * ServiceConnection callback for DictationService binding.
@@ -102,6 +109,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        restrictedSettingsLaunch = savedInstanceState?.getBoolean(
+            STATE_RESTRICTED_SETTINGS_LAUNCH,
+            false,
+        ) ?: (
+            intent?.action == AppLaunchContract.ACTION_OPEN_SETTINGS &&
+                SettingsLaunchAuthorization.consume(
+                    intent?.getStringExtra(AppLaunchContract.EXTRA_AUTHORIZATION),
+                )
+            )
         lifecycleScope.launch {
             LastTranscriptionStore.enforceRetention(dataStore)
         }
@@ -139,6 +155,7 @@ class MainActivity : AppCompatActivity() {
                     onOpenKeyboardSettings = { openKeyboardSettings() },
                     onShowKeyboardPicker = { showKeyboardPicker() },
                     onOpenAppSettings = { openAppSettings() },
+                    openSettingsRequested = restrictedSettingsLaunch,
                 )
             }
         }
@@ -167,6 +184,11 @@ class MainActivity : AppCompatActivity() {
             isBound = false
         }
         super.onDestroy()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_RESTRICTED_SETTINGS_LAUNCH, restrictedSettingsLaunch)
+        super.onSaveInstanceState(outState)
     }
 
     /**

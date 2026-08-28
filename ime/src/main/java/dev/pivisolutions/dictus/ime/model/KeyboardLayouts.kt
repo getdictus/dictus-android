@@ -113,4 +113,19 @@ object KeyboardLayouts {
         "qwerty" -> qwertyLetters
         else -> azertyLetters
     }
+
+    /** Applies profile-owned labels without mutating shared layout definitions. */
+    fun localizeUtilityLabels(
+        rows: List<List<KeyDefinition>>,
+        spaceLabel: String,
+        returnLabel: String,
+    ): List<List<KeyDefinition>> = rows.map { row ->
+        row.map { key ->
+            when (key.type) {
+                KeyType.SPACE -> key.copy(label = spaceLabel)
+                KeyType.RETURN -> key.copy(label = returnLabel)
+                else -> key
+            }
+        }
+    }
 }
