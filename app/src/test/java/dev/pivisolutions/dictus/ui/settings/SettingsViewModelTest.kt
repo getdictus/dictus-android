@@ -127,6 +127,30 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `autocorrect has a dedicated enabled-by-default persisted preference`() = testScope.runTest {
+        assertEquals("autocorrect_enabled", PreferenceKeys.AUTOCORRECT_ENABLED.name)
+        assertTrue(viewModel.autocorrectEnabled.value)
+
+        viewModel.toggleAutocorrect()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.autocorrectEnabled.value)
+        assertTrue(viewModel.suggestionsEnabled.value)
+        val restarted = SettingsViewModel(fakeDataStore, modelManager)
+        advanceUntilIdle()
+        assertFalse(restarted.autocorrectEnabled.value)
+    }
+
+    @Test
+    fun `suggestions toggle does not change autocorrect`() = testScope.runTest {
+        viewModel.toggleSuggestions()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.suggestionsEnabled.value)
+        assertTrue(viewModel.autocorrectEnabled.value)
+    }
+
+    @Test
     fun `hapticsEnabled defaults to true`() = testScope.runTest {
         assertTrue(viewModel.hapticsEnabled.value)
     }

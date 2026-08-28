@@ -185,7 +185,48 @@ class NativeTrieSuggestionEngineTest {
         engine.personalDictionary.recordWordTyped("CA\u0301FE")
         advanceUntilIdle()
 
-        assertEquals(listOf("ca\u0301fe"), engine.getSuggestions("ca"))
+        assertEquals(listOf("cáfe"), engine.getSuggestions("ca"))
+    }
+
+    @Test
+    fun `request identity advances even when text returns to the same value`() = runTest(dispatcher) {
+        val engine = createEngine(FakeOpener())
+        advanceUntilIdle()
+
+        val firstA = requireNotNull(engine.requestSuggestions("a"))
+        val b = requireNotNull(engine.requestSuggestions("b"))
+        val secondA = requireNotNull(engine.requestSuggestions("a"))
+        advanceUntilIdle()
+
+        assertTrue(firstA < b)
+        assertTrue(b < secondA)
+        assertEquals(secondA, engine.suggestionResults.value.requestId)
+        assertEquals("a", engine.suggestionResults.value.input)
+    }
+
+    @Test
+    fun `structured result separates known words corrections and completions`() = runTest(dispatcher) {
+        val handle = FakeHandle(
+            knownWords = setOf("hello"),
+            prefix = listOf("hello", "help"),
+            fuzzy = listOf("hello", "hullo"),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val knownRequest = requireNotNull(engine.requestSuggestions("hello"))
+        advanceUntilIdle()
+        assertEquals(knownRequest, engine.suggestionResults.value.requestId)
+        assertTrue(engine.suggestionResults.value.isKnownWord)
+        assertEquals("hullo", engine.suggestionResults.value.primaryCorrection)
+
+        handle.fuzzyOverride = emptyList()
+        val completionRequest = requireNotNull(engine.requestSuggestions("hel"))
+        advanceUntilIdle()
+        assertEquals(completionRequest, engine.suggestionResults.value.requestId)
+        assertTrue(!engine.suggestionResults.value.isKnownWord)
+        assertEquals(null, engine.suggestionResults.value.primaryCorrection)
+        assertEquals(listOf("hello", "help"), engine.suggestionResults.value.suggestions)
     }
 
     @Test
@@ -416,11 +457,15 @@ class NativeTrieSuggestionEngineTest {
 
 
     private class FakeHandle(
+        private val knownWords: Set<String> = emptySet(),
         private val prefix: List<String> = emptyList(),
         private val fuzzy: List<String> = emptyList(),
     ) : NativeTrieHandle {
         var closeCount = 0
         val requestedLimits = mutableListOf<Int>()
+        var fuzzyOverride: List<String>? = null
+
+        override fun wordExists(word: String): Boolean = word in knownWords
 
         override fun complete(prefix: String, maxResults: Int): List<String> {
             requestedLimits += maxResults
@@ -429,7 +474,7 @@ class NativeTrieSuggestionEngineTest {
 
         override fun correct(word: String, maxEditDistance: Float, maxResults: Int): List<String> {
             requestedLimits += maxResults
-            return fuzzy.take(maxResults)
+            return (fuzzyOverride ?: fuzzy).take(maxResults)
         }
 
         override fun close() {

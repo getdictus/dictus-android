@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
@@ -65,6 +66,18 @@ class SettingsViewModel @Inject constructor(
     /** Whether the built-in suggestion bar is enabled on the keyboard. */
     val suggestionsEnabled: StateFlow<Boolean> = dataStore.data
         .map { it[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    /** Automatic correction intent, independent from suggestion-bar visibility and ASR. */
+    val autocorrectEnabled: StateFlow<Boolean> = dataStore.data
+        .map { preferences ->
+            val profile = KeyboardPreferenceResolver
+                .language(preferences[PreferenceKeys.KEYBOARD_LANGUAGE]).profile
+            AutocorrectRuntimePolicy.isEnabled(
+                preferences[PreferenceKeys.AUTOCORRECT_ENABLED],
+                profile,
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     /** Whether haptic feedback is enabled on dictation actions. */
@@ -134,6 +147,21 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.SUGGESTIONS_ENABLED] = !(prefs[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true)
+            }
+        }
+    }
+
+    /** Toggle automatic correction without changing suggestion-bar visibility. */
+    fun toggleAutocorrect() {
+        viewModelScope.launch {
+            dataStore.edit { preferences ->
+                val profile = KeyboardPreferenceResolver
+                    .language(preferences[PreferenceKeys.KEYBOARD_LANGUAGE]).profile
+                val current = AutocorrectRuntimePolicy.isEnabled(
+                    preferences[PreferenceKeys.AUTOCORRECT_ENABLED],
+                    profile,
+                )
+                preferences[PreferenceKeys.AUTOCORRECT_ENABLED] = !current
             }
         }
     }

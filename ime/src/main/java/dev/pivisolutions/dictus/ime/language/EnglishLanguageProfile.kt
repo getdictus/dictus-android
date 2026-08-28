@@ -10,6 +10,8 @@ val englishLanguageProfile = LanguageProfile(
     returnLabel = "return",
     dictionaryAssetName = "dict_en.txt",
     nativeDictionaryAssetName = "en_spellcheck.dict",
+    supportsAutocorrect = true,
+    autocorrectEnabledByDefault = true,
     overrides = mapOf(
         "im" to "i'm",
         "ive" to "i've",

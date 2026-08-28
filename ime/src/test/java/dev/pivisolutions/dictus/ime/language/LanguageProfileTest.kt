@@ -40,6 +40,8 @@ class LanguageProfileTest {
         assertEquals("retour", frenchLanguageProfile.returnLabel)
         assertEquals("dict_fr.txt", frenchLanguageProfile.dictionaryAssetName)
         assertEquals("fr_spellcheck.dict", frenchLanguageProfile.nativeDictionaryAssetName)
+        assertTrue(frenchLanguageProfile.supportsAutocorrect)
+        assertTrue(frenchLanguageProfile.autocorrectEnabledByDefault)
         assertEquals(
             mapOf(
                 "ca" to "ça",
@@ -88,6 +90,8 @@ class LanguageProfileTest {
         assertEquals("return", englishLanguageProfile.returnLabel)
         assertEquals("dict_en.txt", englishLanguageProfile.dictionaryAssetName)
         assertEquals("en_spellcheck.dict", englishLanguageProfile.nativeDictionaryAssetName)
+        assertTrue(englishLanguageProfile.supportsAutocorrect)
+        assertTrue(englishLanguageProfile.autocorrectEnabledByDefault)
         assertEquals(
             mapOf(
                 "im" to "i'm", "ive" to "i've", "dont" to "don't",

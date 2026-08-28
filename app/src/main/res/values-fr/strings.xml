@@ -67,6 +67,7 @@
     <string name="settings_haptic_feedback">Retour haptique</string>
     <string name="settings_keyboard_sounds">Sons du clavier</string>
     <string name="settings_suggestions">Suggestions</string>
+    <string name="settings_autocorrect">Correction automatique</string>
     <string name="settings_sounds">Sons</string>
     <string name="settings_theme">Th\u00e8me</string>
     <string name="settings_version">Version</string>

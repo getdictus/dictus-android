@@ -10,6 +10,8 @@ val frenchLanguageProfile = LanguageProfile(
     returnLabel = "retour",
     dictionaryAssetName = "dict_fr.txt",
     nativeDictionaryAssetName = "fr_spellcheck.dict",
+    supportsAutocorrect = true,
+    autocorrectEnabledByDefault = true,
     overrides = mapOf(
         "ca" to "ça",
         "tres" to "très",
