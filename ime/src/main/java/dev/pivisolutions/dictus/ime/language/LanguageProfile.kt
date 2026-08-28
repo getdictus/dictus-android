@@ -11,6 +11,10 @@ data class LanguageProfile(
     val dictionaryAssetName: String,
     /** Binary mmap-ready dictionary packaged by the trie module. */
     val nativeDictionaryAssetName: String,
+    /** Whether this language's dictionary is safe to use for automatic replacement. */
+    val supportsAutocorrect: Boolean,
+    /** Intent used until the user persists an explicit autocorrect preference. */
+    val autocorrectEnabledByDefault: Boolean,
     val overrides: Map<String, String>,
     val accentMap: Map<Char, List<Char>>,
     val contractionPrefixes: List<String>,

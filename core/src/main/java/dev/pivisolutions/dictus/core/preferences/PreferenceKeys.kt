@@ -54,6 +54,9 @@ object PreferenceKeys {
      *  experience performance issues or prefer typing without suggestions. */
     val SUGGESTIONS_ENABLED = booleanPreferencesKey("suggestions_enabled")
 
+    /** Whether automatic replacement on word boundaries is enabled. Independent of the bar. */
+    val AUTOCORRECT_ENABLED = booleanPreferencesKey("autocorrect_enabled")
+
     // --- Personal dictionary (Phase 8) ---
     /** Set of words the user has typed at least twice, persisted across restarts. */
     val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")

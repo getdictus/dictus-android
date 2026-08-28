@@ -77,6 +77,27 @@ class AutocorrectInputCoordinatorTest {
     }
 
     @Test
+    fun `runtime disable invalidates correction evidence and immediate undo`() {
+        val coordinator = AutocorrectInputCoordinator {}
+        val editor = FakeEditor(tokenSnapshot("helo"))
+        coordinator.startSession()
+        publishEligible(coordinator)
+
+        coordinator.setRuntimeEnabled(false)
+        var spaces = 0
+        assertEquals(AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(editor) { spaces++ })
+        assertEquals(1, spaces)
+
+        coordinator.setRuntimeEnabled(true)
+        publishEligible(coordinator)
+        coordinator.onSpace(editor) {}
+        coordinator.setRuntimeEnabled(false)
+        var deletes = 0
+        assertEquals(AutocorrectBackspaceResult.PLAIN_DELETE, coordinator.onBackspace(editor) { deletes++ })
+        assertEquals(1, deletes)
+    }
+
+    @Test
     fun `immediate backspace restores original and learns synchronously`() {
         val learned = mutableListOf<String>()
         val coordinator = AutocorrectInputCoordinator(learned::add)

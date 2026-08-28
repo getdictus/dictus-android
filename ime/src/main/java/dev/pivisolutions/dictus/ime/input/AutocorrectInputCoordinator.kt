@@ -40,6 +40,7 @@ class AutocorrectInputCoordinator(
     private var session = 0L
     private var sessionActive = false
     private var autocorrectEligible = false
+    private var runtimeEnabled = true
     private var personalizedLearningAllowed = true
     private var expectedSuggestion: ExpectedSuggestion? = null
     private var suggestionSnapshot: AutocorrectSuggestionSnapshot? = null
@@ -64,9 +65,19 @@ class AutocorrectInputCoordinator(
         clearTransientState()
     }
 
+    /** Applies live settings/profile policy and invalidates all one-shot state on transitions. */
+    fun setRuntimeEnabled(enabled: Boolean) {
+        if (runtimeEnabled != enabled) {
+            runtimeEnabled = enabled
+            clearTransientState()
+        }
+    }
+
     fun suggestionRequested(requestId: Long?, input: String) {
         suggestionSnapshot = null
-        expectedSuggestion = if (sessionActive && autocorrectEligible && requestId != null) {
+        expectedSuggestion = if (
+            sessionActive && autocorrectEligible && runtimeEnabled && requestId != null
+        ) {
             ExpectedSuggestion(session, requestId, input)
         } else {
             null
@@ -76,7 +87,7 @@ class AutocorrectInputCoordinator(
     /** Returns true only when [snapshot] is the exact latest request in the active session. */
     fun suggestionPublished(snapshot: AutocorrectSuggestionSnapshot): Boolean {
         val expected = expectedSuggestion
-        val accepted = sessionActive && autocorrectEligible &&
+        val accepted = sessionActive && autocorrectEligible && runtimeEnabled &&
             expected != null &&
             expected.session == session &&
             expected.requestId == snapshot.requestId &&
@@ -91,7 +102,7 @@ class AutocorrectInputCoordinator(
         val offered = suggestionSnapshot
         expectedSuggestion = null
         suggestionSnapshot = null
-        val identityEligible = sessionActive && autocorrectEligible &&
+        val identityEligible = sessionActive && autocorrectEligible && runtimeEnabled &&
             expected != null &&
             expected.session == session &&
             offered != null &&

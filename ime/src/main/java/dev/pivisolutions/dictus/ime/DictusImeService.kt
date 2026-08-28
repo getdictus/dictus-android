@@ -40,6 +40,7 @@ import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
+import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
 import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
 import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
@@ -125,6 +126,8 @@ class DictusImeService : LifecycleInputMethodService() {
     // Whether the built-in suggestion bar is enabled. Observed from DataStore
     // so the user can toggle it in settings without restarting the IME.
     private val _suggestionsEnabled = MutableStateFlow(true)
+    private val _autocorrectEnabled = MutableStateFlow(true)
+    private var autocorrectPreference: Boolean? = null
 
     // Production suggestion engine: opens the binary trie off-thread and atomically
     // publishes the resolved language/layout only after a complete native load.
@@ -204,25 +207,31 @@ class DictusImeService : LifecycleInputMethodService() {
         Timber.d("DictusImeService created")
         bindDictationService()
 
-        // Observe suggestions toggle from DataStore (defaults to true)
+        // Suggestion display and automatic replacement are separate live preferences.
         bindingScope.launch {
             entryPoint.dataStore().data
                 .map { it[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true }
                 .collect { enabled ->
                     _suggestionsEnabled.value = enabled
-                    if (enabled) {
+                    if (shouldRequestSuggestions()) {
                         requestSuggestionsForCurrentWord()
                     } else {
-                        autocorrectCoordinator.onOtherInput()
-                        latestSuggestionRequestId = null
                         _suggestions.value = emptyList()
                     }
                 }
         }
         bindingScope.launch {
+            entryPoint.dataStore().data
+                .map { it[PreferenceKeys.AUTOCORRECT_ENABLED] }
+                .collect { preference ->
+                    autocorrectPreference = preference
+                    updateAutocorrectPolicy()
+                    if (shouldRequestSuggestions()) requestSuggestionsForCurrentWord()
+                }
+        }
+        bindingScope.launch {
             dictionaryEngine.suggestionResults.collect { result ->
                 if (
-                    _suggestionsEnabled.value &&
                     result.requestId == latestSuggestionRequestId &&
                     result.input == _currentWord.value
                 ) {
@@ -235,7 +244,11 @@ class DictusImeService : LifecycleInputMethodService() {
                             isLearnedWord = dictionaryEngine.personalDictionary.isLearned(result.input),
                         ),
                     )
-                    _suggestions.value = result.suggestions
+                    _suggestions.value = if (_suggestionsEnabled.value) {
+                        result.suggestions
+                    } else {
+                        emptyList()
+                    }
                 }
             }
         }
@@ -244,8 +257,9 @@ class DictusImeService : LifecycleInputMethodService() {
                 autocorrectCoordinator.onOtherInput()
                 val activeState = ActiveKeyboardState(activation.language, activation.layout)
                 _activeKeyboardState.value = activeState
+                updateAutocorrectPolicy()
                 refreshFrenchAdaptiveKeyState()
-                if (_suggestionsEnabled.value) {
+                if (shouldRequestSuggestions()) {
                     requestSuggestionsForCurrentWord()
                 }
             }
@@ -312,7 +326,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
 
         _currentWord.value = currentWord
-        if (_suggestionsEnabled.value) {
+        if (shouldRequestSuggestions()) {
             requestSuggestionsForCurrentWord()
         } else {
             _suggestions.value = emptyList()
@@ -324,6 +338,23 @@ class DictusImeService : LifecycleInputMethodService() {
         _suggestions.value = emptyList()
         latestSuggestionRequestId = dictionaryEngine.requestSuggestions(_currentWord.value)
         autocorrectCoordinator.suggestionRequested(latestSuggestionRequestId, _currentWord.value)
+    }
+
+    private fun shouldRequestSuggestions(): Boolean =
+        AutocorrectRuntimePolicy.shouldRequestSuggestions(
+            editorEligible = isCurrentEditorSuggestionEligible,
+            suggestionDisplayEnabled = _suggestionsEnabled.value,
+            autocorrectEnabled = _autocorrectEnabled.value,
+        )
+
+    private fun updateAutocorrectPolicy() {
+        val enabled = AutocorrectRuntimePolicy.isEnabled(
+            autocorrectPreference,
+            _activeKeyboardState.value.language.profile,
+        )
+        _autocorrectEnabled.value = enabled
+        // A false transition synchronously drops pending correction evidence and undo state.
+        autocorrectCoordinator.setRuntimeEnabled(enabled)
     }
 
     override fun onStartInput(
@@ -339,6 +370,7 @@ class DictusImeService : LifecycleInputMethodService() {
             autocorrectEligible = isCurrentEditorSuggestionEligible,
             personalizedLearningAllowed = editorPolicy?.personalizedLearningAllowed == true,
         )
+        autocorrectCoordinator.setRuntimeEnabled(_autocorrectEnabled.value)
         latestSuggestionRequestId = null
         _currentWord.value = ""
         _suggestions.value = emptyList()
