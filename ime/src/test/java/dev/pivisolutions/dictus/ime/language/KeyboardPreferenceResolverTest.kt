@@ -10,7 +10,7 @@ class KeyboardPreferenceResolverTest {
     fun `absent and unknown language safely resolve to French`() {
         assertEquals(SupportedLanguage.FRENCH, KeyboardPreferenceResolver.language(null))
         assertEquals(SupportedLanguage.FRENCH, KeyboardPreferenceResolver.language("auto"))
-        assertEquals(SupportedLanguage.FRENCH, KeyboardPreferenceResolver.language("de"))
+        assertEquals(SupportedLanguage.GERMAN, KeyboardPreferenceResolver.language("de"))
     }
 
     @Test
@@ -26,6 +26,14 @@ class KeyboardPreferenceResolverTest {
         assertEquals(
             KeyboardLayout.QWERTY,
             KeyboardPreferenceResolver.layout(null, SupportedLanguage.SPANISH),
+        )
+        assertEquals(
+            KeyboardLayout.QWERTY,
+            KeyboardPreferenceResolver.layout(null, SupportedLanguage.GERMAN),
+        )
+        assertEquals(
+            KeyboardLayout.AZERTY,
+            KeyboardPreferenceResolver.layout("azerty", SupportedLanguage.GERMAN),
         )
         assertEquals(
             KeyboardLayout.AZERTY,

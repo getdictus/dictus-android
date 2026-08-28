@@ -32,6 +32,7 @@ class KeyboardLanguageCyclerTest {
 
         assertEquals(SupportedLanguage.ENGLISH, cycleKeyboardLanguage(store))
         assertEquals(SupportedLanguage.SPANISH, cycleKeyboardLanguage(store))
+        assertEquals(SupportedLanguage.GERMAN, cycleKeyboardLanguage(store))
         assertEquals(SupportedLanguage.FRENCH, cycleKeyboardLanguage(store))
 
         val persisted = store.data.first()

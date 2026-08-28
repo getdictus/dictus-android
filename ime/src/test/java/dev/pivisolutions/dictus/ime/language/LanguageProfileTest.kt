@@ -10,10 +10,11 @@ class LanguageProfileTest {
 
     @Test
     fun `supported languages bind one-to-one in toolbar cycle order`() {
-        assertEquals(listOf("fr", "en", "es"), SupportedLanguage.entries.map { it.code })
+        assertEquals(listOf("fr", "en", "es", "de"), SupportedLanguage.entries.map { it.code })
         assertSame(frenchLanguageProfile, SupportedLanguage.FRENCH.profile)
         assertSame(englishLanguageProfile, SupportedLanguage.ENGLISH.profile)
         assertSame(spanishLanguageProfile, SupportedLanguage.SPANISH.profile)
+        assertSame(germanLanguageProfile, SupportedLanguage.GERMAN.profile)
         assertEquals(
             SupportedLanguage.entries.size,
             SupportedLanguage.entries.map { it.profile.code }.toSet().size,
@@ -27,7 +28,7 @@ class LanguageProfileTest {
     fun `unknown persisted language codes fall back to French`() {
         assertEquals(SupportedLanguage.FRENCH, SupportedLanguage.fromCodeOrDefault(null))
         assertEquals(SupportedLanguage.FRENCH, SupportedLanguage.fromCodeOrDefault(""))
-        assertEquals(SupportedLanguage.FRENCH, SupportedLanguage.fromCodeOrDefault("de"))
+        assertEquals(SupportedLanguage.GERMAN, SupportedLanguage.fromCodeOrDefault("de"))
         assertEquals(SupportedLanguage.ENGLISH, SupportedLanguage.fromCodeOrDefault("en"))
         assertEquals(SupportedLanguage.SPANISH, SupportedLanguage.fromCodeOrDefault("es"))
     }
@@ -36,7 +37,8 @@ class LanguageProfileTest {
     fun `toolbar cycle follows registry order and wraps`() {
         assertEquals(SupportedLanguage.ENGLISH, SupportedLanguage.FRENCH.next())
         assertEquals(SupportedLanguage.SPANISH, SupportedLanguage.ENGLISH.next())
-        assertEquals(SupportedLanguage.FRENCH, SupportedLanguage.SPANISH.next())
+        assertEquals(SupportedLanguage.GERMAN, SupportedLanguage.SPANISH.next())
+        assertEquals(SupportedLanguage.FRENCH, SupportedLanguage.GERMAN.next())
     }
 
     @Test
@@ -152,7 +154,7 @@ class LanguageProfileTest {
         assertTrue(spanishLanguageProfile.collapseRules.isEmpty())
         assertTrue(spanishLanguageProfile.seedBigrams.isEmpty())
 
-        assertEquals(listOf("fr", "en", "es"), SupportedLanguage.entries.map { it.code })
+        assertEquals(listOf("fr", "en", "es", "de"), SupportedLanguage.entries.map { it.code })
         assertEquals(SupportedLanguage.SPANISH, SupportedLanguage.fromCodeOrDefault("es"))
     }
 

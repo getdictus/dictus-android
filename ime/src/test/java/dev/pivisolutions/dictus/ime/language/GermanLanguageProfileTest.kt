@@ -1,14 +1,13 @@
 package dev.pivisolutions.dictus.ime.language
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GermanLanguageProfileTest {
 
     @Test
-    fun `German profile matches the approved iOS contract without runtime registration`() {
+    fun `German profile matches the approved iOS contract`() {
         assertEquals("de", germanLanguageProfile.code)
         assertEquals("Deutsch", germanLanguageProfile.displayName)
         assertEquals("DE", germanLanguageProfile.shortCode)
@@ -42,8 +41,8 @@ class GermanLanguageProfileTest {
     }
 
     @Test
-    fun `German remains hidden until matching native assets are packaged`() {
-        assertFalse(SupportedLanguage.entries.any { it.code == germanLanguageProfile.code })
-        assertEquals(SupportedLanguage.FRENCH, SupportedLanguage.fromCodeOrDefault("de"))
+    fun `German is registered after its matching native assets are packaged`() {
+        assertTrue(SupportedLanguage.entries.any { it.code == germanLanguageProfile.code })
+        assertEquals(SupportedLanguage.GERMAN, SupportedLanguage.fromCodeOrDefault("de"))
     }
 }
