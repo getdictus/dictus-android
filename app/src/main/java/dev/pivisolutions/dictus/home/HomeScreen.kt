@@ -47,6 +47,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
@@ -63,12 +64,16 @@ import kotlinx.coroutines.flow.map
  *
  * @param dataStore Application DataStore for reading active model preference.
  * @param onNewDictation Callback for the "Nouvelle dictée" CTA.
+ * @param onOpenHistory Callback for the history entry point (swipe up or tap the hint).
+ * @param historyEnabled Whether the history entry point exists at all. Defaults to the
+ *   premium flag; tests override it to exercise the gated behaviour both ways.
  */
 @Composable
 fun HomeScreen(
     dataStore: DataStore<Preferences>,
     onNewDictation: () -> Unit,
     onOpenHistory: () -> Unit = {},
+    historyEnabled: Boolean = PremiumFlags.HISTORY_VISIBLE,
 ) {
     val activeModelKey by dataStore.data
         .map { it[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY }
@@ -88,19 +93,25 @@ fun HomeScreen(
             .fillMaxSize()
             .testTag("home_screen")
             .background(MaterialTheme.colorScheme.background)
-            .pointerInput(onOpenHistory, historySwipeThresholdPx) {
-                detectVerticalDragGestures(
-                    onDragStart = { upwardDrag = 0f },
-                    onVerticalDrag = { change, amount ->
-                        if (amount < 0f) upwardDrag -= amount else upwardDrag = 0f
-                        change.consume()
-                    },
-                    onDragEnd = {
-                        if (upwardDrag > historySwipeThresholdPx) onOpenHistory()
-                        upwardDrag = 0f
-                    },
-                )
-            }
+            .then(
+                if (!historyEnabled) {
+                    Modifier
+                } else {
+                    Modifier.pointerInput(onOpenHistory, historySwipeThresholdPx) {
+                        detectVerticalDragGestures(
+                            onDragStart = { upwardDrag = 0f },
+                            onVerticalDrag = { change, amount ->
+                                if (amount < 0f) upwardDrag -= amount else upwardDrag = 0f
+                                change.consume()
+                            },
+                            onDragEnd = {
+                                if (upwardDrag > historySwipeThresholdPx) onOpenHistory()
+                                upwardDrag = 0f
+                            },
+                        )
+                    }
+                },
+            )
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -245,25 +256,27 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Column(
-            modifier = Modifier
-                .clickable(
-                    onClickLabel = stringResource(R.string.home_history_hint),
-                    onClick = onOpenHistory,
+        if (historyEnabled) {
+            Column(
+                modifier = Modifier
+                    .clickable(
+                        onClickLabel = stringResource(R.string.home_history_hint),
+                        onClick = onOpenHistory,
+                    )
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = null,
+                    tint = DictusColors.Accent,
                 )
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
-                contentDescription = null,
-                tint = DictusColors.Accent,
-            )
-            Text(
-                text = stringResource(R.string.home_history_hint),
-                color = LocalDictusColors.current.textSecondary,
-                fontSize = 13.sp,
-            )
+                Text(
+                    text = stringResource(R.string.home_history_hint),
+                    color = LocalDictusColors.current.textSecondary,
+                    fontSize = 13.sp,
+                )
+            }
         }
     }
 }

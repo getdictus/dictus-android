@@ -22,6 +22,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
+import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
@@ -283,14 +284,19 @@ private fun MainTabsScreen(
                     },
                 )
             }
-            composable(
-                route = AppDestination.History.route,
-                enterTransition = { slideInVertically(initialOffsetY = { it }) },
-                exitTransition = { slideOutVertically(targetOffsetY = { it }) },
-                popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
-                popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
-            ) {
-                HistoryRoute(onBack = { navController.popBackStack() })
+            // History is a Pro feature that has not shipped yet: while the flag is off the
+            // route is never registered, so no navigation can reach the screen even by
+            // mistake. The implementation stays compiled and unit-tested behind it.
+            if (PremiumFlags.HISTORY_VISIBLE) {
+                composable(
+                    route = AppDestination.History.route,
+                    enterTransition = { slideInVertically(initialOffsetY = { it }) },
+                    exitTransition = { slideOutVertically(targetOffsetY = { it }) },
+                    popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
+                    popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
+                ) {
+                    HistoryRoute(onBack = { navController.popBackStack() })
+                }
             }
             composable(AppDestination.Models.route) {
                 ModelsScreen()
