@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build Dictus NGRM v1 assets from pinned, integrity-checked Google Books CSVs."""
+"""Build Dictus NGRM v1 assets from a pinned, integrity-checked Tatoeba sentence export."""
 
 from __future__ import annotations
 
 import argparse
-import csv
+import bz2
 import hashlib
 import json
 import math
@@ -14,26 +14,18 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
-REVISION = "8e16017414d88aa75cba348416ba877a9135889a"
-BASE_URL = f"https://raw.githubusercontent.com/orgtre/google-books-ngram-frequency/{REVISION}/ngrams"
+# Tatoeba publishes one rolling export per language rather than versioned revisions, so the
+# snapshot below is pinned by content hash. A mismatch is fatal on purpose: upstream moved, and
+# the regenerated assets must be re-reviewed and re-pinned rather than silently changing.
+SNAPSHOT = "2026-08-30"
+BASE_URL = "https://downloads.tatoeba.org/exports/per_language"
 SOURCE_SHA256 = {
-    "de": {
-        2: "a9b5e20c707337d01106014263ae6ee3b6769ce03934e2e0279b1c84614175bc",
-        3: "51c53108407278fb77ecd58e429c2417d61b91c154faa20e0fd9a42a810db867",
-    },
-    "es": {
-        2: "fa2b6368b08744d03d604cdacdaab1c15834dfe2f1d81c9a3ad2f102a6643774",
-        3: "85b49f0521c57dd8bc2718c367c326397a06e45a0b36cdbf86b0f06cdf80258d",
-    },
-    "fr": {
-        2: "63f48cc4f9511306cdd15dacd93d2550447ba789c6a58b1ee302bbf3f562d48d",
-        3: "0e1829c66c2244b567c2a18ca088daf1797770c90047855f8b04ee162aa84b90",
-    },
-    "en": {
-        2: "9e2ae9e6149785a078e62325d468e462974ce6eb94eefe8f27b16e6d011e8ee5",
-        3: "6cfdd4cc65cbd0df606d174df00274843c81eb430cfbeddce4711fb07f4e12df",
-    },
+    "de": "d94890e3f1ca3cf1fa928b4fa727119421458d11081a1afc1144faf73648847b",
+    "en": "d1a7d45ad531a2cf5ee3b3660aaef3bdf6e1915f247893afd40dacc3a90a8175",
+    "es": "6902d2d7d6170378003fd36b8b036abe2ce5776921995a9bea8fd94a38032bb6",
+    "fr": "02c6a4041697aa3bd3e96f5b245dbada4523442d4755ccbc842af86ff9b5b412",
 }
+ISO3 = {"de": "deu", "en": "eng", "es": "spa", "fr": "fra"}
 LANG_NAME = {"de": "german", "fr": "french", "en": "english", "es": "spanish"}
 SEEDS = {
     # ADR 0001 deliberately defines no authored seed pairs for German.
@@ -54,32 +46,37 @@ SEEDS = {
         ("we", "are"), ("we", "have"), ("kind", "of"), ("sort", "of"),
     ],
 }
-TOKEN = re.compile(r"^[a-zA-ZÀ-ÿœŒ]+(?:[-'][a-zA-ZÀ-ÿœŒ]+)*$")
+TOKEN = re.compile(r"[a-zA-ZÀ-ÿœŒ]+(?:[-'][a-zA-ZÀ-ÿœŒ]+)*")
+# Anything that is neither a token character nor whitespace ends a context. This mirrors
+# NextWordContextExtractor, which refuses to bridge a context backwards over punctuation or
+# digits: a key learned across a comma could never be queried at runtime.
+BOUNDARY = re.compile(r"[^a-zA-ZÀ-ÿœŒ'\-\s]+")
 HEADER_SIZE = 32
 MAX_RESULTS = 16
+MIN_FREQUENCY = 2
 
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def source_name(language: str, width: int) -> str:
-    return f"{width}grams_{LANG_NAME[language]}.csv"
+def source_name(language: str) -> str:
+    return f"{ISO3[language]}_sentences.tsv.bz2"
 
 
-def acquire_source(language: str, width: int, cache_dir: Path) -> tuple[bytes, str]:
-    name = source_name(language, width)
+def acquire_source(language: str, cache_dir: Path) -> tuple[bytes, str]:
+    name = source_name(language)
     destination = cache_dir / name
-    url = f"{BASE_URL}/{name}"
+    url = f"{BASE_URL}/{ISO3[language]}/{name}"
     if destination.exists():
         data = destination.read_bytes()
     else:
         request = urllib.request.Request(url, headers={"User-Agent": "Dictus-asset-builder/1"})
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=300) as response:
             data = response.read()
         cache_dir.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(data)
-    expected = SOURCE_SHA256[language][width]
+    expected = SOURCE_SHA256[language]
     actual = sha256(data)
     if actual != expected:
         raise ValueError(f"source integrity mismatch for {name}: expected {expected}, got {actual}")
@@ -90,25 +87,38 @@ def normalize(token: str) -> str:
     return token.strip().lower().replace("’", "'").replace("‘", "'")
 
 
-def parse_csv(data: bytes, width: int) -> dict[str, dict[str, int]]:
-    parsed: dict[str, dict[str, int]] = defaultdict(dict)
-    rows = csv.reader(data.decode("utf-8").splitlines())
-    for row in rows:
-        if len(row) != 2 or row[0].lower() == "ngram":
+def parse_sentences(data: bytes) -> tuple[dict[str, dict[str, int]], dict[str, dict[str, int]]]:
+    """Counts bigram and trigram continuations in one pass over the sentence export.
+
+    Each export row is `id TAB iso3 TAB sentence`. Sentences are independent, and punctuation
+    splits a sentence further, so no context ever spans a boundary the runtime would refuse.
+    """
+    bigrams: dict[str, dict[str, int]] = defaultdict(dict)
+    trigrams: dict[str, dict[str, int]] = defaultdict(dict)
+    for line in bz2.decompress(data).decode("utf-8").splitlines():
+        row = line.split("\t")
+        if len(row) != 3:
             continue
-        words = [normalize(word) for word in row[0].split()]
-        if len(words) != width or not all(TOKEN.fullmatch(word) for word in words):
-            continue
-        try:
-            frequency = int(row[1])
-        except ValueError:
-            continue
-        if frequency < 2:
-            continue
-        key = words[0] if width == 2 else words[0] + "\0" + words[1]
-        predicted = words[-1]
-        parsed[key][predicted] = max(parsed[key].get(predicted, 0), frequency)
-    return parsed
+        for segment in BOUNDARY.split(normalize(row[2])):
+            words = TOKEN.findall(segment)
+            for index in range(len(words) - 1):
+                key, predicted = words[index], words[index + 1]
+                bigrams[key][predicted] = bigrams[key].get(predicted, 0) + 1
+            for index in range(len(words) - 2):
+                key = words[index] + "\0" + words[index + 1]
+                predicted = words[index + 2]
+                trigrams[key][predicted] = trigrams[key].get(predicted, 0) + 1
+    return prune(bigrams), prune(trigrams)
+
+
+def prune(data: dict[str, dict[str, int]]) -> dict[str, dict[str, int]]:
+    """Drops continuations seen once. A single occurrence is as likely a typo as a phrase."""
+    pruned: dict[str, dict[str, int]] = {}
+    for key, results in data.items():
+        kept = {word: count for word, count in results.items() if count >= MIN_FREQUENCY}
+        if kept:
+            pruned[key] = kept
+    return pruned
 
 
 def inject_seeds(data: dict[str, dict[str, int]], language: str) -> None:
@@ -141,6 +151,25 @@ def normalized(data: dict[str, list[tuple[str, int]]]) -> dict[str, list[tuple[s
     }
 
 
+def drop_collisions(data: dict[str, list[tuple[str, int]]]) -> tuple[dict[str, list[tuple[str, int]]], list[str]]:
+    """Removes every key involved in an FNV-1a collision, keeping none of them.
+
+    NGRM v1 addresses a context by a 32-bit hash, so at the corpus sizes a sentence-derived
+    trigram section reaches, collisions are near-certain rather than exotic. Keeping the more
+    frequent side would silently serve its continuations for the other context, so both go: a
+    context with no prediction is honest, a context with another context's prediction is not.
+    Raising this ceiling means a 64-bit key, and that is an NGRM v2 on both platforms.
+    """
+    by_hash: dict[int, list[str]] = defaultdict(list)
+    for key in data:
+        by_hash[fnv1a(key.encode("utf-8"))].append(key)
+    dropped = sorted(key for keys in by_hash.values() if len(keys) > 1 for key in keys)
+    if not dropped:
+        return data, []
+    discarded = set(dropped)
+    return {key: results for key, results in data.items() if key not in discarded}, dropped
+
+
 def section(data: dict[str, list[tuple[str, int]]], offsets: dict[str, int]) -> bytes:
     hashed: list[tuple[int, str, list[tuple[str, int]]]] = []
     seen: dict[int, str] = {}
@@ -159,7 +188,12 @@ def section(data: dict[str, list[tuple[str, int]]], offsets: dict[str, int]) -> 
     return bytes(output)
 
 
-def serialize(bigrams: dict[str, list[tuple[str, int]]], trigrams: dict[str, list[tuple[str, int]]]) -> bytes:
+def serialize(
+    bigrams: dict[str, list[tuple[str, int]]],
+    trigrams: dict[str, list[tuple[str, int]]],
+) -> tuple[bytes, dict[str, int]]:
+    bigrams, bigram_collisions = drop_collisions(bigrams)
+    trigrams, trigram_collisions = drop_collisions(trigrams)
     bigrams = normalized(bigrams)
     trigrams = normalized(trigrams)
     words = sorted({word for dataset in (bigrams, trigrams) for results in dataset.values() for word, _ in results})
@@ -177,7 +211,11 @@ def serialize(bigrams: dict[str, list[tuple[str, int]]], trigrams: dict[str, lis
         trigram_offset, string_offset, len(strings),
     )
     assert len(header) == HEADER_SIZE
-    return header + bigram_bytes + trigram_bytes + strings
+    collisions = {
+        "bigramKeysDroppedToCollision": len(bigram_collisions),
+        "trigramKeysDroppedToCollision": len(trigram_collisions),
+    }
+    return header + bigram_bytes + trigram_bytes + strings, collisions
 
 
 def inspect(data: bytes) -> dict[str, int]:
@@ -194,12 +232,10 @@ def inspect(data: bytes) -> dict[str, int]:
 
 
 def build(language: str, output: Path, cache_dir: Path) -> dict[str, object]:
-    bigram_source, bigram_url = acquire_source(language, 2, cache_dir)
-    trigram_source, trigram_url = acquire_source(language, 3, cache_dir)
-    bigrams = parse_csv(bigram_source, 2)
-    trigrams = parse_csv(trigram_source, 3)
+    source, url = acquire_source(language, cache_dir)
+    bigrams, trigrams = parse_sentences(source)
     inject_seeds(bigrams, language)
-    binary = serialize(cap(bigrams), cap(trigrams))
+    binary, collisions = serialize(cap(bigrams), cap(trigrams))
     stats = inspect(binary)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(binary)
@@ -207,11 +243,10 @@ def build(language: str, output: Path, cache_dir: Path) -> dict[str, object]:
         "language": language,
         "output": str(output),
         "sha256": sha256(binary),
+        "snapshot": SNAPSHOT,
         **stats,
-        "sources": [
-            {"url": bigram_url, "sha256": SOURCE_SHA256[language][2]},
-            {"url": trigram_url, "sha256": SOURCE_SHA256[language][3]},
-        ],
+        **collisions,
+        "sources": [{"url": url, "sha256": SOURCE_SHA256[language]}],
     }
 
 
