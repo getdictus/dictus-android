@@ -32,6 +32,7 @@ class HomeScreenHistoryCallbackTest {
                     dataStore = FakeDataStore(),
                     onNewDictation = { dictationCalls++ },
                     onOpenHistory = { historyCalls++ },
+                    historyEnabled = true,
                 )
             }
         }
@@ -47,11 +48,25 @@ class HomeScreenHistoryCallbackTest {
         var historyCalls = 0
         composeRule.setContent {
             DictusTheme {
-                HomeScreen(FakeDataStore(), {}, { historyCalls++ })
+                HomeScreen(FakeDataStore(), {}, { historyCalls++ }, historyEnabled = true)
             }
         }
         composeRule.onNodeWithTag("home_screen").performTouchInput { swipeUp() }
         assertEquals(1, historyCalls)
+    }
+
+    @Test
+    fun `gated history exposes neither the hint nor the swipe`() {
+        var historyCalls = 0
+        composeRule.setContent {
+            DictusTheme {
+                HomeScreen(FakeDataStore(), {}, { historyCalls++ }, historyEnabled = false)
+            }
+        }
+
+        composeRule.onNodeWithText("Swipe up for history").assertDoesNotExist()
+        composeRule.onNodeWithTag("home_screen").performTouchInput { swipeUp() }
+        assertEquals(0, historyCalls)
     }
 
     private class FakeDataStore : DataStore<Preferences> {

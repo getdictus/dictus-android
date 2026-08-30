@@ -21,3 +21,7 @@ Thumbs.db
 *.jks
 *.keystore
 keystore.properties
+
+# Asset builder download cache
+.cache/
+tools/__pycache__/
