@@ -35,10 +35,10 @@ class NativeTrie private constructor(
             "en_spellcheck.dict" to "2721a68a1dca369b6a23d149405c99bbff5071caa973843b896fad088912b11c",
             "es_spellcheck.dict" to "39015e063ea69282ff6ac3099e852fe06b94118f41a69a680f75582899bb9ab4",
             "fr_spellcheck.dict" to "4f52b3cd584ff1844ad09719d21751d93ebc76e506bde0b9b958d876b886f92d",
-            "de_ngrams.dict" to "89219a332ed98b651abde529f9156ebf9f3e251355d9a880468bddbbfb3a303d",
-            "en_ngrams.dict" to "eecdf421c71c39e9f7822cb48a8624efb9ae8d86c6a01e976c6fa506f2fc71bd",
-            "es_ngrams.dict" to "d48691aa2c8c95fff9f831f32e3ae565917f17352ea696f1fd6d655fb320750e",
-            "fr_ngrams.dict" to "ba8f8b3ea9ade673eeb158e4aaeebcb129647938b8cb619189393cbb1c6da712",
+            "de_ngrams.dict" to "889df643d4079fe8408996af53f840b58609a86aa2a205618b5b51d047cf6e6d",
+            "en_ngrams.dict" to "9d1a0a1383c0cc02f2697652d58e1fcb8cd12819b1c11aa15edb807ac8ab557d",
+            "es_ngrams.dict" to "bdaec24949ddeae8e7f4840d5e59de58fed227ecc62f4ffc78218e4c8981e4ed",
+            "fr_ngrams.dict" to "cd8a505818a333d6d27076a7c47d1a86b838a0054b2003df408f8f4d4b191720",
         )
         private val ngramAssets = mapOf(
             "de_spellcheck.dict" to "de_ngrams.dict",

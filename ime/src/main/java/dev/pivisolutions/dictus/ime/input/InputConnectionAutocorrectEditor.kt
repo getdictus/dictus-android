@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.ime.input
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import java.text.Normalizer
 
 /** A fail-closed [AutocorrectEditor] backed by an Android [InputConnection]. */
 class InputConnectionAutocorrectEditor(
@@ -20,6 +21,95 @@ class InputConnectionAutocorrectEditor(
     }
 
     override fun beginBatchEdit(): Boolean = inputConnection.beginBatchEdit()
+
+    /**
+     * Cursor-relative replacement for editors that expose no extracted text.
+     *
+     * Uses only `getTextBeforeCursor`, `deleteSurroundingText` and `commitText` — the three calls
+     * AOSP LatinIME's own correction path relies on, and the ones every InputConnection
+     * implements. It proves what those allow: the text before the cursor ends with [original]
+     * beforehand and with [replacement] afterwards.
+     *
+     * The window returned by `getTextBeforeCursor` slides as the text changes, so both checks are
+     * on the tail. Anything else is reported as indeterminate rather than guessed at.
+     */
+    override fun attemptRelativeReplacement(
+        original: String,
+        replacement: String,
+    ): AutocorrectReplacementOutcome {
+        if (original.isEmpty() || original.length > contextLimit || replacement.length > contextLimit) {
+            return AutocorrectReplacementOutcome.RejectedUnchanged
+        }
+        if (!selectionIsCollapsed()) return AutocorrectReplacementOutcome.RejectedUnchanged
+        val before = textBeforeCursor() ?: return AutocorrectReplacementOutcome.FailedUnchanged
+        // The editor may hold a different normalization than the dictionary, so the tail is
+        // located by comparing normalized forms while deleting the code units actually present.
+        val deletable = matchingTailLength(before, original)
+            ?: return AutocorrectReplacementOutcome.RejectedUnchanged
+
+        val deleted = try {
+            inputConnection.deleteSurroundingText(deletable, 0)
+        } catch (_: Exception) {
+            false
+        }
+        val committed = if (deleted) {
+            try {
+                inputConnection.commitText(replacement, 1)
+            } catch (_: Exception) {
+                false
+            }
+        } else {
+            false
+        }
+
+        val after = textBeforeCursor()
+        return when {
+            after == null -> AutocorrectReplacementOutcome.IndeterminateMutation
+            matchingTailLength(after, replacement) != null -> AutocorrectReplacementOutcome.Applied
+            !deleted || !committed -> restoredOrIndeterminate(after, original)
+            else -> restoredOrIndeterminate(after, original)
+        }
+    }
+
+    private fun restoredOrIndeterminate(
+        after: String,
+        original: String,
+    ): AutocorrectReplacementOutcome = if (matchingTailLength(after, original) != null) {
+        AutocorrectReplacementOutcome.FailedUnchanged
+    } else {
+        AutocorrectReplacementOutcome.IndeterminateMutation
+    }
+
+    private fun selectionIsCollapsed(): Boolean = try {
+        inputConnection.getSelectedText(0).isNullOrEmpty()
+    } catch (_: Exception) {
+        false
+    }
+
+    private fun textBeforeCursor(): String? = try {
+        inputConnection.getTextBeforeCursor(contextLimit, 0)?.toString()
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * The number of trailing code units of [text] whose normalized form equals [expected], or null.
+     *
+     * A composed `é` and a decomposed `e` + combining acute mean the same word in different code
+     * unit counts, so the length to delete has to be measured against the editor's own bytes
+     * rather than against the dictionary's.
+     */
+    private fun matchingTailLength(text: String, expected: String): Int? {
+        val normalizedExpected = Normalizer.normalize(expected, Normalizer.Form.NFC)
+        val shortest = normalizedExpected.length
+        val longest = minOf(text.length, shortest * 2)
+        for (length in shortest..longest) {
+            val tail = text.takeLast(length)
+            if (tail.length != length) return null
+            if (Normalizer.normalize(tail, Normalizer.Form.NFC) == normalizedExpected) return length
+        }
+        return null
+    }
 
     override fun endBatchEdit(): Boolean = inputConnection.endBatchEdit()
 

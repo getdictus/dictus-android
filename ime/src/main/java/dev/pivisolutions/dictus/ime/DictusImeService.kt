@@ -53,6 +53,7 @@ import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionCoordinator
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionInsertResult
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
+import dev.pivisolutions.dictus.ime.input.AutocorrectSpaceDiagnosis
 import dev.pivisolutions.dictus.ime.input.AutocorrectSpaceResult
 import dev.pivisolutions.dictus.ime.input.ImeServicePrivacyPolicy
 import dev.pivisolutions.dictus.ime.input.ImeTranscriptionRetentionSession
@@ -102,6 +103,9 @@ class DictusImeService : LifecycleInputMethodService() {
         /** Fully-qualified class name of DictationService in the app module. */
         private const val DICTATION_SERVICE_CLASS =
             "dev.pivisolutions.dictus.service.DictationService"
+
+        /** Spaces between autocorrect tally reports — roughly one line per sentence typed. */
+        private const val AUTOCORRECT_REPORT_INTERVAL = 25
     }
 
     private val entryPoint: DictusImeEntryPoint by lazy {
@@ -166,6 +170,17 @@ class DictusImeService : LifecycleInputMethodService() {
     private val _suggestionMode = MutableStateFlow(SuggestionPresentationMode.COMPLETION)
     private var latestSuggestionRequestId: Long? = null
     private var correctionSessionId = 0L
+    // Rolling autocorrect tally. Autocorrect is silent by design, so a report of "it never
+    // corrects" used to leave nothing behind; one line per Space would drown the 1 MB buffer in
+    // a few minutes of typing. Counting and reporting periodically keeps both properties.
+    private val autocorrectTally = linkedMapOf<AutocorrectSpaceDiagnosis, Int>()
+    private var spacesSinceAutocorrectReport = 0
+
+    // Null until the policy is first resolved, so the opening state is logged as well as every
+    // later change. Comparing against _autocorrectEnabled alone stays silent when the resolved
+    // value happens to equal the default, which is the common case and the one worth stating.
+    private var loggedAutocorrectEnabled: Boolean? = null
+
     private val _predictionToken = MutableStateFlow<NextWordPredictionToken?>(null)
     private val predictionCoordinator = NextWordPredictionCoordinator()
     private val autocorrectCoordinator: AutocorrectInputCoordinator by lazy {
@@ -489,11 +504,52 @@ class DictusImeService : LifecycleInputMethodService() {
         )
     }
 
+    /**
+     * Accumulates why each Space did or did not correct, and reports periodically.
+     *
+     * The two editor outcomes are reported immediately instead: they mean a candidate existed and
+     * the editor would not take it, which is rare enough to never flood and specific enough that
+     * waiting for the next summary would lose which keystroke produced it.
+     */
+    private fun recordAutocorrectOutcome(diagnosis: AutocorrectSpaceDiagnosis?, detail: String?) {
+        diagnosis ?: return
+        autocorrectTally[diagnosis] = (autocorrectTally[diagnosis] ?: 0) + 1
+        if (
+            diagnosis == AutocorrectSpaceDiagnosis.EDITOR_REFUSED ||
+            diagnosis == AutocorrectSpaceDiagnosis.EDITOR_INDETERMINATE
+        ) {
+            Timber.w(
+                "Autocorrect had a candidate the editor would not apply: %s (%s)",
+                diagnosis,
+                detail ?: "no detail",
+            )
+        }
+        spacesSinceAutocorrectReport++
+        if (spacesSinceAutocorrectReport < AUTOCORRECT_REPORT_INTERVAL) return
+        spacesSinceAutocorrectReport = 0
+        Timber.d(
+            "Autocorrect outcomes (%s): %s",
+            _activeKeyboardState.value.language.code,
+            autocorrectTally.entries.joinToString(" ") { "${it.key}=${it.value}" },
+        )
+        autocorrectTally.clear()
+    }
+
     private fun updateAutocorrectPolicy() {
         val enabled = AutocorrectRuntimePolicy.isEnabled(
             autocorrectPreference,
             _activeKeyboardState.value.language.profile,
         )
+        if (enabled != loggedAutocorrectEnabled) {
+            loggedAutocorrectEnabled = enabled
+            Timber.i(
+                "Autocorrect %s (preference=%s, language=%s, supported=%b)",
+                if (enabled) "enabled" else "disabled",
+                autocorrectPreference?.toString() ?: "default",
+                _activeKeyboardState.value.language.code,
+                _activeKeyboardState.value.language.profile.supportsAutocorrect,
+            )
+        }
         _autocorrectEnabled.value = enabled
         // A false transition synchronously drops pending correction evidence and undo state.
         autocorrectCoordinator.setRuntimeEnabled(enabled)
@@ -529,6 +585,27 @@ class DictusImeService : LifecycleInputMethodService() {
             attribute.initialSelStart == attribute.initialSelEnd
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         refreshFrenchAdaptiveKeyState()
+        logEditorSession(attribute, restarting)
+    }
+
+    /**
+     * Records which editor the keyboard was handed, once per field focus.
+     *
+     * A report that autocorrect never fires is unactionable without this. The whole verified
+     * replacement path rests on getExtractedText, which is the host app's to implement, and a
+     * WebView, a Compose field and a plain EditText do not answer alike. The package name and
+     * input type say which one was in front of the user; neither is user content.
+     */
+    private fun logEditorSession(attribute: EditorInfo?, restarting: Boolean) {
+        if (restarting) return
+        Timber.d(
+            "Editor session: package=%s inputType=0x%08x imeOptions=0x%08x eligible=%b learning=%b",
+            attribute?.packageName ?: "unknown",
+            attribute?.inputType ?: 0,
+            attribute?.imeOptions ?: 0,
+            isCurrentEditorSuggestionEligible,
+            isPersonalizedLearningAllowed,
+        )
     }
 
     override fun onStartInputView(
@@ -964,6 +1041,10 @@ class DictusImeService : LifecycleInputMethodService() {
             val result = autocorrectCoordinator.onSpace(InputConnectionAutocorrectEditor(inputConnection)) {
                 inputConnection.commitText(" ", 1)
             }
+            recordAutocorrectOutcome(
+                autocorrectCoordinator.lastSpaceDiagnosis,
+                autocorrectCoordinator.lastSpaceDetail,
+            )
             if (result != AutocorrectSpaceResult.INDETERMINATE) {
                 requestNextWordPredictions(result)
             } else {

@@ -28,6 +28,7 @@ import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
+import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.TranscriptionHistoryMetadata
 import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
 import kotlinx.coroutines.CancellationException
@@ -389,7 +390,9 @@ class DictationService : Service(), DictationController {
             if (processedText.isNotEmpty()) {
                 val model = ModelCatalog.findByKey(activeModelKey)
                 transcriptionHistoryWriter.persist(
-                    retention = retention,
+                    // Pro gate: callers still express the retention their context deserves,
+                    // the flag only ever downgrades it (see PremiumFlags.HISTORY_VISIBLE).
+                    retention = PremiumFlags.effectiveRetention(retention),
                     text = processedText,
                     metadata = TranscriptionHistoryMetadata(
                         requestedLanguage = languagePref,

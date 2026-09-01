@@ -25,6 +25,20 @@ object LastTranscriptionStore {
     }
 
     /**
+     * Drops the preview unconditionally.
+     *
+     * Called once per process start so the Home preview never survives an app restart, matching
+     * iOS: force-quitting the app is expected to take the last transcription with it. The
+     * five-minute window in [RETENTION_MS] still bounds a preview inside a single session.
+     */
+    suspend fun clear(dataStore: DataStore<Preferences>) {
+        dataStore.edit { preferences ->
+            preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION)
+            preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT)
+        }
+    }
+
+    /**
      * Clears expired text on app launch. Legacy entries without a timestamp and
      * impossible future timestamps are removed conservatively.
      */
