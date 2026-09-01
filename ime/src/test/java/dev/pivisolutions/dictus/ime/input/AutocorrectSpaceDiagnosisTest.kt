@@ -83,12 +83,20 @@ class AutocorrectSpaceDiagnosisTest {
     }
 
     @Test
-    fun `an unreadable snapshot is named as such rather than as a refused replacement`() {
+    fun `an editor with no extracted text now corrects through the relative path`() {
+        val coordinator = coordinatorWith(snapshot())
+        coordinator.onSpace(RelativeOnlyEditor(), {})
+
+        assertEquals(AutocorrectSpaceDiagnosis.APPLIED, coordinator.lastSpaceDiagnosis)
+    }
+
+    @Test
+    fun `an editor that answers neither path names the failure, not the missing snapshot`() {
         val coordinator = coordinatorWith(snapshot())
         coordinator.onSpace(BlindEditor) {}
 
         assertEquals(AutocorrectSpaceDiagnosis.EDITOR_REFUSED, coordinator.lastSpaceDiagnosis)
-        assertEquals("CONTEXT_UNAVAILABLE", coordinator.lastSpaceDetail)
+        assertEquals("FAILED_VERIFIED_REPLACEMENT", coordinator.lastSpaceDetail)
     }
 
     @Test
@@ -99,13 +107,34 @@ class AutocorrectSpaceDiagnosisTest {
         assertNull(coordinator.lastSpaceDetail)
     }
 
-    /** An editor whose getExtractedText answers nothing, as a WebView often does. */
+    /** An editor that answers neither the offset path nor the relative one. */
     private object BlindEditor : AutocorrectEditor {
         override fun snapshot(): AutocorrectEditorSnapshot? = null
         override fun beginBatchEdit() = true
         override fun endBatchEdit() = true
         override fun attemptVerifiedReplacement(request: AutocorrectReplacement) =
             AutocorrectReplacementOutcome.RejectedUnchanged
+    }
+
+    /** No extracted text, but the cursor-relative calls every InputConnection implements. */
+    private class RelativeOnlyEditor : AutocorrectEditor {
+        private var text = "bonjuor"
+
+        override fun snapshot(): AutocorrectEditorSnapshot? = null
+        override fun beginBatchEdit() = true
+        override fun endBatchEdit() = true
+
+        override fun attemptVerifiedReplacement(request: AutocorrectReplacement) =
+            AutocorrectReplacementOutcome.FailedUnchanged
+
+        override fun attemptRelativeReplacement(
+            original: String,
+            replacement: String,
+        ): AutocorrectReplacementOutcome {
+            if (!text.endsWith(original)) return AutocorrectReplacementOutcome.RejectedUnchanged
+            text = text.dropLast(original.length) + replacement
+            return AutocorrectReplacementOutcome.Applied
+        }
     }
 
     @Test

@@ -20,6 +20,27 @@ interface AutocorrectEditor {
     fun attemptVerifiedReplacement(request: AutocorrectReplacement): AutocorrectReplacementOutcome
 
     fun endBatchEdit(): Boolean
+
+    /**
+     * Replaces the token immediately before the cursor using only cursor-relative operations.
+     *
+     * WHY a second path at all: [attemptVerifiedReplacement] needs absolute offsets, which only
+     * `getExtractedText` supplies, and that method is the host app's to implement. Apps that
+     * return nothing from it — a note-taking app was the first found — got no autocorrect at all,
+     * silently, while their suggestion bar worked fine.
+     *
+     * The operations used here are the ones AOSP LatinIME's own correction path uses:
+     * `getTextBeforeCursor`, `deleteSurroundingText`, `commitText`. Every InputConnection
+     * implements them, so this reaches editors the extracted-text path cannot.
+     *
+     * It verifies what this API allows — that the text before the cursor ends with [original]
+     * beforehand and with [replacement] afterwards — which is less than the offset path proves
+     * and is why it stays the fallback rather than the default.
+     */
+    fun attemptRelativeReplacement(
+        original: String,
+        replacement: String,
+    ): AutocorrectReplacementOutcome = AutocorrectReplacementOutcome.FailedUnchanged
 }
 
 /**
@@ -111,6 +132,16 @@ enum class AutocorrectEditorOperation {
 
 /** Coordinates fail-closed autocorrect and its immediate undo without issuing deletion calls. */
 object AutocorrectEditorTransaction {
+
+    /**
+     * Selection marker for a correction applied without absolute offsets.
+     *
+     * The coordinator compares this against the selection reported by onUpdateSelection to keep an
+     * undo alive; a value no real selection can take retires the undo on the first movement, which
+     * is the safe direction when offsets could not be verified in the first place.
+     */
+    const val UNKNOWN_SELECTION = -1
+
     fun apply(
         editor: AutocorrectEditor,
         original: String,
@@ -120,7 +151,8 @@ object AutocorrectEditorTransaction {
         val normalizedOriginal = original.nfc()
         val normalizedCorrection = correction.nfc()
         validateRequest(normalizedOriginal, normalizedCorrection, identityEligible)?.let { return it }
-        val snapshot = readSnapshot(editor) ?: return rejected(AutocorrectRejection.CONTEXT_UNAVAILABLE)
+        val snapshot = readSnapshot(editor)
+            ?: return applyRelative(editor, normalizedOriginal, normalizedCorrection)
         val match = matchTokenAtCursor(snapshot, normalizedOriginal) ?: return snapshotValidationFailure(snapshot, normalizedOriginal)
 
         val insertedCorrection = normalizedCorrection
@@ -145,6 +177,69 @@ object AutocorrectEditorTransaction {
         }
     }
 
+    /**
+     * Applies a correction through the cursor-relative path, for editors with no extracted text.
+     *
+     * The undo it hands back carries no absolute selection, so the caller must not use one: an
+     * editor that cannot report offsets cannot have them checked either.
+     */
+    private fun applyRelative(
+        editor: AutocorrectEditor,
+        original: String,
+        correction: String,
+    ): AutocorrectTransactionResult {
+        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(original, "$correction ") }
+        return when (outcome.result) {
+            AutocorrectReplacementOutcome.Applied -> AutocorrectTransactionResult.Applied(
+                AutocorrectUndo(original, correction, UNKNOWN_SELECTION),
+                outcome.cleanup,
+            )
+            AutocorrectReplacementOutcome.RejectedUnchanged ->
+                rejected(AutocorrectRejection.EDITOR_PRECONDITION_CHANGED)
+            AutocorrectReplacementOutcome.FailedUnchanged, null ->
+                AutocorrectTransactionResult.EditorFailure(
+                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    outcome.cleanup,
+                )
+            AutocorrectReplacementOutcome.IndeterminateMutation ->
+                AutocorrectTransactionResult.IndeterminateMutation(
+                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    outcome.cleanup,
+                )
+        }
+    }
+
+    private data class BatchOutcome(
+        val result: AutocorrectReplacementOutcome?,
+        val cleanup: AutocorrectBatchCleanup,
+    )
+
+    private fun withBatch(
+        editor: AutocorrectEditor,
+        body: () -> AutocorrectReplacementOutcome,
+    ): BatchOutcome {
+        val began = try {
+            editor.beginBatchEdit()
+        } catch (_: Exception) {
+            false
+        }
+        val result = if (began) {
+            try {
+                body()
+            } catch (_: Exception) {
+                AutocorrectReplacementOutcome.IndeterminateMutation
+            }
+        } else {
+            null
+        }
+        val cleanup = try {
+            if (editor.endBatchEdit()) AutocorrectBatchCleanup.SUCCEEDED else AutocorrectBatchCleanup.FAILED
+        } catch (_: Exception) {
+            AutocorrectBatchCleanup.FAILED
+        }
+        return BatchOutcome(result, cleanup)
+    }
+
     fun undo(
         editor: AutocorrectEditor,
         undo: AutocorrectUndo,
@@ -153,7 +248,8 @@ object AutocorrectEditorTransaction {
         val normalizedOriginal = undo.original.nfc()
         val normalizedCorrection = undo.correction.nfc()
         validateRequest(normalizedOriginal, normalizedCorrection, identityEligible)?.let { return it }
-        val snapshot = readSnapshot(editor) ?: return rejected(AutocorrectRejection.CONTEXT_UNAVAILABLE)
+        val snapshot = readSnapshot(editor)
+            ?: return undoRelative(editor, normalizedCorrection, normalizedOriginal)
         val match = matchCorrectionAndSpaceAtCursor(snapshot, normalizedCorrection)
             ?: return snapshotValidationFailure(snapshot, normalizedCorrection, trailingSpace = true)
 
@@ -167,6 +263,31 @@ object AutocorrectEditorTransaction {
                 replacement = undo.original,
             ),
         ) { cleanup -> AutocorrectTransactionResult.Restored(cleanup) }
+    }
+
+    /** Reverses a relative correction, restoring the original token and dropping its space. */
+    private fun undoRelative(
+        editor: AutocorrectEditor,
+        correction: String,
+        original: String,
+    ): AutocorrectTransactionResult {
+        val outcome = withBatch(editor) { editor.attemptRelativeReplacement("$correction ", original) }
+        return when (outcome.result) {
+            AutocorrectReplacementOutcome.Applied ->
+                AutocorrectTransactionResult.Restored(outcome.cleanup)
+            AutocorrectReplacementOutcome.RejectedUnchanged ->
+                rejected(AutocorrectRejection.EDITOR_PRECONDITION_CHANGED)
+            AutocorrectReplacementOutcome.FailedUnchanged, null ->
+                AutocorrectTransactionResult.EditorFailure(
+                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    outcome.cleanup,
+                )
+            AutocorrectReplacementOutcome.IndeterminateMutation ->
+                AutocorrectTransactionResult.IndeterminateMutation(
+                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    outcome.cleanup,
+                )
+        }
     }
 
     private fun validateRequest(

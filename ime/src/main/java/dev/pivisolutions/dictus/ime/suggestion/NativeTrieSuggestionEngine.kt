@@ -286,6 +286,7 @@ class NativeTrieSuggestionEngine(
     private data class NativeQuery(
         val isKnownWord: Boolean,
         val profileCorrection: AccentCollapseCandidateSelector.Selection?,
+        val contraction: String?,
         val completions: List<String>,
         val corrections: List<String>,
         val contextScores: Map<String, Int>,
@@ -308,7 +309,7 @@ class NativeTrieSuggestionEngine(
             live
         }
         val nativeQuery = if (live == null) {
-            NativeQuery(false, null, emptyList(), emptyList(), emptyMap(), null)
+            NativeQuery(false, null, null, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
                 val isKnownWord = live.handle.wordExists(input)
@@ -323,6 +324,32 @@ class NativeTrieSuggestionEngine(
                     } else {
                         null
                     }
+                }
+                // A missing apostrophe is an insertion, so the fuzzy corrector has no reason to
+                // prefer `c'est` over any other neighbour of `cest`. The expansion is exact —
+                // a declared prefix plus a word already in the dictionary — so it is resolved
+                // here and ranked above the fuzzy candidates.
+                val contraction = if (isKnownWord) {
+                    null
+                } else {
+                    ContractionExpander.expand(
+                        word = input,
+                        profile = live.profile,
+                        accentedForm = { suffix ->
+                            AccentCollapseCandidateSelector.select(
+                                input = suffix,
+                                profile = live.profile,
+                                inputKnown = false,
+                                maxRawFrequency = live.handle.maxFrequency(),
+                            ) { word ->
+                                if (live.handle.wordExists(word)) {
+                                    AccentCollapseCandidateSelector.WordFrequency(live.handle.frequency(word))
+                                } else {
+                                    null
+                                }
+                            }?.word
+                        },
+                    ) { word -> live.handle.wordExists(word) }
                 }
                 val completions = live.handle.complete(input, candidateLimit)
                 val corrections = live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit)
@@ -349,6 +376,7 @@ class NativeTrieSuggestionEngine(
                 NativeQuery(
                     isKnownWord,
                     profileCorrection,
+                    contraction,
                     completions,
                     corrections,
                     scores,
@@ -358,10 +386,12 @@ class NativeTrieSuggestionEngine(
                 releaseQuery()
             }
         }
-        val (isKnownWord, profileCorrection, completions, corrections, contextScores, contextIdentity) =
-            nativeQuery
+        val (
+            isKnownWord, profileCorrection, contraction, completions, corrections,
+            contextScores, contextIdentity,
+        ) = nativeQuery
         val nativeCandidates = rerank(
-            listOfNotNull(profileCorrection?.word) + completions + corrections,
+            listOfNotNull(profileCorrection?.word, contraction) + completions + corrections,
             contextScores,
         )
         if (nativeCandidates.isEmpty() && learned.isEmpty()) {
@@ -369,9 +399,11 @@ class NativeTrieSuggestionEngine(
         }
 
         val normalizedInput = input.canonicalLookupKey()
-        val primaryCorrection = profileCorrection?.word ?: rerank(corrections, contextScores).firstOrNull {
-            it.canonicalLookupKey() != normalizedInput
-        }
+        val primaryCorrection = profileCorrection?.word
+            ?: contraction
+            ?: rerank(corrections, contextScores).firstOrNull {
+                it.canonicalLookupKey() != normalizedInput
+            }
         val prefixInput = normalizedInput.stripAccents()
         val seen = mutableSetOf(normalizedInput)
         val learnedPrefixWords = learned.asSequence()
