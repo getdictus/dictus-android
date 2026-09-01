@@ -16,6 +16,24 @@ enum class AutocorrectSpaceResult {
     INDETERMINATE,
 }
 
+/**
+ * Why a Space did not produce a correction, for the debug log only.
+ *
+ * Carries no editor text and no candidate word — only which branch was taken. Autocorrect is
+ * otherwise completely silent, so a user reporting "it never corrects" leaves nothing behind to
+ * separate "the dictionary had nothing to offer" from "the editor refused the replacement",
+ * and those have opposite fixes.
+ */
+enum class AutocorrectSpaceDiagnosis {
+    APPLIED,
+    NO_SUGGESTION_EVIDENCE,
+    INPUT_ALREADY_KNOWN,
+    INPUT_LEARNED,
+    NO_CANDIDATE,
+    EDITOR_REFUSED,
+    EDITOR_INDETERMINATE,
+}
+
 enum class AutocorrectBackspaceResult {
     UNDONE,
     PLAIN_DELETE,
@@ -46,6 +64,10 @@ class AutocorrectInputCoordinator(
     private var expectedSuggestion: ExpectedSuggestion? = null
     private var suggestionSnapshot: AutocorrectSuggestionSnapshot? = null
     private var pendingUndo: PendingUndo? = null
+
+    /** Reason for the most recent Space outcome. Read by the service for one log line. */
+    var lastSpaceDiagnosis: AutocorrectSpaceDiagnosis? = null
+        private set
 
     fun startSession(
         autocorrectEligible: Boolean = true,
@@ -110,31 +132,46 @@ class AutocorrectInputCoordinator(
             expected.requestId == offered.requestId &&
             expected.input == offered.input
         val correction = offered?.primaryCorrection
-        if (
-            !identityEligible ||
-            (offered.isKnownWord && !offered.knownInputDominance) ||
-            offered.isLearnedWord ||
-            correction == null
-        ) {
+        val applicable = when {
+            !identityEligible || offered == null -> null
+            offered.isKnownWord && !offered.knownInputDominance -> null
+            offered.isLearnedWord -> null
+            correction == null -> null
+            else -> offered to correction
+        }
+        if (applicable == null) {
+            lastSpaceDiagnosis = when {
+                !identityEligible || offered == null -> AutocorrectSpaceDiagnosis.NO_SUGGESTION_EVIDENCE
+                offered.isKnownWord && !offered.knownInputDominance ->
+                    AutocorrectSpaceDiagnosis.INPUT_ALREADY_KNOWN
+                offered.isLearnedWord -> AutocorrectSpaceDiagnosis.INPUT_LEARNED
+                else -> AutocorrectSpaceDiagnosis.NO_CANDIDATE
+            }
             commitPlainSpace()
             return AutocorrectSpaceResult.PLAIN_SPACE
         }
+        val (evidence, candidate) = applicable
 
         return when (
             val result = AutocorrectEditorTransaction.apply(
                 editor = editor,
-                original = offered.input,
-                correction = correction,
+                original = evidence.input,
+                correction = candidate,
                 identityEligible = true,
             )
         ) {
             is AutocorrectTransactionResult.Applied -> {
                 pendingUndo = PendingUndo(session, result.undo, personalizedLearningAllowed)
+                lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.APPLIED
                 AutocorrectSpaceResult.CORRECTED
             }
-            is AutocorrectTransactionResult.IndeterminateMutation ->
+            is AutocorrectTransactionResult.IndeterminateMutation -> {
+                lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.EDITOR_INDETERMINATE
                 AutocorrectSpaceResult.INDETERMINATE
+            }
             else -> {
+                // A candidate existed and the editor would not take it: the interesting failure.
+                lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.EDITOR_REFUSED
                 commitPlainSpace()
                 AutocorrectSpaceResult.PLAIN_SPACE
             }
