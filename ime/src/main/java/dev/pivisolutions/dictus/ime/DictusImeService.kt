@@ -511,14 +511,18 @@ class DictusImeService : LifecycleInputMethodService() {
      * the editor would not take it, which is rare enough to never flood and specific enough that
      * waiting for the next summary would lose which keystroke produced it.
      */
-    private fun recordAutocorrectOutcome(diagnosis: AutocorrectSpaceDiagnosis?) {
+    private fun recordAutocorrectOutcome(diagnosis: AutocorrectSpaceDiagnosis?, detail: String?) {
         diagnosis ?: return
         autocorrectTally[diagnosis] = (autocorrectTally[diagnosis] ?: 0) + 1
         if (
             diagnosis == AutocorrectSpaceDiagnosis.EDITOR_REFUSED ||
             diagnosis == AutocorrectSpaceDiagnosis.EDITOR_INDETERMINATE
         ) {
-            Timber.w("Autocorrect had a candidate the editor would not apply: %s", diagnosis)
+            Timber.w(
+                "Autocorrect had a candidate the editor would not apply: %s (%s)",
+                diagnosis,
+                detail ?: "no detail",
+            )
         }
         spacesSinceAutocorrectReport++
         if (spacesSinceAutocorrectReport < AUTOCORRECT_REPORT_INTERVAL) return
@@ -581,6 +585,27 @@ class DictusImeService : LifecycleInputMethodService() {
             attribute.initialSelStart == attribute.initialSelEnd
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         refreshFrenchAdaptiveKeyState()
+        logEditorSession(attribute, restarting)
+    }
+
+    /**
+     * Records which editor the keyboard was handed, once per field focus.
+     *
+     * A report that autocorrect never fires is unactionable without this. The whole verified
+     * replacement path rests on getExtractedText, which is the host app's to implement, and a
+     * WebView, a Compose field and a plain EditText do not answer alike. The package name and
+     * input type say which one was in front of the user; neither is user content.
+     */
+    private fun logEditorSession(attribute: EditorInfo?, restarting: Boolean) {
+        if (restarting) return
+        Timber.d(
+            "Editor session: package=%s inputType=0x%08x imeOptions=0x%08x eligible=%b learning=%b",
+            attribute?.packageName ?: "unknown",
+            attribute?.inputType ?: 0,
+            attribute?.imeOptions ?: 0,
+            isCurrentEditorSuggestionEligible,
+            isPersonalizedLearningAllowed,
+        )
     }
 
     override fun onStartInputView(
@@ -1016,7 +1041,10 @@ class DictusImeService : LifecycleInputMethodService() {
             val result = autocorrectCoordinator.onSpace(InputConnectionAutocorrectEditor(inputConnection)) {
                 inputConnection.commitText(" ", 1)
             }
-            recordAutocorrectOutcome(autocorrectCoordinator.lastSpaceDiagnosis)
+            recordAutocorrectOutcome(
+                autocorrectCoordinator.lastSpaceDiagnosis,
+                autocorrectCoordinator.lastSpaceDetail,
+            )
             if (result != AutocorrectSpaceResult.INDETERMINATE) {
                 requestNextWordPredictions(result)
             } else {

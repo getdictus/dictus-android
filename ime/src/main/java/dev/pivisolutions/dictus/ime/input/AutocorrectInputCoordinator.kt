@@ -69,6 +69,17 @@ class AutocorrectInputCoordinator(
     var lastSpaceDiagnosis: AutocorrectSpaceDiagnosis? = null
         private set
 
+    /**
+     * The precise refusal behind [AutocorrectSpaceDiagnosis.EDITOR_REFUSED], or null.
+     *
+     * EDITOR_REFUSED covers eight distinct transaction outcomes, from "the snapshot could not be
+     * read" to "the editor took the text and then reported something else". A field log that only
+     * says the editor refused narrows nothing, so the transaction's own reason is carried through.
+     * It is an enum name, never editor text.
+     */
+    var lastSpaceDetail: String? = null
+        private set
+
     fun startSession(
         autocorrectEligible: Boolean = true,
         personalizedLearningAllowed: Boolean = true,
@@ -140,6 +151,7 @@ class AutocorrectInputCoordinator(
             else -> offered to correction
         }
         if (applicable == null) {
+            lastSpaceDetail = null
             lastSpaceDiagnosis = when {
                 !identityEligible || offered == null -> AutocorrectSpaceDiagnosis.NO_SUGGESTION_EVIDENCE
                 offered.isKnownWord && !offered.knownInputDominance ->
@@ -163,15 +175,22 @@ class AutocorrectInputCoordinator(
             is AutocorrectTransactionResult.Applied -> {
                 pendingUndo = PendingUndo(session, result.undo, personalizedLearningAllowed)
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.APPLIED
+                lastSpaceDetail = null
                 AutocorrectSpaceResult.CORRECTED
             }
             is AutocorrectTransactionResult.IndeterminateMutation -> {
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.EDITOR_INDETERMINATE
+                lastSpaceDetail = "INDETERMINATE_${result.operation.name}"
                 AutocorrectSpaceResult.INDETERMINATE
             }
             else -> {
                 // A candidate existed and the editor would not take it: the interesting failure.
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.EDITOR_REFUSED
+                lastSpaceDetail = when (result) {
+                    is AutocorrectTransactionResult.Rejected -> result.reason.name
+                    is AutocorrectTransactionResult.EditorFailure -> "FAILED_${result.operation.name}"
+                    else -> null
+                }
                 commitPlainSpace()
                 AutocorrectSpaceResult.PLAIN_SPACE
             }

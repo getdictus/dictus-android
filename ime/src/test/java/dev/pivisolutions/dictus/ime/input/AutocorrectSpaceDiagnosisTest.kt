@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.ime.input
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -70,6 +71,41 @@ class AutocorrectSpaceDiagnosisTest {
     @Test
     fun `a candidate the editor will not take reports the editor, not the dictionary`() {
         assertEquals(AutocorrectSpaceDiagnosis.EDITOR_REFUSED, diagnose(snapshot()))
+    }
+
+    @Test
+    fun `the refusal carries which of the eight transaction outcomes it was`() {
+        val coordinator = coordinatorWith(snapshot())
+        coordinator.onSpace(RefusingEditor) {}
+
+        // FailedUnchanged from the editor, not a stale precondition or an unreadable snapshot.
+        assertEquals("FAILED_VERIFIED_REPLACEMENT", coordinator.lastSpaceDetail)
+    }
+
+    @Test
+    fun `an unreadable snapshot is named as such rather than as a refused replacement`() {
+        val coordinator = coordinatorWith(snapshot())
+        coordinator.onSpace(BlindEditor) {}
+
+        assertEquals(AutocorrectSpaceDiagnosis.EDITOR_REFUSED, coordinator.lastSpaceDiagnosis)
+        assertEquals("CONTEXT_UNAVAILABLE", coordinator.lastSpaceDetail)
+    }
+
+    @Test
+    fun `an applied correction leaves no refusal detail behind`() {
+        val coordinator = coordinatorWith(snapshot())
+        coordinator.onSpace(ApplyingEditor()) {}
+
+        assertNull(coordinator.lastSpaceDetail)
+    }
+
+    /** An editor whose getExtractedText answers nothing, as a WebView often does. */
+    private object BlindEditor : AutocorrectEditor {
+        override fun snapshot(): AutocorrectEditorSnapshot? = null
+        override fun beginBatchEdit() = true
+        override fun endBatchEdit() = true
+        override fun attemptVerifiedReplacement(request: AutocorrectReplacement) =
+            AutocorrectReplacementOutcome.RejectedUnchanged
     }
 
     @Test
