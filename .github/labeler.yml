@@ -1,0 +1,52 @@
+# Path-based PR labels, applied by .github/workflows/labeler.yml (actions/labeler).
+#
+# needs-physical-test: the PR touches audio capture, the microphone or
+# transcription. CI cannot inject reliable audio, so these changes need a manual
+# test on a physical device with Pierre before merge. See
+# docs/agents/physical-test-label.md for who removes the label and when.
+#
+# This file is the single source of truth for those zones: edit the globs below
+# to widen or narrow the scope. Globs use minimatch syntax, matched against the
+# repo-relative path of every file changed by the PR.
+#
+# Deliberately out of scope: UI sounds (audio/DictationSoundPlayer.kt,
+# ime/audio/KeyboardSoundPlayer.kt), history/** (storage, unit-tested) and test
+# sources (src/test/**). None of the globs below reach them.
+needs-physical-test:
+  - changed-files:
+      - any-glob-to-any-file:
+          # Native Whisper module (JNI bindings, CPU config, build, manifest)
+          - 'whisper/**'
+
+          # Audio capture, input routing and recording limits
+          - 'app/src/main/java/dev/pivisolutions/dictus/service/AudioCaptureManager.kt'
+          - 'app/src/main/java/dev/pivisolutions/dictus/service/AudioInputRouting.kt'
+          - 'app/src/main/java/dev/pivisolutions/dictus/service/RecordingDurationPolicy.kt'
+          - 'app/src/main/java/dev/pivisolutions/dictus/service/WhisperProvider.kt'
+
+          # Recording and transcription UI (app + IME)
+          - 'app/src/main/java/dev/pivisolutions/dictus/recording/**'
+          - 'app/src/main/java/dev/pivisolutions/dictus/onboarding/OnboardingTestRecordingScreen.kt'
+          - 'app/src/main/java/dev/pivisolutions/dictus/ui/RecordingTestArea.kt'
+          - 'ime/src/main/java/dev/pivisolutions/dictus/ime/ui/RecordingScreen.kt'
+          - 'ime/src/main/java/dev/pivisolutions/dictus/ime/ui/TranscribingScreen.kt'
+          - 'ime/src/main/java/dev/pivisolutions/dictus/ime/input/ImeTranscriptionRetentionSession.kt'
+
+          # Transcript post-processing
+          - 'core/src/main/java/dev/pivisolutions/dictus/core/whisper/**'
+
+          # RECORD_AUDIO and the microphone foreground service are declared here.
+          # Labeler matches paths, not content, so any change to this manifest
+          # triggers the label (accepted false positives).
+          - 'app/src/main/AndroidManifest.xml'
+
+          # Same audio/transcription zones, found while confirming the list on
+          # develop (not in the issue's candidate list):
+          # foreground service that drives recording and transcription
+          - 'app/src/main/java/dev/pivisolutions/dictus/service/DictationService.kt'
+          # loads and switches the active STT engine
+          - 'app/src/main/java/dev/pivisolutions/dictus/service/SttProviderSlot.kt'
+          # Parakeet STT engine (sherpa-onnx)
+          - 'asr/**'
+          # whisper.cpp submodule bump
+          - 'third_party/whisper.cpp'
