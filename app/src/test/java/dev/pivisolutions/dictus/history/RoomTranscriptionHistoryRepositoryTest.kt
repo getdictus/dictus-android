@@ -3,10 +3,10 @@ package dev.pivisolutions.dictus.history
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.async
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -35,18 +35,29 @@ class RoomTranscriptionHistoryRepositoryTest {
 
     @Test
     fun `insert and delete re-emit and unknown id is false`() = runBlocking {
-        val emissions = async(start = CoroutineStart.UNDISPATCHED) {
-            withTimeout(5_000) { repository.observeAll().take(3).toList() }
-        }
-        val id = repository.insert(entry())
-        assertTrue(repository.deleteById(id))
+        // Room runs the first query and every re-query on its own executor, so each write
+        // waits for the list it must produce instead of counting emissions (#157).
+        val latest = MutableStateFlow<List<TranscriptionHistoryEntry>?>(null)
+        val collector = launch { repository.observeAll().collect { latest.value = it } }
+        try {
+            // Room registers its invalidation observer before the first query, so once the
+            // initial empty list is in, the writes below are observed.
+            latest.awaitList { it.isEmpty() }
+            val id = repository.insert(entry())
+            assertEquals(listOf(id), latest.awaitList { it.isNotEmpty() }.map { it.id })
+            assertTrue(repository.deleteById(id))
+            latest.awaitList { it.isEmpty() }
 
-        val values = emissions.await()
-        assertEquals(1, values.first().size)
-        assertEquals(0, values.last().size)
-        assertFalse(repository.deleteById(id))
-        assertFalse(repository.deleteById(Long.MAX_VALUE))
+            assertFalse(repository.deleteById(id))
+            assertFalse(repository.deleteById(Long.MAX_VALUE))
+        } finally {
+            collector.cancel()
+        }
     }
+
+    private suspend fun MutableStateFlow<List<TranscriptionHistoryEntry>?>.awaitList(
+        predicate: (List<TranscriptionHistoryEntry>) -> Boolean,
+    ): List<TranscriptionHistoryEntry> = withTimeout(5_000) { filterNotNull().first(predicate) }
 
     private fun entry() = TranscriptionHistoryEntry(
         text = "private",

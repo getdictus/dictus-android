@@ -179,6 +179,10 @@ class NativeTrieSuggestionEngineTest {
                 runCurrent()
                 releaseStale.countDown()
                 assertTrue(allOpened.await(5, TimeUnit.SECONDS))
+                // allOpened fires inside open(), before the engine publishes or closes the handle
+                // it returned. Each activation is one non-suspending task on this single thread,
+                // so a task queued now runs only after the newest one has been published.
+                executor.submit {}.get(5, TimeUnit.SECONDS)
 
                 assertEquals(SupportedLanguage.FRENCH, engine.activation.value?.language)
                 assertEquals(listOf("bonne"), engine.getSuggestions("bo"))

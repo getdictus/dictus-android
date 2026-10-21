@@ -114,9 +114,14 @@ class ParakeetProviderTest {
     fun `native calls run off the caller thread`() = runTest {
         val caller = Thread.currentThread()
         var nativeThread: Thread? = null
+        var nativeThreadName: String? = null
         val provider = provider(
             createRecognizer = {
                 nativeThread = Thread.currentThread()
+                // Read the name here: kotlinx.coroutines debug mode (on under Gradle's -ea)
+                // renames the thread "parakeet-native @coroutine#N" while the block runs, and
+                // initialize() can return before the original name is restored (#157).
+                nativeThreadName = Thread.currentThread().name.substringBefore(" @coroutine#")
                 throw UnsatisfiedLinkError("test")
             },
         )
@@ -124,7 +129,7 @@ class ParakeetProviderTest {
         provider.initialize(ctcModelPath())
 
         assertNotSame(caller, nativeThread)
-        assertTrue(nativeThread!!.name == "parakeet-native")
+        assertEquals("parakeet-native", nativeThreadName)
     }
 
     @Test
