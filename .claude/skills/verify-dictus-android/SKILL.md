@@ -248,7 +248,7 @@ A=.claude/skills/verify-dictus-android/fixtures/audio
 $H/emulator-mic.sh build                       # ./gradlew assembleDebug -Pdictus.emulatorAbi=true, then --stop
 $H/emulator-mic.sh start 1                     # lock, virtual mic, boot; last line: SERIAL emulator-5554
 $H/emulator-mic.sh install 1                   # install -r, Dictus as IME, RECORD_AUDIO granted
-# Argent on emulator-5554: Home → « New dictation » (recording starts), then AT ONCE (< 1 s):
+# Argent on emulator-5554: Home → « Nouvelle dictée » (recording starts), then AT ONCE (< 1 s):
 $H/emulator-mic.sh play $A/fr-bonjour-test.wav 1
 # Argent: Stop → compare the text with $A/fr-bonjour-test.txt
 $H/emulator-mic.sh stop 1                      # emulator, virtual mic, lock; safe to run twice
@@ -256,7 +256,7 @@ $H/emulator-mic.sh stop 1                      # emulator, virtual mic, lock; sa
 $H/emulator-mic.sh status
 ```
 
-- **Play the clip within a second of starting the recording.** Seen 2026-10-21 (#151), with `fr-bonjour-test.wav` among others: a clip played 5 s or more after « New dictation » reached the host side of the virtual mic (`pw-record` on `dictus_mic_N` heard it) but the guest recorded silence: flat waveform, Tiny wrote « (musique) ». Played right after the tap, the same clip was transcribed. Cause not found yet. A flat waveform while the clip plays means the take is lost: stop it and start again.
+- **Play the clip within a second of starting the recording.** Seen 2026-10-21 (#151), with `fr-bonjour-test.wav` among others: a clip played 5 s or more after « Nouvelle dictée » reached the host side of the virtual mic (`pw-record` on `dictus_mic_N` heard it) but the guest recorded silence: flat waveform, Tiny wrote « (musique) ». Played right after the tap, the same clip was transcribed. Cause not found yet: #156. A flat waveform while the clip plays means the take is lost: stop it and start again.
 - Set Réglages → Transcription → Language to **Français** first. On `Automatic`, Tiny takes the synthetic voice for Japanese.
 - `start` boots without `-no-window`: that flag selects `qemu-system-x86_64-headless`, whose PulseAudio driver is a stub in emulator 37.1.11 (« Could not init `pa' audio driver », the guest records silence). It uses the Qt binary with a hidden window (`-qt-hide-window`, `QT_QPA_PLATFORM=offscreen`), `PULSE_SOURCE=dictus_mic_N`, `-allow-host-audio`, the guest's speaker on a sink linked to nothing (`dictus_spk_N`, so its sounds do not loop into the mic through the default sink), gRPC with a token (Argent needs it), then `adb emu avd hostmicon`. It refuses to finish if `pa` failed.
 - The Gradle property is named once, in `env.sh` (`DICTUS_EMULATOR_GRADLE_PROP`); `install` refuses an APK without `lib/x86_64`.
@@ -265,16 +265,31 @@ $H/emulator-mic.sh status
 **Clip source: `getdictus/dictus-test-voices`.** The real test clips live in that private repo, shared with iOS and desktop: `elevenlabs/<lang>/<lang>-NN-<slug>.wav` (16 kHz mono 16-bit PCM, 3 to 8 s; `-long-` clips 60 to 120 s) and `manifest.json`, whose `text` field is the expected text of each clip. Its `NOTICE` restricts them to internal Dictus testing and forbids redistribution outside that repo, so **never commit them here**. Fetch the clips you need with `gh` (needs read access to the private repo) into a directory outside the repository, read-only (no clone, no push):
 
 ```bash
-V=/home/pierre/Dev/dictus-proofs/test-voices          # outside the repo, never committed
-mkdir -p "$V/elevenlabs/fr"
-for f in NOTICE manifest.json elevenlabs/fr/fr-03-shopping.wav; do
-  gh api -H 'Accept: application/vnd.github.raw' "repos/getdictus/dictus-test-voices/contents/$f" > "$V/$f"
-done
+# From the repository root. The function body is a subshell, so its `exit` never closes your
+# shell. It downloads each path to a temp file and moves it into place only on success; on the
+# first failure it removes the temp file, says so on stderr and returns 1. On success it prints
+# the directory: $DICTUS_PROOFS/test-voices (env.sh), outside the repo, never committed.
+fetch_test_voices() (
+  source .claude/skills/verify-dictus-android/helpers/env.sh || exit 1
+  V="$DICTUS_PROOFS/test-voices"
+  for f in "$@"; do
+    mkdir -p "$(dirname "$V/$f")" || exit 1
+    tmp="$(mktemp "$V/$f.XXXXXX")" || exit 1
+    if ! gh api -H 'Accept: application/vnd.github.raw' "repos/getdictus/dictus-test-voices/contents/$f" > "$tmp"; then
+      rm -f "$tmp"
+      echo "no access to getdictus/dictus-test-voices: use the espeak clips" >&2
+      exit 1
+    fi
+    mv "$tmp" "$V/$f"
+  done
+  echo "$V"
+)
+V="$(fetch_test_voices NOTICE manifest.json elevenlabs/fr/fr-03-shopping.wav)"   # status 1: play $A/fr-bonjour-test.wav instead
 jq -r '.clips[] | select(.file == "elevenlabs/fr/fr-03-shopping.wav") | .text' "$V/manifest.json"   # expected text
 $H/emulator-mic.sh play "$V/elevenlabs/fr/fr-03-shopping.wav" 1
 ```
 
-Without access to that repo (no `gh` login, offline), use the espeak clips above. The French short clips are `fr-01` (spoken punctuation: « virgule », « point »), `fr-02` (numbers), `fr-03` (plain sentence) and `fr-04` (« point d'interrogation »); start with `fr-03`. Unlike the espeak clips, they have no leading silence. Seen 2026-10-21 with Tiny on the emulator (#151): two takes of `fr-03` both stopped after « … des tomates et », and the rest of the sentence was missing.
+Without access to that repo (no `gh` login, offline), use the espeak clips above. The French short clips are `fr-01` (spoken punctuation: « virgule », « point »), `fr-02` (numbers), `fr-03` (plain sentence) and `fr-04` (« point d'interrogation »); start with `fr-03`. Unlike the espeak clips, they have no leading silence. Seen 2026-10-21 with Tiny on the emulator (#151): two takes of `fr-03` both stopped after « … des tomates et » (WER 50% and 71%), and the start was damaged too. Tiny on the clean clip gives the whole sentence, so the guest receives truncated audio: #156. Until it is fixed, an emulator dictation proves the chain (capture, waveform, a transcription comes back), not the text, and the long clips cannot be used.
 
 **The emulator lock** is the Pixel lock's code (`lock.sh` with `DICTUS_LOCK_NAME=emulator`): atomic `mkdir`, a token unique to the session in `owner` and in the session's `token.emulator`, release by the owner only; `DICTUS_LOCK_NAME=emulator $H/lock.sh status` shows the owner. `start` adds three rules:
 

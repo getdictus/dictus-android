@@ -254,9 +254,14 @@ case "$cmd" in
   install) install_apk "${2:-1}" ;;
   play) play "${2:-}" "${3:-1}" ;;
   stop)
-    shift; n=1; force=""
-    for a in "$@"; do case "$a" in --force) force=--force ;; *) n="$a" ;; esac; done
-    stop "$n" "$force" ;;
+    shift; n=""; force=""
+    for a in "$@"; do
+      case "$a" in
+        --force) force=--force ;;
+        *) [ -z "$n" ] || { echo "usage: emulator-mic.sh stop [N] [--force] (one N only, got '$n' and '$a')" >&2; exit 2; }; n="$a" ;;
+      esac
+    done
+    stop "${n:-1}" "$force" ;;
   status) status ;;
   *) echo "usage: emulator-mic.sh build | start [N] | install [N] | play <wav> [N] | stop [N] [--force] | status"; exit 2 ;;
 esac

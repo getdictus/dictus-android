@@ -12,7 +12,9 @@
 # session's lock older than that many minutes while no qemu-system and no pw-loopback runs (age
 # from the owner's since=, else the directory's mtime). Every check-and-change of the lock
 # (stale recovery, mkdir + owner write, release) runs under one flock on $DICTUS_LOCK.flock, so a
-# session never removes a lock that another session has just taken.
+# session never removes a lock that another session has just taken. The flock covers both locks:
+# the Pixel lock's acquire and release run under .pixel-lock.flock the same way (it just has no
+# stale rule).
 # The token lives in the session directory (env.sh: DICTUS_SESSION_TOKEN); the lock's owner file
 # holds token=, session=, label=, since=. The label is informative only: it never grants the lock.
 set -u
