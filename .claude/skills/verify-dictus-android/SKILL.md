@@ -245,7 +245,7 @@ $H/emulator-mic.sh status
 ```
 
 - Set Réglages → Transcription → Language to **Français** first. On `Automatic`, Tiny takes the synthetic voice for Japanese.
-- `start` boots without `-no-window`: that flag selects `qemu-system-x86_64-headless`, whose PulseAudio driver is a stub in emulator 37.1.11 (« Could not init `pa' audio driver », the guest records silence). It uses the Qt binary with a hidden window (`-qt-hide-window`, `QT_QPA_PLATFORM=offscreen`), `PULSE_SOURCE=dictus_mic_N`, `-allow-host-audio`, no audio output (`QEMU_AUDIO_OUT_DRV=none`, so the guest's sounds do not loop into the mic), gRPC with a token (Argent needs it), then `adb emu avd hostmicon`. It refuses to finish if `pa` failed.
+- `start` boots without `-no-window`: that flag selects `qemu-system-x86_64-headless`, whose PulseAudio driver is a stub in emulator 37.1.11 (« Could not init `pa' audio driver », the guest records silence). It uses the Qt binary with a hidden window (`-qt-hide-window`, `QT_QPA_PLATFORM=offscreen`), `PULSE_SOURCE=dictus_mic_N`, `-allow-host-audio`, the guest's speaker on a sink linked to nothing (`dictus_spk_N`, so its sounds do not loop into the mic through the default sink), gRPC with a token (Argent needs it), then `adb emu avd hostmicon`. It refuses to finish if `pa` failed.
 - The Gradle property is named once, in `env.sh` (`DICTUS_EMULATOR_GRADLE_PROP`); `install` refuses an APK without `lib/x86_64`.
 - The clips in `fixtures/audio/` are synthesized French sentences (libespeak-ng, see its README), 16 kHz mono, each with its expected text in a `.txt` beside it.
 

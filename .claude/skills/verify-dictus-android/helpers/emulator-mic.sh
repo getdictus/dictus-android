@@ -36,7 +36,7 @@ instance() {
   local n="${1:-1}"
   [[ "$n" =~ ^[1-9]$ ]] || die "instance N must be 1..9, got '$n'"
   N="$n"; PORT=$((5552 + 2 * N)); SERIAL="emulator-$PORT"
-  FEED="dictus_feed_$N"; MIC="dictus_mic_$N"; STATE="$STATE_ROOT/$N"
+  FEED="dictus_feed_$N"; MIC="dictus_mic_$N"; SPK="dictus_spk_$N"; STATE="$STATE_ROOT/$N"
 }
 # pid from a state file, only if it is alive and still runs the expected command.
 live_pid() {
@@ -54,7 +54,7 @@ other_instances_running() {
   for d in "$STATE_ROOT"/*/; do
     [ -d "$d" ] || continue
     [ "$(basename "$d")" = "$N" ] && continue
-    [ -n "$(live_pid "$d/emulator.pid" qemu-system)$(live_pid "$d/loopback.pid" pw-loopback)" ] && { OTHER="$(basename "$d")"; return 0; }
+    [ -n "$(live_pid "$d/emulator.pid" qemu-system)$(live_pid "$d/loopback.pid" pw-loopback)$(live_pid "$d/speaker.pid" pw-loopback)" ] && { OTHER="$(basename "$d")"; return 0; }
   done
   return 1
 }
@@ -143,13 +143,22 @@ start() {
     node_exists "$MIC" && node_exists "$FEED" || die "virtual mic nodes did not appear (see $STATE/loopback.log)"
     echo "virtual mic: $FEED -> $MIC (pw-loopback pid $(cat "$STATE/loopback.pid"))"
   fi
+  # The guest's speaker: a sink linked to nothing, so its sounds (key clicks...) are dropped
+  # instead of reaching the default sink, which may be dictus_feed_N, i.e. the guest's own mic.
+  if [ -z "$(live_pid "$STATE/speaker.pid" pw-loopback)" ]; then
+    setsid pw-loopback -n "dictus-virtual-speaker-$N" \
+      --capture-props="media.class=Audio/Sink node.name=$SPK node.description=Dictus-speaker-$N audio.position=[MONO]" \
+      --playback-props="node.autoconnect=false node.name=${SPK}_drop audio.position=[MONO]" \
+      > "$STATE/speaker.log" 2>&1 < /dev/null &
+    echo $! > "$STATE/speaker.pid"
+    for _ in $(seq 1 20); do node_exists "$SPK" && break; sleep 0.25; done
+    node_exists "$SPK" || die "virtual speaker $SPK did not appear (see $STATE/speaker.log)"
+  fi
 
   # Not -no-window: it selects qemu-system-*-headless, whose PulseAudio driver is a stub
   # (emulator 37.1.11: "Could not init `pa' audio driver", the guest records silence). The Qt
   # binary links libpulse; -qt-hide-window with Qt's offscreen platform keeps it windowless.
-  # No audio output: the only sink may be dictus_feed_N, and the guest's sounds would loop back
-  # into its own microphone.
-  PULSE_SOURCE="$MIC" QEMU_AUDIO_OUT_DRV=none QT_QPA_PLATFORM=offscreen setsid "$EMULATOR_BIN" -avd "$AVD" -port "$PORT" \
+  PULSE_SOURCE="$MIC" PULSE_SINK="$SPK" QEMU_PA_SOURCE="$MIC" QEMU_PA_SINK="$SPK" QT_QPA_PLATFORM=offscreen setsid "$EMULATOR_BIN" -avd "$AVD" -port "$PORT" \
     -memory "${DICTUS_EMU_MEMORY:-2048}" -qt-hide-window -no-snapshot-save -no-boot-anim \
     -gpu swiftshader_indirect -allow-host-audio -grpc "$((PORT + 3000))" -grpc-use-token \
     > "$STATE/emulator.log" 2>&1 < /dev/null &
@@ -162,7 +171,7 @@ start() {
   done
   [ -n "$qpid" ] || die "no qemu-system process for port $PORT (see $STATE/emulator.log)"
   echo "$qpid" > "$STATE/emulator.pid"
-  echo "emulator: avd=$AVD serial=$SERIAL pid=$(cat "$STATE/emulator.pid") PULSE_SOURCE=$MIC (log $STATE/emulator.log)"
+  echo "emulator: avd=$AVD serial=$SERIAL pid=$(cat "$STATE/emulator.pid") source=$MIC sink=$SPK (log $STATE/emulator.log)"
 
   local timeout="${DICTUS_EMU_BOOT_TIMEOUT:-300}" t=0
   until booted; do
@@ -212,7 +221,13 @@ stop() {
   else
     echo "virtual mic $N: not running"
   fi
-  rm -f "$STATE/emulator.pid" "$STATE/loopback.pid" "$STATE/serial"
+  pid="$(live_pid "$STATE/speaker.pid" pw-loopback)"
+  if [ -n "$pid" ]; then
+    kill "$pid" 2>/dev/null || true
+    for _ in $(seq 1 10); do kill -0 "$pid" 2>/dev/null || break; sleep 0.3; done
+    echo "virtual speaker $SPK removed (pw-loopback pid $pid)"
+  fi
+  rm -f "$STATE/emulator.pid" "$STATE/loopback.pid" "$STATE/speaker.pid" "$STATE/serial"
   if other_instances_running; then
     echo "emulator lock kept: instance $OTHER still runs"
   else
@@ -229,9 +244,10 @@ status() {
     instance "$(basename "$d")"; found=1
     local epid lpid
     epid="$(live_pid "$STATE/emulator.pid" qemu-system)"; lpid="$(live_pid "$STATE/loopback.pid" pw-loopback)"
-    printf 'instance %s: emulator=%s serial=%s booted=%s pw-loopback=%s nodes=%s/%s\n' "$N" \
+    printf 'instance %s: emulator=%s serial=%s booted=%s pw-loopback=%s nodes=%s/%s/%s\n' "$N" \
       "${epid:-down}" "$SERIAL" "$( [ -n "$epid" ] && booted && echo yes || echo no)" "${lpid:-down}" \
-      "$(node_exists "$FEED" && echo "$FEED" || echo -)" "$(node_exists "$MIC" && echo "$MIC" || echo -)"
+      "$(node_exists "$FEED" && echo "$FEED" || echo -)" "$(node_exists "$MIC" && echo "$MIC" || echo -)" \
+      "$(node_exists "$SPK" && echo "$SPK" || echo -)"
   done
   [ "$found" = 1 ] || echo "no instance started from this machine yet"
   if [ -d "$DICTUS_LOCK" ] && [ -z "$(running_emulators)$(running_loopbacks)" ]; then
