@@ -10,7 +10,7 @@ In any app, the Dictus keyboard's blue mic pill records the voice on the phone, 
 ## Sub-features
 
 - `dictation.start`: Tap the mic pill (top right of the keyboard) to start recording. — présent
-- `dictation.stop`: ✓ stops, transcribes (« Transcription… ») and inserts the text at the cursor. When the dictation produces no text, nothing is inserted and the suggestion bar reads « Aucun mot détecté » in grey for 3 s, like the iOS toolbar (#153). — présent
+- `dictation.stop`: ✓ stops, transcribes (« Transcription… ») and inserts the text at the cursor. When the dictation produces no text (including only non-speech tags or punctuation, #161), nothing is inserted and the suggestion bar reads « Aucun mot détecté » in grey for 3 s, like the iOS toolbar (#153). — présent
 - `dictation.cancel`: ✕ stops and discards the audio; nothing is inserted. — présent
 - `dictation.status`: Recording panel with waveform, MM:SS timer and « En écoute… », then « Transcription… »; while the model loads the mic is dimmed and an overlay reads « Préparation de la reconnaissance vocale ». — présent
 - `dictation.undo-insert`: After an insertion, the suggestion bar shows « Annuler » (`Annuler la dernière dictée`): it deletes the inserted text if it is still right before the cursor. — présent (#137)
