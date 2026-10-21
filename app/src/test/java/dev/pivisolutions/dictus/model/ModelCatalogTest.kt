@@ -114,7 +114,7 @@ class ModelCatalogTest {
         assertEquals(AiProvider.PARAKEET, model!!.provider)
         assertTrue(model.isTransducer)
         assertFalse(model.isEnglishOnly)
-        assertEquals(8, model.minRamGb)
+        assertEquals(6, model.minRamGb)
     }
 
     @Test

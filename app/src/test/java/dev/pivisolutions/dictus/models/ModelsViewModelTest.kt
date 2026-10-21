@@ -83,18 +83,18 @@ class ModelsViewModelTest {
 
     @Test
     fun `models the device cannot run stay listed with the RAM they need`() {
-        val vm = viewModelWithRam(5.5)
+        val vm = viewModelWithRam(3.6)
 
         assertEquals(ModelCatalog.ALL.size, vm.models.value.size)
         val parakeet = vm.models.value.single { it.info.key == "parakeet-tdt-0.6b-v3" }
-        assertEquals(8, parakeet.requiredRamGb)
+        assertEquals(6, parakeet.requiredRamGb)
         val tiny = vm.models.value.single { it.info.key == "tiny" }
         assertNull(tiny.requiredRamGb)
     }
 
     @Test
-    fun `8 GB phone reporting 7_4 GiB gets Parakeet 0_6B as available`() {
-        val vm = viewModelWithRam(7.4)
+    fun `6 GB phone reporting 5_3 GiB gets Parakeet 0_6B as available`() {
+        val vm = viewModelWithRam(5.3)
 
         val parakeet = vm.models.value.single { it.info.key == "parakeet-tdt-0.6b-v3" }
         assertNull(parakeet.requiredRamGb)
@@ -102,7 +102,7 @@ class ModelsViewModelTest {
 
     @Test
     fun `requestSetActiveModel refuses a model the device lacks RAM for`() = testScope.runTest {
-        val vm = viewModelWithRam(5.5)
+        val vm = viewModelWithRam(3.6)
 
         vm.requestSetActiveModel("parakeet-tdt-0.6b-v3")
         advanceUntilIdle()

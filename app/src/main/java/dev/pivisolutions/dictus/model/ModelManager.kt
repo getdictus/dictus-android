@@ -82,7 +82,7 @@ object ModelCatalog {
      *
      * Phase 9 Parakeet models (2 entries, sherpa-onnx):
      *   parakeet-ctc-110m-int8 — 126 MB — fast quantised, English-only (CTC)
-     *   parakeet-tdt-0.6b-v3  — 640 MB — 25 languages, requires 8+ GB RAM (transducer)
+     *   parakeet-tdt-0.6b-v3  — 640 MB — 25 languages, requires 6+ GB RAM (transducer)
      *
      * WHY corrected sizes: The exact byte sizes were confirmed via UAT debug session
      * (Whisper) or from official sherpa-onnx release metadata (Parakeet).
@@ -182,8 +182,12 @@ object ModelCatalog {
     /**
      * Return the recommended model key for onboarding based on device RAM.
      *
-     * >= 8 GB marketed RAM (Parakeet's minRamGb) -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
-     * < 8 GB marketed RAM                         -> small-q5_1 (190 MB, best accuracy/size trade-off)
+     * >= 6 GB marketed RAM (Parakeet's minRamGb) -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
+     * < 6 GB marketed RAM                         -> small-q5_1 (190 MB, best accuracy/size trade-off)
+     *
+     * Same rule as iOS (ModelInfo.recommendedIdentifier, minus its A12/A13 exception). On a
+     * 6 GB Pixel 4, Parakeet peaks at ~1.5 GB PSS and answers in under 1 s for a 6 s dictation,
+     * where small-q5_1 takes about 30 s (#148).
      *
      * WHY DeviceRam: the Models screen gates the same model with the same helper, so
      * onboarding never recommends a model the Models screen shows as unavailable.
