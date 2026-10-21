@@ -16,6 +16,8 @@ cd dictus-android
 ./gradlew assembleDebug
 ```
 
+Debug builds target ARM devices (arm64-v8a, armeabi-v7a). To run the app on an x86_64 emulator, add `-Pdictus.emulatorAbi=true`: whisper.cpp and the keyboard trie are then also built for x86_64 (debug only). Parakeet (sherpa-onnx) ships ARM libraries only and is unavailable on the emulator.
+
 ## Module Map
 
 | Module | Purpose | Key entry point |

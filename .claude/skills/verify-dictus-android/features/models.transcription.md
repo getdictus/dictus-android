@@ -42,3 +42,4 @@ Preconditions: Launch and Doctor OK. Note the active model Doctor printed; it mu
 - Card descriptions are unaccented (« Rapide et leger », « Precis et equilibre », « Haute precision », « Detection automatique »).
 - Selecting a model reloads the engine: the next dictation waits on the loading overlay.
 - RAM gating rounds `ActivityManager.totalMem` up to the marketed size (#121); Parakeet 0.6B needs 8 GB, so on the 6 GB Pixel 4 it is greyed with « Nécessite 8 Go de RAM ou plus » (seen on the Pixel 2026-10-20).
+- Parakeet does not run on the x86_64 emulator (sherpa-onnx ships ARM libraries only): the engine fails cleanly, the app does not crash. Verify Parakeet on the Pixel only.

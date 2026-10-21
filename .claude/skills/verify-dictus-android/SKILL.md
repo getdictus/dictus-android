@@ -203,6 +203,30 @@ Then stop Argent's services **for the Pixel only**: `mcp__argent__stop-all-simul
 
 With a run of this session, `cleanup.sh` copies `files/dictus.log` into it, writes `prefs-after.digest` and prints only `PREFS same` or `PREFS differ: <key names>` (never a value), and restores the IME that Launch replaced (if it replaced one). Then, run or no run (e.g. Launch refused because the phone was locked), it releases the lock **only if this session's token holds it**, ends with `CLEANUP OK run=…` and a `NEXT:` line reminding to stop Argent for the Pixel. It never uninstalls, never clears data, never kills a process by name, never deletes anything under `dictus-proofs/`. Delete your scratch note yourself before Cleanup. Run Cleanup after a failed run too, then check the evidence survived: `ls -la <run-dir>`.
 
+## Emulator tier (x86_64 AVD)
+
+For checks that do not need the real phone: the AVD `dictus_api35` (x86_64, API 35). The helpers above target the Pixel; on the emulator pass `-s emulator-5554` yourself. One emulator at a time on this 12 GB machine: take `/home/pierre/Dev/dictus-proofs/.emulator-lock` (`mkdir`, owner file with your label + date; wait while another thread holds it, never kill its emulator), run `./gradlew --stop` before booting, and never build while the emulator runs.
+
+The default debug build has **no x86_64 whisper/trie libs** (it compiles ARM only, like CI): the emulator installs it as x86_64 because AndroidX ships x86_64 libs, then whisper fails to load. Build the emulator APK with the opt-in property:
+
+```bash
+./gradlew assembleDebug -Pdictus.emulatorAbi=true    # adds lib/x86_64/libwhisper.so, libggml*.so, libdictus_trie.so
+./gradlew --stop
+emulator -avd dictus_api35 -memory 2048 -no-window -no-snapshot-save -no-boot-anim -gpu swiftshader_indirect &
+adb -s emulator-5554 wait-for-device
+adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
+# ... drive with Argent (udid emulator-5554), then:
+adb -s emulator-5554 emu kill
+rm -r /home/pierre/Dev/dictus-proofs/.emulator-lock   # only if its owner file is yours
+```
+
+Release the lock after `emu kill`, also when install or verification failed (kill the emulator first). Never remove a lock whose owner file is another thread's.
+
+Release never contains x86_64 whisper/trie, with or without the property.
+
+- **Use Tiny.** whisper on x86_64 is built for SSE4.2 only (the emulator CPU lacks AVX2/FMA): Tiny takes ~12 s for 3 s of audio; Small Q5 ~75 s.
+- **Parakeet is unavailable on the emulator.** sherpa-onnx (`:asr`) ships arm64-v8a and armeabi-v7a only. Activating a Parakeet model there must end in a failed engine (log `ParakeetProvider: sherpa-onnx native library unavailable on x86_64`), never in a crash. Test Parakeet on the Pixel.
+
 ## Helpers
 
 All executable, run from the repository root; all read `helpers/env.sh` (overrides: `DICTUS_SERIAL`, `DICTUS_PROOFS`, `DICTUS_EVIDENCE_ROOT`, `DICTUS_VERIFY_RUN`, `DICTUS_VERIFY_SESSION`).

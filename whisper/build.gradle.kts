@@ -33,6 +33,21 @@ android {
         }
     }
 
+    // Opt-in x86_64 for debug builds only, to transcribe on an x86_64 emulator:
+    //   ./gradlew assembleDebug -Pdictus.emulatorAbi=true
+    // Off by default so phone and CI debug builds do not compile whisper.cpp a third
+    // time. AGP merges buildType ndk.abiFilters with defaultConfig's; release always
+    // keeps the two ARM ABIs it ships.
+    buildTypes {
+        debug {
+            if (providers.gradleProperty("dictus.emulatorAbi").orNull.toBoolean()) {
+                ndk {
+                    abiFilters += "x86_64"
+                }
+            }
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path = file("src/main/jni/whisper/CMakeLists.txt")
