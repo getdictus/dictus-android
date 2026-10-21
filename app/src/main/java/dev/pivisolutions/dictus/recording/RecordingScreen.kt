@@ -55,6 +55,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
@@ -65,6 +66,8 @@ import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import dev.pivisolutions.dictus.core.R as CoreR
 
 /**
  * Standalone recording screen — triggered from Home via "Nouvelle dictée".
@@ -147,6 +150,8 @@ fun RecordingScreen(
     }
 
     var transcriptionResult by remember { mutableStateOf<String?>(null) }
+    // The last dictation produced no text (#153): the idle layout says so until the next one.
+    var noWordsDetected by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
 
     // Auto-start recording on first composition — iOS parity: tapping "Nouvelle dictée"
@@ -162,6 +167,13 @@ fun RecordingScreen(
     }
     LaunchedEffect(engineState) {
         runGateCommand(micGate.engineChanged(engineState))
+    }
+
+    fun requestNewDictation() {
+        transcriptionResult = null
+        noWordsDetected = false
+        copied = false
+        runGateCommand(micGate.request(engineState))
     }
 
     // Processing animation driver for the transcribing state.
@@ -288,11 +300,14 @@ fun RecordingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = stringResource(R.string.recording_idle_title),
+                        text = stringResource(
+                            if (noWordsDetected) CoreR.string.dictation_no_words_detected else R.string.recording_idle_title,
+                        ),
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = (-0.5).sp,
+                        textAlign = TextAlign.Center,
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -383,13 +398,23 @@ fun RecordingScreen(
                             .clickable {
                                 ownsRecording = false
                                 scope.launch {
-                                    val result = dictationController?.confirmAndTranscribe(
+                                    val outcome = dictationController?.confirmAndTranscribe(
                                         TranscriptionRetention.PERSIST_HISTORY,
                                     )
-                                    transcriptionResult = result ?: noResultLabel
-                                    // Keep the Home preview for a short, privacy-bounded period.
-                                    if (result != null) {
-                                        dataStore?.let { LastTranscriptionStore.save(it, result) }
+                                    when (outcome) {
+                                        is TranscriptionOutcome.Text -> {
+                                            transcriptionResult = outcome.text
+                                            // Keep the Home preview for a short, privacy-bounded period.
+                                            dataStore?.let { LastTranscriptionStore.save(it, outcome.text) }
+                                        }
+                                        TranscriptionOutcome.NoWordsDetected -> {
+                                            // Like iOS, which drops its last result when a dictation
+                                            // starts: the older text must not pass for this one.
+                                            noWordsDetected = true
+                                            dataStore?.let { LastTranscriptionStore.clear(it) }
+                                            Timber.i("No words detected notice shown: surface=app")
+                                        }
+                                        TranscriptionOutcome.Failed, null -> transcriptionResult = noResultLabel
                                     }
                                 }
                             },
@@ -429,11 +454,7 @@ fun RecordingScreen(
                             .size(90.dp)
                             .clip(CircleShape)
                             .background(DictusColors.Accent)
-                            .clickable {
-                                transcriptionResult = null
-                                copied = false
-                                runGateCommand(micGate.request(engineState))
-                            },
+                            .clickable { requestNewDictation() },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -452,9 +473,7 @@ fun RecordingScreen(
                             .size(90.dp)
                             .clip(CircleShape)
                             .background(DictusColors.Accent)
-                            .clickable {
-                                runGateCommand(micGate.request(engineState))
-                            },
+                            .clickable { requestNewDictation() },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(

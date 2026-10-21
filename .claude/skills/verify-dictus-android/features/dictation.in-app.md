@@ -9,7 +9,7 @@ Dictus's Home tab starts a full-screen recording without any keyboard; the resul
 
 ## Sub-features
 
-- `dictation.start-in-app`: « Nouvelle dictée » on Accueil opens the recording screen **and starts recording at once**; « Toucher pour arrêter » stops and transcribes. — présent
+- `dictation.start-in-app`: « Nouvelle dictée » on Accueil opens the recording screen **and starts recording at once**; « Toucher pour arrêter » stops and transcribes. A dictation that produces no text (silence, too short, blank transcription) shows « Aucun mot détecté » in place of « Nouvelle dictée », clears « Dernière transcription » and saves nothing, like iOS (#153). — présent
 - `dictation.copy-last`: The « Dernière transcription » card on Accueil copies its text (`Copier`). — présent
 - `dictation.download-prompt`: — partiel: Accueil never asks to download a model (it always shows « Modèle actif »); only the mic answers « Aucun modèle vocal » once tapped.
 - `dictation.from-widget`: — absent: no home-screen widget.
@@ -27,6 +27,7 @@ Preconditions: Launch and Doctor OK, onboarding completed, a model downloaded.
 - **Home.** Tap `Accueil`. → `Modèle actif`, `Nouvelle dictée` and, if any, `Dernière transcription` in the tree (`screen.sh app.home`).
 - **Open the recorder (this records).** Tap `Nouvelle dictée`. → `Retour`, a running timer (`0:01`), `Arrêter`, `Toucher pour arrêter`; log `ACTION_START` (`screen.sh app.recording`).
 - **Stop and transcribe (records the room).** Tap `Arrêter`. → `Transcription en cours…` then `Résultat` with `Copier`; log `confirmAndTranscribe: N samples captured`; « Dernière transcription » appears on Accueil.
+- **Empty dictation (no words).** On the emulator, play `/home/pierre/Dev/dictus-proofs/153/silence-5s.wav` (5 s of digital silence, `ffmpeg -f lavfi -i anullsrc=r=16000:cl=mono -t 5`) right after « Nouvelle dictée », then `Arrêter`. → log `Transcription processed: rawLength=0` then `No words detected notice shown: surface=app`; the screen reads « Aucun mot détecté » above the mic, no `Résultat` card; Accueil has no « Dernière transcription ». Whisper can also hallucinate on silence (« (musique) »): that is text, not this path.
 - **Leave without a transcript.** `Retour` does **not** stop the recording (see Gotchas). Stop it from Quick Settings: swipe down twice, tap `1 appli est active`, Dictus `Arrêter`; the green mic chip disappears.
 - **Proof.** Screens before/after and, for a real dictation, the `Résultat` text in the tree plus the log line; the « Dernière transcription » card on Accueil shows the same text afterwards.
 

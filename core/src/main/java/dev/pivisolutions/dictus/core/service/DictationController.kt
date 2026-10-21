@@ -40,9 +40,10 @@ interface DictationController {
     fun cancelRecording()
 
     /**
-     * Stop recording, transcribe the audio, and return the processed text.
+     * Stop recording, transcribe the audio, and return what it produced.
      * Transitions: Recording -> Transcribing -> Idle.
-     * Returns the post-processed transcribed text, or null on failure.
+     * Returns the post-processed text, [TranscriptionOutcome.NoWordsDetected] when there is
+     * nothing to insert, or [TranscriptionOutcome.Failed].
      */
-    suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String?
+    suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome
 }

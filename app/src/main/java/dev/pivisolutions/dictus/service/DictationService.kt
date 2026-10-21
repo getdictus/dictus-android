@@ -22,10 +22,10 @@ import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.audio.DictationSoundPlayer
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
-import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -46,9 +46,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import dev.pivisolutions.dictus.asr.ParakeetProvider
-import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelManager
 import timber.log.Timber
@@ -119,6 +117,13 @@ class DictationService : Service(), DictationController {
     }
     private val modelManager by lazy { ModelManager(applicationContext) }
     private val modelDownloader by lazy { ModelDownloader(modelManager) }
+    private val transcriber by lazy {
+        DictationTranscriber(
+            timeoutMs = TRANSCRIPTION_TIMEOUT_MS,
+            ensureModel = { modelKey -> modelDownloader.ensureModelAvailable(modelKey) },
+            withProvider = { modelKey, modelPath, use -> withProviderForModel(modelKey, modelPath, use) },
+        )
+    }
 
     /**
      * Local binder for same-process binding.
@@ -325,7 +330,7 @@ class DictationService : Service(), DictationController {
      * typical dictation (5-30s audio). 30s covers worst-case long recordings.
      * A stuck JNI call should not block the UI indefinitely.
      */
-    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
+    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
         // 1. Stop recording and get audio samples
         val samples = audioCaptureManager?.stop() ?: FloatArray(0)
         timerJob?.cancel()
@@ -333,24 +338,9 @@ class DictationService : Service(), DictationController {
         elapsedMs = 0L
         audioCaptureManager = null
 
-        if (samples.isEmpty()) {
-            Timber.w("confirmAndTranscribe: no audio samples captured")
-            _state.value = DictationState.Idle
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return null
-        }
-
-        if (!RecordingDurationPolicy.canTranscribe(samples.size)) {
-            Timber.w(
-                "confirmAndTranscribe: clip too short (%d samples, minimum=%d)",
-                samples.size,
-                RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT,
-            )
-            _state.value = DictationState.Idle
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return null
+        transcriber.rejectBeforeEngine(samples)?.let { outcome ->
+            finishTranscription()
+            return outcome
         }
 
         // Play stop cue when audio capture ends and transcription begins.
@@ -374,43 +364,17 @@ class DictationService : Service(), DictationController {
                 engineLanguage,
             )
 
-            // 3. Ensure model is available (download on first use)
-            val modelPath = modelDownloader.ensureModelAvailable(activeModelKey)
-            if (modelPath == null) {
-                Timber.e("Model not available, cannot transcribe")
-                _state.value = DictationState.Idle
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-                return null
-            }
+            // 3. Download the model if needed, transcribe, post-process.
+            val outcome = transcriber.transcribe(samples, activeModelKey, engineLanguage)
 
-            // 4. Initialize and use the selected provider/model under one ownership lock.
-            val rawText = transcribeWithProvider(
-                modelKey = activeModelKey,
-                modelPath = modelPath,
-                samples = samples,
-                language = engineLanguage,
-            )
-
-            if (rawText == null) {
-                Timber.e("Provider initialization failed or transcription timed out")
-                _state.value = DictationState.Idle
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-                return null
-            }
-
-            // 6. Post-process (trim + punctuation)
-            val processedText = TextPostProcessor.process(rawText)
-            Timber.d(PrivacySafeLog.transcriptionProcessed(rawText, processedText))
-
-            if (processedText.isNotEmpty()) {
+            // 4. Only a dictation with words reaches history.
+            if (outcome is TranscriptionOutcome.Text) {
                 val model = ModelCatalog.findByKey(activeModelKey)
                 transcriptionHistoryWriter.persist(
                     // Pro gate: callers still express the retention their context deserves,
                     // the flag only ever downgrades it (see PremiumFlags.HISTORY_VISIBLE).
                     retention = PremiumFlags.effectiveRetention(retention),
-                    text = processedText,
+                    text = outcome.text,
                     metadata = TranscriptionHistoryMetadata(
                         requestedLanguage = languagePref,
                         durationMillis = samples.size * 1_000L / RecordingDurationPolicy.SAMPLE_RATE_HZ,
@@ -419,45 +383,22 @@ class DictationService : Service(), DictationController {
                     ),
                 )
             }
-
-            _state.value = DictationState.Idle
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-
-            if (processedText.isEmpty()) null else processedText
+            outcome
         } catch (cancellation: CancellationException) {
-            _state.value = DictationState.Idle
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
             throw cancellation
         } catch (e: Exception) {
             Timber.e(e, "Transcription failed")
-            _state.value = DictationState.Idle
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            null
+            TranscriptionOutcome.Failed
+        } finally {
+            finishTranscription()
         }
     }
 
-    /**
-     * Get or initialize the correct STT provider based on the active model's provider type.
-     *
-     * WHY dynamic dispatch: Phase 9 adds Parakeet as a second engine. The provider is
-     * determined by the active model's AiProvider enum, not a separate setting.
-     * Strict single-engine policy: if the provider type changes, release() the current
-     * one before initialize() on the new one — prevents OOM from dual engine loading.
-     */
-    private suspend fun transcribeWithProvider(
-        modelKey: String,
-        modelPath: String,
-        samples: FloatArray,
-        language: String,
-    ): String? {
-        return withProviderForModel(modelKey, modelPath) { provider ->
-            withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
-                provider.transcribe(samples, language)
-            }
-        }
+    /** Every confirmAndTranscribe exit: back to Idle and out of the foreground. */
+    private fun finishTranscription() {
+        _state.value = DictationState.Idle
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     /**
@@ -491,6 +432,14 @@ class DictationService : Service(), DictationController {
         }
     }
 
+    /**
+     * Run [block] on the initialized provider for the model's engine.
+     *
+     * WHY dynamic dispatch: Phase 9 adds Parakeet as a second engine. The provider is
+     * determined by the active model's AiProvider enum, not a separate setting.
+     * Strict single-engine policy: if the provider type changes, release() the current
+     * one before initialize() on the new one — prevents OOM from dual engine loading.
+     */
     private suspend fun <T> withProviderForModel(
         modelKey: String,
         modelPath: String,

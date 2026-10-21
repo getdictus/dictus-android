@@ -27,6 +27,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
 import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
@@ -48,7 +49,9 @@ import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
 import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
+import dev.pivisolutions.dictus.ime.input.DictationFeedback
 import dev.pivisolutions.dictus.ime.input.DictationUndo
+import dev.pivisolutions.dictus.ime.input.NoWordsNotice
 import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
 import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionCoordinator
@@ -145,6 +148,10 @@ class DictusImeService : LifecycleInputMethodService() {
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
     // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
     private val dictationUndo = DictationUndo()
+    // "No words detected" after a dictation that produced no text, in the suggestion bar (#153).
+    private val noWordsNotice = NoWordsNotice(bindingScope)
+    // Withdraws both offers together wherever the field changes.
+    private val dictationFeedback = DictationFeedback(dictationUndo, noWordsNotice)
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
@@ -595,7 +602,7 @@ class DictusImeService : LifecycleInputMethodService() {
         editorSelStart = attribute?.initialSelStart ?: -1
         editorSelEnd = attribute?.initialSelEnd ?: -1
         // A restart keeps the same field; a new field already went through onFinishInput.
-        if (!restarting) dictationUndo.clear()
+        if (!restarting) dictationFeedback.withdraw()
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         refreshFrenchAdaptiveKeyState()
         logEditorSession(attribute, restarting)
@@ -644,7 +651,7 @@ class DictusImeService : LifecycleInputMethodService() {
         isEditorSelectionCollapsed = false
         editorSelStart = -1
         editorSelEnd = -1
-        dictationUndo.clear()
+        dictationFeedback.withdraw()
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         super.onFinishInput()
     }
@@ -713,6 +720,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
         val isDictationUndoAvailable by dictationUndo.isAvailable.collectAsState()
+        val isNoWordsNoticeVisible by noWordsNotice.isVisible.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
@@ -745,7 +753,7 @@ class DictusImeService : LifecycleInputMethodService() {
 
         val gatedMicTap = {
             autocorrectCoordinator.onOtherInput()
-            dictationUndo.clear()
+            dictationFeedback.withdraw()
             if (dictationState is DictationState.Idle) {
                 if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED
@@ -864,9 +872,10 @@ class DictusImeService : LifecycleInputMethodService() {
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
+                    isNoWordsNoticeVisible = isNoWordsNoticeVisible,
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
-                        dictationUndo.clear()
+                        dictationFeedback.withdraw()
                         val ic = currentInputConnection ?: return@KeyboardScreen
                         // A callback carrying a prediction token must always take the guarded
                         // prediction path. Never reinterpret a delayed prediction tap as a
@@ -924,7 +933,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     },
                     onCurrentWordSelected = {
                         autocorrectCoordinator.onOtherInput()
-                        dictationUndo.clear()
+                        dictationFeedback.withdraw()
                         // Commit the raw input as-is + space (user accepts what they typed)
                         val ic = currentInputConnection ?: return@KeyboardScreen
                         val word = _currentWord.value
@@ -948,7 +957,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     },
                     onMoveCursor = { delta ->
                         autocorrectCoordinator.onOtherInput()
-                        dictationUndo.clear()
+                        dictationFeedback.withdraw()
                         clearSuggestionState()
                         currentInputConnection?.let { moveCursorBy(it, delta) }
                         refreshFrenchAdaptiveKeyState()
@@ -1004,8 +1013,8 @@ class DictusImeService : LifecycleInputMethodService() {
                             if (controller != null) {
                                 val retention = transcriptionRetentionSession.consume()
                                 bindingScope.launch {
-                                    val text = controller.confirmAndTranscribe(retention)
-                                    if (text != null) {
+                                    val outcome = controller.confirmAndTranscribe(retention)
+                                    dictationFeedback.onOutcome(outcome) { text ->
                                         insertDictation(text)
                                         Timber.d(PrivacySafeLog.transcriptionInserted(text))
                                         // Clear suggestions after voice transcription so the bar
@@ -1013,8 +1022,13 @@ class DictusImeService : LifecycleInputMethodService() {
                                         // Suggestions resume when user types on keyboard.
                                         _suggestions.value = emptyList()
                                         _currentWord.value = ""
-                                    } else {
-                                        Timber.w("Transcription returned null (failed or empty)")
+                                    }
+                                    when (outcome) {
+                                        TranscriptionOutcome.NoWordsDetected ->
+                                            Timber.i("No words detected notice shown: surface=keyboard")
+                                        TranscriptionOutcome.Failed ->
+                                            Timber.w("Transcription failed, nothing inserted")
+                                        is TranscriptionOutcome.Text -> Unit
                                     }
                                 }
                             }
@@ -1060,7 +1074,7 @@ class DictusImeService : LifecycleInputMethodService() {
      */
     fun commitText(text: String) {
         val inputConnection = currentInputConnection ?: return
-        dictationUndo.clear()
+        dictationFeedback.withdraw()
         if (text == " ") {
             val result = autocorrectCoordinator.onSpace(InputConnectionAutocorrectEditor(inputConnection)) {
                 inputConnection.commitText(" ", 1)
@@ -1104,7 +1118,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun undoLastDictation() {
         val inputConnection = currentInputConnection
         if (inputConnection == null) {
-            dictationUndo.clear()
+            dictationFeedback.withdraw()
             return
         }
         autocorrectCoordinator.onOtherInput()
@@ -1130,7 +1144,7 @@ class DictusImeService : LifecycleInputMethodService() {
      */
     fun deleteBackward() {
         val inputConnection = currentInputConnection ?: return
-        dictationUndo.clear()
+        dictationFeedback.withdraw()
         clearSuggestionState()
         autocorrectCoordinator.onBackspace(InputConnectionAutocorrectEditor(inputConnection)) {
             deletePrecedingCodePoint(inputConnection)
@@ -1141,7 +1155,7 @@ class DictusImeService : LifecycleInputMethodService() {
     /** Deletes the preceding token during accelerated backspace repetition. */
     fun deleteWordBackward() {
         val inputConnection = currentInputConnection ?: return
-        dictationUndo.clear()
+        dictationFeedback.withdraw()
         autocorrectCoordinator.onOtherInput()
         clearSuggestionState()
         deletePrecedingWord(inputConnection)
@@ -1153,7 +1167,7 @@ class DictusImeService : LifecycleInputMethodService() {
      */
     fun sendReturnKey() {
         autocorrectCoordinator.onOtherInput()
-        dictationUndo.clear()
+        dictationFeedback.withdraw()
         clearSuggestionState()
         currentInputConnection?.sendKeyEvent(
             android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER),
@@ -1185,7 +1199,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun handleFrenchAdaptiveKey() {
         val inputConnection = currentInputConnection ?: return
         autocorrectCoordinator.onOtherInput()
-        dictationUndo.clear()
+        dictationFeedback.withdraw()
         if (!isCurrentEditorSuggestionEligible) {
             inputConnection.commitText(FrenchAdaptiveKey.DEFAULT.label, 1)
             return
@@ -1199,7 +1213,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun handleFrenchAdaptiveVariant(variant: String) {
         val inputConnection = currentInputConnection ?: return
         autocorrectCoordinator.onOtherInput()
-        dictationUndo.clear()
+        dictationFeedback.withdraw()
         if (!isCurrentEditorSuggestionEligible) return
         // Context may change while the popup is open; never replace from stale display state.
         val currentState = readFrenchAdaptiveContext()
