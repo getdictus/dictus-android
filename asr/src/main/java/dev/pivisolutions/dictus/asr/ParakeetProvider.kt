@@ -7,8 +7,17 @@ import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * SttProvider implementation backed by sherpa-onnx OfflineRecognizer for
@@ -24,13 +33,23 @@ import java.io.File
  *
  * WHY null AssetManager: Models live in the app's files directory, not in assets.
  * Passing null to OfflineRecognizer routes to the newFromFile() JNI path.
+ *
+ * WHY a dedicated native thread: the JNI calls block for seconds (model load, decode
+ * of a long dictation). Callers run on the main thread, so running them inline froze
+ * every frame, including the transcribing animation (#155). All native calls run one
+ * at a time on [nativeDispatcher], like WhisperContext's single-thread executor.
+ * Serializing them also means release() waits for an in-flight decode instead of
+ * freeing the recognizer under it.
  */
 class ParakeetProvider(
     // Injectable so a unit test can simulate a missing native library without the
     // real OfflineRecognizer, whose class init loads libsherpa-onnx-jni.
     private val createRecognizer: (OfflineRecognizerConfig) -> OfflineRecognizer =
         { config -> OfflineRecognizer(assetManager = null, config = config) },
+    private val nativeDispatcher: CoroutineDispatcher = NATIVE_DISPATCHER,
 ) : SttProvider {
+
+    private val nativeScope = CoroutineScope(SupervisorJob() + nativeDispatcher)
 
     override val providerId: String = "parakeet"
     override val displayName: String = "Parakeet (sherpa-onnx)"
@@ -39,6 +58,8 @@ class ParakeetProvider(
     // Empty list = all languages supported; actual constraint is per-model.
     override val supportedLanguages: List<String> = emptyList()
 
+    // Written only on the native thread; read by isReady from any thread.
+    @Volatile
     private var recognizer: OfflineRecognizer? = null
 
     override val isReady: Boolean get() = recognizer != null
@@ -54,7 +75,9 @@ class ParakeetProvider(
      *                  tokens.txt is expected in the same directory.
      * @return true if initialization succeeded.
      */
-    override suspend fun initialize(modelPath: String): Boolean {
+    override suspend fun initialize(modelPath: String): Boolean = runNative { initializeBlocking(modelPath) }
+
+    private fun initializeBlocking(modelPath: String): Boolean {
         val modelDir = modelPath.substringBeforeLast("/")
         val tokensPath = "$modelDir/tokens.txt"
 
@@ -132,10 +155,10 @@ class ParakeetProvider(
      * @param language BCP-47 language code (ignored — Parakeet auto-detects).
      * @return Raw transcribed text.
      */
-    override suspend fun transcribe(samples: FloatArray, language: String): String {
+    override suspend fun transcribe(samples: FloatArray, language: String): String = runNative {
         val r = recognizer ?: throw IllegalStateException("ParakeetProvider not initialized — call initialize() first")
         val stream = r.createStream()
-        return try {
+        try {
             stream.acceptWaveform(samples, sampleRate = 16000)
             r.decode(stream)
             r.getResult(stream).text
@@ -151,9 +174,41 @@ class ParakeetProvider(
      * Relying on finalization would retain large native allocations across model switches.
      */
     override suspend fun release() {
-        val current = recognizer
-        recognizer = null
-        current?.release()
+        // NonCancellable: a release skipped while queued would leak the native model.
+        withContext(NonCancellable) {
+            runNative {
+                val current = recognizer
+                recognizer = null
+                current?.release()
+            }
+        }
         Timber.d("ParakeetProvider released")
+    }
+
+    /**
+     * Run [block] on the native thread and await its result.
+     *
+     * WHY async + await rather than withContext: a JNI call cannot be interrupted, and
+     * withContext waits for its block even once cancelled, so withTimeoutOrNull would
+     * still hang on a stuck decode. await() returns on cancellation; the block then
+     * finishes on its own and its late result is dropped with its Deferred, so it can
+     * never reach the next dictation. A block still queued is skipped.
+     */
+    private suspend fun <T> runNative(block: () -> T): T {
+        val work = nativeScope.async { block() }
+        return try {
+            work.await()
+        } catch (cancellation: CancellationException) {
+            work.cancel()
+            throw cancellation
+        }
+    }
+
+    private companion object {
+        // One thread for every provider instance: a replacement model can only load
+        // once the previous one has finished its work and been released.
+        val NATIVE_DISPATCHER: CoroutineDispatcher =
+            Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "parakeet-native").apply { isDaemon = true } }
+                .asCoroutineDispatcher()
     }
 }
