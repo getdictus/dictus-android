@@ -27,6 +27,22 @@ class TranscriptionOutcomeTest {
     }
 
     @Test
+    fun `punctuation-only text is no words detected`() {
+        assertEquals(TranscriptionOutcome.NoWordsDetected, TranscriptionOutcome.fromProcessedText("... "))
+        assertEquals(TranscriptionOutcome.NoWordsDetected, TranscriptionOutcome.fromProcessedText("… ?! "))
+    }
+
+    @Test
+    fun `symbol-only text is no words detected`() {
+        assertEquals(TranscriptionOutcome.NoWordsDetected, TranscriptionOutcome.fromProcessedText("♪ ♪. "))
+    }
+
+    @Test
+    fun `a single digit is text`() {
+        assertEquals(TranscriptionOutcome.Text("3. "), TranscriptionOutcome.fromProcessedText("3. "))
+    }
+
+    @Test
     fun `non-empty engine output is returned as text`() {
         val processed = TextPostProcessor.process(" Bonjour ")
 
