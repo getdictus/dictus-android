@@ -11,17 +11,25 @@ DICTUS_ACTIVITY="$DICTUS_PKG/.MainActivity"
 DICTUS_IME="$DICTUS_PKG/.ime.DictusImeService"
 DICTUS_PROOFS="${DICTUS_PROOFS:-/home/pierre/Dev/dictus-proofs}"
 DICTUS_EVIDENCE_ROOT="${DICTUS_EVIDENCE_ROOT:-$DICTUS_PROOFS/verify-dictus-android}"
-DICTUS_LOCK="$DICTUS_PROOFS/.pixel-lock"
+# Device lock: "pixel" (default, every existing caller) or "emulator" (emulator-mic.sh).
+DICTUS_LOCK_NAME="${DICTUS_LOCK_NAME:-pixel}"
+case "$DICTUS_LOCK_NAME" in pixel|emulator) ;; *) echo "error: DICTUS_LOCK_NAME must be pixel or emulator" >&2; exit 2 ;; esac
+DICTUS_LOCK="$DICTUS_PROOFS/.$DICTUS_LOCK_NAME-lock"
 DICTUS_PREFS_REMOTE="files/datastore/dictus_prefs.preferences_pb"
 REPO_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 DICTUS_APK="$REPO_ROOT/app/build/outputs/apk/debug/app-debug.apk"
+# Gradle property that adds the x86_64 native libs to the debug APK (emulator builds only);
+# the only place that names it.
+DICTUS_EMULATOR_GRADLE_PROP="${DICTUS_EMULATOR_GRADLE_PROP:--Pdictus.emulatorAbi=true}"
 
 # Session = this checkout (full path, hashed), or DICTUS_VERIFY_SESSION when two agents share
 # one checkout. The session directory holds the lock token and the run pointer, so a session
 # never resolves another session's run and never releases another session's lock.
 DICTUS_SESSION="${DICTUS_VERIFY_SESSION:-$(basename "$REPO_ROOT")-$(printf '%s' "$REPO_ROOT" | sha256sum | cut -c1-12)}"
 DICTUS_SESSION_DIR="$DICTUS_EVIDENCE_ROOT/sessions/$DICTUS_SESSION"
-DICTUS_SESSION_TOKEN="$DICTUS_SESSION_DIR/token"   # written by lock.sh acquire, removed by release
+# Lock token of this session, one file per lock: "token" (Pixel, unchanged) or "token.emulator".
+DICTUS_SESSION_TOKEN="$DICTUS_SESSION_DIR/token"
+[ "$DICTUS_LOCK_NAME" = pixel ] || DICTUS_SESSION_TOKEN="$DICTUS_SESSION_DIR/token.$DICTUS_LOCK_NAME"
 DICTUS_SESSION_PTR="$DICTUS_SESSION_DIR/run"       # "<token> <run-dir>", written by launch.sh
 
 adbs() { adb -s "$DICTUS_SERIAL" "$@"; }

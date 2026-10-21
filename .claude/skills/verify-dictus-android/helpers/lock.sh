@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Pixel lock shared by every thread that installs or drives on the Pixel (other skills and agents
-# use the same directory: /home/pierre/Dev/dictus-proofs/.pixel-lock).
-#   lock.sh acquire [label]   wait (retry every 60 s, up to 30 min) until the lock is free, then take
+# Device lock shared by every thread that installs or drives on the Pixel (other skills and agents
+# use the same directory: /home/pierre/Dev/dictus-proofs/.pixel-lock). DICTUS_LOCK_NAME=emulator
+# works on the emulator lock instead (.emulator-lock, token file token.emulator); default pixel.
+#   lock.sh acquire [label]   wait (retry every DICTUS_LOCK_RETRY_SEC, default 60 s, up to
+#                             DICTUS_LOCK_WAIT_MIN, default 30 min)
+#                             until the lock is free, then take
 #                             it with a token unique to this session (pid + epoch ms + random)
 #   lock.sh release           release it, only if its token is this session's token
 #   lock.sh status            print the owner and whether it is this session
@@ -15,16 +18,19 @@ case "$cmd" in
   acquire)
     if lock_is_mine; then echo "LOCK ACQUIRED (already held by this session, token $(session_token))"; exit 0; fi
     token="$$-$(date +%s%3N)-$(od -An -N4 -tx4 /dev/urandom | tr -d ' ')"
-    for i in $(seq 0 30); do
+    wait_min="${DICTUS_LOCK_WAIT_MIN:-30}"; retry="${DICTUS_LOCK_RETRY_SEC:-60}"
+    deadline=$(( $(date +%s) + wait_min * 60 ))
+    while :; do
       if mkdir "$DICTUS_LOCK" 2>/dev/null; then
         printf 'token=%s\nsession=%s\nlabel=%s\nsince=%s\n' "$token" "$DICTUS_SESSION" "$label" "$(date -Is)" > "$DICTUS_LOCK/owner"
         echo "$token" > "$DICTUS_SESSION_TOKEN"
         echo "LOCK ACQUIRED token=$token session=$DICTUS_SESSION"; exit 0
       fi
-      echo "lock held by: $(lock_owner_line) (attempt $i/30, retry in 60 s)"
-      [ "$i" -lt 30 ] && sleep 60
+      [ "$(( $(date +%s) + retry ))" -gt "$deadline" ] && break
+      echo "$DICTUS_LOCK_NAME lock held by: $(lock_owner_line) (retry in $retry s, give up at $(date -d "@$deadline" +%H:%M))"
+      sleep "$retry"
     done
-    echo "LOCK TIMEOUT after 30 min"; exit 1 ;;
+    echo "LOCK TIMEOUT after $wait_min min: $DICTUS_LOCK_NAME lock held by [$(lock_owner_line)]"; exit 1 ;;
   release)
     if [ ! -d "$DICTUS_LOCK" ]; then rm -f "$DICTUS_SESSION_TOKEN"; echo "LOCK already free"; exit 0; fi
     if ! lock_is_mine; then
