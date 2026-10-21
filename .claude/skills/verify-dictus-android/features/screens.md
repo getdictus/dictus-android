@@ -22,7 +22,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `app.onboarding.completion` | Onboarding 7/7: « C'est prêt ! », « Commencer » | fresh install, after step 6 | onboarding | — | no — onboarding completed on the Pixel |
 | `app.whats-new` | — | — | onboarding | absent | — |
 | `app.home` | Home tab: logo, « Modèle actif », « Dernière transcription » + « Copier », « Nouvelle dictée » | tap `Accueil` | dictation.in-app | without a last transcription (captured) / with one | [yes](../screens/app.home.png) |
-| `app.recording` | Full-screen dictation: timer, « Arrêter », « Toucher pour arrêter » | Accueil → `Nouvelle dictée` (starts recording at once; `Retour` does not stop it) | dictation.in-app | idle / recording / transcription / « Résultat » + « Copier » / loading overlay or « Aucun modèle vocal » | [yes](../screens/app.recording.png) |
+| `app.recording` | Full-screen dictation: timer, « Arrêter », « Toucher pour arrêter » | Accueil → `Nouvelle dictée` (starts recording at once; `Retour` does not stop it) | dictation.in-app | idle / recording / transcription / « Résultat » + « Copier » / « Aucun mot détecté » (empty dictation) / loading overlay or « Aucun modèle vocal » | [yes](../screens/app.recording.png) |
 | `app.history` | — | route not registered (`PremiumFlags.HISTORY_VISIBLE = false`) | history | absent (code present) | — |
 | `app.history.detail` | — | same | history | absent (code present) | — |
 | `app.models` | Models tab: « Téléchargés », « Disponibles », storage | tap `Modèles` | models.transcription | active card « Actif » / download « N% » / failure « Réessayer » / greyed out « Nécessite N Go de RAM ou plus » / dialogs « Supprimer … ? », « Modèle anglais uniquement », « RAM insuffisante » | [yes](../screens/app.models.png) |
@@ -51,7 +51,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `kbd.emoji` | Emoji picker, ABC and ⌫ at the bottom | tap 😊 | keyboard.emoji | categories / recents | [yes](../screens/kbd.emoji.png) |
 | `kbd.voice-note-reader` | — | — | voice-notes | absent | — |
 | `kbd.smart-mode-fan` | — | — | smart-modes | absent | — |
-| `kbd.suggestions` | Suggestion bar (3 slots); « Annuler » chip after a dictation | type in a scratch note | typing.autocorrect, dictation.keyboard | completions / predictions / dictation undo chip | [yes](../screens/kbd.suggestions.png) |
+| `kbd.suggestions` | Suggestion bar (3 slots); « Annuler » chip after a dictation | type in a scratch note | typing.autocorrect, dictation.keyboard | completions / predictions / dictation undo chip / « Aucun mot détecté » notice (3 s) | [yes](../screens/kbd.suggestions.png) |
 | `sys.settings.full-access` | — | — | dictation.keyboard | iOS-only | — |
 | `share.voice-note` | — | — | voice-notes | absent | — |
 | `widget.live-activity` | — | — | live-activity | iOS-only | — |

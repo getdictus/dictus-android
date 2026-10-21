@@ -57,6 +57,7 @@ fun KeyboardScreen(
     predictionToken: NextWordPredictionToken? = null,
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
+    isNoWordsNoticeVisible: Boolean = false,
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
@@ -111,6 +112,7 @@ fun KeyboardScreen(
                     onCurrentWordSelected = onCurrentWordSelected,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = onUndoDictation,
+                    isNoWordsNoticeVisible = isNoWordsNoticeVisible,
                 )
 
                 // Mic button row above keyboard (46.dp)

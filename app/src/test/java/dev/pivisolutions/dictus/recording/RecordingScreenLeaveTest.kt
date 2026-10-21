@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -197,10 +198,10 @@ class RecordingScreenLeaveTest {
             mutableState.value = DictationState.Idle
         }
 
-        override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
+        override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
             confirmAndTranscribeCallCount++
             mutableState.value = DictationState.Idle
-            return null
+            return TranscriptionOutcome.Failed
         }
     }
 }

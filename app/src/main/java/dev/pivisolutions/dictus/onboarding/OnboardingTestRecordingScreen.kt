@@ -46,6 +46,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
@@ -59,6 +60,7 @@ import dev.pivisolutions.dictus.ui.onboarding.OnboardingCTAButton
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingProgressDots
 import dev.pivisolutions.dictus.ui.onboarding.accentGradient
 import kotlinx.coroutines.launch
+import dev.pivisolutions.dictus.core.R as CoreR
 
 /**
  * Onboarding Step 6 — Test recording screen.
@@ -302,10 +304,16 @@ fun OnboardingTestRecordingScreen(
                                 .background(DictusColors.Recording)
                                 .clickable {
                                     scope.launch {
-                                        val result = dictationController?.confirmAndTranscribe(
+                                        val outcome = dictationController?.confirmAndTranscribe(
                                             TranscriptionRetention.EPHEMERAL,
                                         )
-                                        transcriptionResult = result ?: context.getString(R.string.onboarding_test_recording_no_result)
+                                        transcriptionResult = when (outcome) {
+                                            is TranscriptionOutcome.Text -> outcome.text
+                                            TranscriptionOutcome.NoWordsDetected ->
+                                                context.getString(CoreR.string.dictation_no_words_detected)
+                                            TranscriptionOutcome.Failed, null ->
+                                                context.getString(R.string.onboarding_test_recording_no_result)
+                                        }
                                     }
                                 },
                             contentAlignment = Alignment.Center,

@@ -26,6 +26,7 @@ import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -325,7 +326,7 @@ class DictationService : Service(), DictationController {
      * typical dictation (5-30s audio). 30s covers worst-case long recordings.
      * A stuck JNI call should not block the UI indefinitely.
      */
-    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
+    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
         // 1. Stop recording and get audio samples
         val samples = audioCaptureManager?.stop() ?: FloatArray(0)
         timerJob?.cancel()
@@ -338,7 +339,7 @@ class DictationService : Service(), DictationController {
             _state.value = DictationState.Idle
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
-            return null
+            return TranscriptionOutcome.NoWordsDetected
         }
 
         if (!RecordingDurationPolicy.canTranscribe(samples.size)) {
@@ -350,7 +351,7 @@ class DictationService : Service(), DictationController {
             _state.value = DictationState.Idle
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
-            return null
+            return TranscriptionOutcome.NoWordsDetected
         }
 
         // Play stop cue when audio capture ends and transcription begins.
@@ -381,7 +382,7 @@ class DictationService : Service(), DictationController {
                 _state.value = DictationState.Idle
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
-                return null
+                return TranscriptionOutcome.Failed
             }
 
             // 4. Initialize and use the selected provider/model under one ownership lock.
@@ -397,7 +398,7 @@ class DictationService : Service(), DictationController {
                 _state.value = DictationState.Idle
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
-                return null
+                return TranscriptionOutcome.Failed
             }
 
             // 6. Post-process (trim + punctuation)
@@ -424,7 +425,11 @@ class DictationService : Service(), DictationController {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
 
-            if (processedText.isEmpty()) null else processedText
+            TranscriptionOutcome.fromProcessedText(processedText).also { outcome ->
+                if (outcome == TranscriptionOutcome.NoWordsDetected) {
+                    Timber.i("confirmAndTranscribe: no words detected, nothing saved")
+                }
+            }
         } catch (cancellation: CancellationException) {
             _state.value = DictationState.Idle
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -435,7 +440,7 @@ class DictationService : Service(), DictationController {
             _state.value = DictationState.Idle
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
-            null
+            TranscriptionOutcome.Failed
         }
     }
 

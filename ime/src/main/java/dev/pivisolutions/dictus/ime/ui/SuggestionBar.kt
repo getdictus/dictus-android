@@ -23,12 +23,16 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import dev.pivisolutions.dictus.ime.R
+import dev.pivisolutions.dictus.core.R as CoreR
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
 
 enum class SuggestionPresentationMode { COMPLETION, PREDICTION }
@@ -45,7 +49,12 @@ fun SuggestionBar(
     predictionToken: NextWordPredictionToken? = null,
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
+    isNoWordsNoticeVisible: Boolean = false,
 ) {
+    if (isNoWordsNoticeVisible) {
+        NoWordsNoticeBar(modifier = modifier)
+        return
+    }
     if (isDictationUndoAvailable) {
         DictationUndoBar(onUndoDictation = onUndoDictation, modifier = modifier)
         return
@@ -153,5 +162,31 @@ private fun DictationUndoBar(onUndoDictation: () -> Unit, modifier: Modifier = M
                 fontSize = 14.sp,
             )
         }
+    }
+}
+
+/**
+ * Shown in place of the suggestion slots after a dictation that produced no text (#153). Grey,
+ * like the iOS toolbar: the app works, there was simply nothing to transcribe. A polite live
+ * region so TalkBack users hear it too.
+ */
+@Composable
+private fun NoWordsNoticeBar(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .semantics { liveRegion = LiveRegionMode.Polite }
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(CoreR.string.dictation_no_words_detected),
+            color = LocalDictusColors.current.textSecondary,
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

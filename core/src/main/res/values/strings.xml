@@ -16,4 +16,6 @@
     <string name="model_missing_title">No voice model yet</string>
     <string name="model_missing_body">Download a voice model to start dictating.</string>
     <string name="model_missing_accessibility">No speech recognition model is downloaded. Microphone unavailable.</string>
+    <!-- A dictation that produced no text. A notice, not an error; same sentence as iOS (#153, iOS #313). -->
+    <string name="dictation_no_words_detected">No words detected</string>
 </resources>

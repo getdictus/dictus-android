@@ -27,6 +27,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
 import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
@@ -49,6 +50,7 @@ import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
 import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.input.DictationUndo
+import dev.pivisolutions.dictus.ime.input.NoWordsNotice
 import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
 import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionCoordinator
@@ -145,6 +147,8 @@ class DictusImeService : LifecycleInputMethodService() {
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
     // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
     private val dictationUndo = DictationUndo()
+    // "No words detected" after a dictation that produced no text, in the suggestion bar (#153).
+    private val noWordsNotice = NoWordsNotice(bindingScope)
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
@@ -645,6 +649,7 @@ class DictusImeService : LifecycleInputMethodService() {
         editorSelStart = -1
         editorSelEnd = -1
         dictationUndo.clear()
+        noWordsNotice.clear()
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         super.onFinishInput()
     }
@@ -713,6 +718,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
         val isDictationUndoAvailable by dictationUndo.isAvailable.collectAsState()
+        val isNoWordsNoticeVisible by noWordsNotice.isVisible.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
@@ -746,6 +752,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val gatedMicTap = {
             autocorrectCoordinator.onOtherInput()
             dictationUndo.clear()
+            noWordsNotice.clear()
             if (dictationState is DictationState.Idle) {
                 if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED
@@ -864,6 +871,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
+                    isNoWordsNoticeVisible = isNoWordsNoticeVisible,
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
                         dictationUndo.clear()
@@ -1004,17 +1012,24 @@ class DictusImeService : LifecycleInputMethodService() {
                             if (controller != null) {
                                 val retention = transcriptionRetentionSession.consume()
                                 bindingScope.launch {
-                                    val text = controller.confirmAndTranscribe(retention)
-                                    if (text != null) {
-                                        insertDictation(text)
-                                        Timber.d(PrivacySafeLog.transcriptionInserted(text))
-                                        // Clear suggestions after voice transcription so the bar
-                                        // does not show stale suggestions from the last typed word.
-                                        // Suggestions resume when user types on keyboard.
-                                        _suggestions.value = emptyList()
-                                        _currentWord.value = ""
-                                    } else {
-                                        Timber.w("Transcription returned null (failed or empty)")
+                                    when (val outcome = controller.confirmAndTranscribe(retention)) {
+                                        is TranscriptionOutcome.Text -> {
+                                            val text = outcome.text
+                                            insertDictation(text)
+                                            Timber.d(PrivacySafeLog.transcriptionInserted(text))
+                                            // Clear suggestions after voice transcription so the bar
+                                            // does not show stale suggestions from the last typed word.
+                                            // Suggestions resume when user types on keyboard.
+                                            _suggestions.value = emptyList()
+                                            _currentWord.value = ""
+                                        }
+                                        TranscriptionOutcome.NoWordsDetected -> {
+                                            // Nothing inserted; say so instead of staying silent.
+                                            noWordsNotice.show()
+                                            Timber.i("No words detected notice shown: surface=keyboard")
+                                        }
+                                        TranscriptionOutcome.Failed ->
+                                            Timber.w("Transcription failed, nothing inserted")
                                     }
                                 }
                             }
