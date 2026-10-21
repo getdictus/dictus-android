@@ -73,7 +73,15 @@ android {
     }
 
     buildTypes {
+        // Parakeet 0.6B v3 RAM gate (#148). Release always keeps 8 GB; a debug build can
+        // lower it to measure Parakeet on a smaller phone:
+        //   ./gradlew assembleDebug -Pdictus.parakeetMinRamGb=6
+        debug {
+            val parakeetMinRamGb = providers.gradleProperty("dictus.parakeetMinRamGb").orNull?.toInt() ?: 8
+            buildConfigField("int", "PARAKEET_MIN_RAM_GB", parakeetMinRamGb.toString())
+        }
         release {
+            buildConfigField("int", "PARAKEET_MIN_RAM_GB", "8")
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }

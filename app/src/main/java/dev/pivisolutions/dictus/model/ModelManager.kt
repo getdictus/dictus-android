@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.model
 
 import android.content.Context
+import dev.pivisolutions.dictus.BuildConfig
 import dev.pivisolutions.dictus.model.ModelCatalog.isDirectoryModel
 import java.io.File
 
@@ -170,7 +171,7 @@ object ModelCatalog {
             speed = 0.40f,
             provider = AiProvider.PARAKEET,
             isTransducer = true,
-            minRamGb = 8,
+            minRamGb = BuildConfig.PARAKEET_MIN_RAM_GB,
             languages = ModelLanguages.PARAKEET_V3,
         ),
     )
