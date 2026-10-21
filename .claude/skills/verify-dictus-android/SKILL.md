@@ -17,12 +17,12 @@ Pick the lowest tier that can prove the change. Each tier proves what the one ab
 
 | Tier | Who and where | Proves | Does not prove |
 | --- | --- | --- | --- |
-| 1. Emulator | An agent on the AVD `dictus_api35` | UI, navigation, keyboard and IME, lifecycle, rotation, dictation from an injected WAV clip (pending) | A real microphone, real timings |
+| 1. Emulator | An agent on the AVD `dictus_api35` | UI, navigation, keyboard and IME, lifecycle, rotation, dictation from a WAV clip through the virtual microphone | A real microphone, real timings |
 | 2. Pixel 4, Andy | Andy with this skill on `99071FFAZ00EBN` | Real microphone, permissions, notifications, transcription time with Tiny, Base, Small Q5 and Parakeet 0.6B v3 | A real voice, text quality, keyboard feel |
 | 3. Pixel 4, Pierre | Pierre, in a batch device test | Real voice, text quality, keyboard feel in real apps | Phones faster than the Pixel 4 |
 | 4. Out of reach | Nobody | Nothing | Whisper models larger than Small Q5 |
 
-**1. Emulator.** This is the default tier for every PR and for ship-issue agents. One emulator runs at a time, and the agent that drives it holds a lock, as on the Pixel. It covers the UI, navigation, the Dictus keyboard in a real text field, activity and service lifecycle, rotation, and dictation fed by a WAV clip instead of the microphone. Three parts are **pending** and come in follow-up PRs: an x86_64 debug build (`whisper/build.gradle.kts` builds `arm64-v8a` and `armeabi-v7a` only today), the virtual microphone that plays the WAV clip, and the emulator lock. Until they land, do not claim a tier 1 proof of dictation.
+**1. Emulator.** This is the default tier for every PR and for ship-issue agents. One emulator runs at a time, and the agent that drives it holds a lock, as on the Pixel. It covers the UI, navigation, the Dictus keyboard in a real text field, activity and service lifecycle, rotation, and dictation fed by a WAV clip instead of the microphone. The x86_64 debug build (opt-in, #147), the virtual microphone that plays the clip and the emulator lock (#149) are in place: see Emulator tier below.
 
 **2. Pixel 4, driven by Andy.** Use the steps below: Launch, Doctor, Drive, Evidence, Cleanup. This tier proves what needs the real hardware:
 
@@ -35,6 +35,14 @@ Andy's voice is not a test input. The room noise proves that the chain runs, not
 **3. Pixel 4, Pierre.** Pierre checks what only a person can judge: dictation with his own voice in French and in other languages, the quality of the text, and how the keyboard feels in his own apps. A PR that touches this tier carries the `needs-physical-test` label (see `docs/agents/physical-test-label.md`: the label is added by path, and only Titus removes it after Pierre validates). It is not merged before Pierre has tested it in a batch device test.
 
 Batch device tests follow the shared `batch-device-test` skill (proposed in Pivii/skills#20, not merged yet). Pierre replies per PR with `#<num> OK` or `#<num> KO: <what failed>`.
+
+Before each batch, once the phone is connected and before the first install, enlarge the logcat ring buffer so the Dictus lines survive the whole batch (the default buffer was too small during the #144 + #147 batch and the app's logs were lost):
+
+```bash
+adb -s 99071FFAZ00EBN logcat -G 16M     # per buffer; check with: adb -s 99071FFAZ00EBN logcat -g
+```
+
+The size holds until the phone reboots: run it again after a reboot.
 
 **4. Out of reach.** Pierre has no phone more recent than the Pixel 4. `small` and `medium-q5_0` cannot be validated on the phones they are meant for. A PR that changes them says "not tested on a recent phone". `parakeet-tdt-0.6b-v3` is not in this tier: it is gated at 6 GB of RAM, like iOS (#148), so it runs on the 6 GB Pixel 4 and is measured in tier 2. Onboarding installs Parakeet v3 from 6 GB of RAM (so on the Pixel 4) and Small Q5 below 6 GB (`ModelCatalog.recommendedModelKey`); a phone below 6 GB sees `Nécessite 6 Go de RAM ou plus` on Parakeet 0.6B in Modèles; `DEFAULT_KEY` (`tiny`) is only a fallback when no model is active.
 
@@ -212,6 +220,9 @@ The default debug build has **no x86_64 whisper/trie libs** (it compiles ARM onl
 ```bash
 ./gradlew assembleDebug -Pdictus.emulatorAbi=true    # adds lib/x86_64/libwhisper.so, libggml*.so, libdictus_trie.so
 ./gradlew --stop
+# -no-window gives a silent microphone (the headless binary has no PulseAudio input: the guest
+# records zeroes). Fine for UI checks; for a dictation use emulator-mic.sh start, which runs the
+# GUI binary with a hidden window instead.
 emulator -avd dictus_api35 -memory 2048 -no-window -no-snapshot-save -no-boot-anim -gpu swiftshader_indirect &
 adb -s emulator-5554 wait-for-device
 adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
@@ -237,22 +248,54 @@ A=.claude/skills/verify-dictus-android/fixtures/audio
 $H/emulator-mic.sh build                       # ./gradlew assembleDebug -Pdictus.emulatorAbi=true, then --stop
 $H/emulator-mic.sh start 1                     # lock, virtual mic, boot; last line: SERIAL emulator-5554
 $H/emulator-mic.sh install 1                   # install -r, Dictus as IME, RECORD_AUDIO granted
-# Argent on emulator-5554: Home → « New dictation » (recording starts), then:
+# Argent on emulator-5554: Home → « Nouvelle dictée » (recording starts), then AT ONCE (< 1 s):
 $H/emulator-mic.sh play $A/fr-bonjour-test.wav 1
 # Argent: Stop → compare the text with $A/fr-bonjour-test.txt
 $H/emulator-mic.sh stop 1                      # emulator, virtual mic, lock; safe to run twice
+                                               # refused if another session holds the lock (--force)
 $H/emulator-mic.sh status
 ```
 
+- **Play the clip within a second of starting the recording.** Seen 2026-10-21 (#151), with `fr-bonjour-test.wav` among others: a clip played 5 s or more after « Nouvelle dictée » reached the host side of the virtual mic (`pw-record` on `dictus_mic_N` heard it) but the guest recorded silence: flat waveform, Tiny wrote « (musique) ». Played right after the tap, the same clip was transcribed. Cause not found yet: #156. A flat waveform while the clip plays means the take is lost: stop it and start again.
 - Set Réglages → Transcription → Language to **Français** first. On `Automatic`, Tiny takes the synthetic voice for Japanese.
 - `start` boots without `-no-window`: that flag selects `qemu-system-x86_64-headless`, whose PulseAudio driver is a stub in emulator 37.1.11 (« Could not init `pa' audio driver », the guest records silence). It uses the Qt binary with a hidden window (`-qt-hide-window`, `QT_QPA_PLATFORM=offscreen`), `PULSE_SOURCE=dictus_mic_N`, `-allow-host-audio`, the guest's speaker on a sink linked to nothing (`dictus_spk_N`, so its sounds do not loop into the mic through the default sink), gRPC with a token (Argent needs it), then `adb emu avd hostmicon`. It refuses to finish if `pa` failed.
 - The Gradle property is named once, in `env.sh` (`DICTUS_EMULATOR_GRADLE_PROP`); `install` refuses an APK without `lib/x86_64`.
-- The clips in `fixtures/audio/` are synthesized French sentences (libespeak-ng, see its README), 16 kHz mono, each with its expected text in a `.txt` beside it.
+- **Offline fallback:** the clips in `fixtures/audio/` are synthesized French sentences (libespeak-ng, see its README), 16 kHz mono, each with its expected text in a `.txt` beside it.
+
+**Clip source: `getdictus/dictus-test-voices`.** The real test clips live in that private repo, shared with iOS and desktop: `elevenlabs/<lang>/<lang>-NN-<slug>.wav` (16 kHz mono 16-bit PCM, 3 to 8 s; `-long-` clips 60 to 120 s) and `manifest.json`, whose `text` field is the expected text of each clip. Its `NOTICE` restricts them to internal Dictus testing and forbids redistribution outside that repo, so **never commit them here**. Fetch the clips you need with `gh` (needs read access to the private repo) into a directory outside the repository, read-only (no clone, no push):
+
+```bash
+# From the repository root. The function body is a subshell, so its `exit` never closes your
+# shell. It downloads each path to a temp file and moves it into place only on success; on the
+# first failure it removes the temp file, says so on stderr and returns 1. On success it prints
+# the directory: $DICTUS_PROOFS/test-voices (env.sh), outside the repo, never committed.
+fetch_test_voices() (
+  source .claude/skills/verify-dictus-android/helpers/env.sh || exit 1
+  V="$DICTUS_PROOFS/test-voices"
+  for f in "$@"; do
+    mkdir -p "$(dirname "$V/$f")" || exit 1
+    tmp="$(mktemp "$V/$f.XXXXXX")" || exit 1
+    if ! gh api -H 'Accept: application/vnd.github.raw' "repos/getdictus/dictus-test-voices/contents/$f" > "$tmp"; then
+      rm -f "$tmp"
+      echo "no access to getdictus/dictus-test-voices: use the espeak clips" >&2
+      exit 1
+    fi
+    mv "$tmp" "$V/$f"
+  done
+  echo "$V"
+)
+V="$(fetch_test_voices NOTICE manifest.json elevenlabs/fr/fr-03-shopping.wav)"   # status 1: play $A/fr-bonjour-test.wav instead
+jq -r '.clips[] | select(.file == "elevenlabs/fr/fr-03-shopping.wav") | .text' "$V/manifest.json"   # expected text
+$H/emulator-mic.sh play "$V/elevenlabs/fr/fr-03-shopping.wav" 1
+```
+
+Without access to that repo (no `gh` login, offline), use the espeak clips above. The French short clips are `fr-01` (spoken punctuation: « virgule », « point »), `fr-02` (numbers), `fr-03` (plain sentence) and `fr-04` (« point d'interrogation »); start with `fr-03`. Unlike the espeak clips, they have no leading silence. Seen 2026-10-21 with Tiny on the emulator (#151): two takes of `fr-03` both stopped after « … des tomates et » (WER 50% and 71%), and the start was damaged too. Tiny on the clean clip gives the whole sentence, so the guest receives truncated audio: #156. Until it is fixed, an emulator dictation proves the chain (capture, waveform, a transcription comes back), not the text, and the long clips cannot be used.
 
 **The emulator lock** is the Pixel lock's code (`lock.sh` with `DICTUS_LOCK_NAME=emulator`): atomic `mkdir`, a token unique to the session in `owner` and in the session's `token.emulator`, release by the owner only; `DICTUS_LOCK_NAME=emulator $H/lock.sh status` shows the owner. `start` adds three rules:
 
 - It waits while another session holds the lock, or while any `qemu-system` or Gradle daemon runs (retry every 2 min, give up after 30 min; `DICTUS_EMU_WAIT_MIN=0` refuses at once). It waits for a free machine before taking the lock, so a waiting session never blocks a build.
-- A lock older than 45 min while no `qemu-system` and no `pw-loopback` runs is stale: `start` removes it and prints its owner. The Pixel lock has no such rule.
+- A lock older than 45 min while no `qemu-system` and no `pw-loopback` runs is stale: `start` passes `DICTUS_LOCK_STALE_MIN=45` to `lock.sh acquire`, which removes it and prints its owner (age from the owner's `since=`, else the directory's mtime). Stale recovery, `mkdir` and the owner write run under one `flock` on `.emulator-lock.flock`, and the owner token is read again just before removal, so two sessions never take the lock at once and none removes a lock just taken. The Pixel lock has no stale rule.
+- `stop` refuses while another session holds the lock: it prints the owner and exits 1. `stop N --force` stops the instance anyway (only when that session is gone); the lock stays with its owner until it is stale.
 - A failed `start` undoes itself (emulator, virtual mic, lock). Hold the lock only while the emulator is in use: `stop` as soon as the check is done, then `mcp__argent__stop-all-simulator-servers { devices: ["emulator-5554"] }`.
 
 ## Helpers
@@ -262,7 +305,7 @@ All executable, run from the repository root; all read `helpers/env.sh` (overrid
 | Script | Invocation | Ends with |
 | --- | --- | --- |
 | `helpers/lock.sh` | `lock.sh acquire [label]` · `lock.sh release` · `lock.sh status` | `LOCK ACQUIRED token=… session=…` / `LOCK RELEASED token=…` / `LOCK REFUSED: held by […]` / `free` |
-| `helpers/emulator-mic.sh` | `emulator-mic.sh build` · `start [N]` · `install [N]` · `play <wav> [N]` · `stop [N]` · `status` | `BUILT …` / `SERIAL emulator-5554` / `INSTALLED on …` / `PLAYED <clip>` / `STOPPED <N>` |
+| `helpers/emulator-mic.sh` | `emulator-mic.sh build` · `start [N]` · `install [N]` · `play <wav> [N]` · `stop [N] [--force]` · `status` | `BUILT …` / `SERIAL emulator-5554` / `INSTALLED on …` / `PLAYED <clip>` / `STOPPED <N>` |
 | `helpers/launch.sh` | `launch.sh [--no-build]` | `READY serial=… run=… pid=… version=… apk_sha=…` |
 | `helpers/doctor.sh` | `doctor.sh [run-dir]` | `DOCTOR OK` / `DOCTOR FAIL <n>` |
 | `helpers/log.sh` | `log.sh mark` · `log.sh wait '<regex>' [secs] [mark]` · `log.sh since <mark>` | `found: <line>` / `error: Dictus is running but logged no line …` / `error: no Dictus process running …` |

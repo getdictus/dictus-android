@@ -7,13 +7,16 @@
 #                                    on it, wait for boot_completed, print the serial
 #   emulator-mic.sh install [N]      adb install -r the debug APK, make Dictus the IME, grant the mic
 #   emulator-mic.sh play <wav> [N]   play a WAV into dictus_feed_N (blocking); the AVD hears it
-#   emulator-mic.sh stop [N]         kill the emulator and the virtual mic, release the lock
-#                                    (safe twice, safe when nothing runs)
+#   emulator-mic.sh stop [N] [--force]
+#                                    kill the emulator and the virtual mic, release the lock
+#                                    (safe twice, safe when nothing runs); refused while another
+#                                    session holds the emulator lock, unless --force
 #   emulator-mic.sh status           lock owner, then per instance: pids, serial, PipeWire nodes
 # N defaults to 1; the serial is emulator-<5552+2N> (N=1 -> emulator-5554). One emulator at a
 # time on this machine (12 GB): start waits while another session holds the emulator lock, or
 # while any qemu-system or Gradle daemon runs (retry every 2 min, up to 30 min). A lock older than
-# 45 min with no qemu-system and no pw-loopback running is stale: start removes it and says so.
+# 45 min with no qemu-system and no pw-loopback running is stale: lock.sh acquire removes it under
+# the lock's flock and says so.
 # Overrides: DICTUS_AVD (dictus_api35), DICTUS_EMU_MEMORY (2048), DICTUS_EMU_WAIT_MIN (30, 0 =
 # refuse at once), DICTUS_EMU_STALE_MIN (45), DICTUS_EMU_BOOT_TIMEOUT (300 s).
 set -euo pipefail
@@ -59,21 +62,6 @@ other_instances_running() {
   return 1
 }
 
-# Remove the lock of another session when it is older than STALE_MIN and nothing it could guard
-# runs (no qemu-system, no pw-loopback). Age from the owner's since=, else the directory's mtime.
-break_stale_lock() {
-  [ -d "$DICTUS_LOCK" ] && ! lock_is_mine || return 0
-  local since age
-  since="$(grep -o 'since=[^ ]*' "$DICTUS_LOCK/owner" 2>/dev/null | head -1 | cut -d= -f2- || true)"
-  since="$(date -d "${since:-@$(stat -c %Y "$DICTUS_LOCK")}" +%s 2>/dev/null || stat -c %Y "$DICTUS_LOCK")"
-  age=$(( ($(date +%s) - since) / 60 ))
-  [ "$age" -ge "$STALE_MIN" ] || return 0
-  if [ -n "$(running_emulators)$(running_loopbacks)" ]; then
-    echo "emulator lock is ${age} min old but an emulator or pw-loopback runs: not stale, waiting"; return 0
-  fi
-  echo "STALE emulator lock removed (${age} min old, no emulator running): [$(lock_owner_line)]"
-  rm -f "$DICTUS_LOCK/owner"; rmdir "$DICTUS_LOCK" 2>/dev/null || true
-}
 # Wait (RETRY_SEC, up to WAIT_MIN) until no emulator and no Gradle daemon runs on this machine.
 wait_machine_idle() {
   local deadline=$(( $(date +%s) + WAIT_MIN * 60 )) busy
@@ -123,8 +111,8 @@ start() {
   # Wait for the machine before taking the lock, so a build elsewhere is not blocked by an idle
   # holder; check again once the lock is ours.
   wait_machine_idle
-  break_stale_lock
-  DICTUS_LOCK_WAIT_MIN="$WAIT_MIN" DICTUS_LOCK_RETRY_SEC="$RETRY_SEC" "$H/lock.sh" acquire "emulator-mic $N" \
+  DICTUS_LOCK_STALE_MIN="$STALE_MIN" DICTUS_LOCK_WAIT_MIN="$WAIT_MIN" DICTUS_LOCK_RETRY_SEC="$RETRY_SEC" \
+    "$H/lock.sh" acquire "emulator-mic $N" \
     || die "emulator lock not acquired (see the owner above); nothing started"
   # From here a failure undoes this start (emulator, virtual mic, lock): nothing is left half up.
   trap '[ "$?" = 0 ] || { echo "start failed: undoing" >&2; stop "$N" >&2; }' EXIT
@@ -203,7 +191,11 @@ play() {
 
 stop() {
   instance "${1:-1}"
-  local pid
+  local force="${2:-}" pid
+  if [ -d "$DICTUS_LOCK" ] && ! lock_is_mine; then
+    [ "$force" = --force ] || die "the emulator lock belongs to another session: [$(lock_owner_line)]. Its emulator is not yours to stop: wait for that session, or, if it is gone, run 'emulator-mic.sh stop $N --force' (the lock stays; lock.sh acquire removes it once stale)"
+    echo "warn: --force: stopping instance $N although the emulator lock belongs to [$(lock_owner_line)]" >&2
+  fi
   pid="$(live_pid "$STATE/emulator.pid" qemu-system)"
   if [ -n "$pid" ]; then
     adb -s "$SERIAL" emu kill >/dev/null 2>&1 || true
@@ -261,7 +253,15 @@ case "$cmd" in
   start) start "${2:-1}" ;;
   install) install_apk "${2:-1}" ;;
   play) play "${2:-}" "${3:-1}" ;;
-  stop) stop "${2:-1}" ;;
+  stop)
+    shift; n=""; force=""
+    for a in "$@"; do
+      case "$a" in
+        --force) force=--force ;;
+        *) [ -z "$n" ] || { echo "usage: emulator-mic.sh stop [N] [--force] (one N only, got '$n' and '$a')" >&2; exit 2; }; n="$a" ;;
+      esac
+    done
+    stop "${n:-1}" "$force" ;;
   status) status ;;
-  *) echo "usage: emulator-mic.sh build | start [N] | install [N] | play <wav> [N] | stop [N] | status"; exit 2 ;;
+  *) echo "usage: emulator-mic.sh build | start [N] | install [N] | play <wav> [N] | stop [N] [--force] | status"; exit 2 ;;
 esac
