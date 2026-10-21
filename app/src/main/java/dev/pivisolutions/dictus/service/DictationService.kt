@@ -142,6 +142,11 @@ class DictationService : Service(), DictationController {
     private var prewarmJob: Job? = null
     private var elapsedMs: Long = 0L
 
+    // True between startRecording() and the ACTION_START it queues. startForegroundService()
+    // is asynchronous, so a cancel can land first; the start must then not open the mic.
+    // Only touched on the main thread (binder calls from UI and onStartCommand).
+    private var pendingStart = false
+
     // Sound feedback for recording lifecycle events.
     // Initialized in onCreate(); conditionally played based on SOUND_ENABLED preference.
     // Sound names and volume are reactively observed from DataStore so changes in
@@ -236,6 +241,15 @@ class DictationService : Service(), DictationController {
                     buildNotification(),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
                 )
+                if (!pendingStart) {
+                    // Cancelled before this start was delivered. startForeground() above is
+                    // still required after startForegroundService(), then nothing records.
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    Timber.d("DictationService dropped ACTION_START cancelled before delivery")
+                    return START_NOT_STICKY
+                }
+                pendingStart = false
                 startAudioCapture()
                 Timber.d("DictationService started foreground with ACTION_START")
             }
@@ -261,6 +275,7 @@ class DictationService : Service(), DictationController {
         val intent = Intent(this, DictationService::class.java).apply {
             action = ACTION_START
         }
+        pendingStart = true
         startForegroundService(intent)
     }
 
@@ -292,6 +307,7 @@ class DictationService : Service(), DictationController {
      * Returns to idle state without producing any audio output.
      */
     override fun cancelRecording() {
+        pendingStart = false
         if (soundEnabled) soundPlayer.playCancel()
         stopRecordingInternal(discard = true)
         stopForeground(STOP_FOREGROUND_REMOVE)
