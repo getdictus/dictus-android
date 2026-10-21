@@ -1,13 +1,23 @@
 package dev.pivisolutions.dictus.asr
 
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class ParakeetProviderTest {
 
@@ -71,5 +81,53 @@ class ParakeetProviderTest {
         val provider = ParakeetProvider(createRecognizer = { throw OutOfMemoryError("test") })
 
         provider.initialize(ctcModelPath())
+    }
+
+    @Test
+    fun `native calls run off the caller thread`() = runTest {
+        val caller = Thread.currentThread()
+        var nativeThread: Thread? = null
+        val provider = ParakeetProvider(
+            createRecognizer = {
+                nativeThread = Thread.currentThread()
+                throw UnsatisfiedLinkError("test")
+            },
+        )
+
+        provider.initialize(ctcModelPath())
+
+        assertNotSame(caller, nativeThread)
+        assertTrue(nativeThread!!.name == "parakeet-native")
+    }
+
+    @Test
+    fun `timeout returns while the native call blocks and release waits for it`() = runBlocking {
+        // A stuck JNI call: the caller's timeout must still fire on time (#155), and
+        // release must not free the recognizer while that call is still running.
+        val executor = Executors.newSingleThreadExecutor()
+        val unblockNative = CountDownLatch(1)
+        val provider = ParakeetProvider(
+            createRecognizer = {
+                unblockNative.await(10, TimeUnit.SECONDS)
+                throw UnsatisfiedLinkError("test")
+            },
+            nativeDispatcher = executor.asCoroutineDispatcher(),
+        )
+        try {
+            val startMs = System.currentTimeMillis()
+            assertNull(withTimeoutOrNull(200) { provider.initialize(ctcModelPath()) })
+            assertTrue(System.currentTimeMillis() - startMs < 2_000)
+
+            val release = async { provider.release() }
+            delay(200)
+            assertFalse("release ran during the native call", release.isCompleted)
+
+            unblockNative.countDown()
+            withTimeoutOrNull(5_000) { release.await() } ?: error("release never ran")
+            assertFalse(provider.isReady)
+        } finally {
+            unblockNative.countDown()
+            executor.shutdownNow()
+        }
     }
 }
