@@ -10,11 +10,14 @@ import java.text.Normalizer
  * suppress ":", ";", "\"" and "/" in real dictations. A filter on the text covers Whisper and
  * Parakeet alike.
  *
- * - A result made only of `[...]` / `(...)` spans, punctuation and whitespace has no words:
- *   [spokenText] returns "".
+ * - A result made only of `[...]` / `(...)` / `*...*` spans, punctuation and whitespace has no
+ *   words: [spokenText] returns "".
  * - In text with words, only the known markers of [MARKER_WORDS] are removed; any other bracket
  *   or parenthesis is kept, since it may be dictated text.
  * - An unclosed bracket ("[Musique") is not a marker.
+ * - `*...*` (Whisper Small writes « *musique* », « *Bruit de chute* ») is Android-only for now:
+ *   iOS #768 has no asterisk form. Guard: no line break inside, and a non-space right after the
+ *   opening asterisk and right before the closing one, so « 2 * 3 * 4 » stays text.
  */
 object NonSpeechMarkers {
 
@@ -29,14 +32,18 @@ object NonSpeechMarkers {
         "música", "risas", "aplausos", "silencio", "ruido",
     )
 
-    private val ANY_SPAN = Regex("""\[[^\[\]]*]|\([^()]*\)""")
+    private val ANY_SPAN = Regex("""\[[^\[\]]*]|\([^()]*\)|\*[^\s*](?:[^*\r\n]*[^\s*])?\*""")
 
     // Whitespace and punctuation may surround the word inside the brackets: « [ Rires... ] ».
     private const val INNER_PADDING = """[\s.,;:!?…-]*"""
 
+    // Same padding between asterisks, without line breaks.
+    private const val ASTERISK_PADDING = """[\t .,;:!?…-]*"""
+
     private val KNOWN: String = MARKER_WORDS.joinToString("|", transform = ::anyAccentForm).let { words ->
         val inner = "$INNER_PADDING(?:$words)$INNER_PADDING"
-        """(?:\[$inner]|\($inner\))"""
+        val asteriskInner = "(?=[^\\s*])$ASTERISK_PADDING(?:$words)$ASTERISK_PADDING(?<=[^\\s*])"
+        """(?:\[$inner]|\($inner\)|\*$asteriskInner\*)"""
     }
     private val GLUED = Regex("""(?<=[\p{L}\p{N}])$KNOWN(?=[\p{L}\p{N}])""", RegexOption.IGNORE_CASE)
     private val BEFORE_PUNCTUATION_OR_END =

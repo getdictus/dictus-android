@@ -79,6 +79,13 @@ class DictationTranscriberTest {
         assertEquals(TranscriptionOutcome.NoWordsDetected, outcome)
     }
 
+    @Test
+    fun `an asterisk marker alone is no words`() = runTest {
+        val outcome = transcriber(engine = { _, _ -> " *Bruit de chute*" }).transcribe(halfSecond, "small-q5_1", "fr")
+
+        assertEquals(TranscriptionOutcome.NoWordsDetected, outcome)
+    }
+
     // --- Failed ---
 
     @Test

@@ -91,6 +91,37 @@ class NonSpeechMarkersTest {
         assertEquals("Bonjour [Rires et cris] à tous", NonSpeechMarkers.spokenText("Bonjour [Rires et cris] à tous"))
     }
 
+    // --- Asterisks (Whisper Small on iPhone: « *musique* », « *Bruit de chute* ») ---
+
+    @Test
+    fun `an asterisk marker alone is no words, known or not`() {
+        listOf("*musique*", "*Musique*.", "*Bruit de chute*", "*musique* *Bruit de chute*").forEach {
+            assertEquals(it, TranscriptionOutcome.NoWordsDetected, outcomeOf(it))
+        }
+    }
+
+    @Test
+    fun `a known word between asterisks is dropped from mixed text`() {
+        assertEquals("Bonjour à tous", NonSpeechMarkers.spokenText("Bonjour *musique* à tous"))
+        assertEquals("Bonjour.", NonSpeechMarkers.spokenText("*Rires...* Bonjour."))
+        assertEquals("Bonjour monde", NonSpeechMarkers.spokenText("Bonjour*Music*monde"))
+        assertEquals("Il tombe *Bruit de chute* ici", NonSpeechMarkers.spokenText("Il tombe *Bruit de chute* ici"))
+    }
+
+    @Test
+    fun `a multiplication stays text`() {
+        assertEquals("2 * 3 * 4", NonSpeechMarkers.spokenText("2 * 3 * 4"))
+        assertEquals(TranscriptionOutcome.Text("2 * 3 * 4. "), outcomeOf("2 * 3 * 4"))
+    }
+
+    @Test
+    fun `asterisks with a space right inside or a line break are not a marker`() {
+        assertEquals("Bonjour * musique * à tous", NonSpeechMarkers.spokenText("Bonjour * musique * à tous"))
+        assertEquals(TranscriptionOutcome.Text("* musique *. "), outcomeOf("* musique *"))
+        assertEquals("Bonjour *musique\n* à tous", NonSpeechMarkers.spokenText("Bonjour *musique\n* à tous"))
+        assertEquals(TranscriptionOutcome.Text("*mu\nsique*. "), outcomeOf("*mu\nsique*"))
+    }
+
     // --- Rule 3: an unclosed marker is not a marker ---
 
     @Test
