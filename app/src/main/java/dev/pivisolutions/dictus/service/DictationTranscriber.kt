@@ -74,7 +74,7 @@ internal class DictationTranscriber(
             }
 
             // Drop non-speech tags (#161), then post-process (trim + punctuation)
-            val processedText = TextPostProcessor.process(NonSpeechMarkers.strip(rawText))
+            val processedText = TextPostProcessor.process(NonSpeechMarkers.spokenText(rawText))
             Timber.d(PrivacySafeLog.transcriptionProcessed(rawText, processedText))
 
             TranscriptionOutcome.fromProcessedText(processedText).also { outcome ->

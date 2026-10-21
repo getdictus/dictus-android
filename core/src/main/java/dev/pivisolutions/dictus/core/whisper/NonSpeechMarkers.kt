@@ -1,40 +1,60 @@
 package dev.pivisolutions.dictus.core.whisper
 
 /**
- * Removes the non-speech tags an engine writes on silence or noise (#161): « [Musique]. »,
- * "(silence)", "[BLANK_AUDIO]", "*rires*".
+ * Drops the non-speech markers an engine writes instead of an empty result (#161): « [Musique]. »,
+ * "(music)", "[BLANK_AUDIO]", "...". Same rule as iOS (dictus-ios #768).
  *
  * WHY a text-side filter: whisper.cpp runs with suppress_nst = false, and enabling it would also
  * suppress ":", ";", "\"" and "/" in real dictations. A filter on the text covers Whisper and
  * Parakeet alike.
  *
- * Only known tags are removed, in [..], (..) or *..*, case-insensitive, with the punctuation
- * that follows them. A tag may carry more words ("[Musique douce]", "(bruits de pas)").
- * Anything else in brackets is kept: a dictated parenthesis is real text.
+ * - A result made only of `[...]` / `(...)` spans, punctuation and whitespace has no words:
+ *   [spokenText] returns "".
+ * - In text with words, only the known markers of [MARKER_WORDS] are removed; any other bracket
+ *   or parenthesis is kept, since it may be dictated text.
+ * - An unclosed bracket ("[Musique") is not a marker.
  */
 object NonSpeechMarkers {
 
-    private val TAG_WORDS = listOf(
-        // French
-        "musique", "musiques", "silence", "applaudissements", "applaudissement",
-        "rires", "rire", "bruits", "bruit", "inaudible", "toux", "soupirs", "soupir",
-        // English
-        "music", "applause", "laughter", "laughs", "laughing", "noise", "background noise",
-        "blank_audio", "blank audio", "no speech", "coughs", "coughing", "cough", "sighs",
+    /** Closed list, case-insensitive. A marker's whole content must be one of these words. */
+    private val MARKER_WORDS = listOf(
+        "musique", "music", "rires", "laughter", "applaudissements", "applause",
+        "silence", "blank_audio", "bruit", "noise", "inaudible",
     )
 
-    // The tag word must end at a non-letter so "(silencieux)" is not a tag.
-    private val TAG_CONTENT =
-        """\s*(?:${TAG_WORDS.joinToString("|") { Regex.escape(it) }})(?![\p{L}\p{N}])"""
+    private val ANY_SPAN = Regex("""\[[^\[\]]*]|\([^()]*\)""")
 
-    private val TAG = Regex(
-        """\s*(?:\[$TAG_CONTENT[^\[\]]*]|\($TAG_CONTENT[^()]*\)|\*$TAG_CONTENT[^*]*\*)[.,;:!?…]*\s*""",
-        setOf(RegexOption.IGNORE_CASE),
-    )
+    private val KNOWN: String = MARKER_WORDS.joinToString("|").let { words ->
+        """(?:\[\s*(?:$words)\s*]|\(\s*(?:$words)\s*\))"""
+    }
+    private val GLUED = Regex("""(?<=[\p{L}\p{N}])$KNOWN(?=[\p{L}\p{N}])""", RegexOption.IGNORE_CASE)
+    private val BEFORE_PUNCTUATION_OR_END =
+        Regex("""\s*$KNOWN\s*(?=[.,;:!?…]|$)""", RegexOption.IGNORE_CASE)
+    private val WITH_SPACE_BEFORE = Regex("""\s*$KNOWN""", RegexOption.IGNORE_CASE)
+    private val LEADING = Regex("""^\s*$KNOWN""", RegexOption.IGNORE_CASE)
+    private val SPACE_RUN = Regex("""[ \t]{2,}""")
+    private const val SENTENCE_PUNCTUATION = ".,;:!?…"
 
-    /** [text] without its non-speech tags; unchanged when it has none. */
-    fun strip(text: String): String {
-        if (!TAG.containsMatchIn(text)) return text
-        return TAG.replace(text, " ").trim()
+    /**
+     * The spoken words in [text], or "" when there are none. Text without a known marker is
+     * returned unchanged.
+     */
+    fun spokenText(text: String): String {
+        if (ANY_SPAN.replace(text, "").none { it.isLetterOrDigit() }) return ""
+        if (!WITH_SPACE_BEFORE.containsMatchIn(text)) return text
+
+        // A marker glued between two words ("Bonjour[Music]monde") becomes a space; any other
+        // marker goes with the whitespace around it, so no double space and no space before
+        // the punctuation that follows it.
+        val stripped = text
+            .replace(GLUED, " ")
+            .replace(BEFORE_PUNCTUATION_OR_END, "")
+            .replace(WITH_SPACE_BEFORE, "")
+            .replace(SPACE_RUN, " ")
+            .trim()
+        // A marker that opened the text leaves the punctuation that followed it ("[Musique].
+        // Bonjour"). Only then: the leading "..." of "... bonjour" is the speaker's.
+        if (!LEADING.containsMatchIn(text)) return stripped
+        return stripped.dropWhile { it in SENTENCE_PUNCTUATION || it.isWhitespace() }
     }
 }
