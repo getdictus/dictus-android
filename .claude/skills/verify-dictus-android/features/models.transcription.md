@@ -31,7 +31,7 @@ The Modèles tab lists the offline speech models (Whisper and Parakeet), downloa
 Preconditions: Launch and Doctor OK. Note the active model Doctor printed; it must be the active one at the end.
 
 - **Open.** Tap `Modèles`. → `Téléchargés`, `Disponibles`, the active card shows `Actif` (`screen.sh app.models`).
-- **Scroll.** `mcp__argent__gesture-swipe` from (0.5, 0.8) to (0.5, 0.1) twice. → `Parakeet 110M` (`Anglais uniquement`), `Parakeet 0.6B` greyed with `Nécessite 8 Go de RAM ou plus`, `Stockage utilisé : 190 Mo / 2196 Mo`, the Whisper / Parakeet lines. **Trust the screenshot here**: after this scroll, `describe` kept returning the pre-scroll tree.
+- **Scroll.** `mcp__argent__gesture-swipe` from (0.5, 0.8) to (0.5, 0.1) twice. → `Parakeet 110M` (`Anglais uniquement`), `Parakeet 0.6B` with `Télécharger` (or in `Téléchargés` once downloaded), `Stockage utilisé : 190 Mo / 2196 Mo`, the Whisper / Parakeet lines. **Trust the screenshot here**: after this scroll, `describe` kept returning the pre-scroll tree.
 - **Delete dialog (no deletion).** Tap `Supprimer` on a downloaded non-active card, capture, tap `Annuler`. → card still in `Téléchargés`.
 - **Proof.** The tree before/after and the unchanged `Actif` card. A download is proved by `Téléchargement — N%` then the card moving to `Téléchargés` and the file in `adb shell run-as dev.pivisolutions.dictus ls files/models`.
 
@@ -41,5 +41,5 @@ Preconditions: Launch and Doctor OK. Note the active model Doctor printed; it mu
 - The active card has no trash icon: delete needs another downloaded model.
 - Card descriptions are unaccented (« Rapide et leger », « Precis et equilibre », « Haute precision », « Detection automatique »).
 - Selecting a model reloads the engine: the next dictation waits on the loading overlay.
-- RAM gating rounds `ActivityManager.totalMem` up to the marketed size (#121); Parakeet 0.6B needs 8 GB, so on the 6 GB Pixel 4 it is greyed with « Nécessite 8 Go de RAM ou plus » (seen on the Pixel 2026-10-20).
+- RAM gating rounds `ActivityManager.totalMem` up to the marketed size (#121); Parakeet 0.6B needs 6 GB, like iOS (#148): the 6 GB Pixel 4 (5.34 GiB reported) can download it; a phone below 6 GB sees it greyed with « Nécessite 6 Go de RAM ou plus ». Before #148 the gate was 8 GB and the Pixel showed « Nécessite 8 Go de RAM ou plus » (2026-10-20).
 - Parakeet does not run on the x86_64 emulator (sherpa-onnx ships ARM libraries only): the engine fails cleanly, the app does not crash. Verify Parakeet on the Pixel only.

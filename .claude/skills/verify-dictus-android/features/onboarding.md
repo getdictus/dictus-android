@@ -41,6 +41,6 @@ Preconditions: a phone where Dictus has **never completed onboarding**. Pierre's
 ## Gotchas
 
 - Clearing data to see onboarding again would delete Pierre's models and settings: never on the Pixel.
-- The model step downloads for real (Small Q5 ~190 MB, or Parakeet 0.6B ~620 MB on an 8 GB phone).
+- The model step downloads for real (Parakeet 0.6B ~620 MB from 6 GB of RAM, so on the Pixel 4, or Small Q5 ~190 MB below; Parakeet's archive then takes ~3.5 min to extract on the Pixel 4).
 - The keyboard step leaves Dictus for Android's settings and its picker; `MainActivity` re-reads the IME state on return.
 - The test dictation records the room.

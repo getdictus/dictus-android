@@ -18,9 +18,9 @@ Pick the lowest tier that can prove the change. Each tier proves what the one ab
 | Tier | Who and where | Proves | Does not prove |
 | --- | --- | --- | --- |
 | 1. Emulator | An agent on the AVD `dictus_api35` | UI, navigation, keyboard and IME, lifecycle, rotation, dictation from an injected WAV clip (pending) | A real microphone, real timings |
-| 2. Pixel 4, Andy | Andy with this skill on `99071FFAZ00EBN` | Real microphone, permissions, notifications, transcription time with Tiny, Base and Small Q5 | A real voice, text quality, keyboard feel |
+| 2. Pixel 4, Andy | Andy with this skill on `99071FFAZ00EBN` | Real microphone, permissions, notifications, transcription time with Tiny, Base, Small Q5 and Parakeet 0.6B v3 | A real voice, text quality, keyboard feel |
 | 3. Pixel 4, Pierre | Pierre, in a batch device test | Real voice, text quality, keyboard feel in real apps | Phones faster than the Pixel 4 |
-| 4. Out of reach | Nobody | Nothing | Models larger than Small Q5, Parakeet 0.6B v3 (needs 8 GB of RAM) |
+| 4. Out of reach | Nobody | Nothing | Whisper models larger than Small Q5 |
 
 **1. Emulator.** This is the default tier for every PR and for ship-issue agents. One emulator runs at a time, and the agent that drives it holds a lock, as on the Pixel. It covers the UI, navigation, the Dictus keyboard in a real text field, activity and service lifecycle, rotation, and dictation fed by a WAV clip instead of the microphone. Three parts are **pending** and come in follow-up PRs: an x86_64 debug build (`whisper/build.gradle.kts` builds `arm64-v8a` and `armeabi-v7a` only today), the virtual microphone that plays the WAV clip, and the emulator lock. Until they land, do not claim a tier 1 proof of dictation.
 
@@ -28,7 +28,7 @@ Pick the lowest tier that can prove the change. Each tier proves what the one ab
 
 - the microphone opens and closes: `DictationService started foreground with ACTION_START`, then `Recording cancelled, samples discarded` or `Transcribed text inserted: length=…` (see Drive);
 - `RECORD_AUDIO` is granted (Doctor) and the service runs in the foreground; notifications are denied for Dictus on this Pixel, so the proof is « 1 appli est active » in Quick Settings, not the notification;
-- transcription time with Tiny, Base and Small Q5, measured as the gap between the logcat timestamps of `confirmAndTranscribe: … samples captured` and `Transcribed text inserted`. The app logs no duration of its own. The Pixel 4 is the performance floor: a model too slow on it is too slow for Dictus.
+- transcription time with Tiny, Base, Small Q5 and Parakeet 0.6B v3, measured as the gap between the logcat timestamps of `confirmAndTranscribe: … samples captured` and `Transcribed text inserted`. The app logs no duration of its own. The Pixel 4 is the performance floor: a model too slow on it is too slow for Dictus.
 
 Andy's voice is not a test input. The room noise proves that the chain runs, not that the text is right.
 
@@ -36,7 +36,7 @@ Andy's voice is not a test input. The room noise proves that the chain runs, not
 
 Batch device tests follow the shared `batch-device-test` skill (proposed in Pivii/skills#20, not merged yet). Pierre replies per PR with `#<num> OK` or `#<num> KO: <what failed>`.
 
-**4. Out of reach.** Pierre has no phone more recent than the Pixel 4. `small`, `medium-q5_0` and `parakeet-tdt-0.6b-v3` (gated at 8 GB of RAM: `Nécessite 8 Go de RAM ou plus` in Modèles) cannot be validated on the phones they are meant for. `small-q5_1` is not in this tier: it is the onboarding model below 8 GB and is measured in tier 2. A PR that changes them says "not tested on a recent phone". Onboarding installs Small Q5 below 8 GB of RAM (so on the Pixel 4) and Parakeet v3 from 8 GB (`ModelCatalog.recommendedModelKey`); `DEFAULT_KEY` (`tiny`) is only a fallback when no model is active.
+**4. Out of reach.** Pierre has no phone more recent than the Pixel 4. `small` and `medium-q5_0` cannot be validated on the phones they are meant for. A PR that changes them says "not tested on a recent phone". `parakeet-tdt-0.6b-v3` is not in this tier: it is gated at 6 GB of RAM, like iOS (#148), so it runs on the 6 GB Pixel 4 and is measured in tier 2. Onboarding installs Parakeet v3 from 6 GB of RAM (so on the Pixel 4) and Small Q5 below 6 GB (`ModelCatalog.recommendedModelKey`); a phone below 6 GB sees `Nécessite 6 Go de RAM ou plus` on Parakeet 0.6B in Modèles; `DEFAULT_KEY` (`tiny`) is only a fallback when no model is active.
 
 ## Launch
 
@@ -109,7 +109,7 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | Bottom tabs | `Accueil`, `Modèles`, `Réglages` |
 | Accueil | `Modèle actif`, the model name (`Small Q5`), `Nouvelle dictée`; `Dernière transcription` + `Copier` only after a dictation |
 | In-app recording | `Retour`, the timer `0:06`, `Arrêter`, `Toucher pour arrêter`; then `Transcription en cours…`, `Résultat` + `Copier` |
-| Modèles | `Téléchargés`, `Disponibles`, card names `Tiny` `Base` `Small` `Small Q5` `Medium` `Parakeet 110M` `Parakeet 0.6B`, badges `WK` / `NV`, `Actif`, `Télécharger`, `Anglais uniquement`, `Nécessite 8 Go de RAM ou plus`, `Stockage utilisé : …` |
+| Modèles | `Téléchargés`, `Disponibles`, card names `Tiny` `Base` `Small` `Small Q5` `Medium` `Parakeet 110M` `Parakeet 0.6B`, badges `WK` / `NV`, `Actif`, `Télécharger`, `Anglais uniquement`, `Nécessite 6 Go de RAM ou plus` (below 6 GB only), `Stockage utilisé : …` |
 | Réglages | `TRANSCRIPTION`, `Langue / Automatique`, `CLAVIER`, `Langue du clavier / …`, `Disposition du clavier / AZERTY`, `Mode par défaut / ABC`, `Suggestions`, `Correction automatique`, `Retour haptique`, `Sons du clavier`, `Sons`, `APPARENCE`, `Thème / Sombre`, `Langue de l'interface / Automatique`, `A PROPOS`, `Version`, `Debug Logs`, `Exporter les logs de débogage`, `Licences`, `GitHub`, `Mentions légales` |
 | Picker sheets | title (`Disposition du clavier`…), options with `[checked]`, `Fermer la feuille` (tap it to dismiss without choosing) |
 | Sons | `Retour`, `GENERAL`, `Son de dictée`, `Volume`, `SONS`, `Son de début / Electronic 01F`, `Son de fin / …`, `Son d'annulation / …` (`[disabled]` while « Son de dictée » is off); in a list `Electronic 01F / Sélectionné` |

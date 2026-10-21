@@ -73,7 +73,24 @@ android {
     }
 
     buildTypes {
+        // Parakeet 0.6B v3 RAM gate: 6 GB, like iOS (#148, measured on a 6 GB Pixel 4).
+        // Release always keeps 6; a debug build can move it to test another tier:
+        //   ./gradlew assembleDebug -Pdictus.parakeetMinRamGb=8
+        // Expected: testDebugUnitTest run with the property set to anything but 6 fails
+        // ModelCatalogTest, DeviceRamTest and ModelsViewModelTest, which assert the 6 GB
+        // gate. Run unit tests without it.
+        debug {
+            val parakeetMinRamGb = providers.gradleProperty("dictus.parakeetMinRamGb").orNull?.let { raw ->
+                val gb = raw.toIntOrNull()
+                require(gb != null && gb in 1..16) {
+                    "dictus.parakeetMinRamGb must be an integer from 1 to 16 (GB), got '$raw'"
+                }
+                gb
+            } ?: 6
+            buildConfigField("int", "PARAKEET_MIN_RAM_GB", parakeetMinRamGb.toString())
+        }
         release {
+            buildConfigField("int", "PARAKEET_MIN_RAM_GB", "6")
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
