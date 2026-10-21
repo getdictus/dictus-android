@@ -147,7 +147,9 @@ start() {
   # Not -no-window: it selects qemu-system-*-headless, whose PulseAudio driver is a stub
   # (emulator 37.1.11: "Could not init `pa' audio driver", the guest records silence). The Qt
   # binary links libpulse; -qt-hide-window with Qt's offscreen platform keeps it windowless.
-  PULSE_SOURCE="$MIC" QT_QPA_PLATFORM=offscreen setsid "$EMULATOR_BIN" -avd "$AVD" -port "$PORT" \
+  # No audio output: the only sink may be dictus_feed_N, and the guest's sounds would loop back
+  # into its own microphone.
+  PULSE_SOURCE="$MIC" QEMU_AUDIO_OUT_DRV=none QT_QPA_PLATFORM=offscreen setsid "$EMULATOR_BIN" -avd "$AVD" -port "$PORT" \
     -memory "${DICTUS_EMU_MEMORY:-2048}" -qt-hide-window -no-snapshot-save -no-boot-anim \
     -gpu swiftshader_indirect -allow-host-audio -grpc "$((PORT + 3000))" -grpc-use-token \
     > "$STATE/emulator.log" 2>&1 < /dev/null &
@@ -171,6 +173,9 @@ start() {
   if grep -F "Could not init \`pa' audio driver" "$STATE/emulator.log" >/dev/null; then
     die "the emulator has no PulseAudio input, the virtual mic would be silent (see $STATE/emulator.log)"
   fi
+  # -allow-host-audio alone still hands the guest zeroes: switch the host microphone on.
+  [ "$(adb -s "$SERIAL" emu avd hostmicon 2>/dev/null | tr -d '\r' | sed -n 1p)" = OK ] \
+    || die "'adb emu avd hostmicon' failed: the guest would record silence"
   echo "$SERIAL" > "$STATE/serial"
   trap - EXIT
   echo "booted in ~${t}s"

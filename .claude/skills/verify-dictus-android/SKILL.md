@@ -205,7 +205,7 @@ With a run of this session, `cleanup.sh` copies `files/dictus.log` into it, writ
 
 ## Emulator tier (x86_64 AVD)
 
-For checks that do not need the real phone: the AVD `dictus_api35` (x86_64, API 35). The helpers above target the Pixel; on the emulator pass `-s emulator-5554` yourself. One emulator at a time on this 12 GB machine: take `/home/pierre/Dev/dictus-proofs/.emulator-lock` (`mkdir`, owner file with your label + date; wait while another thread holds it, never kill its emulator), run `./gradlew --stop` before booting, and never build while the emulator runs.
+For checks that do not need the real phone: the AVD `dictus_api35` (x86_64, API 35). The helpers above target the Pixel; on the emulator pass `-s emulator-5554` yourself. One emulator at a time on this 12 GB machine: take `/home/pierre/Dev/dictus-proofs/.emulator-lock` with `DICTUS_LOCK_NAME=emulator helpers/lock.sh acquire <label>` (or let `emulator-mic.sh start` take it; wait while another thread holds it, never kill its emulator), run `./gradlew --stop` before booting, and never build while the emulator runs.
 
 The default debug build has **no x86_64 whisper/trie libs** (it compiles ARM only, like CI): the emulator installs it as x86_64 because AndroidX ships x86_64 libs, then whisper fails to load. Build the emulator APK with the opt-in property:
 
@@ -227,32 +227,9 @@ Release never contains x86_64 whisper/trie, with or without the property.
 - **Use Tiny.** whisper on x86_64 is built for SSE4.2 only (the emulator CPU lacks AVX2/FMA): Tiny takes ~12 s for 3 s of audio; Small Q5 ~75 s.
 - **Parakeet is unavailable on the emulator.** sherpa-onnx (`:asr`) ships arm64-v8a and armeabi-v7a only. Activating a Parakeet model there must end in a failed engine (log `ParakeetProvider: sherpa-onnx native library unavailable on x86_64`), never in a crash. Test Parakeet on the Pixel.
 
-## Helpers
+### Dictation from a WAV clip (virtual microphone)
 
-All executable, run from the repository root; all read `helpers/env.sh` (overrides: `DICTUS_SERIAL`, `DICTUS_PROOFS`, `DICTUS_EVIDENCE_ROOT`, `DICTUS_VERIFY_RUN`, `DICTUS_VERIFY_SESSION`).
-
-| Script | Invocation | Ends with |
-| --- | --- | --- |
-| `helpers/lock.sh` | `lock.sh acquire [label]` · `lock.sh release` · `lock.sh status` | `LOCK ACQUIRED token=… session=…` / `LOCK RELEASED token=…` / `LOCK REFUSED: held by […]` / `free` |
-| `helpers/launch.sh` | `launch.sh [--no-build]` | `READY serial=… run=… pid=… version=… apk_sha=…` |
-| `helpers/doctor.sh` | `doctor.sh [run-dir]` | `DOCTOR OK` / `DOCTOR FAIL <n>` |
-| `helpers/log.sh` | `log.sh mark` · `log.sh wait '<regex>' [secs] [mark]` · `log.sh since <mark>` | `found: <line>` / `error: Dictus is running but logged no line …` / `error: no Dictus process running …` |
-| `helpers/evidence.sh` | `evidence.sh <name> [mark] [run-dir]` | `evidence <name>: <path>.png` |
-| `helpers/screen.sh` | `screen.sh <screen-id>` | `screen <id>: <path> (<n> KB)` |
-| `helpers/cleanup.sh` | `cleanup.sh [run-dir]` | `PREFS same` / `PREFS differ: <keys>`, `CLEANUP OK run=…`, `NEXT: stop Argent…` |
-| `helpers/env.sh` | sourced, not run | `adbs`, `pixel_locked`, `device_mark`, `lock_is_mine`, `session_token`, `resolve_run`, `report`, `prefs_tool digest\|show`, `pull_prefs` |
-
-## Keeping the map current
-
-**A PR that adds or changes a screen or a user-facing feature MUST update `features/` and `features/screens.md` in the same PR.** Reuse the IDs of the iOS map (`getdictus/dictus-ios`, `.claude/skills/verify-dictus-ios/features/`) for the same feature or screen, and set the Android status (present, partial, absent, iOS-only). A feature that exists only on Android gets a new ID marked *Android-only*. Run `/maintain-verification-skill` from pstack (see `CLAUDE.md`) for a full pass over the map; a user has to invoke it.
-
-TODO sync after dictus-ios #762 merges: it adds four screen IDs, `kbd.transcribing`, `kbd.dictation-undo`, `kbd.numbers` and `kbd.symbols`. Add them to the "All IDs" table of `features/README.md` and to `features/screens.md` with their Android status, then update the totals.
-
-## Emulator with a virtual microphone
-
-A dictation can also be checked on the `dictus_api35` emulator (x86_64, API 35) by playing a WAV file into it, so it runs without the Pixel and without anyone speaking. `helpers/emulator-mic.sh` creates a PipeWire virtual microphone (`pw-loopback`: a sink `dictus_feed_N` whose sound comes out of a source `dictus_mic_N`), boots the AVD with `PULSE_SOURCE=dictus_mic_N -allow-host-audio`, and plays a clip into the sink. The AVD config already has `hw.audioInput = yes`; the script warns if it does not.
-
-Use Tiny (or another Whisper model). Parakeet does not run on the emulator: the debug APK carries no x86_64 sherpa-onnx library.
+A dictation can be checked on the emulator without the Pixel and without anyone speaking: `helpers/emulator-mic.sh` creates a PipeWire virtual microphone (`pw-loopback`: a sink `dictus_feed_N` whose sound comes out of a source `dictus_mic_N`), boots the AVD on it and plays a WAV clip into the sink.
 
 ```bash
 H=.claude/skills/verify-dictus-android/helpers
@@ -267,12 +244,35 @@ $H/emulator-mic.sh stop 1                      # emulator, virtual mic, lock; sa
 $H/emulator-mic.sh status
 ```
 
-The Gradle property that adds the x86_64 libraries is named once, in `env.sh` (`DICTUS_EMULATOR_GRADLE_PROP`). Build before booting, never during: the machine has 12 GB of RAM.
+- Set Réglages → Transcription → Language to **Français** first. On `Automatic`, Tiny takes the synthetic voice for Japanese.
+- `start` boots without `-no-window`: that flag selects `qemu-system-x86_64-headless`, whose PulseAudio driver is a stub in emulator 37.1.11 (« Could not init `pa' audio driver », the guest records silence). It uses the Qt binary with a hidden window (`-qt-hide-window`, `QT_QPA_PLATFORM=offscreen`), `PULSE_SOURCE=dictus_mic_N`, `-allow-host-audio`, no audio output (`QEMU_AUDIO_OUT_DRV=none`, so the guest's sounds do not loop into the mic), gRPC with a token (Argent needs it), then `adb emu avd hostmicon`. It refuses to finish if `pa` failed.
+- The Gradle property is named once, in `env.sh` (`DICTUS_EMULATOR_GRADLE_PROP`); `install` refuses an APK without `lib/x86_64`.
+- The clips in `fixtures/audio/` are synthesized French sentences (libespeak-ng, see its README), 16 kHz mono, each with its expected text in a `.txt` beside it.
 
-**The emulator lock** is `/home/pierre/Dev/dictus-proofs/.emulator-lock`, taken by `start` and released by `stop`. It is the Pixel lock's code (`lock.sh` with `DICTUS_LOCK_NAME=emulator`): an atomic `mkdir`, a token unique to the session in `owner` and in the session's `token.emulator`, release by the owner only. `DICTUS_LOCK_NAME=emulator $H/lock.sh status` shows the owner. `start` differs from the Pixel flow in three ways:
+**The emulator lock** is the Pixel lock's code (`lock.sh` with `DICTUS_LOCK_NAME=emulator`): atomic `mkdir`, a token unique to the session in `owner` and in the session's `token.emulator`, release by the owner only; `DICTUS_LOCK_NAME=emulator $H/lock.sh status` shows the owner. `start` adds three rules:
 
-- It waits while another session holds the lock, or while any `qemu-system` or Gradle daemon runs on the machine (retry every 2 min, give up after 30 min; `DICTUS_EMU_WAIT_MIN=0` refuses at once). It waits for a free machine before taking the lock, so a waiting session never blocks a build.
+- It waits while another session holds the lock, or while any `qemu-system` or Gradle daemon runs (retry every 2 min, give up after 30 min; `DICTUS_EMU_WAIT_MIN=0` refuses at once). It waits for a free machine before taking the lock, so a waiting session never blocks a build.
 - A lock older than 45 min while no `qemu-system` and no `pw-loopback` runs is stale: `start` removes it and prints its owner. The Pixel lock has no such rule.
 - A failed `start` undoes itself (emulator, virtual mic, lock). Hold the lock only while the emulator is in use: `stop` as soon as the check is done, then `mcp__argent__stop-all-simulator-servers { devices: ["emulator-5554"] }`.
 
-The clips in `fixtures/audio/` are synthesized French sentences (libespeak-ng, see its README), 16 kHz mono, each with its expected text in a `.txt` beside it. Evidence goes outside the repository, as for the Pixel.
+## Helpers
+
+All executable, run from the repository root; all read `helpers/env.sh` (overrides: `DICTUS_SERIAL`, `DICTUS_PROOFS`, `DICTUS_EVIDENCE_ROOT`, `DICTUS_VERIFY_RUN`, `DICTUS_VERIFY_SESSION`).
+
+| Script | Invocation | Ends with |
+| --- | --- | --- |
+| `helpers/lock.sh` | `lock.sh acquire [label]` · `lock.sh release` · `lock.sh status` | `LOCK ACQUIRED token=… session=…` / `LOCK RELEASED token=…` / `LOCK REFUSED: held by […]` / `free` |
+| `helpers/emulator-mic.sh` | `emulator-mic.sh build` · `start [N]` · `install [N]` · `play <wav> [N]` · `stop [N]` · `status` | `BUILT …` / `SERIAL emulator-5554` / `INSTALLED on …` / `PLAYED <clip>` / `STOPPED <N>` |
+| `helpers/launch.sh` | `launch.sh [--no-build]` | `READY serial=… run=… pid=… version=… apk_sha=…` |
+| `helpers/doctor.sh` | `doctor.sh [run-dir]` | `DOCTOR OK` / `DOCTOR FAIL <n>` |
+| `helpers/log.sh` | `log.sh mark` · `log.sh wait '<regex>' [secs] [mark]` · `log.sh since <mark>` | `found: <line>` / `error: Dictus is running but logged no line …` / `error: no Dictus process running …` |
+| `helpers/evidence.sh` | `evidence.sh <name> [mark] [run-dir]` | `evidence <name>: <path>.png` |
+| `helpers/screen.sh` | `screen.sh <screen-id>` | `screen <id>: <path> (<n> KB)` |
+| `helpers/cleanup.sh` | `cleanup.sh [run-dir]` | `PREFS same` / `PREFS differ: <keys>`, `CLEANUP OK run=…`, `NEXT: stop Argent…` |
+| `helpers/env.sh` | sourced, not run | `adbs`, `pixel_locked`, `device_mark`, `lock_is_mine`, `session_token`, `resolve_run`, `report`, `prefs_tool digest\|show`, `pull_prefs` |
+
+## Keeping the map current
+
+**A PR that adds or changes a screen or a user-facing feature MUST update `features/` and `features/screens.md` in the same PR.** Reuse the IDs of the iOS map (`getdictus/dictus-ios`, `.claude/skills/verify-dictus-ios/features/`) for the same feature or screen, and set the Android status (present, partial, absent, iOS-only). A feature that exists only on Android gets a new ID marked *Android-only*. Run `/maintain-verification-skill` from pstack (see `CLAUDE.md`) for a full pass over the map; a user has to invoke it.
+
+TODO sync after dictus-ios #762 merges: it adds four screen IDs, `kbd.transcribing`, `kbd.dictation-undo`, `kbd.numbers` and `kbd.symbols`. Add them to the "All IDs" table of `features/README.md` and to `features/screens.md` with their Android status, then update the totals.
