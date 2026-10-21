@@ -13,8 +13,8 @@ import kotlinx.coroutines.launch
  * text (#153). Nothing was inserted, so without it the user cannot tell the dictation ran.
  *
  * Mirrors the iOS keyboard toolbar (ToolbarView.swift, iOS #313): a plain grey line, not an
- * error, gone after [DISPLAY_DURATION_MS] (iOS StatusMessageLifetime.displayDuration). A new
- * dictation or the end of the input session withdraws it earlier through [clear].
+ * error, gone after [DISPLAY_DURATION_MS] (iOS StatusMessageLifetime.displayDuration). Anything
+ * that changes the field withdraws it earlier, through [DictationFeedback.withdraw].
  */
 class NoWordsNotice(private val scope: CoroutineScope) {
 
