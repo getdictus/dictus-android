@@ -8,16 +8,18 @@ import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * SttProvider implementation backed by sherpa-onnx OfflineRecognizer for
@@ -37,19 +39,35 @@ import java.util.concurrent.Executors
  * WHY a dedicated native thread: the JNI calls block for seconds (model load, decode
  * of a long dictation). Callers run on the main thread, so running them inline froze
  * every frame, including the transcribing animation (#155). All native calls run one
- * at a time on [nativeDispatcher], like WhisperContext's single-thread executor.
- * Serializing them also means release() waits for an in-flight decode instead of
- * freeing the recognizer under it.
+ * at a time on this provider's own [nativeExecutor], like WhisperContext's single-thread
+ * executor. Serializing them also means release() waits for an in-flight decode instead
+ * of freeing the recognizer under it.
+ *
+ * WHY a thread per provider, and a bounded release (#159): a decode that never returns
+ * keeps its thread busy forever. With one shared thread, the next provider's model load
+ * queued behind it and every later dictation hung on « Transcription en cours ». Now a
+ * call its caller abandoned while it ran makes [isReady] false, so SttProviderSlot
+ * replaces this provider; [release] waits [releaseGraceMs] at most and then gives up.
+ * The free stays queued behind the stuck call on the same thread, so the recognizer is
+ * never freed under a running decode: it is freed if the decode ever returns, and
+ * leaked with its parked thread otherwise. The replacement loads on a fresh thread.
  */
 class ParakeetProvider(
-    // Injectable so a unit test can simulate a missing native library without the
-    // real OfflineRecognizer, whose class init loads libsherpa-onnx-jni.
-    private val createRecognizer: (OfflineRecognizerConfig) -> OfflineRecognizer =
-        { config -> OfflineRecognizer(assetManager = null, config = config) },
-    private val nativeDispatcher: CoroutineDispatcher = NATIVE_DISPATCHER,
+    // Injectable so a unit test can use a fake instead of the real OfflineRecognizer,
+    // whose class init loads libsherpa-onnx-jni.
+    private val createRecognizer: (OfflineRecognizerConfig) -> ParakeetRecognizer =
+        { config -> SherpaParakeetRecognizer(OfflineRecognizer(assetManager = null, config = config)) },
+    private val nativeExecutor: ExecutorService = newNativeExecutor(),
+    private val releaseGraceMs: Long = RELEASE_GRACE_MS,
 ) : SttProvider {
 
-    private val nativeScope = CoroutineScope(SupervisorJob() + nativeDispatcher)
+    private val nativeScope = CoroutineScope(SupervisorJob() + nativeExecutor.asCoroutineDispatcher())
+
+    // Native calls whose caller gave up while they ran and that have not returned yet.
+    private val abandonedCalls = AtomicInteger(0)
+
+    @Volatile
+    private var released = false
 
     override val providerId: String = "parakeet"
     override val displayName: String = "Parakeet (sherpa-onnx)"
@@ -60,9 +78,11 @@ class ParakeetProvider(
 
     // Written only on the native thread; read by isReady from any thread.
     @Volatile
-    private var recognizer: OfflineRecognizer? = null
+    private var recognizer: ParakeetRecognizer? = null
 
-    override val isReady: Boolean get() = recognizer != null
+    // Not ready while an abandoned call still holds the native thread: a reuse would
+    // only queue behind it until the caller's timeout.
+    override val isReady: Boolean get() = recognizer != null && !released && abandonedCalls.get() == 0
 
     /**
      * Initialize the engine with a model file path.
@@ -157,14 +177,7 @@ class ParakeetProvider(
      */
     override suspend fun transcribe(samples: FloatArray, language: String): String = runNative {
         val r = recognizer ?: throw IllegalStateException("ParakeetProvider not initialized — call initialize() first")
-        val stream = r.createStream()
-        try {
-            stream.acceptWaveform(samples, sampleRate = 16000)
-            r.decode(stream)
-            r.getResult(stream).text
-        } finally {
-            stream.release()
-        }
+        r.transcribe(samples)
     }
 
     /**
@@ -172,17 +185,31 @@ class ParakeetProvider(
      *
      * Explicitly frees the native ONNX Runtime recognizer before clearing the reference.
      * Relying on finalization would retain large native allocations across model switches.
+     *
+     * Returns within [releaseGraceMs] even when a stuck call holds the native thread; the
+     * free then stays queued behind that call (see the class comment).
      */
     override suspend fun release() {
-        // NonCancellable: a release skipped while queued would leak the native model.
-        withContext(NonCancellable) {
-            runNative {
-                val current = recognizer
-                recognizer = null
-                current?.release()
-            }
+        if (released) return
+        released = true
+        // Not runNative: this block must stay queued even if we stop waiting for it, or a
+        // decode that eventually returns would leave the native model allocated.
+        val freeing = nativeScope.async {
+            val current = recognizer
+            recognizer = null
+            current?.release()
         }
-        Timber.d("ParakeetProvider released")
+        // Lets the native thread exit once its queue drains.
+        nativeExecutor.shutdown()
+        // NonCancellable: the slot holds its mutex here and must not leave mid-release.
+        val freed = withContext(NonCancellable) {
+            withTimeoutOrNull(releaseGraceMs) { freeing.await() }
+        } != null
+        if (freed) {
+            Timber.d("ParakeetProvider released")
+        } else {
+            Timber.w("ParakeetProvider: native thread still busy after %d ms, release left queued behind it", releaseGraceMs)
+        }
     }
 
     /**
@@ -195,20 +222,35 @@ class ParakeetProvider(
      * never reach the next dictation. A block still queued is skipped.
      */
     private suspend fun <T> runNative(block: () -> T): T {
-        val work = nativeScope.async { block() }
+        val call = AtomicInteger(QUEUED)
+        val work = nativeScope.async {
+            call.set(RUNNING)
+            try {
+                block()
+            } finally {
+                if (call.getAndSet(DONE) == ABANDONED) abandonedCalls.decrementAndGet()
+            }
+        }
         return try {
             work.await()
         } catch (cancellation: CancellationException) {
             work.cancel()
+            if (call.compareAndSet(RUNNING, ABANDONED)) abandonedCalls.incrementAndGet()
             throw cancellation
         }
     }
 
-    private companion object {
-        // One thread for every provider instance: a replacement model can only load
-        // once the previous one has finished its work and been released.
-        val NATIVE_DISPATCHER: CoroutineDispatcher =
+    internal companion object {
+        // Time a release waits for the native thread. A decode abandoned at the 120 s
+        // dictation timeout gets this long to return before its model is left behind.
+        const val RELEASE_GRACE_MS = 10_000L
+
+        private const val QUEUED = 0
+        private const val RUNNING = 1
+        private const val DONE = 2
+        private const val ABANDONED = 3
+
+        fun newNativeExecutor(): ExecutorService =
             Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "parakeet-native").apply { isDaemon = true } }
-                .asCoroutineDispatcher()
     }
 }
