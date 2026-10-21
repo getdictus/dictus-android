@@ -76,7 +76,7 @@ A PR that adds or changes a screen or a user-facing feature MUST update the skil
 
 Four test tiers, detailed in the skill's `SKILL.md` → Test tiers:
 
-1. Emulator: the default for every PR. The x86_64 build and the virtual microphone are pending.
+1. Emulator: the default for every PR. The opt-in x86_64 debug build (`-Pdictus.emulatorAbi=true`, #147) and the virtual microphone fed from French WAV clips (#149) are in place, so a dictation can be proven on the emulator with Tiny.
 2. Pixel 4 driven by Andy: real microphone, permissions, transcription time with Tiny, Base and Small Q5 (the onboarding model below 8 GB of RAM).
 3. Pixel 4 with Pierre: real voice, text quality, keyboard feel. Label `needs-physical-test` and a batch device test.
 4. Out of reach: models larger than Small Q5, and Parakeet 0.6B v3 (needs 8 GB of RAM). The PR says "not tested on a recent phone".
