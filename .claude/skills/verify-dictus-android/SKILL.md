@@ -205,7 +205,7 @@ With a run of this session, `cleanup.sh` copies `files/dictus.log` into it, writ
 
 ## Emulator tier (x86_64 AVD)
 
-For checks that do not need the real phone: the AVD `dictus_api35` (x86_64, API 35). The helpers above target the Pixel; on the emulator pass `-s emulator-5554` yourself. One emulator at a time on this 12 GB machine: take `/home/pierre/Dev/dictus-proofs/.emulator-lock` (`mkdir`, owner file with your label + date; wait while another thread holds it, never kill its emulator), run `./gradlew --stop` before booting, and never build while the emulator runs.
+For checks that do not need the real phone: the AVD `dictus_api35` (x86_64, API 35). The helpers above target the Pixel; on the emulator pass `-s emulator-5554` yourself. One emulator at a time on this 12 GB machine: take `/home/pierre/Dev/dictus-proofs/.emulator-lock` with `DICTUS_LOCK_NAME=emulator helpers/lock.sh acquire <label>` (or let `emulator-mic.sh start` take it; wait while another thread holds it, never kill its emulator), run `./gradlew --stop` before booting, and never build while the emulator runs.
 
 The default debug build has **no x86_64 whisper/trie libs** (it compiles ARM only, like CI): the emulator installs it as x86_64 because AndroidX ships x86_64 libs, then whisper fails to load. Build the emulator APK with the opt-in property:
 
@@ -217,15 +217,43 @@ adb -s emulator-5554 wait-for-device
 adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
 # ... drive with Argent (udid emulator-5554), then:
 adb -s emulator-5554 emu kill
-rm -r /home/pierre/Dev/dictus-proofs/.emulator-lock   # only if its owner file is yours
+DICTUS_LOCK_NAME=emulator helpers/lock.sh release   # releases only this session's token
 ```
 
-Release the lock after `emu kill`, also when install or verification failed (kill the emulator first). Never remove a lock whose owner file is another thread's.
+Release the lock after `emu kill`, also when install or verification failed (kill the emulator first); `emulator-mic.sh stop` does both. Never remove another session's lock.
 
 Release never contains x86_64 whisper/trie, with or without the property.
 
 - **Use Tiny.** whisper on x86_64 is built for SSE4.2 only (the emulator CPU lacks AVX2/FMA): Tiny takes ~12 s for 3 s of audio; Small Q5 ~75 s.
 - **Parakeet is unavailable on the emulator.** sherpa-onnx (`:asr`) ships arm64-v8a and armeabi-v7a only. Activating a Parakeet model there must end in a failed engine (log `ParakeetProvider: sherpa-onnx native library unavailable on x86_64`), never in a crash. Test Parakeet on the Pixel.
+
+### Dictation from a WAV clip (virtual microphone)
+
+A dictation can be checked on the emulator without the Pixel and without anyone speaking: `helpers/emulator-mic.sh` creates a PipeWire virtual microphone (`pw-loopback`: a sink `dictus_feed_N` whose sound comes out of a source `dictus_mic_N`), boots the AVD on it and plays a WAV clip into the sink.
+
+```bash
+H=.claude/skills/verify-dictus-android/helpers
+A=.claude/skills/verify-dictus-android/fixtures/audio
+$H/emulator-mic.sh build                       # ./gradlew assembleDebug -Pdictus.emulatorAbi=true, then --stop
+$H/emulator-mic.sh start 1                     # lock, virtual mic, boot; last line: SERIAL emulator-5554
+$H/emulator-mic.sh install 1                   # install -r, Dictus as IME, RECORD_AUDIO granted
+# Argent on emulator-5554: Home → « New dictation » (recording starts), then:
+$H/emulator-mic.sh play $A/fr-bonjour-test.wav 1
+# Argent: Stop → compare the text with $A/fr-bonjour-test.txt
+$H/emulator-mic.sh stop 1                      # emulator, virtual mic, lock; safe to run twice
+$H/emulator-mic.sh status
+```
+
+- Set Réglages → Transcription → Language to **Français** first. On `Automatic`, Tiny takes the synthetic voice for Japanese.
+- `start` boots without `-no-window`: that flag selects `qemu-system-x86_64-headless`, whose PulseAudio driver is a stub in emulator 37.1.11 (« Could not init `pa' audio driver », the guest records silence). It uses the Qt binary with a hidden window (`-qt-hide-window`, `QT_QPA_PLATFORM=offscreen`), `PULSE_SOURCE=dictus_mic_N`, `-allow-host-audio`, the guest's speaker on a sink linked to nothing (`dictus_spk_N`, so its sounds do not loop into the mic through the default sink), gRPC with a token (Argent needs it), then `adb emu avd hostmicon`. It refuses to finish if `pa` failed.
+- The Gradle property is named once, in `env.sh` (`DICTUS_EMULATOR_GRADLE_PROP`); `install` refuses an APK without `lib/x86_64`.
+- The clips in `fixtures/audio/` are synthesized French sentences (libespeak-ng, see its README), 16 kHz mono, each with its expected text in a `.txt` beside it.
+
+**The emulator lock** is the Pixel lock's code (`lock.sh` with `DICTUS_LOCK_NAME=emulator`): atomic `mkdir`, a token unique to the session in `owner` and in the session's `token.emulator`, release by the owner only; `DICTUS_LOCK_NAME=emulator $H/lock.sh status` shows the owner. `start` adds three rules:
+
+- It waits while another session holds the lock, or while any `qemu-system` or Gradle daemon runs (retry every 2 min, give up after 30 min; `DICTUS_EMU_WAIT_MIN=0` refuses at once). It waits for a free machine before taking the lock, so a waiting session never blocks a build.
+- A lock older than 45 min while no `qemu-system` and no `pw-loopback` runs is stale: `start` removes it and prints its owner. The Pixel lock has no such rule.
+- A failed `start` undoes itself (emulator, virtual mic, lock). Hold the lock only while the emulator is in use: `stop` as soon as the check is done, then `mcp__argent__stop-all-simulator-servers { devices: ["emulator-5554"] }`.
 
 ## Helpers
 
@@ -234,6 +262,7 @@ All executable, run from the repository root; all read `helpers/env.sh` (overrid
 | Script | Invocation | Ends with |
 | --- | --- | --- |
 | `helpers/lock.sh` | `lock.sh acquire [label]` · `lock.sh release` · `lock.sh status` | `LOCK ACQUIRED token=… session=…` / `LOCK RELEASED token=…` / `LOCK REFUSED: held by […]` / `free` |
+| `helpers/emulator-mic.sh` | `emulator-mic.sh build` · `start [N]` · `install [N]` · `play <wav> [N]` · `stop [N]` · `status` | `BUILT …` / `SERIAL emulator-5554` / `INSTALLED on …` / `PLAYED <clip>` / `STOPPED <N>` |
 | `helpers/launch.sh` | `launch.sh [--no-build]` | `READY serial=… run=… pid=… version=… apk_sha=…` |
 | `helpers/doctor.sh` | `doctor.sh [run-dir]` | `DOCTOR OK` / `DOCTOR FAIL <n>` |
 | `helpers/log.sh` | `log.sh mark` · `log.sh wait '<regex>' [secs] [mark]` · `log.sh since <mark>` | `found: <line>` / `error: Dictus is running but logged no line …` / `error: no Dictus process running …` |
