@@ -104,6 +104,11 @@ class WhisperContext private constructor(
                 if (ptr != 0L) withContext(NonCancellable + dispatcher) { WhisperLib.freeContext(ptr) }
                 dispatcher.close()
                 throw cancellation
+            } catch (failure: Throwable) {
+                // e.g. UnsatisfiedLinkError: close the thread, which is not a daemon, so a
+                // failed attempt does not leave one behind.
+                dispatcher.close()
+                throw failure
             }
 
             val ptr = loaded.get()

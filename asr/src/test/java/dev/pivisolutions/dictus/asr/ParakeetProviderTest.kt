@@ -1,8 +1,10 @@
 package dev.pivisolutions.dictus.asr
 
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -27,6 +29,9 @@ class ParakeetProviderTest {
 
     private val executors = mutableListOf<ExecutorService>()
 
+    // Each test gets its own count instead of the process-wide one.
+    private val leakedProviders = AtomicInteger(0)
+
     @After
     fun shutDownExecutors() {
         executors.forEach { it.shutdownNow() }
@@ -34,11 +39,13 @@ class ParakeetProviderTest {
 
     private fun provider(
         releaseGraceMs: Long = 5_000,
+        nativeExecutor: ExecutorService = ParakeetProvider.newNativeExecutor(),
         createRecognizer: (OfflineRecognizerConfig) -> ParakeetRecognizer,
     ) = ParakeetProvider(
         createRecognizer = createRecognizer,
-        nativeExecutor = ParakeetProvider.newNativeExecutor().also { executors += it },
+        nativeExecutor = nativeExecutor.also { executors += it },
         releaseGraceMs = releaseGraceMs,
+        leakedProviders = leakedProviders,
     )
 
     @get:Rule
@@ -149,13 +156,11 @@ class ParakeetProviderTest {
     }
 
     @Test
-    fun `late result of a timed-out transcribe is dropped`() = runBlocking {
+    fun `late result of an abandoned transcribe is dropped`() = runBlocking {
         val recognizer = FakeRecognizer()
         val provider = readyProvider(recognizer)
-        recognizer.blockNextDecode("late text")
 
-        assertNull(withTimeoutOrNull(200) { provider.transcribe(FloatArray(16), "fr") })
-        assertTrue(recognizer.decodeStarted.await(5, TimeUnit.SECONDS))
+        abandonRunningDecode(provider, recognizer)
         // The stuck call still holds the thread: the slot must not reuse this provider.
         assertFalse(provider.isReady)
 
@@ -186,13 +191,31 @@ class ParakeetProviderTest {
     }
 
     @Test
-    fun `a stuck decode does not block release or the next provider`() = runBlocking {
+    fun `call abandoned before it starts is not counted and the provider stays usable`() = runBlocking {
+        val recognizer = FakeRecognizer().apply { nextResult = "next dictation" }
+        val executor = ParakeetProvider.newNativeExecutor()
+        val provider = provider(nativeExecutor = executor) { recognizer }
+        assertTrue(provider.initialize(ctcModelPath()))
+        // Keep the native thread busy so the transcribe stays queued until its caller gives up.
+        val busy = CountDownLatch(1)
+        executor.execute { busy.await(10, TimeUnit.SECONDS) }
+
+        assertNull(withTimeoutOrNull(200) { provider.transcribe(FloatArray(16), "fr") })
+        assertTrue("a call that never ran made the provider unusable", provider.isReady)
+
+        busy.countDown()
+        assertEquals("next dictation", withTimeoutOrNull(5_000) { provider.transcribe(FloatArray(16), "fr") })
+        assertEquals("the abandoned transcribe ran", 1, recognizer.decodes.get())
+    }
+
+    @Test
+    fun `a stuck decode does not hang release and no second model loads until it returns`() = runBlocking {
         // #159: a decode that never returns used to hang the model switch, and with it
-        // every later dictation.
+        // every later dictation. Loading a second model next to the leaked one could then
+        // kill the app on a 6 GB phone.
         val stuck = FakeRecognizer()
         val oldProvider = readyProvider(stuck, releaseGraceMs = 300)
-        stuck.blockNextDecode("never")
-        assertNull(withTimeoutOrNull(200) { oldProvider.transcribe(FloatArray(16), "fr") })
+        abandonRunningDecode(oldProvider, stuck)
         assertFalse(oldProvider.isReady)
 
         // What SttProviderSlot does next: release the provider, then load a new one.
@@ -201,13 +224,37 @@ class ParakeetProviderTest {
         assertTrue(System.currentTimeMillis() - startMs < 2_000)
         assertFalse("recognizer freed under a running decode", stuck.released)
 
+        var created = 0
         val fresh = FakeRecognizer().apply { nextResult = "next dictation" }
-        val newProvider = readyProvider(fresh)
-        assertEquals("next dictation", withTimeoutOrNull(5_000) { newProvider.transcribe(FloatArray(16), "fr") })
+        val refused = provider { created++; fresh }
+        assertFalse("loaded a second model while the first leaks", refused.initialize(ctcModelPath()))
+        assertEquals(0, created)
+        refused.release()
 
-        // If the stuck decode ever returns, the queued release frees its model after it.
+        // The stuck decode returns: the queued release frees its model, and loading works again.
         stuck.finishBlockedDecode()
         awaitCondition { stuck.released }
+        awaitCondition { leakedProviders.get() == 0 }
+        val newProvider = readyProvider(fresh)
+        assertEquals("next dictation", withTimeoutOrNull(5_000) { newProvider.transcribe(FloatArray(16), "fr") })
+    }
+
+    @Test
+    fun `release that completes in time is not counted as a leak`() = runBlocking {
+        val provider = readyProvider(FakeRecognizer())
+
+        provider.release()
+
+        assertEquals(0, leakedProviders.get())
+        assertTrue(provider(createRecognizer = { FakeRecognizer() }).initialize(ctcModelPath()))
+    }
+
+    /** Start a transcribe that blocks in native code, wait until it runs, then give up on it. */
+    private suspend fun CoroutineScope.abandonRunningDecode(provider: ParakeetProvider, recognizer: FakeRecognizer) {
+        recognizer.blockNextDecode("late text")
+        val caller = async(Dispatchers.Default) { provider.transcribe(FloatArray(16), "fr") }
+        assertTrue("decode never started", recognizer.decodeStarted.await(5, TimeUnit.SECONDS))
+        caller.cancelAndJoin()
     }
 
     private suspend fun readyProvider(recognizer: FakeRecognizer, releaseGraceMs: Long = 5_000): ParakeetProvider {
