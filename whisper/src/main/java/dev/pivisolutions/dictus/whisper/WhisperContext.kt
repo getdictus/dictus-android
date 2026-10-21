@@ -100,9 +100,13 @@ class WhisperContext private constructor(
                 withContext(dispatcher) { loaded.set(WhisperLib.initContext(modelPath)) }
             } catch (cancellation: CancellationException) {
                 // A load that finished after its caller gave up would otherwise leak the model.
-                val ptr = loaded.get()
-                if (ptr != 0L) withContext(NonCancellable + dispatcher) { WhisperLib.freeContext(ptr) }
-                dispatcher.close()
+                // finally: returning to the cancelled caller throws again once the free is done.
+                try {
+                    val ptr = loaded.get()
+                    if (ptr != 0L) withContext(NonCancellable + dispatcher) { WhisperLib.freeContext(ptr) }
+                } finally {
+                    dispatcher.close()
+                }
                 throw cancellation
             } catch (failure: Throwable) {
                 // e.g. UnsatisfiedLinkError: close the thread, which is not a daemon, so a
