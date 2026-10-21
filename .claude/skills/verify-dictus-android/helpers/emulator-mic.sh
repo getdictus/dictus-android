@@ -42,17 +42,19 @@ instance() {
 live_pid() {
   local file="$1" pattern="$2" pid
   pid="$(cat "$file" 2>/dev/null || true)"
-  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q -- "$pattern" && echo "$pid"
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -- "$pattern" >/dev/null && echo "$pid"
   return 0
 }
-node_exists() { pw-cli ls Node 2>/dev/null | grep -q "node.name = \"$1\""; }
+# grep without -q in pipes: under pipefail an early grep exit fails the pipeline (SIGPIPE).
+node_exists() { pw-cli ls Node 2>/dev/null | grep "node.name = \"$1\"" >/dev/null; }
 booted() { [ "$(adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; }
+# 0 when an instance other than N runs (state dirs are per machine); its number in OTHER.
 other_instances_running() {
-  local d
+  local d; OTHER=""
   for d in "$STATE_ROOT"/*/; do
     [ -d "$d" ] || continue
     [ "$(basename "$d")" = "$N" ] && continue
-    [ -n "$(live_pid "$d/emulator.pid" qemu-system)$(live_pid "$d/loopback.pid" pw-loopback)" ] && return 0
+    [ -n "$(live_pid "$d/emulator.pid" qemu-system)$(live_pid "$d/loopback.pid" pw-loopback)" ] && { OTHER="$(basename "$d")"; return 0; }
   done
   return 1
 }
@@ -94,7 +96,7 @@ install_apk() {
   instance "${1:-1}"
   booted || die "$SERIAL is not booted: start $N first"
   [ -f "$DICTUS_APK" ] || die "no APK at $DICTUS_APK: run 'emulator-mic.sh build' first"
-  unzip -l "$DICTUS_APK" | grep -q 'lib/x86_64/' || die "$DICTUS_APK has no lib/x86_64: build it with 'emulator-mic.sh build'"
+  unzip -l "$DICTUS_APK" | grep 'lib/x86_64/' >/dev/null || die "$DICTUS_APK has no lib/x86_64: build it with 'emulator-mic.sh build'"
   adb -s "$SERIAL" install -r "$DICTUS_APK"
   adb -s "$SERIAL" shell pm grant "$DICTUS_PKG" android.permission.RECORD_AUDIO
   adb -s "$SERIAL" shell ime enable "$DICTUS_IME" >/dev/null
@@ -106,17 +108,16 @@ start() {
   instance "${1:-1}"
   command -v pw-loopback >/dev/null && command -v pw-cli >/dev/null || die "pw-loopback/pw-cli missing (PipeWire)"
   [ -x "$EMULATOR_BIN" ] || die "no emulator at $EMULATOR_BIN"
-  "$EMULATOR_BIN" -list-avds 2>/dev/null | grep -qx "$AVD" || die "no AVD named $AVD"
+  "$EMULATOR_BIN" -list-avds 2>/dev/null | grep -x "$AVD" >/dev/null || die "no AVD named $AVD"
   grep -qx 'hw.audioInput *= *yes' "$HOME/.android/avd/$AVD.avd/config.ini" \
     || echo "warn: $AVD has no 'hw.audioInput = yes' in config.ini: Android may not see a microphone" >&2
 
-  mkdir -p "$STATE"
   # Already up (idempotent start): print the serial and leave everything as it is.
   if lock_is_mine && [ -n "$(live_pid "$STATE/emulator.pid" qemu-system)" ] && booted; then
     echo "already running: serial=$SERIAL mic=$MIC feed=$FEED"; echo "SERIAL $SERIAL"; return 0
   fi
   if other_instances_running; then
-    die "another instance of this session is running (status shows which); stop it first"
+    die "instance $OTHER already runs (emulator lock: [$(lock_owner_line)]); one emulator at a time"
   fi
 
   # Wait for the machine before taking the lock, so a build elsewhere is not blocked by an idle
@@ -127,6 +128,7 @@ start() {
     || die "emulator lock not acquired (see the owner above); nothing started"
   # From here a failure undoes this start (emulator, virtual mic, lock): nothing is left half up.
   trap '[ "$?" = 0 ] || { echo "start failed: undoing" >&2; stop "$N" >&2; }' EXIT
+  mkdir -p "$STATE"
   wait_machine_idle
 
   if [ -z "$(live_pid "$STATE/loopback.pid" pw-loopback)" ]; then
@@ -142,9 +144,12 @@ start() {
     echo "virtual mic: $FEED -> $MIC (pw-loopback pid $(cat "$STATE/loopback.pid"))"
   fi
 
-  PULSE_SOURCE="$MIC" setsid "$EMULATOR_BIN" -avd "$AVD" -port "$PORT" \
-    -memory "${DICTUS_EMU_MEMORY:-2048}" -no-window -no-snapshot-save -no-boot-anim \
-    -gpu swiftshader_indirect -allow-host-audio \
+  # Not -no-window: it selects qemu-system-*-headless, whose PulseAudio driver is a stub
+  # (emulator 37.1.11: "Could not init `pa' audio driver", the guest records silence). The Qt
+  # binary links libpulse; -qt-hide-window with Qt's offscreen platform keeps it windowless.
+  PULSE_SOURCE="$MIC" QT_QPA_PLATFORM=offscreen setsid "$EMULATOR_BIN" -avd "$AVD" -port "$PORT" \
+    -memory "${DICTUS_EMU_MEMORY:-2048}" -qt-hide-window -no-snapshot-save -no-boot-anim \
+    -gpu swiftshader_indirect -allow-host-audio -grpc "$((PORT + 3000))" -grpc-use-token \
     > "$STATE/emulator.log" 2>&1 < /dev/null &
   echo $! > "$STATE/emulator.pid"
   # The launcher may hand over to a qemu-system process: record that one (it carries our -port).
@@ -163,6 +168,9 @@ start() {
     [ "$t" -ge "$timeout" ] && die "no boot_completed after ${timeout}s"
     sleep 5; t=$((t + 5))
   done
+  if grep -F "Could not init \`pa' audio driver" "$STATE/emulator.log" >/dev/null; then
+    die "the emulator has no PulseAudio input, the virtual mic would be silent (see $STATE/emulator.log)"
+  fi
   echo "$SERIAL" > "$STATE/serial"
   trap - EXIT
   echo "booted in ~${t}s"
@@ -201,7 +209,7 @@ stop() {
   fi
   rm -f "$STATE/emulator.pid" "$STATE/loopback.pid" "$STATE/serial"
   if other_instances_running; then
-    echo "emulator lock kept: another instance of this session still runs"
+    echo "emulator lock kept: instance $OTHER still runs"
   else
     "$H/lock.sh" release || true
   fi
