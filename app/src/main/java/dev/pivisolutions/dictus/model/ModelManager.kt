@@ -182,8 +182,8 @@ object ModelCatalog {
     /**
      * Return the recommended model key for onboarding based on device RAM.
      *
-     * >= 8 GB marketed RAM -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
-     * < 8 GB marketed RAM  -> small-q5_1 (190 MB, best accuracy/size trade-off)
+     * >= 8 GB marketed RAM (Parakeet's minRamGb) -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
+     * < 8 GB marketed RAM                         -> small-q5_1 (190 MB, best accuracy/size trade-off)
      *
      * WHY DeviceRam: the Models screen gates the same model with the same helper, so
      * onboarding never recommends a model the Models screen shows as unavailable.
