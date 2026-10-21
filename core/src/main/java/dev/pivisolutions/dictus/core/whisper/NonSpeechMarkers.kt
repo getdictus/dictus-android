@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.core.whisper
 
+import java.text.Normalizer
+
 /**
  * Drops the non-speech markers an engine writes instead of an empty result (#161): « [Musique]. »,
  * "(music)", "[BLANK_AUDIO]", "...". Same rule as iOS (dictus-ios #768).
@@ -16,16 +18,25 @@ package dev.pivisolutions.dictus.core.whisper
  */
 object NonSpeechMarkers {
 
-    /** Closed list, case-insensitive. A marker's whole content must be one of these words. */
+    /**
+     * Closed list, as iOS (dictus-ios #768, NonSpeechMarkers.swift:25-30): FR, EN, DE, ES.
+     * Case-insensitive, accents required ("musica" is not "música", like iOS).
+     */
     private val MARKER_WORDS = listOf(
-        "musique", "music", "rires", "laughter", "applaudissements", "applause",
-        "silence", "blank_audio", "bruit", "noise", "inaudible",
+        "musique", "rires", "applaudissements", "silence", "bruit", "inaudible",
+        "music", "laughter", "applause", "noise", "blank_audio",
+        "musik", "lachen", "applaus", "stille", "geräusch",
+        "música", "risas", "aplausos", "silencio", "ruido",
     )
 
     private val ANY_SPAN = Regex("""\[[^\[\]]*]|\([^()]*\)""")
 
-    private val KNOWN: String = MARKER_WORDS.joinToString("|").let { words ->
-        """(?:\[\s*(?:$words)\s*]|\(\s*(?:$words)\s*\))"""
+    // Whitespace and punctuation may surround the word inside the brackets: « [ Rires... ] ».
+    private const val INNER_PADDING = """[\s.,;:!?…-]*"""
+
+    private val KNOWN: String = MARKER_WORDS.joinToString("|", transform = ::anyAccentForm).let { words ->
+        val inner = "$INNER_PADDING(?:$words)$INNER_PADDING"
+        """(?:\[$inner]|\($inner\))"""
     }
     private val GLUED = Regex("""(?<=[\p{L}\p{N}])$KNOWN(?=[\p{L}\p{N}])""", RegexOption.IGNORE_CASE)
     private val BEFORE_PUNCTUATION_OR_END =
@@ -57,4 +68,14 @@ object NonSpeechMarkers {
         if (!LEADING.containsMatchIn(text)) return stripped
         return stripped.dropWhile { it in SENTENCE_PUNCTUATION || it.isWhitespace() }
     }
+
+    /**
+     * [word] as a pattern where each accented letter also matches its decomposed form (NFD,
+     * "u" + combining acute), so a decomposed accent from an engine still matches.
+     */
+    private fun anyAccentForm(word: String): String = word.map { char ->
+        val decomposed = Normalizer.normalize(char.toString(), Normalizer.Form.NFD)
+        if (decomposed.length == 1) Regex.escape(char.toString())
+        else "(?:${Regex.escape(char.toString())}|${Regex.escape(decomposed)})"
+    }.joinToString("")
 }

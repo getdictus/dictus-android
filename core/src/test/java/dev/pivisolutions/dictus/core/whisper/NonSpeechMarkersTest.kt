@@ -59,6 +59,38 @@ class NonSpeechMarkersTest {
         assertEquals("Ok", NonSpeechMarkers.spokenText("Ok [blank_audio]"))
     }
 
+    @Test
+    fun `German and Spanish markers are dropped from mixed text`() {
+        assertEquals("Guten Tag", NonSpeechMarkers.spokenText("Guten Tag (Geräusch)"))
+        assertEquals("Guten Tag", NonSpeechMarkers.spokenText("Guten [Musik] Tag"))
+        assertEquals("Hola.", NonSpeechMarkers.spokenText("Hola [Música]."))
+        assertEquals("Hola amigos", NonSpeechMarkers.spokenText("Hola (risas) amigos"))
+        listOf("[Lachen]", "(Applaus)", "[Stille]", "(aplausos)", "[Silencio]", "(Ruido)").forEach {
+            assertEquals(it, "Ok", NonSpeechMarkers.spokenText("Ok $it"))
+        }
+    }
+
+    @Test
+    fun `accented markers match in any case but need their accent, like iOS`() {
+        assertEquals("Guten Tag", NonSpeechMarkers.spokenText("Guten Tag [GERÄUSCH]"))
+        assertEquals("Hola", NonSpeechMarkers.spokenText("Hola (MÚSICA)"))
+        assertEquals("Hola (musica)", NonSpeechMarkers.spokenText("Hola (musica)"))
+        assertEquals("Guten Tag [Gerausch]", NonSpeechMarkers.spokenText("Guten Tag [Gerausch]"))
+    }
+
+    @Test
+    fun `a decomposed accent still matches`() {
+        assertEquals("Hola", NonSpeechMarkers.spokenText("Hola [Mu\u0301sica]"))
+        assertEquals("Guten Tag", NonSpeechMarkers.spokenText("Guten Tag (GERA\u0308USCH)"))
+    }
+
+    @Test
+    fun `whitespace and punctuation inside a known marker are tolerated`() {
+        assertEquals("Bonjour à tous", NonSpeechMarkers.spokenText("Bonjour [ Rires... ] à tous"))
+        assertEquals("Hello.", NonSpeechMarkers.spokenText("Hello (- music -)."))
+        assertEquals("Bonjour [Rires et cris] à tous", NonSpeechMarkers.spokenText("Bonjour [Rires et cris] à tous"))
+    }
+
     // --- Rule 3: an unclosed marker is not a marker ---
 
     @Test
