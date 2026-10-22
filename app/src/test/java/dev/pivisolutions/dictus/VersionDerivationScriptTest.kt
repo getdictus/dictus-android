@@ -3,7 +3,7 @@ package dev.pivisolutions.dictus
 import java.io.File
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -19,19 +19,36 @@ class VersionDerivationScriptTest {
 
     @Test
     fun `release and dev version derivation tests pass`() {
-        val process = ProcessBuilder("bash", scripts.resolve("test-derive-android-version.sh").path)
-            .redirectErrorStream(true)
-            .start()
-        val output = process.inputStream.bufferedReader().readText()
-        assertTrue("script timed out", process.waitFor(60, TimeUnit.SECONDS))
-        assertEquals(output, 0, process.exitValue())
+        val result = run(60, "bash", scripts.resolve("test-derive-android-version.sh").path, mergeStderr = true)
+        assertEquals(result.output, 0, result.exitCode)
     }
 
     @Test
     fun `release v1_3_0 keeps versionCode 10300999`() {
-        val process = ProcessBuilder("bash", scripts.resolve("derive-android-version.sh").path, "v1.3.0").start()
-        val output = process.inputStream.bufferedReader().readText()
-        assertTrue(process.waitFor(10, TimeUnit.SECONDS))
-        assertEquals("version_name=1.3.0\nversion_code=10300999\n", output)
+        val result = run(10, "bash", scripts.resolve("derive-android-version.sh").path, "v1.3.0")
+        assertEquals("version_name=1.3.0\nversion_code=10300999\n", result.output)
+    }
+
+    private class Result(val exitCode: Int, val output: String)
+
+    /**
+     * Stdout goes to a temp file rather than a pipe, so waitFor's timeout holds even if
+     * the script hangs: reading a pipe first would block until the script exits.
+     */
+    private fun run(timeoutSeconds: Long, vararg command: String, mergeStderr: Boolean = false): Result {
+        val outputFile = File.createTempFile("derive-android-version", ".out")
+        try {
+            val process = ProcessBuilder(*command)
+                .redirectErrorStream(mergeStderr)
+                .redirectOutput(outputFile)
+                .start()
+            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                fail("${command.joinToString(" ")} timed out after ${timeoutSeconds}s:\n${outputFile.readText()}")
+            }
+            return Result(process.exitValue(), outputFile.readText())
+        } finally {
+            outputFile.delete()
+        }
     }
 }
