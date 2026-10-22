@@ -5,12 +5,11 @@ import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelCatalog.isDirectoryModel
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -72,6 +71,8 @@ open class ModelDownloader(
         .followRedirects(true)
         .build()
 ) {
+
+    private val resumableDownload = ResumableDownload(client)
 
     /**
      * Ensure a model is available on disk. Downloads if not present.
@@ -202,52 +203,9 @@ open class ModelDownloader(
             }
         }
 
-        val request = Request.Builder().url(url).build()
-        val call = client.newCall(request)
-
-        // Register cancellation: when the collector's coroutine is cancelled,
-        // cancel the OkHttp call so the blocking input.read() throws and unblocks the IO.
-        val job = currentCoroutineContext()[kotlinx.coroutines.Job]
-        job?.invokeOnCompletion {
-            call.cancel()
-            tempFile.delete()
-        }
-
         try {
-            val response = call.execute()
-            if (!response.isSuccessful) {
-                emit(DownloadProgress.Error("HTTP ${response.code}"))
-                return@flow
-            }
-            val body = response.body ?: run {
-                emit(DownloadProgress.Error("Empty response body"))
-                return@flow
-            }
-            val totalBytes = body.contentLength()
-            var bytesRead = 0L
-            var lastEmittedPercent = -1
-
-            tempFile.parentFile?.mkdirs()
-            FileOutputStream(tempFile).use { output ->
-                body.byteStream().use { input ->
-                    val buffer = ByteArray(8192)
-                    while (currentCoroutineContext().isActive) {
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        bytesRead += read
-                        if (totalBytes > 0) {
-                            val percent = ((bytesRead * 100) / totalBytes).toInt()
-                            if (percent != lastEmittedPercent) {
-                                lastEmittedPercent = percent
-                                emit(DownloadProgress.Progress(percent))
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!currentCoroutineContext().isActive) return@flow
+            // Resumes from <temp>.part after an earlier network error or stall (#131).
+            resumableDownload.fetch(url, tempFile) { percent -> emit(DownloadProgress.Progress(percent)) }
 
             if (isArchive) {
                 // Parakeet: extract tar.bz2 archive, then delete the archive temp file
@@ -278,10 +236,12 @@ open class ModelDownloader(
                     tempFile.delete()
                 }
             }
+        } catch (e: CancellationException) {
+            tempFile.delete()
+            throw e
         } catch (e: Exception) {
-            if (!call.isCanceled()) {
-                emit(DownloadProgress.Error(e.message ?: "Download failed"))
-            }
+            Timber.e(e, "Download failed for %s", modelKey)
+            emit(DownloadProgress.Error(e.message ?: "Download failed"))
             tempFile.delete()
         }
     }.flowOn(Dispatchers.IO)
