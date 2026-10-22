@@ -25,6 +25,10 @@
   <a href="https://t.me/getdictus">Community</a>
 </p>
 
+<p align="center">
+  <a href="screenshots/keyboard.png"><img src="screenshots/keyboard.png" alt="Dictus keyboard in action" width="600" /></a>
+</p>
+
 ---
 
 Dictus is a free, open-source Android keyboard that adds voice dictation to any app. All speech recognition runs **on-device** via Whisper (whisper.cpp) and NVIDIA Parakeet (sherpa-onnx) — no server, no account, no subscription.
