@@ -57,6 +57,35 @@ class DictationTranscriberTest {
         assertEquals(TranscriptionOutcome.NoWordsDetected, outcome)
     }
 
+    @Test
+    fun `a Whisper music tag alone is no words`() = runTest {
+        val outcome = transcriber(engine = { _, _ -> " [Musique]." }).transcribe(halfSecond, "tiny", "fr")
+
+        assertEquals(TranscriptionOutcome.NoWordsDetected, outcome)
+    }
+
+    @Test
+    fun `an ellipsis alone is no words`() = runTest {
+        val outcome = transcriber(engine = { _, _ -> " ..." }).transcribe(halfSecond, "small-q5_1", "fr")
+
+        assertEquals(TranscriptionOutcome.NoWordsDetected, outcome)
+    }
+
+    @Test
+    fun `a Parakeet result made of tags is no words`() = runTest {
+        val outcome = transcriber(engine = { _, _ -> "(silence) [BLANK_AUDIO]" })
+            .transcribe(halfSecond, "parakeet-tdt-0.6b-v3", "fr")
+
+        assertEquals(TranscriptionOutcome.NoWordsDetected, outcome)
+    }
+
+    @Test
+    fun `an asterisk marker alone is no words`() = runTest {
+        val outcome = transcriber(engine = { _, _ -> " *Bruit de chute*" }).transcribe(halfSecond, "small-q5_1", "fr")
+
+        assertEquals(TranscriptionOutcome.NoWordsDetected, outcome)
+    }
+
     // --- Failed ---
 
     @Test
@@ -101,6 +130,13 @@ class DictationTranscriberTest {
         val outcome = transcriber(engine = { _, _ -> " Bonjour " }).transcribe(halfSecond, "tiny", "fr")
 
         assertEquals(TranscriptionOutcome.Text("Bonjour. "), outcome)
+    }
+
+    @Test
+    fun `tags are dropped from text with words`() = runTest {
+        val outcome = transcriber(engine = { _, _ -> " Bonjour [Musique] ça va" }).transcribe(halfSecond, "tiny", "fr")
+
+        assertEquals(TranscriptionOutcome.Text("Bonjour ça va. "), outcome)
     }
 
     @Test

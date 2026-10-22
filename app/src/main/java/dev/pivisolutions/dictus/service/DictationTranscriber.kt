@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.service
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import dev.pivisolutions.dictus.core.whisper.NonSpeechMarkers
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
@@ -52,8 +53,9 @@ internal class DictationTranscriber(
 
     /**
      * Transcribes a take that passed [rejectBeforeEngine]. A missing model, a provider that
-     * cannot start, a timeout or an exception is [TranscriptionOutcome.Failed]; blank text is
-     * [TranscriptionOutcome.NoWordsDetected]. Cancellation is rethrown.
+     * cannot start, a timeout or an exception is [TranscriptionOutcome.Failed]; text with no
+     * words once non-speech tags are removed is [TranscriptionOutcome.NoWordsDetected].
+     * Cancellation is rethrown.
      */
     suspend fun transcribe(samples: FloatArray, modelKey: String, language: String): TranscriptionOutcome {
         return try {
@@ -71,8 +73,8 @@ internal class DictationTranscriber(
                 return TranscriptionOutcome.Failed
             }
 
-            // Post-process (trim + punctuation)
-            val processedText = TextPostProcessor.process(rawText)
+            // Drop non-speech tags (#161), then post-process (trim + punctuation)
+            val processedText = TextPostProcessor.process(NonSpeechMarkers.spokenText(rawText))
             Timber.d(PrivacySafeLog.transcriptionProcessed(rawText, processedText))
 
             TranscriptionOutcome.fromProcessedText(processedText).also { outcome ->

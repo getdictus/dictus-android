@@ -14,7 +14,8 @@ sealed interface TranscriptionOutcome {
 
     /**
      * No words to insert: no audio captured, a recording under the minimum duration, or a
-     * transcription that is blank once trimmed. Nothing is inserted or saved.
+     * transcription with no letter or digit once non-speech tags are removed (blank, "...",
+     * "♪", #161). Nothing is inserted or saved.
      */
     data object NoWordsDetected : TranscriptionOutcome
 
@@ -22,8 +23,11 @@ sealed interface TranscriptionOutcome {
     data object Failed : TranscriptionOutcome
 
     companion object {
-        /** Blank text, whitespace included, is no words: iOS throws noSpeechDetected there. */
+        /**
+         * Text without a letter or digit is no words: blank (iOS throws noSpeechDetected there)
+         * or punctuation and symbols only, such as the "..." Whisper writes on silence (#161).
+         */
         fun fromProcessedText(text: String): TranscriptionOutcome =
-            if (text.isBlank()) NoWordsDetected else Text(text)
+            if (text.none { it.isLetterOrDigit() }) NoWordsDetected else Text(text)
     }
 }

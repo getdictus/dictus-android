@@ -1,0 +1,88 @@
+package dev.pivisolutions.dictus.core.whisper
+
+import java.text.Normalizer
+
+/**
+ * Drops the non-speech markers an engine writes instead of an empty result (#161): « [Musique]. »,
+ * "(music)", "[BLANK_AUDIO]", "...". Same rule as iOS (dictus-ios #768).
+ *
+ * WHY a text-side filter: whisper.cpp runs with suppress_nst = false, and enabling it would also
+ * suppress ":", ";", "\"" and "/" in real dictations. A filter on the text covers Whisper and
+ * Parakeet alike.
+ *
+ * - A result made only of `[...]` / `(...)` / `*...*` spans, punctuation and whitespace has no
+ *   words: [spokenText] returns "".
+ * - In text with words, only the known markers of [MARKER_WORDS] are removed; any other bracket
+ *   or parenthesis is kept, since it may be dictated text.
+ * - An unclosed bracket ("[Musique") is not a marker.
+ * - `*...*` (Whisper Small writes « *musique* », « *Bruit de chute* ») is Android-only for now:
+ *   iOS #768 has no asterisk form. Guard: no line break inside, and a non-space right after the
+ *   opening asterisk and right before the closing one, so « 2 * 3 * 4 » stays text.
+ */
+object NonSpeechMarkers {
+
+    /**
+     * Closed list, as iOS (dictus-ios #768, NonSpeechMarkers.swift:25-30): FR, EN, DE, ES.
+     * Case-insensitive, accents required ("musica" is not "música", like iOS).
+     */
+    private val MARKER_WORDS = listOf(
+        "musique", "rires", "applaudissements", "silence", "bruit", "inaudible",
+        "music", "laughter", "applause", "noise", "blank_audio",
+        "musik", "lachen", "applaus", "stille", "geräusch",
+        "música", "risas", "aplausos", "silencio", "ruido",
+    )
+
+    private val ANY_SPAN = Regex("""\[[^\[\]]*]|\([^()]*\)|\*[^\s*](?:[^*\r\n]*[^\s*])?\*""")
+
+    // Whitespace and punctuation may surround the word inside the brackets: « [ Rires... ] ».
+    private const val INNER_PADDING = """[\s.,;:!?…-]*"""
+
+    // Same padding between asterisks, without line breaks.
+    private const val ASTERISK_PADDING = """[\t .,;:!?…-]*"""
+
+    private val KNOWN: String = MARKER_WORDS.joinToString("|", transform = ::anyAccentForm).let { words ->
+        val inner = "$INNER_PADDING(?:$words)$INNER_PADDING"
+        val asteriskInner = "(?=[^\\s*])$ASTERISK_PADDING(?:$words)$ASTERISK_PADDING(?<=[^\\s*])"
+        """(?:\[$inner]|\($inner\)|\*$asteriskInner\*)"""
+    }
+    private val GLUED = Regex("""(?<=[\p{L}\p{N}])$KNOWN(?=[\p{L}\p{N}])""", RegexOption.IGNORE_CASE)
+    private val BEFORE_PUNCTUATION_OR_END =
+        Regex("""\s*$KNOWN\s*(?=[.,;:!?…]|$)""", RegexOption.IGNORE_CASE)
+    private val WITH_SPACE_BEFORE = Regex("""\s*$KNOWN""", RegexOption.IGNORE_CASE)
+    private val LEADING = Regex("""^\s*$KNOWN""", RegexOption.IGNORE_CASE)
+    private val SPACE_RUN = Regex("""[ \t]{2,}""")
+    private const val SENTENCE_PUNCTUATION = ".,;:!?…"
+
+    /**
+     * The spoken words in [text], or "" when there are none. Text without a known marker is
+     * returned unchanged.
+     */
+    fun spokenText(text: String): String {
+        if (ANY_SPAN.replace(text, "").none { it.isLetterOrDigit() }) return ""
+        if (!WITH_SPACE_BEFORE.containsMatchIn(text)) return text
+
+        // A marker glued between two words ("Bonjour[Music]monde") becomes a space; any other
+        // marker goes with the whitespace around it, so no double space and no space before
+        // the punctuation that follows it.
+        val stripped = text
+            .replace(GLUED, " ")
+            .replace(BEFORE_PUNCTUATION_OR_END, "")
+            .replace(WITH_SPACE_BEFORE, "")
+            .replace(SPACE_RUN, " ")
+            .trim()
+        // A marker that opened the text leaves the punctuation that followed it ("[Musique].
+        // Bonjour"). Only then: the leading "..." of "... bonjour" is the speaker's.
+        if (!LEADING.containsMatchIn(text)) return stripped
+        return stripped.dropWhile { it in SENTENCE_PUNCTUATION || it.isWhitespace() }
+    }
+
+    /**
+     * [word] as a pattern where each accented letter also matches its decomposed form (NFD,
+     * "u" + combining acute), so a decomposed accent from an engine still matches.
+     */
+    private fun anyAccentForm(word: String): String = word.map { char ->
+        val decomposed = Normalizer.normalize(char.toString(), Normalizer.Form.NFD)
+        if (decomposed.length == 1) Regex.escape(char.toString())
+        else "(?:${Regex.escape(char.toString())}|${Regex.escape(decomposed)})"
+    }.joinToString("")
+}
