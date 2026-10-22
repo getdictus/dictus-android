@@ -14,7 +14,7 @@ The Modèles tab lists the offline speech models (Whisper and Parakeet), downloa
 - `models.download`: « Télécharger » on an available card, with « Téléchargement — N% » and « Extraction… » (Parakeet). — présent
 - `models.select`: Tap a downloaded card to make it « Actif ». — présent
 - `models.delete`: Trash icon (`Supprimer`) then « Supprimer <nom> ? ». — présent
-- `models.retry`: « Échec du téléchargement. » + « Réessayer ». — partiel: no explicit way to delete a partial download (not verified on device).
+- `models.retry`: « Échec du téléchargement. » + « Réessayer », within 30 s of the last byte when the network drops (#131). Retry resumes from the bytes already on disk (`Range`, log line `range offset=<N> status=206`). — partiel: no explicit way to delete a partial download.
 - `models.languages`: — partiel: no per-model language sheet; only Parakeet 110M carries « Anglais uniquement » and activating it asks « Modèle anglais uniquement » (Parakeet 0.6B's description reads « 25 langues - Detection automatique »).
 - `models.preparation`: Loading the model shows « Chargement du modèle… » in Modèles and the « Préparation de la reconnaissance vocale » overlay over the keyboard or the recorder. — présent (different surface from iOS)
 - `models.device-gating`: Models above the RAM threshold are greyed with « Nécessite N Go de RAM ou plus » (#121); « RAM insuffisante » dialog. — présent

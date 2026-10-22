@@ -68,6 +68,10 @@ class ResumableDownload(
             discard(part, meta)
             throw e
         } catch (e: SocketTimeoutException) {
+            // A read timeout ends the HTTP/2 stream, not its connection: without this, Retry
+            // reuses the dead pooled connection and stalls again (seen on the emulator).
+            client.connectionPool.evictAll()
+            Timber.w("Download %s: stalled, part kept at %d bytes", part.name, part.length())
             throw DownloadStalledException(stallTimeoutMs / 1000)
         }
         dest.delete()
