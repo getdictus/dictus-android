@@ -79,6 +79,24 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `setLanguage persists Spanish and German`() = testScope.runTest {
+        viewModel.setLanguage("es")
+        advanceUntilIdle()
+        assertEquals("es", viewModel.language.value)
+
+        viewModel.setLanguage("de")
+        advanceUntilIdle()
+        assertEquals("de", viewModel.language.value)
+    }
+
+    @Test
+    fun `unknown stored language is shown as auto`() = testScope.runTest {
+        viewModel.setLanguage("zz")
+        advanceUntilIdle()
+        assertEquals("auto", viewModel.language.value)
+    }
+
+    @Test
     fun `keyboard language defaults to French and survives ViewModel restart`() = testScope.runTest {
         assertEquals("fr", viewModel.keyboardLanguage.value)
         viewModel.setKeyboardLanguage("en")

@@ -114,6 +114,8 @@ fun SettingsScreen(
                 value = when (language) {
                     "fr" -> stringResource(R.string.settings_language_fr)
                     "en" -> stringResource(R.string.settings_language_en)
+                    "es" -> stringResource(R.string.settings_language_es)
+                    "de" -> stringResource(R.string.settings_language_de)
                     else -> stringResource(R.string.settings_language_auto)
                 },
                 onClick = { showLanguagePicker = true },
@@ -283,6 +285,8 @@ fun SettingsScreen(
                 "auto" to stringResource(R.string.settings_language_auto),
                 "fr" to stringResource(R.string.settings_language_fr),
                 "en" to stringResource(R.string.settings_language_en),
+                "es" to stringResource(R.string.settings_language_es),
+                "de" to stringResource(R.string.settings_language_de),
             ),
             selected = language,
             onSelect = { viewModel.setLanguage(it) },

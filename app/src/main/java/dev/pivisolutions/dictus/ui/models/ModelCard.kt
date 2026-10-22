@@ -4,6 +4,12 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -31,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -81,6 +88,10 @@ import kotlin.math.roundToInt
  * @param onDelete       Callback to request deletion (shows confirmation sheet).
  * @param onRetry        Callback to retry after a download failure.
  * @param onSelect       Callback when a downloaded, non-active card is tapped to select it.
+ * @param requiredRamGb  Non-null when the device lacks the RAM for this model: the card is
+ *                       greyed out, cannot be downloaded or selected, and shows the reason.
+ * @param onShowLanguages Callback to open the supported-languages sheet; null keeps the
+ *                       language summary as plain text.
  */
 @Composable
 fun ModelCard(
@@ -95,7 +106,12 @@ fun ModelCard(
     onDelete: () -> Unit,
     onRetry: () -> Unit,
     onSelect: () -> Unit = {},
+    requiredRamGb: Int? = null,
+    onShowLanguages: (() -> Unit)? = null,
 ) {
+    // Issue #121: recess an unavailable card rather than hiding it (same 0.55 as iOS #369)
+    val isUnavailable = requiredRamGb != null
+
     // Press animation state
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -166,6 +182,7 @@ fun ModelCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+                .alpha(if (isUnavailable) 0.55f else 1f)
                 .onSizeChanged { cardHeightPx = it.height.toFloat() }
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surface)
@@ -192,7 +209,7 @@ fun ModelCard(
                         )
                     }
                 }
-                .pointerInput(isDownloaded, isActive) {
+                .pointerInput(isDownloaded, isActive, isUnavailable) {
                     detectTapGestures(
                         onPress = {
                             isPressed = true
@@ -203,7 +220,7 @@ fun ModelCard(
                             // Reset swipe if open
                             if (offsetX < 0f) {
                                 offsetX = 0f
-                            } else if (isDownloaded && !isActive) {
+                            } else if (isDownloaded && !isActive && !isUnavailable) {
                                 onSelect()
                             }
                         },
@@ -270,22 +287,9 @@ fun ModelCard(
                     }
                 }
 
-                // Persistent amber warning for English-only models
-                if (model.isEnglishOnly) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF59E0B).copy(alpha = 0.15f))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.model_parakeet_language_warning),
-                            color = Color(0xFFF59E0B),
-                            fontSize = 12.sp,
-                        )
-                    }
-                }
+                // Language summary (issue #133): tapping it opens the full list.
+                // English-only stays amber, as the former warning was.
+                LanguageSummaryRow(model = model, onClick = onShowLanguages)
 
                 // Description below name (matches iOS vertical layout)
                 if (model.description.isNotBlank()) {
@@ -294,6 +298,16 @@ fun ModelCard(
                         color = LocalDictusColors.current.textSecondary,
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
+                    )
+                }
+
+                // Why the card is greyed out: names the phone's limit, not an app error
+                if (requiredRamGb != null) {
+                    Text(
+                        text = stringResource(R.string.model_requires_ram, requiredRamGb),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
                     )
                 }
 
@@ -388,6 +402,9 @@ fun ModelCard(
                             }
                         }
                     }
+                    isUnavailable -> {
+                        // No download button: the device cannot run this model
+                    }
                     isDownloaded -> {
                         // No delete button — swipe left to reveal delete action
                     }
@@ -421,6 +438,58 @@ fun ModelCard(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Globe + coverage summary ("~99 languages") + info glyph, one tap target.
+ *
+ * WHY a clickable row inside the card and not the whole card: tapping the card already
+ * selects the model, so the languages need their own target (the iOS card has an
+ * info button for the same reason). Its click consumes the tap, so the card does not
+ * also select the model. Role and click label tell TalkBack what the tap does.
+ */
+@Composable
+private fun LanguageSummaryRow(model: ModelInfo, onClick: (() -> Unit)?) {
+    val color = if (model.isEnglishOnly) Color(0xFFF59E0B) else LocalDictusColors.current.textSecondary
+    val clickLabel = stringResource(R.string.model_languages_show)
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClickLabel = clickLabel, role = Role.Button, onClick = onClick)
+                } else {
+                    Modifier
+                },
+            )
+            .background(color.copy(alpha = 0.12f))
+            .heightIn(min = 36.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .testTag("model_languages_summary"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Default.Language,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = languageSummary(model.languages),
+            color = color,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        if (onClick != null) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }

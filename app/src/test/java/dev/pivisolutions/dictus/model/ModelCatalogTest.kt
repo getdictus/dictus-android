@@ -114,7 +114,7 @@ class ModelCatalogTest {
         assertEquals(AiProvider.PARAKEET, model!!.provider)
         assertTrue(model.isTransducer)
         assertFalse(model.isEnglishOnly)
-        assertEquals(8, model.minRamGb)
+        assertEquals(6, model.minRamGb)
     }
 
     @Test
@@ -178,5 +178,69 @@ class ModelCatalogTest {
         val parakeet600m = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!
 
         assertTrue(parakeet110m.speed > parakeet600m.speed)
+    }
+
+    // --- Supported languages (issue #133) ---
+
+    @Test
+    fun `every catalog model declares unique well-formed BCP-47 language codes`() {
+        ModelCatalog.ALL.forEach { model ->
+            val codes = model.languages.codes
+            assertTrue("${model.key} should declare languages", codes.isNotEmpty())
+            assertEquals("${model.key} has duplicate codes", codes.size, codes.distinct().size)
+            codes.forEach { code ->
+                assertEquals(
+                    "${model.key}: '$code' is not a BCP-47 language code",
+                    code,
+                    java.util.Locale.forLanguageTag(code).language,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `parakeet 110M declares English only`() {
+        val model = ModelCatalog.findByKey("parakeet-ctc-110m-int8")!!
+        assertEquals(listOf("en"), model.languages.codes)
+        assertEquals(LanguageCoverage.ENGLISH_ONLY, model.languages.coverage)
+    }
+
+    @Test
+    fun `parakeet v3 declares the 25 European languages of the NVIDIA model card`() {
+        val model = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!
+        val expected = setOf(
+            "bg", "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "de", "el", "hu", "it",
+            "lv", "lt", "mt", "pl", "pt", "ro", "sk", "sl", "es", "sv", "ru", "uk",
+        )
+        assertEquals(25, model.languages.codes.size)
+        assertEquals(expected, model.languages.codes.toSet())
+        assertEquals(LanguageCoverage.EUROPEAN, model.languages.coverage)
+    }
+
+    @Test
+    fun `whisper models are multilingual with 99 languages and FR EN ES DE first`() {
+        ModelCatalog.ALL.filter { it.provider == AiProvider.WHISPER }.forEach { model ->
+            assertEquals(LanguageCoverage.MULTILINGUAL, model.languages.coverage)
+            assertEquals(99, model.languages.codes.size)
+            assertEquals(listOf("fr", "en", "es", "de"), model.languages.codes.take(4))
+            assertEquals(listOf("fr", "en", "es", "de"), model.languages.highlights)
+            assertFalse(model.isEnglishOnly)
+        }
+    }
+
+    @Test
+    fun `highlights and others split the codes without overlap`() {
+        val parakeet = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!.languages
+        assertEquals(listOf("fr", "en", "es", "de"), parakeet.highlights)
+        assertEquals(21, parakeet.others.size)
+        assertTrue(parakeet.others.none { it in parakeet.highlights })
+        assertEquals(listOf("en"), ModelLanguages.ENGLISH.highlights)
+        assertTrue(ModelLanguages.ENGLISH.others.isEmpty())
+    }
+
+    @Test
+    fun `parakeet v3 display name says v3`() {
+        val model = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!
+        assertTrue(model.displayName.contains("v3"))
     }
 }

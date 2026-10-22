@@ -1,6 +1,5 @@
 package dev.pivisolutions.dictus.models
 
-import android.app.ActivityManager
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -12,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.AiProvider
+import dev.pivisolutions.dictus.model.DeviceRam
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
@@ -39,6 +39,8 @@ import javax.inject.Inject
  * @param isDownloaded    True if the model file is present on disk with correct size.
  * @param downloadPercent Active download progress 0–100, or null if not downloading.
  * @param hasError        True if the last download attempt failed.
+ * @param requiredRamGb   Non-null when the device has too little RAM for this model:
+ *                        the card is greyed out and shows this requirement as the reason.
  */
 data class ModelUiState(
     val info: ModelInfo,
@@ -46,6 +48,7 @@ data class ModelUiState(
     val downloadPercent: Int?,
     val hasError: Boolean = false,
     val isExtracting: Boolean = false,
+    val requiredRamGb: Int? = null,
 )
 
 /**
@@ -106,7 +109,11 @@ class ModelsViewModel @Inject constructor(
     private val _showParakeetLanguageDialog = MutableStateFlow<String?>(null)
     val showParakeetLanguageDialog: StateFlow<String?> = _showParakeetLanguageDialog.asStateFlow()
 
+    // Read once: total RAM does not change while the app runs
+    private val totalMemBytes: Long = DeviceRam.totalMemBytes(appContext)
+
     init {
+        Timber.d("Device totalMem=%d bytes (%d GB marketed)", totalMemBytes, DeviceRam.marketedGb(totalMemBytes))
         refreshModels()
     }
 
@@ -119,10 +126,9 @@ class ModelsViewModel @Inject constructor(
         val progress = _downloadProgress.value
         val errors = _downloadErrors.value
         val extracting = _extracting.value
-        // Filter out models that require more RAM than available on this device
-        val deviceRamGb = deviceTotalRamGb()
+        // WHY no filtering: a hidden model reads as a missing feature (issue #121).
+        // Models the device cannot run stay listed, greyed out with the RAM they need.
         _models.value = ModelCatalog.ALL
-            .filter { it.minRamGb == 0 || deviceRamGb >= it.minRamGb }
             .map { info ->
                 ModelUiState(
                     info = info,
@@ -130,16 +136,10 @@ class ModelsViewModel @Inject constructor(
                     downloadPercent = progress[info.key],
                     hasError = info.key in errors,
                     isExtracting = info.key in extracting,
+                    requiredRamGb = info.minRamGb.takeUnless { DeviceRam.meetsRequirement(info, totalMemBytes) },
                 )
             }
         _storageUsedBytes.value = modelManager.storageUsedBytes()
-    }
-
-    private fun deviceTotalRamGb(): Long {
-        val actManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memInfo = ActivityManager.MemoryInfo()
-        actManager.getMemoryInfo(memInfo)
-        return memInfo.totalMem / (1024L * 1024L * 1024L)
     }
 
     /**
@@ -247,13 +247,14 @@ class ModelsViewModel @Inject constructor(
      *
      * WHY not direct setActiveModel: Parakeet is English-only. If the user's
      * transcription language is FR or auto, they need a confirmation dialog.
-     * The 0.6B model also needs a RAM check (8+ GB required).
+     * Models the device lacks the RAM for are refused (the card is disabled too).
      *
      * @param key Stable catalog key for the model to make active.
      */
     fun requestSetActiveModel(key: String) {
         viewModelScope.launch {
             val info = ModelCatalog.findByKey(key) ?: return@launch
+            if (!DeviceRam.meetsRequirement(info, totalMemBytes)) return@launch
 
             // Language mismatch check for English-only models
             if (info.isEnglishOnly) {

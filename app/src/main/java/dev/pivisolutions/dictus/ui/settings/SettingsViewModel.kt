@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -48,10 +49,10 @@ class SettingsViewModel @Inject constructor(
     private val modelManager: ModelManager,
 ) : ViewModel() {
 
-    /** Currently selected transcription language ("auto", "fr", or "en"). */
+    /** Currently selected transcription language, one of [TranscriptionLanguage.SUPPORTED]. */
     val language: StateFlow<String> = dataStore.data
-        .map { it[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto" }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, "auto")
+        .map { TranscriptionLanguage.resolve(it[PreferenceKeys.TRANSCRIPTION_LANGUAGE]) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TranscriptionLanguage.AUTO)
 
     /** Keyboard correction language, independent from transcription language. */
     val keyboardLanguage: StateFlow<String> = dataStore.data

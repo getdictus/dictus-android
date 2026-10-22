@@ -53,7 +53,9 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
+import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.ui.models.ModelCard
+import dev.pivisolutions.dictus.ui.models.ModelLanguagesSheet
 import kotlinx.coroutines.launch
 
 /**
@@ -85,6 +87,8 @@ fun ModelsScreen(
 
     // Deletion confirmation bottom sheet state
     var modelToDelete by remember { mutableStateOf<ModelUiState?>(null) }
+    // Model whose supported-languages sheet is open (issue #133)
+    var languagesModel by remember { mutableStateOf<ModelInfo?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -160,6 +164,8 @@ fun ModelsScreen(
                         },
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
                         onSelect = { viewModel.requestSetActiveModel(modelState.info.key) },
+                        requiredRamGb = modelState.requiredRamGb,
+                        onShowLanguages = { languagesModel = modelState.info },
                     )
                     }
                 }
@@ -182,6 +188,8 @@ fun ModelsScreen(
                         onDownload = { viewModel.downloadModel(modelState.info.key) },
                         onDelete = {},
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
+                        requiredRamGb = modelState.requiredRamGb,
+                        onShowLanguages = { languagesModel = modelState.info },
                     )
                     }
                 }
@@ -211,6 +219,10 @@ fun ModelsScreen(
             icon = Icons.Default.Bolt,
             text = stringResource(R.string.models_provider_parakeet),
         )
+    }
+
+    languagesModel?.let { model ->
+        ModelLanguagesSheet(model = model, onDismiss = { languagesModel = null })
     }
 
     // Delete confirmation bottom sheet

@@ -81,6 +81,8 @@
     <string name="settings_language_auto">Automatique</string>
     <string name="settings_language_fr">Fran\u00e7ais</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_language_es">Espa\u00f1ol</string>
+    <string name="settings_language_de">Deutsch</string>
 
     <!-- Settings: Theme picker values -->
     <string name="settings_theme_dark">Sombre</string>
@@ -150,7 +152,22 @@
     <string name="fake_settings_dictus_subtitle">AZERTY (Fran\u00e7ais)</string>
 
     <!-- ModelCard — Parakeet provider -->
-    <string name="model_parakeet_language_warning">Anglais uniquement</string>
+    <!-- Model languages (issue #133) -->
+    <string name="model_languages_english_only">Anglais uniquement</string>
+    <plurals name="model_languages_european">
+        <item quantity="one">%1$d langue europ\u00e9enne</item>
+        <item quantity="many">%1$d langues europ\u00e9ennes</item>
+        <item quantity="other">%1$d langues europ\u00e9ennes</item>
+    </plurals>
+    <plurals name="model_languages_multilingual">
+        <item quantity="one">~%1$d langue</item>
+        <item quantity="many">~%1$d langues</item>
+        <item quantity="other">~%1$d langues</item>
+    </plurals>
+    <string name="model_languages_show">Voir les langues prises en charge</string>
+    <string name="model_languages_main">Langues principales</string>
+    <string name="model_languages_others">Autres langues</string>
+    <string name="model_languages_quality_note">La qualit\u00e9 varie beaucoup d\u2019une langue \u00e0 l\u2019autre. Elle est meilleure sur les langues principales.</string>
     <string name="parakeet_lang_dialog_title">Mod\u00e8le anglais uniquement</string>
     <string name="parakeet_lang_dialog_message">Ce mod\u00e8le ne supporte que l\u2019anglais. Continuer\u00a0?</string>
     <string name="ram_warning_dialog_title">RAM insuffisante</string>
@@ -167,6 +184,7 @@
     <string name="model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
     <string name="model_extracting">Extraction\u2026</string>
     <string name="model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
+    <string name="model_requires_ram">N\u00e9cessite %1$d Go de RAM ou plus</string>
     <string name="model_precision">Pr\u00e9cision</string>
     <string name="model_speed">Vitesse</string>
     <string name="model_delete_cd">Supprimer</string>

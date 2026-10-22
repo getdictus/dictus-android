@@ -35,6 +35,17 @@ set(
 
 find_library(LOG_LIB log)
 
+# x86_64 is only built for the emulator (debug, -Pdictus.emulatorAbi=true). SSE4.2 is
+# enabled: the Android x86_64 ABI guarantees it. The rest is already off by default when
+# cross-compiling, pinned off here because an emulator CPU may lack AVX2/FMA (SIGILL).
+if (${ANDROID_ABI} STREQUAL "x86_64")
+    set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+    set(GGML_SSE42  ON  CACHE BOOL "" FORCE)
+    foreach(ggml_x86_ext AVX AVX2 AVX_VNNI AVX512 FMA F16C BMI2)
+        set(GGML_${ggml_x86_ext} OFF CACHE BOOL "" FORCE)
+    endforeach()
+endif ()
+
 include(FetchContent)
 
 function(build_library target_name)

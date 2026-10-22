@@ -1,10 +1,14 @@
 package dev.pivisolutions.dictus.whisper
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import timber.log.Timber
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Thread-safe Kotlin wrapper for a whisper.cpp inference context.
@@ -19,10 +23,11 @@ import java.util.concurrent.Executors
  * into memory (takes seconds for large models). Creating a new context per
  * transcription would add unacceptable latency.
  */
-class WhisperContext private constructor(private var ptr: Long) {
-
+class WhisperContext private constructor(
+    private var ptr: Long,
     // Single-thread executor ensures all whisper.cpp calls are serialized.
-    private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val dispatcher: ExecutorCoroutineDispatcher,
+) {
 
     /**
      * Transcribe audio samples to text.
@@ -78,22 +83,47 @@ class WhisperContext private constructor(private var ptr: Long) {
         /**
          * Create a WhisperContext by loading a GGML model file.
          *
+         * WHY on the context's executor: the load blocks for 0.2 to 0.7 s and callers run
+         * on the main thread, which froze the UI like the Parakeet decode did (#155, #159).
+         *
          * @param modelPath Absolute path to a .bin GGML model file on internal storage.
          * @return WhisperContext ready for transcription, or null if loading failed.
          */
         suspend fun createFromFile(modelPath: String): WhisperContext? {
+            val dispatcher = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "whisper-native") }
+                .asCoroutineDispatcher()
+            // Set on the native thread; read here once withContext returns or throws.
+            val loaded = AtomicLong(0L)
             Timber.d("Loading whisper model from %s", modelPath)
             val startMs = System.currentTimeMillis()
-            val ptr = WhisperLib.initContext(modelPath)
-            val durationMs = System.currentTimeMillis() - startMs
+            try {
+                withContext(dispatcher) { loaded.set(WhisperLib.initContext(modelPath)) }
+            } catch (cancellation: CancellationException) {
+                // A load that finished after its caller gave up would otherwise leak the model.
+                // finally: returning to the cancelled caller throws again once the free is done.
+                try {
+                    val ptr = loaded.get()
+                    if (ptr != 0L) withContext(NonCancellable + dispatcher) { WhisperLib.freeContext(ptr) }
+                } finally {
+                    dispatcher.close()
+                }
+                throw cancellation
+            } catch (failure: Throwable) {
+                // e.g. UnsatisfiedLinkError: close the thread, which is not a daemon, so a
+                // failed attempt does not leave one behind.
+                dispatcher.close()
+                throw failure
+            }
 
+            val ptr = loaded.get()
             if (ptr == 0L) {
                 Timber.e("Failed to create WhisperContext from %s", modelPath)
+                dispatcher.close()
                 return null
             }
 
-            Timber.d("WhisperContext created in %d ms (ptr=%d)", durationMs, ptr)
-            return WhisperContext(ptr)
+            Timber.d("WhisperContext created in %d ms (ptr=%d)", System.currentTimeMillis() - startMs, ptr)
+            return WhisperContext(ptr, dispatcher)
         }
 
         /**

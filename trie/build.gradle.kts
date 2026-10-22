@@ -21,6 +21,18 @@ android {
         }
     }
 
+    // Opt-in x86_64 for debug builds (-Pdictus.emulatorAbi=true), same rule as
+    // :whisper. Release keeps arm64-v8a and armeabi-v7a only.
+    buildTypes {
+        debug {
+            if (providers.gradleProperty("dictus.emulatorAbi").orNull.toBoolean()) {
+                ndk {
+                    abiFilters += "x86_64"
+                }
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

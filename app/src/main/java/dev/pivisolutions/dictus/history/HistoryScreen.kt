@@ -284,6 +284,8 @@ private fun HistoryCard(
         "auto" -> stringResource(R.string.history_language_automatic)
         "fr" -> Locale.FRENCH.getDisplayLanguage(locale)
         "en" -> Locale.ENGLISH.getDisplayLanguage(locale)
+        "es" -> Locale("es").getDisplayLanguage(locale)
+        "de" -> Locale.GERMAN.getDisplayLanguage(locale)
         else -> entry.requestedLanguage.uppercase(locale)
     }
     val seconds = (entry.durationMillis.coerceAtLeast(0L) / 1000.0).roundToInt()
@@ -395,6 +397,8 @@ private fun historyMetadata(entry: TranscriptionHistoryEntry): String {
         "auto" -> stringResource(R.string.history_language_automatic)
         "fr" -> Locale.FRENCH.getDisplayLanguage(locale)
         "en" -> Locale.ENGLISH.getDisplayLanguage(locale)
+        "es" -> Locale("es").getDisplayLanguage(locale)
+        "de" -> Locale.GERMAN.getDisplayLanguage(locale)
         else -> entry.requestedLanguage.uppercase(locale)
     }
     val seconds = (entry.durationMillis.coerceAtLeast(0L) / 1000.0).roundToInt()

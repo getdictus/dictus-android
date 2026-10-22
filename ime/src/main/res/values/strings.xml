@@ -5,4 +5,6 @@
     <string name="ime_recording_listening">Listening\u2026</string>
     <string name="ime_transcribing">Transcribing\u2026</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
+    <string name="ime_undo_dictation">Undo</string>
+    <string name="ime_undo_dictation_description">Undo last dictation</string>
 </resources>

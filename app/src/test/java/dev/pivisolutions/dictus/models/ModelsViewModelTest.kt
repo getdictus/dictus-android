@@ -22,12 +22,14 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -64,6 +66,48 @@ class ModelsViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    /** Build a ViewModel on a device reporting [totalMemGib] of RAM to the OS. */
+    private fun viewModelWithRam(totalMemGib: Double): ModelsViewModel {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val activityManager = context.getSystemService(android.content.Context.ACTIVITY_SERVICE)
+            as android.app.ActivityManager
+        val memInfo = android.app.ActivityManager.MemoryInfo().apply {
+            totalMem = (totalMemGib * 1024 * 1024 * 1024).toLong()
+        }
+        shadowOf(activityManager).setMemoryInfo(memInfo)
+        val modelManager = ModelManager(context)
+        return ModelsViewModel(modelManager, ModelDownloader(modelManager), fakeDataStore, context)
+    }
+
+    @Test
+    fun `models the device cannot run stay listed with the RAM they need`() {
+        val vm = viewModelWithRam(3.6)
+
+        assertEquals(ModelCatalog.ALL.size, vm.models.value.size)
+        val parakeet = vm.models.value.single { it.info.key == "parakeet-tdt-0.6b-v3" }
+        assertEquals(6, parakeet.requiredRamGb)
+        val tiny = vm.models.value.single { it.info.key == "tiny" }
+        assertNull(tiny.requiredRamGb)
+    }
+
+    @Test
+    fun `6 GB phone reporting 5_3 GiB gets Parakeet 0_6B as available`() {
+        val vm = viewModelWithRam(5.3)
+
+        val parakeet = vm.models.value.single { it.info.key == "parakeet-tdt-0.6b-v3" }
+        assertNull(parakeet.requiredRamGb)
+    }
+
+    @Test
+    fun `requestSetActiveModel refuses a model the device lacks RAM for`() = testScope.runTest {
+        val vm = viewModelWithRam(3.6)
+
+        vm.requestSetActiveModel("parakeet-tdt-0.6b-v3")
+        advanceUntilIdle()
+
+        assertFalse(fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL] == "parakeet-tdt-0.6b-v3")
     }
 
     @Test
