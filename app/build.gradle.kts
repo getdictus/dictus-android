@@ -1,4 +1,5 @@
 import java.io.ByteArrayOutputStream
+import javax.inject.Inject
 
 /**
  * The git revision the binary was built from, resolved at configuration time.
@@ -22,6 +23,67 @@ fun gitOutput(vararg command: String): String = try {
 } catch (_: Exception) {
     "unknown"
 }
+
+/**
+ * The version of a build that release.yml did not make, derived from the git tags by
+ * `.github/scripts/derive-android-version.sh --dev`: `1.2.0-17-g44a3cd6` and a versionCode
+ * between the last release and the next one. The script holds the formula once, for
+ * release and dev builds alike, so the two cannot drift (#165).
+ *
+ * WHY a ValueSource: Gradle runs it only when a task needs the version, and never when
+ * release.yml provides VERSION_NAME / VERSION_CODE.
+ *
+ * Never fails the build: without bash, git or any release tag (a shallow CI checkout), it
+ * logs a warning and reports 0.0.0-unknown or 0.0.0-dev+g<sha> with versionCode 1.
+ */
+abstract class DevVersionSource : ValueSource<Map<String, String>, DevVersionSource.Params> {
+    interface Params : ValueSourceParameters {
+        val script: RegularFileProperty
+        val repoDir: DirectoryProperty
+    }
+
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
+    override fun obtain(): Map<String, String> {
+        val logger = Logging.getLogger(DevVersionSource::class.java)
+        val output = ByteArrayOutputStream()
+        val errors = ByteArrayOutputStream()
+        val values = try {
+            execOperations.exec {
+                commandLine("bash", parameters.script.get().asFile.absolutePath, "--dev")
+                workingDir = parameters.repoDir.get().asFile
+                standardOutput = output
+                errorOutput = errors
+            }
+            output.toString().lines().mapNotNull { line ->
+                line.split("=", limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] }
+            }.toMap()
+        } catch (e: Exception) {
+            logger.warn("warning: could not derive the version from git (${e.message})")
+            emptyMap()
+        }
+        errors.toString().trim().takeIf { it.isNotEmpty() }?.let { logger.warn(it) }
+        val name = values["version_name"] ?: "0.0.0-unknown"
+        val code = values["version_code"]?.toIntOrNull() ?: 1
+        logger.lifecycle("Dictus version from git: $name ($code)")
+        return mapOf("version_name" to name, "version_code" to code.toString())
+    }
+}
+
+val devVersion = providers.of(DevVersionSource::class) {
+    parameters {
+        script.set(rootProject.layout.projectDirectory.file(".github/scripts/derive-android-version.sh"))
+        repoDir.set(rootProject.layout.projectDirectory)
+    }
+}
+
+// release.yml's VERSION_NAME / VERSION_CODE, derived from the pushed tag, win over git.
+val appVersionName: Provider<String> = providers.environmentVariable("VERSION_NAME")
+    .orElse(devVersion.map { it.getValue("version_name") })
+val appVersionCode: Provider<Int> = providers.environmentVariable("VERSION_CODE")
+    .map { it.toInt() }
+    .orElse(devVersion.map { it.getValue("version_code").toInt() })
 
 plugins {
     alias(libs.plugins.android.application)
@@ -55,8 +117,7 @@ android {
         applicationId = "dev.pivisolutions.dictus"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        // versionCode and versionName come from git tags, see appVersionName above (#165).
         // Injected into BuildConfig so every log export names the exact commit (#112).
         buildConfigField("String", "GIT_SHA", "\"${gitOutput("git", "rev-parse", "--short=12", "HEAD")}\"")
         buildConfigField("String", "GIT_BRANCH", "\"${gitOutput("git", "rev-parse", "--abbrev-ref", "HEAD")}\"")
@@ -65,11 +126,6 @@ android {
             "GIT_DIRTY",
             (gitOutput("git", "status", "--porcelain").let { it != "unknown" && it.isNotEmpty() }).toString(),
         )
-
-        val ciVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull()
-        val ciVersionName = System.getenv("VERSION_NAME")
-        if (ciVersionCode != null) versionCode = ciVersionCode
-        if (ciVersionName != null) versionName = ciVersionName
     }
 
     buildTypes {
@@ -147,6 +203,11 @@ licensee {
 // The licensee plugin generates the file in build/reports/ but does not bundle it as an asset.
 androidComponents {
     onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.versionName.set(appVersionName)
+            output.versionCode.set(appVersionCode)
+        }
+
         val variantName = variant.name
         val capitalizedVariant = variantName.replaceFirstChar { it.uppercase() }
         val outputDir = layout.buildDirectory.dir("generated/licensee_assets/$variantName")

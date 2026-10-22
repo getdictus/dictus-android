@@ -73,7 +73,7 @@ $H/launch.sh --no-build           # same, reusing app/build/outputs/apk/debug/ap
 **Ready means** the process is alive (`pidof`), `MainActivity` is the resumed activity, and the pid is unchanged 3 s later (an app that crashes on start fails here). Last line on success, the only one to rely on:
 
 ```
-READY serial=99071FFAZ00EBN run=/home/pierre/Dev/dictus-proofs/verify-dictus-android/<run-id> pid=<pid> version=1.0.0 apk_sha=<16 hex>
+READY serial=99071FFAZ00EBN run=/home/pierre/Dev/dictus-proofs/verify-dictus-android/<run-id> pid=<pid> version=1.2.0-17-g44a3cd6 apk_sha=<16 hex>
 ```
 
 Then confirm with Argent that the first screen is usable: `mcp__argent__describe` (udid `99071FFAZ00EBN`) lists the bottom tabs `Accueil`, `Modèles`, `Réglages` (onboarding completed) or `Commencer` (fresh install, onboarding step 1).
