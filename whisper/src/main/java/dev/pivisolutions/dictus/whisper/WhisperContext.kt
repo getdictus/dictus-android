@@ -23,10 +23,12 @@ import java.util.concurrent.atomic.AtomicLong
  * into memory (takes seconds for large models). Creating a new context per
  * transcription would add unacceptable latency.
  */
-class WhisperContext private constructor(
+class WhisperContext internal constructor(
     private var ptr: Long,
     // Single-thread executor ensures all whisper.cpp calls are serialized.
     private val dispatcher: ExecutorCoroutineDispatcher,
+    // Injectable so a JVM test can stand in for whisper.cpp, which has no library there.
+    private val runFull: (ptr: Long, data: FloatArray, language: String) -> String = ::runWhisperFull,
 ) {
 
     /**
@@ -39,22 +41,7 @@ class WhisperContext private constructor(
     suspend fun transcribeData(data: FloatArray, language: String = "fr"): String =
         withContext(dispatcher) {
             require(ptr != 0L) { "WhisperContext has been released" }
-            val numThreads = WhisperCpuConfig.preferredThreadCount
-            Timber.d("Transcribing %d samples with %d threads, language=%s", data.size, numThreads, language)
-            val startMs = System.currentTimeMillis()
-
-            WhisperLib.fullTranscribe(ptr, numThreads, data, language)
-
-            val textCount = WhisperLib.getTextSegmentCount(ptr)
-            val result = buildString {
-                for (i in 0 until textCount) {
-                    append(WhisperLib.getTextSegment(ptr, i))
-                }
-            }
-
-            val durationMs = System.currentTimeMillis() - startMs
-            Timber.d(PrivacySafeLog.transcriptionComplete(textCount, durationMs, result))
-            return@withContext result
+            runFull(ptr, data, language)
         }
 
     /**
@@ -124,6 +111,26 @@ class WhisperContext private constructor(
 
             Timber.d("WhisperContext created in %d ms (ptr=%d)", System.currentTimeMillis() - startMs, ptr)
             return WhisperContext(ptr, dispatcher)
+        }
+
+        /** One whisper_full run and its joined segments. Called on the context's native thread. */
+        private fun runWhisperFull(ptr: Long, data: FloatArray, language: String): String {
+            val numThreads = WhisperCpuConfig.preferredThreadCount
+            Timber.d("Transcribing %d samples with %d threads, language=%s", data.size, numThreads, language)
+            val startMs = System.currentTimeMillis()
+
+            WhisperLib.fullTranscribe(ptr, numThreads, data, language)
+
+            val textCount = WhisperLib.getTextSegmentCount(ptr)
+            val result = buildString {
+                for (i in 0 until textCount) {
+                    append(WhisperLib.getTextSegment(ptr, i))
+                }
+            }
+
+            val durationMs = System.currentTimeMillis() - startMs
+            Timber.d(PrivacySafeLog.transcriptionComplete(textCount, durationMs, result))
+            return result
         }
 
         /**
