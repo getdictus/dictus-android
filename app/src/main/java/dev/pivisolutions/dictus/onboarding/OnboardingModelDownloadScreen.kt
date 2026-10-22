@@ -34,24 +34,24 @@ import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
+import dev.pivisolutions.dictus.service.ModelInstallState
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 
 /**
  * Onboarding Step 5 — Model download.
  *
- * Shows the default Whisper model info card with download state:
- * - Before download: "Telecharger" CTA → calls [onStartDownload]
- * - In progress: disabled "Telechargement en cours..." + progress bar in card
- * - Error: re-enabled "Telecharger" CTA + inline error + "Reessayer" text button
- * - Complete: "Continuer" CTA → calls [onNext]
+ * Shows the recommended model's info card with its install state:
+ * - Idle: "Telecharger" CTA → calls [onStartDownload]
+ * - Downloading / Extracting: disabled "Telechargement en cours..." + bar and percentage
+ * - Verifying: disabled CTA + full bar, "Verification des fichiers..."
+ * - Failed: "Telecharger" CTA retries + inline error + "Reessayer" text button
+ * - Done: "Continuer" CTA → calls [onNext]
  *
- * Advancement to step 6 is gated on [downloadComplete] — the CTA remains disabled
- * until download finishes. This guard is enforced in OnboardingViewModel.advanceStep().
+ * Advancement to step 6 is gated on Done — the CTA remains disabled until the install
+ * finishes. This guard is enforced in OnboardingViewModel.advanceStep().
  *
- * @param downloadProgress  -1 = not started, 0-99 = in progress, 100 = complete (or after complete)
- * @param downloadComplete  True when the download finished successfully.
- * @param downloadError     Non-null string if the last download attempt failed.
- * @param onStartDownload   Called to start downloading the default model.
+ * @param installState      State of the background install (ModelInstallWorker).
+ * @param onStartDownload   Called to start installing the recommended model.
  * @param onRetry           Called to retry after a failure.
  * @param onNext            Called when the user taps "Continuer" after completion.
  */
@@ -60,16 +60,14 @@ fun OnboardingModelDownloadScreen(
     modelName: String,
     modelSize: String,
     modelQualityLabel: String,
-    isExtracting: Boolean,
-    downloadProgress: Int,
-    downloadComplete: Boolean,
-    downloadError: String?,
+    installState: ModelInstallState,
     onStartDownload: () -> Unit,
     onRetry: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val isDownloading = (downloadProgress in 0..99 || isExtracting) && !downloadComplete && downloadError == null
-    val hasError = downloadError != null && !downloadComplete
+    val downloadComplete = installState is ModelInstallState.Done
+    val isDownloading = installState.isInProgress
+    val hasError = installState is ModelInstallState.Failed
 
     val ctaText = when {
         downloadComplete -> stringResource(R.string.onboarding_model_download_cta_continue)
@@ -127,8 +125,7 @@ fun OnboardingModelDownloadScreen(
             modelName = modelName,
             modelSize = modelSize,
             modelQualityLabel = modelQualityLabel,
-            isExtracting = isExtracting,
-            downloadProgress = if (isDownloading) downloadProgress else null,
+            installState = installState,
         )
 
         // Error state
@@ -157,7 +154,7 @@ fun OnboardingModelDownloadScreen(
 }
 
 /**
- * Card showing the recommended model info with optional progress bar.
+ * Card showing the recommended model info, with a progress bar while it installs.
  *
  * All display values (name, size, quality) come from the caller — no hardcoded model data.
  */
@@ -166,8 +163,7 @@ private fun ModelInfoCard(
     modelName: String,
     modelSize: String,
     modelQualityLabel: String,
-    isExtracting: Boolean,
-    downloadProgress: Int?,
+    installState: ModelInstallState,
 ) {
     Column(
         modifier = Modifier
@@ -233,9 +229,17 @@ private fun ModelInfoCard(
             }
         }
 
-        // Progress bar (shown during download or extraction)
-        if (downloadProgress != null) {
-            val barFraction = if (isExtracting) 1f else downloadProgress / 100f
+        // Progress bar and label while the install runs
+        val progress: Pair<Float, String>? = when (installState) {
+            is ModelInstallState.Downloading -> installState.percent / 100f to
+                stringResource(R.string.onboarding_model_download_progress, installState.percent)
+            is ModelInstallState.Extracting -> installState.percent / 100f to
+                stringResource(R.string.onboarding_model_download_extracting, installState.percent)
+            ModelInstallState.Verifying -> 1f to stringResource(R.string.onboarding_model_download_verifying)
+            else -> null
+        }
+        if (progress != null) {
+            val (barFraction, label) = progress
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -259,11 +263,7 @@ private fun ModelInfoCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = if (isExtracting) {
-                        stringResource(R.string.onboarding_model_download_extracting)
-                    } else {
-                        stringResource(R.string.onboarding_model_download_progress, downloadProgress)
-                    },
+                    text = label,
                     color = DictusColors.AccentHighlight,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,

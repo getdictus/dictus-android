@@ -6,14 +6,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
-import dev.pivisolutions.dictus.model.ModelManager
-import dev.pivisolutions.dictus.service.DownloadProgress
-import dev.pivisolutions.dictus.service.ModelDownloader
+import dev.pivisolutions.dictus.service.ModelInstallState
+import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -29,8 +27,8 @@ import org.robolectric.RuntimeEnvironment
 /**
  * Unit tests for OnboardingViewModel step state machine, download orchestration, and DataStore persistence.
  *
- * Uses FakeDataStore (in-memory) and FakeModelDownloader to isolate the ViewModel from real I/O.
- * Robolectric provides the Android Context needed by ModelManager in FakeModelDownloader.
+ * Uses FakeDataStore (in-memory) and FakeModelInstaller to isolate the ViewModel from real I/O
+ * and WorkManager. Robolectric provides the Android Context for the RAM-based recommendation.
  * StandardTestDispatcher gives deterministic coroutine execution via advanceUntilIdle().
  */
 @RunWith(RobolectricTestRunner::class)
@@ -39,7 +37,7 @@ class OnboardingViewModelTest {
 
     private lateinit var context: android.content.Context
     private lateinit var fakeDataStore: FakeDataStore
-    private lateinit var fakeDownloader: FakeModelDownloader
+    private lateinit var fakeInstaller: FakeModelInstaller
     private lateinit var viewModel: OnboardingViewModel
     private val testDispatcher = StandardTestDispatcher()
 
@@ -47,8 +45,8 @@ class OnboardingViewModelTest {
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
         fakeDataStore = FakeDataStore()
-        fakeDownloader = FakeModelDownloader(ModelManager(context))
-        viewModel = OnboardingViewModel(context, fakeDataStore, fakeDownloader, SavedStateHandle())
+        fakeInstaller = FakeModelInstaller(context)
+        viewModel = OnboardingViewModel(context, fakeDataStore, fakeInstaller, SavedStateHandle())
     }
 
     // --- Initial state ---
@@ -70,13 +68,8 @@ class OnboardingViewModelTest {
 
 
     @Test
-    fun `initial state - downloadProgress is -1`() = runTest(testDispatcher) {
-        assertEquals(-1, viewModel.downloadProgress.value)
-    }
-
-    @Test
-    fun `initial state - modelDownloadComplete is false`() = runTest(testDispatcher) {
-        assertFalse(viewModel.modelDownloadComplete.value)
+    fun `initial state - install is Idle`() = runTest(testDispatcher) {
+        assertEquals(ModelInstallState.Idle, viewModel.installState.value)
     }
 
     // --- SavedStateHandle restoration ---
@@ -86,7 +79,7 @@ class OnboardingViewModelTest {
         val restoredVm = OnboardingViewModel(
             context,
             fakeDataStore,
-            fakeDownloader,
+            fakeInstaller,
             SavedStateHandle(mapOf("currentStep" to 3)),
         )
         assertEquals(3, restoredVm.currentStep.value)
@@ -97,7 +90,7 @@ class OnboardingViewModelTest {
         val restoredVm = OnboardingViewModel(
             context,
             fakeDataStore,
-            fakeDownloader,
+            fakeInstaller,
             SavedStateHandle(mapOf("micPermissionGranted" to true)),
         )
         assertTrue(restoredVm.micPermissionGranted.value)
@@ -107,7 +100,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - advanceStep writes to savedStateHandle`() = runTest(testDispatcher) {
         val ssh = SavedStateHandle()
-        val vm = OnboardingViewModel(context, fakeDataStore, fakeDownloader, ssh)
+        val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ssh)
         vm.advanceStep()
         assertEquals(2, ssh.get<Int>("currentStep"))
     }
@@ -115,7 +108,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - setMicPermissionGranted writes to savedStateHandle`() = runTest(testDispatcher) {
         val ssh = SavedStateHandle()
-        val vm = OnboardingViewModel(context, fakeDataStore, fakeDownloader, ssh)
+        val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ssh)
         vm.setMicPermissionGranted(true)
         assertEquals(true, ssh.get<Boolean>("micPermissionGranted"))
     }
@@ -153,15 +146,12 @@ class OnboardingViewModelTest {
             // Move to step 5
             repeat(4) { viewModel.advanceStep() }
 
-            // Simulate successful download
-            fakeDownloader.nextFlow = flowOf(
-                DownloadProgress.Progress(50),
-                DownloadProgress.Complete("/path/to/model"),
-            )
             viewModel.startModelDownload()
+            fakeInstaller.state.value = ModelInstallState.Downloading(50)
+            fakeInstaller.state.value = ModelInstallState.Done
             advanceUntilIdle()
 
-            assertTrue(viewModel.modelDownloadComplete.value)
+            assertEquals(ModelInstallState.Done, viewModel.installState.value)
 
             // Now advance should work
             viewModel.advanceStep()
@@ -173,8 +163,8 @@ class OnboardingViewModelTest {
         runTest(testDispatcher) {
             // Move to step 5, complete download, advance to 6
             repeat(4) { viewModel.advanceStep() }
-            fakeDownloader.nextFlow = flowOf(DownloadProgress.Complete("/path/to/model"))
             viewModel.startModelDownload()
+            fakeInstaller.state.value = ModelInstallState.Done
             advanceUntilIdle()
             viewModel.advanceStep() // -> 6
 
@@ -219,31 +209,37 @@ class OnboardingViewModelTest {
         }
 
 
-    // --- Download ---
+    // --- Install (observed from the installer, #169) ---
 
     @Test
-    fun `startModelDownload updates downloadProgress to 100 on complete`() =
-        runTest(testDispatcher) {
-            fakeDownloader.nextFlow = flowOf(
-                DownloadProgress.Progress(0),
-                DownloadProgress.Progress(50),
-                DownloadProgress.Progress(100),
-                DownloadProgress.Complete("/path/to/model"),
-            )
+    fun `startModelDownload asks the installer for the recommended model`() = runTest(testDispatcher) {
+        viewModel.startModelDownload()
 
-            viewModel.startModelDownload()
-            advanceUntilIdle()
-
-            assertEquals(100, viewModel.downloadProgress.value)
-            assertTrue(viewModel.modelDownloadComplete.value)
-        }
+        assertEquals(listOf(viewModel.recommendedKey), fakeInstaller.installed)
+    }
 
     @Test
-    fun `successful download selects recommended model before test recording`() =
-        runTest(testDispatcher) {
-            fakeDownloader.nextFlow = flowOf(DownloadProgress.Complete("/path/to/model"))
+    fun `install progress reaches the screen`() = runTest(testDispatcher) {
+        fakeInstaller.state.value = ModelInstallState.Extracting(37)
+        advanceUntilIdle()
 
-            viewModel.startModelDownload()
+        assertEquals(ModelInstallState.Extracting(37), viewModel.installState.value)
+    }
+
+    @Test
+    fun `step 5 stays blocked while the install runs`() = runTest(testDispatcher) {
+        repeat(4) { viewModel.advanceStep() }
+        fakeInstaller.state.value = ModelInstallState.Verifying
+        advanceUntilIdle()
+
+        viewModel.advanceStep()
+        assertEquals(5, viewModel.currentStep.value)
+    }
+
+    @Test
+    fun `successful install selects recommended model before test recording`() =
+        runTest(testDispatcher) {
+            fakeInstaller.state.value = ModelInstallState.Done
             advanceUntilIdle()
 
             val activeModel = fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
@@ -251,14 +247,38 @@ class OnboardingViewModelTest {
         }
 
     @Test
-    fun `failed download does not change active model`() =
+    fun `an install finished while the ViewModel was gone still selects the model`() =
+        runTest(testDispatcher) {
+            // The worker succeeded before this ViewModel existed (screen left, process restarted)
+            fakeInstaller.state.value = ModelInstallState.Done
+            val recreated = OnboardingViewModel(context, fakeDataStore, fakeInstaller, SavedStateHandle())
+            advanceUntilIdle()
+
+            assertEquals(ModelInstallState.Done, recreated.installState.value)
+            assertEquals(recreated.recommendedKey, fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL])
+        }
+
+    @Test
+    fun `failed install does not change active model`() =
         runTest(testDispatcher) {
             fakeDataStore.edit { prefs ->
                 prefs[PreferenceKeys.ACTIVE_MODEL] = "existing-model"
             }
-            fakeDownloader.nextFlow = flowOf(DownloadProgress.Error("Network failure"))
+            fakeInstaller.state.value = ModelInstallState.Failed
+            advanceUntilIdle()
 
-            viewModel.startModelDownload()
+            val activeModel = fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
+            assertEquals("existing-model", activeModel)
+            assertEquals(ModelInstallState.Failed, viewModel.installState.value)
+        }
+
+    @Test
+    fun `incomplete install does not change active model`() =
+        runTest(testDispatcher) {
+            fakeDataStore.edit { prefs ->
+                prefs[PreferenceKeys.ACTIVE_MODEL] = "existing-model"
+            }
+            fakeInstaller.state.value = ModelInstallState.Downloading(50)
             advanceUntilIdle()
 
             val activeModel = fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
@@ -266,41 +286,11 @@ class OnboardingViewModelTest {
         }
 
     @Test
-    fun `incomplete download does not change active model`() =
-        runTest(testDispatcher) {
-            fakeDataStore.edit { prefs ->
-                prefs[PreferenceKeys.ACTIVE_MODEL] = "existing-model"
-            }
-            fakeDownloader.nextFlow = flowOf(DownloadProgress.Progress(50))
-
-            viewModel.startModelDownload()
-            advanceUntilIdle()
-
-            val activeModel = fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
-            assertEquals("existing-model", activeModel)
-            assertFalse(viewModel.modelDownloadComplete.value)
-        }
-
-    @Test
-    fun `startModelDownload on error sets downloadError and resets progress`() =
-        runTest(testDispatcher) {
-            fakeDownloader.nextFlow = flowOf(DownloadProgress.Error("Network failure"))
-
-            viewModel.startModelDownload()
-            advanceUntilIdle()
-
-            assertEquals("Network failure", viewModel.downloadError.value)
-            assertEquals(-1, viewModel.downloadProgress.value)
-        }
-
-    @Test
-    fun `retryDownload starts download again`() = runTest(testDispatcher) {
-        fakeDownloader.nextFlow = flowOf(DownloadProgress.Complete("/path/to/model"))
-
+    fun `retryDownload starts the install again`() = runTest(testDispatcher) {
+        fakeInstaller.state.value = ModelInstallState.Failed
         viewModel.retryDownload()
-        advanceUntilIdle()
 
-        assertTrue(viewModel.modelDownloadComplete.value)
+        assertEquals(listOf(viewModel.recommendedKey), fakeInstaller.installed)
     }
 }
 
@@ -337,15 +327,15 @@ class FakeDataStore : DataStore<Preferences> {
 }
 
 /**
- * Configurable fake ModelDownloader for tests.
- *
- * Set [nextFlow] before triggering [downloadWithProgress] to control what events
- * the ViewModel collects. Defaults to an immediate Complete so most tests just work.
- *
- * Extends ModelDownloader (which is now `open`) and overrides the public entry point.
+ * Fake ModelInstaller: records install requests; tests drive [state] as the worker would.
  */
-class FakeModelDownloader(modelManager: ModelManager) : ModelDownloader(modelManager) {
-    var nextFlow: Flow<DownloadProgress> = flowOf(DownloadProgress.Complete("/fake/path"))
+class FakeModelInstaller(context: android.content.Context) : ModelInstaller(context) {
+    val state = MutableStateFlow<ModelInstallState>(ModelInstallState.Idle)
+    val installed = mutableListOf<String>()
 
-    override fun downloadWithProgress(modelKey: String): Flow<DownloadProgress> = nextFlow
+    override fun install(modelKey: String) {
+        installed += modelKey
+    }
+
+    override fun state(modelKey: String): Flow<ModelInstallState> = state
 }

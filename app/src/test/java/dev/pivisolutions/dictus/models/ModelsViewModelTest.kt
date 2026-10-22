@@ -8,7 +8,8 @@ import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
-import dev.pivisolutions.dictus.service.ModelDownloader
+import dev.pivisolutions.dictus.service.ModelInstallState
+import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -51,6 +52,7 @@ class ModelsViewModelTest {
     private val testScope = TestScope(testDispatcher)
 
     private lateinit var fakeDataStore: FakeDataStore
+    private lateinit var fakeInstaller: FakeModelInstaller
     private lateinit var viewModel: ModelsViewModel
 
     @Before
@@ -58,9 +60,8 @@ class ModelsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeDataStore = FakeDataStore()
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val modelManager = ModelManager(context)
-        val modelDownloader = ModelDownloader(modelManager)
-        viewModel = ModelsViewModel(modelManager, modelDownloader, fakeDataStore, context)
+        fakeInstaller = FakeModelInstaller(context)
+        viewModel = ModelsViewModel(ModelManager(context), fakeInstaller, fakeDataStore, context)
     }
 
     @After
@@ -78,7 +79,26 @@ class ModelsViewModelTest {
         }
         shadowOf(activityManager).setMemoryInfo(memInfo)
         val modelManager = ModelManager(context)
-        return ModelsViewModel(modelManager, ModelDownloader(modelManager), fakeDataStore, context)
+        return ModelsViewModel(modelManager, FakeModelInstaller(context), fakeDataStore, context)
+    }
+
+    @Test
+    fun `each card shows its own install state`() {
+        fakeInstaller.states.getValue("base").value = ModelInstallState.Extracting(12)
+        fakeInstaller.states.getValue("small").value = ModelInstallState.Failed
+
+        val byKey = viewModel.models.value.associate { it.info.key to it.installState }
+        assertEquals(ModelInstallState.Extracting(12), byKey["base"])
+        assertEquals(ModelInstallState.Failed, byKey["small"])
+        assertEquals(ModelInstallState.Idle, byKey["tiny"])
+    }
+
+    @Test
+    fun `download and retry ask the installer`() {
+        viewModel.downloadModel("base")
+        viewModel.retryDownload("small")
+
+        assertEquals(listOf("base", "small"), fakeInstaller.installed)
     }
 
     @Test
@@ -205,4 +225,16 @@ class FakeDataStore : DataStore<Preferences> {
         _preferences.value = updated
         return updated
     }
+}
+
+/** Fake ModelInstaller: one state flow per model key, driven by the test. */
+class FakeModelInstaller(context: android.content.Context) : ModelInstaller(context) {
+    val states = ModelCatalog.ALL.associate { it.key to MutableStateFlow<ModelInstallState>(ModelInstallState.Idle) }
+    val installed = mutableListOf<String>()
+
+    override fun install(modelKey: String) {
+        installed += modelKey
+    }
+
+    override fun state(modelKey: String): Flow<ModelInstallState> = states.getValue(modelKey)
 }

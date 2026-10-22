@@ -34,7 +34,8 @@
     <string name="onboarding_model_download_retry">R\u00e9essayer</string>
     <string name="onboarding_model_download_recommended">Recommand\u00e9 pour votre appareil</string>
     <string name="onboarding_model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
-    <string name="onboarding_model_download_extracting">Extraction des fichiers\u2026</string>
+    <string name="onboarding_model_download_extracting">Extraction des fichiers \u2014 %1$d%%</string>
+    <string name="onboarding_model_download_verifying">V\u00e9rification des fichiers\u2026</string>
 
     <!-- Onboarding: Test recording screen (Step 6) -->
     <string name="onboarding_test_recording_title">Testez la dict\u00e9e</string>
@@ -182,7 +183,10 @@
     <string name="model_download">T\u00e9l\u00e9charger</string>
     <string name="model_retry">R\u00e9essayer</string>
     <string name="model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
-    <string name="model_extracting">Extraction\u2026</string>
+    <string name="model_extracting">Extraction \u2014 %1$d%%</string>
+    <string name="model_verifying">V\u00e9rification des fichiers\u2026</string>
+    <string name="model_install_notification_title">Installation de %1$s</string>
+    <string name="model_install_channel_name">Installation des mod\u00e8les</string>
     <string name="model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
     <string name="model_requires_ram">N\u00e9cessite %1$d Go de RAM ou plus</string>
     <string name="model_precision">Pr\u00e9cision</string>

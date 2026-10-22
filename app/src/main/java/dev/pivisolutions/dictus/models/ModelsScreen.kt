@@ -153,10 +153,8 @@ fun ModelsScreen(
                         model = modelState.info,
                         isDownloaded = true,
                         isActive = modelState.info.key == activeModelKey,
-                        downloadProgress = modelState.downloadPercent,
                         canDelete = downloadedModels.size > 1 && modelState.info.key != activeModelKey,
-                        hasDownloadError = modelState.hasError,
-                        isExtracting = modelState.isExtracting,
+                        installState = modelState.installState,
                         onDownload = { viewModel.downloadModel(modelState.info.key) },
                         onDelete = {
                             modelToDelete = modelState
@@ -181,10 +179,8 @@ fun ModelsScreen(
                         model = modelState.info,
                         isDownloaded = false,
                         isActive = false,
-                        downloadProgress = modelState.downloadPercent,
                         canDelete = false,
-                        hasDownloadError = modelState.hasError,
-                        isExtracting = modelState.isExtracting,
+                        installState = modelState.installState,
                         onDownload = { viewModel.downloadModel(modelState.info.key) },
                         onDelete = {},
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
