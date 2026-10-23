@@ -15,8 +15,8 @@ import dev.pivisolutions.dictus.model.DeviceRam
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
-import dev.pivisolutions.dictus.service.DownloadProgress
-import dev.pivisolutions.dictus.service.ModelDownloader
+import dev.pivisolutions.dictus.service.ModelInstallState
+import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -36,53 +36,42 @@ import javax.inject.Inject
  * Represents the UI state of a single model in the model list.
  *
  * @param info            Full model descriptor from the catalog.
- * @param isDownloaded    True if the model file is present on disk with correct size.
- * @param downloadPercent Active download progress 0–100, or null if not downloading.
- * @param hasError        True if the last download attempt failed.
+ * @param isDownloaded    True if every model file is present on disk with its exact size.
+ * @param installState    State of the model's background install (progress, failure).
  * @param requiredRamGb   Non-null when the device has too little RAM for this model:
  *                        the card is greyed out and shows this requirement as the reason.
  */
 data class ModelUiState(
     val info: ModelInfo,
     val isDownloaded: Boolean,
-    val downloadPercent: Int?,
-    val hasError: Boolean = false,
-    val isExtracting: Boolean = false,
+    val installState: ModelInstallState = ModelInstallState.Idle,
     val requiredRamGb: Int? = null,
 )
 
 /**
  * ViewModel for the Models screen (model download, selection, and deletion).
  *
- * WHY @HiltViewModel: Allows Hilt to inject ModelManager and ModelDownloader without
+ * WHY @HiltViewModel: Allows Hilt to inject ModelManager and ModelInstaller without
  * requiring a ViewModelFactory. Hilt generates the factory automatically.
  *
  * WHY separate models StateFlow: The list of models is derived from the catalog
- * (static) but augmented with disk state (dynamic — changes after download/delete).
- * Keeping download progress in a separate Map avoids rebuilding the entire list on
- * every progress tick.
+ * (static) but augmented with disk state (dynamic — changes after download/delete)
+ * and with each model's install state, observed from WorkManager (#169).
  *
  * @param modelManager   Manages model file presence and deletion on disk.
- * @param modelDownloader Provides downloadWithProgress() Flow for each model.
+ * @param modelInstaller Starts installs in the background and reports their state.
  * @param dataStore       Application DataStore for reading/writing active model key.
  */
 @HiltViewModel
 class ModelsViewModel @Inject constructor(
     private val modelManager: ModelManager,
-    private val modelDownloader: ModelDownloader,
+    private val modelInstaller: ModelInstaller,
     private val dataStore: DataStore<Preferences>,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
-    // Map of modelKey → download progress (0–100), only for active downloads
-    private val _downloadProgress = MutableStateFlow<Map<String, Int>>(emptyMap())
-    val downloadProgress: StateFlow<Map<String, Int>> = _downloadProgress.asStateFlow()
-
-    // Map of modelKey → has error
-    private val _downloadErrors = MutableStateFlow<Set<String>>(emptySet())
-
-    // Set of modelKeys currently extracting archive
-    private val _extracting = MutableStateFlow<Set<String>>(emptySet())
+    // Map of modelKey → install state, as WorkManager reports it
+    private val _installStates = MutableStateFlow<Map<String, ModelInstallState>>(emptyMap())
 
     // Derived StateFlow of full model UI state
     private val _models = MutableStateFlow<List<ModelUiState>>(emptyList())
@@ -115,6 +104,16 @@ class ModelsViewModel @Inject constructor(
     init {
         Timber.d("Device totalMem=%d bytes (%d GB marketed)", totalMemBytes, DeviceRam.marketedGb(totalMemBytes))
         refreshModels()
+        // The installs run in WorkManager: started here or in onboarding, they keep reporting
+        // after this screen is left and come back with it.
+        ModelCatalog.ALL.forEach { info ->
+            viewModelScope.launch {
+                modelInstaller.state(info.key).collect { state ->
+                    _installStates.update { it + (info.key to state) }
+                    refreshModels()
+                }
+            }
+        }
     }
 
     /**
@@ -123,9 +122,7 @@ class ModelsViewModel @Inject constructor(
      * Called on init and after any download or deletion to keep state current.
      */
     fun refreshModels() {
-        val progress = _downloadProgress.value
-        val errors = _downloadErrors.value
-        val extracting = _extracting.value
+        val installStates = _installStates.value
         // WHY no filtering: a hidden model reads as a missing feature (issue #121).
         // Models the device cannot run stay listed, greyed out with the RAM they need.
         _models.value = ModelCatalog.ALL
@@ -133,9 +130,7 @@ class ModelsViewModel @Inject constructor(
                 ModelUiState(
                     info = info,
                     isDownloaded = modelManager.isDownloaded(info.key),
-                    downloadPercent = progress[info.key],
-                    hasError = info.key in errors,
-                    isExtracting = info.key in extracting,
+                    installState = installStates[info.key] ?: ModelInstallState.Idle,
                     requiredRamGb = info.minRamGb.takeUnless { DeviceRam.meetsRequirement(info, totalMemBytes) },
                 )
             }
@@ -143,48 +138,13 @@ class ModelsViewModel @Inject constructor(
     }
 
     /**
-     * Start downloading a model and collect progress events into [models] state.
+     * Start installing a model in the background (download, extraction, verification).
      *
-     * The download runs in [viewModelScope] so it survives screen rotation.
-     * Progress events are dispatched to [_downloadProgress] on each tick.
-     * On completion, the model list is refreshed and progress is cleared.
-     * On error, the error flag is set and the error message is logged.
+     * Progress and the result reach [models] through the install state observed in init.
      *
      * @param modelKey Stable catalog key for the model to download.
      */
-    fun downloadModel(modelKey: String) {
-        // Clear previous error for this key
-        _downloadErrors.update { it - modelKey }
-
-        viewModelScope.launch {
-            modelDownloader.downloadWithProgress(modelKey).collect { event ->
-                when (event) {
-                    is DownloadProgress.Progress -> {
-                        _downloadProgress.update { it + (modelKey to event.percent) }
-                        refreshModels()
-                    }
-                    is DownloadProgress.Extracting -> {
-                        _downloadProgress.update { it - modelKey }
-                        _extracting.update { it + modelKey }
-                        refreshModels()
-                    }
-                    is DownloadProgress.Complete -> {
-                        _downloadProgress.update { it - modelKey }
-                        _extracting.update { it - modelKey }
-                        Timber.d("Model '$modelKey' downloaded to ${event.path}")
-                        refreshModels()
-                    }
-                    is DownloadProgress.Error -> {
-                        _downloadProgress.update { it - modelKey }
-                        _extracting.update { it - modelKey }
-                        _downloadErrors.update { it + modelKey }
-                        Timber.e("Download failed for '$modelKey': ${event.message}")
-                        refreshModels()
-                    }
-                }
-            }
-        }
-    }
+    fun downloadModel(modelKey: String) = modelInstaller.install(modelKey)
 
     /**
      * Delete a downloaded model from disk.
@@ -282,12 +242,9 @@ class ModelsViewModel @Inject constructor(
     }
 
     /**
-     * Clear the error state for a model and retry its download.
+     * Retry a failed install. The failed work is finished, so a new one is enqueued.
      *
      * @param modelKey Stable catalog key for the model to retry.
      */
-    fun retryDownload(modelKey: String) {
-        _downloadErrors.update { it - modelKey }
-        downloadModel(modelKey)
-    }
+    fun retryDownload(modelKey: String) = downloadModel(modelKey)
 }

@@ -25,6 +25,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.ModelPreparationGate
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -724,6 +725,10 @@ class DictusImeService : LifecycleInputMethodService() {
         val dictationState by _serviceState.collectAsState()
         val engineState by _engineState.collectAsState()
         val micGate = remember { PendingMicGate() }
+        // A Ready engine on the previous model is not ready for this tap (#175).
+        LaunchedEffect(micGate) {
+            entryPoint.dataStore().data.collect { micGate.selectedModelKey = it[PreferenceKeys.ACTIVE_MODEL] }
+        }
         var showFailureOverlay by remember { mutableStateOf(true) }
         // Only a real mic tap may surface the "no model" panel. A background prewarm must
         // never blanket the keyboard, which is what covered onboarding before the download step.
@@ -865,9 +870,11 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         }
 
-        val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
-            (engineState is SttEngineState.Failed && showFailureOverlay) ||
-            (engineState is SttEngineState.ModelMissing && showModelMissingOverlay)
+        // A load that starts under a dictation never covers it (#175).
+        val overlayEngineState = ModelPreparationGate.overlayState(engineState, dictationState)
+        val isEngineOverlayVisible = overlayEngineState is SttEngineState.Loading ||
+            (overlayEngineState is SttEngineState.Failed && showFailureOverlay) ||
+            (overlayEngineState is SttEngineState.ModelMissing && showModelMissingOverlay)
 
         ImeOverlayHost(
             content = {
@@ -1088,11 +1095,11 @@ class DictusImeService : LifecycleInputMethodService() {
             overlay = {
                 ModelLoadingOverlay(
                     engineState = when {
-                        engineState is SttEngineState.Failed && !showFailureOverlay ->
+                        overlayEngineState is SttEngineState.Failed && !showFailureOverlay ->
                             SttEngineState.Cold
-                        engineState is SttEngineState.ModelMissing && !showModelMissingOverlay ->
+                        overlayEngineState is SttEngineState.ModelMissing && !showModelMissingOverlay ->
                             SttEngineState.Cold
-                        else -> engineState
+                        else -> overlayEngineState
                     },
                     onRetry = { runGateCommand(micGate.retry()) },
                     onCancel = {

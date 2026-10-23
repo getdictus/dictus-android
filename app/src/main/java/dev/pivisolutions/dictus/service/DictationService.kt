@@ -43,6 +43,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -185,6 +187,23 @@ class DictationService : Service(), DictationController {
     override fun onCreate() {
         super.onCreate()
         soundPlayer = DictationSoundPlayer(applicationContext)
+
+        // Load a newly selected model right away, from the Models screen, Settings or onboarding,
+        // so it is ready before the next mic tap (#175, iOS ModelManager.selectModel). Without it
+        // the first dictation recorded on the previous model and loaded the new one while
+        // transcribing. drop(1): the current selection is the one onBind already prewarms.
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.ACTIVE_MODEL] }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { modelKey ->
+                    // A prewarm still running loads the previous selection and would swallow this one.
+                    prewarmJob?.join()
+                    Timber.i("Active model changed to %s, prewarming", modelKey)
+                    prewarmEngine()
+                }
+        }
 
         // Load sounds with user-selected names from DataStore on first launch.
         // Subsequent preference changes are handled by the reactive observers below.
