@@ -40,6 +40,6 @@ Preconditions: Launch and Doctor OK. Note the active model Doctor printed; it mu
 - **Never download or delete a model** on Pierre's phone unless the task needs it (75 MB to over 600 MB, real traffic; deleting loses his setup).
 - The active card has no trash icon: delete needs another downloaded model.
 - Card descriptions are unaccented (« Rapide et leger », « Precis et equilibre », « Haute precision », « Detection automatique »).
-- Selecting a model reloads the engine: the next dictation waits on the loading overlay.
+- Selecting a model starts loading it at once (log `Active model changed to <key>, prewarming`, #175). A mic tap while it still loads, or while the engine still holds the previous model, shows the loading overlay at the tap and records once the selected model is ready. The overlay never covers a recording or a transcription (iOS #458).
 - RAM gating rounds `ActivityManager.totalMem` up to the marketed size (#121); Parakeet 0.6B needs 6 GB, like iOS (#148): the 6 GB Pixel 4 (5.34 GiB reported) can download it; a phone below 6 GB sees it greyed with « Nécessite 6 Go de RAM ou plus ». Before #148 the gate was 8 GB and the Pixel showed « Nécessite 8 Go de RAM ou plus » (2026-10-20).
 - Parakeet does not run on the x86_64 emulator (sherpa-onnx ships ARM libraries only): the engine fails cleanly, the app does not crash. Verify Parakeet on the Pixel only.
