@@ -50,9 +50,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.pivisolutions.dictus.R
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.ModelPreparationGate
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -101,6 +103,10 @@ fun RecordingScreen(
     val engineState by dictationController?.engineState?.collectAsState()
         ?: remember { mutableStateOf(SttEngineState.Cold as SttEngineState) }
     val micGate = remember(dictationController) { PendingMicGate() }
+    // A Ready engine on the previous model is not ready for this tap (#175).
+    LaunchedEffect(dataStore, micGate) {
+        dataStore?.data?.collect { micGate.selectedModelKey = it[PreferenceKeys.ACTIVE_MODEL] }
+    }
 
     // True while a recording this screen started has not been stopped yet. The service is
     // shared with the keyboard, so leaving must never cancel a dictation the IME owns.
@@ -196,8 +202,10 @@ fun RecordingScreen(
     val hasResult = transcriptionResult != null
     val isRecording = dictationState is DictationState.Recording
     val isTranscribing = dictationState is DictationState.Transcribing
-    val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
-        engineState is SttEngineState.Failed
+    // A load that starts under a dictation never covers it (#175).
+    val overlayEngineState = ModelPreparationGate.overlayState(engineState, dictationState)
+    val isEngineOverlayVisible = overlayEngineState is SttEngineState.Loading ||
+        overlayEngineState is SttEngineState.Failed
 
     val noResultLabel = stringResource(R.string.recording_no_result)
 
@@ -502,7 +510,7 @@ fun RecordingScreen(
         }
 
         ModelLoadingOverlay(
-            engineState = engineState,
+            engineState = overlayEngineState,
             onRetry = { runGateCommand(micGate.retry()) },
             onCancel = {
                 micGate.cancel()

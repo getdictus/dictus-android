@@ -44,6 +44,7 @@ import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.ModelPreparationGate
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -126,8 +127,10 @@ fun OnboardingTestRecordingScreen(
     val hasResult = transcriptionResult != null
     val isRecording = dictationState is DictationState.Recording
     val isTranscribing = dictationState is DictationState.Transcribing
-    val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
-        engineState is SttEngineState.Failed
+    // A load that starts under a dictation never covers it (#175).
+    val overlayEngineState = ModelPreparationGate.overlayState(engineState, dictationState)
+    val isEngineOverlayVisible = overlayEngineState is SttEngineState.Loading ||
+        overlayEngineState is SttEngineState.Failed
 
     Box(
         modifier = Modifier
@@ -401,7 +404,7 @@ fun OnboardingTestRecordingScreen(
         }
 
         ModelLoadingOverlay(
-            engineState = engineState,
+            engineState = overlayEngineState,
             onRetry = { runGateCommand(micGate.retry()) },
             onCancel = {
                 micGate.cancel()
