@@ -58,6 +58,7 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelInfo
+import dev.pivisolutions.dictus.service.ModelInstallState
 import kotlin.math.roundToInt
 
 /**
@@ -81,9 +82,9 @@ import kotlin.math.roundToInt
  * @param model          ModelInfo descriptor from the catalog.
  * @param isDownloaded   True if the model file exists on disk with correct size.
  * @param isActive       True if this is the currently selected model.
- * @param downloadProgress Active download progress 0–100, or null if not downloading.
  * @param canDelete      True if this model can be deleted (not the last one).
- * @param hasDownloadError True if the last download attempt failed.
+ * @param installState   State of this model's background install: progress while it runs,
+ *                       error + Retry when the last one failed.
  * @param onDownload     Callback to start downloading this model.
  * @param onDelete       Callback to request deletion (shows confirmation sheet).
  * @param onRetry        Callback to retry after a download failure.
@@ -98,10 +99,8 @@ fun ModelCard(
     model: ModelInfo,
     isDownloaded: Boolean,
     isActive: Boolean,
-    downloadProgress: Int?,
     canDelete: Boolean,
-    hasDownloadError: Boolean = false,
-    isExtracting: Boolean = false,
+    installState: ModelInstallState = ModelInstallState.Idle,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onRetry: () -> Unit,
@@ -122,8 +121,6 @@ fun ModelCard(
         ),
         label = "card_scale",
     )
-
-    val isDownloading = downloadProgress != null
 
     // Active cards get an accent border; others get the default glass border
     val borderColor = if (isActive) DictusColors.Accent else DictusColors.GlassBorder
@@ -342,9 +339,18 @@ fun ModelCard(
 
                 // Download progress or action buttons
                 when {
-                    isExtracting -> {
-                        // Indeterminate progress bar during archive extraction
+                    installState.isInProgress -> {
+                        val (fraction, label) = when (installState) {
+                            is ModelInstallState.Extracting -> installState.percent / 100f to
+                                stringResource(R.string.model_extracting, installState.percent)
+                            ModelInstallState.Verifying -> 1f to stringResource(R.string.model_verifying)
+                            else -> {
+                                val percent = (installState as? ModelInstallState.Downloading)?.percent ?: 0
+                                percent / 100f to stringResource(R.string.model_download_progress, percent)
+                            }
+                        }
                         LinearProgressIndicator(
+                            progress = { fraction },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp)
@@ -354,35 +360,14 @@ fun ModelCard(
                             strokeCap = StrokeCap.Round,
                         )
                         Text(
-                            text = stringResource(R.string.model_extracting),
+                            text = label,
                             color = DictusColors.AccentHighlight,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                         )
                     }
-                    isDownloading -> {
-                        // Progress bar + percentage
-                        val percent = downloadProgress ?: 0
-                        LinearProgressIndicator(
-                            progress = { percent / 100f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = DictusColors.Accent,
-                            trackColor = MaterialTheme.colorScheme.background,
-                            strokeCap = StrokeCap.Round,
-                        )
-                        Text(
-                            text = stringResource(R.string.model_download_progress, percent),
-                            color = DictusColors.AccentHighlight,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                        )
-                    }
-                    hasDownloadError -> {
+                    installState is ModelInstallState.Failed -> {
                         // Error state with retry
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),

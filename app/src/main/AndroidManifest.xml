@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -32,6 +34,17 @@
             android:name=".service.DictationService"
             android:foregroundServiceType="microphone"
             android:exported="false" />
+
+        <!--
+            Model installs (ModelInstallWorker) run in WorkManager's foreground service, so they
+            keep going with the screen off or the app in the background (#169). Android 14+
+            requires the service to declare its type, and the app to hold the matching
+            FOREGROUND_SERVICE_DATA_SYNC permission.
+        -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!--
             FileProvider for sharing the debug log ZIP via the Android share sheet.

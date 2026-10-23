@@ -12,11 +12,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
-import dev.pivisolutions.dictus.service.DownloadProgress
-import dev.pivisolutions.dictus.service.ModelDownloader
+import dev.pivisolutions.dictus.service.ModelInstallState
+import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,12 +29,15 @@ import javax.inject.Inject
  * Manages state transitions between onboarding steps with validation guards:
  * - Step 2 (Mic): user must grant RECORD_AUDIO permission
  * - Step 3 (Keyboard): user must enable the Dictus IME
- * - Step 5 (Download): model download must complete before advancing
+ * - Step 5 (Download): model install must complete before advancing
  * - Step 7 (Success): tapping "Commencer" writes HAS_COMPLETED_ONBOARDING=true to DataStore
  *
  * WHY ViewModel (not stateless composable): Onboarding state survives configuration changes
- * (e.g. screen rotation during download). The ViewModel holds the download coroutine so a
- * rotation does not cancel an in-progress download.
+ * (e.g. screen rotation during download).
+ *
+ * WHY the install is not run here: it takes minutes for Parakeet, and a coroutine in this
+ * ViewModel stopped with the screen and lost its result when the ViewModel was cleared
+ * (#169). [ModelInstaller] runs it in WorkManager; this ViewModel only observes its state.
  *
  * WHY SavedStateHandle for currentStep/micPermissionGranted: The system can kill
  * the app process when showing a system dialog (e.g. the mic permission prompt on step 2).
@@ -39,9 +45,8 @@ import javax.inject.Inject
  * when the user returns to the app, the onboarding resumes at the correct step instead of
  * resetting to step 1.
  *
- * WHY regular MutableStateFlow for selectedLayout/downloadProgress/modelDownloadComplete/downloadError:
- * These are transient: layout can be re-chosen, and a partial download restarts anyway on process
- * death. Persisting them would add complexity with no user-visible benefit.
+ * WHY regular MutableStateFlow for selectedLayout: transient, the layout can be re-chosen.
+ * The install state needs no saving either: WorkManager keeps it across process death.
  *
  * WHY active model at step 5 but onboarding completion at step 7: The test recording in step 6
  * must use the exact recommended model that step 5 downloaded. Selecting that model when the
@@ -50,7 +55,7 @@ import javax.inject.Inject
  *
  * @param context Application context for device capability checks (RAM-based model recommendation).
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
- * @param modelDownloader Injectable downloader for the default Whisper model.
+ * @param modelInstaller Starts and observes the install of the recommended model.
  * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists step/flags across
  *   process death caused by system dialogs (mic permission, etc.).
  */
@@ -58,7 +63,7 @@ import javax.inject.Inject
 class OnboardingViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val dataStore: DataStore<Preferences>,
-    private val modelDownloader: ModelDownloader,
+    private val modelInstaller: ModelInstaller,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -89,21 +94,22 @@ class OnboardingViewModel @Inject constructor(
     /** The keyboard layout chosen by the user. Defaults to "azerty". */
     val selectedLayout: StateFlow<String> = _selectedLayout.asStateFlow()
 
-    // --- Model download progress (transient — download restarts on process death) ---
+    // --- Model install (owned by WorkManager, observed here) ---
 
-    /** -1 = not started, 0–99 = in progress, 100 = complete. */
-    private val _downloadProgress = MutableStateFlow(-1)
-    val downloadProgress: StateFlow<Int> = _downloadProgress.asStateFlow()
-
-    private val _modelDownloadComplete = MutableStateFlow(false)
-    val modelDownloadComplete: StateFlow<Boolean> = _modelDownloadComplete.asStateFlow()
-
-    private val _downloadError = MutableStateFlow<String?>(null)
-    val downloadError: StateFlow<String?> = _downloadError.asStateFlow()
-
-    /** True while the downloaded archive is being extracted (Parakeet models only). */
-    private val _isExtracting = MutableStateFlow(false)
-    val isExtracting: StateFlow<Boolean> = _isExtracting.asStateFlow()
+    /**
+     * Install state of the recommended model.
+     *
+     * WHY Eagerly and the ACTIVE_MODEL write here: the write must happen when the install
+     * completes even if the screen is not collecting at that moment, and again harmlessly if
+     * this ViewModel is recreated after the worker finished.
+     */
+    val installState: StateFlow<ModelInstallState> = modelInstaller.state(recommendedKey)
+        .onEach { state ->
+            if (state is ModelInstallState.Done) {
+                dataStore.edit { prefs -> prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ModelInstallState.Idle)
 
     // --- Public actions ---
 
@@ -126,7 +132,7 @@ class OnboardingViewModel @Inject constructor(
     fun advanceStep() {
         val step = currentStep.value
         when {
-            step == 5 && !_modelDownloadComplete.value -> return // Block: download not complete
+            step == 5 && installState.value !is ModelInstallState.Done -> return // Block: install not complete
             step == 7 -> completeOnboarding()
             step < 7 -> savedStateHandle["currentStep"] = step + 1
         }
@@ -142,46 +148,14 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Begin downloading the default Whisper model and emit progress updates.
+     * Start installing the recommended model in the background.
      *
-     * Sets downloadProgress from 0 to 100, then sets modelDownloadComplete to true.
-     * On error, sets downloadError and resets downloadProgress to -1.
+     * Progress, completion and failure arrive through [installState]. A tap while an install
+     * is already running is ignored by [ModelInstaller].
      */
-    fun startModelDownload() {
-        _downloadProgress.value = 0
-        _downloadError.value = null
-        _isExtracting.value = false
-        viewModelScope.launch {
-            modelDownloader.downloadWithProgress(recommendedKey)
-                .collect { progress ->
-                    when (progress) {
-                        is DownloadProgress.Progress -> {
-                            _downloadProgress.value = progress.percent
-                        }
-                        is DownloadProgress.Extracting -> {
-                            // Parakeet models are tar.bz2 archives — show extraction UI
-                            _downloadProgress.value = 99
-                            _isExtracting.value = true
-                        }
-                        is DownloadProgress.Complete -> {
-                            dataStore.edit { prefs ->
-                                prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey
-                            }
-                            _isExtracting.value = false
-                            _downloadProgress.value = 100
-                            _modelDownloadComplete.value = true
-                        }
-                        is DownloadProgress.Error -> {
-                            _isExtracting.value = false
-                            _downloadError.value = progress.message
-                            _downloadProgress.value = -1
-                        }
-                    }
-                }
-        }
-    }
+    fun startModelDownload() = modelInstaller.install(recommendedKey)
 
-    /** Retry a failed download. Equivalent to calling startModelDownload() again. */
+    /** Retry a failed install. Equivalent to calling startModelDownload() again. */
     fun retryDownload() = startModelDownload()
 
     // --- Private ---
