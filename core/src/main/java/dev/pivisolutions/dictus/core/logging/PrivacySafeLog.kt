@@ -14,6 +14,12 @@ object PrivacySafeLog {
     fun transcriptionProcessed(rawText: String, processedText: String): String =
         "Transcription processed: rawLength=${rawText.length}, processedLength=${processedText.length}"
 
-    fun transcriptionInserted(text: String): String =
-        "Transcribed text inserted: length=${text.length}"
+    /** Engine call done: which engine, how long it ran, and how long its answer was. */
+    fun transcriptionFinished(engine: String, durationMs: Long, rawText: String?): String =
+        "Transcription finished: engine=$engine, durationMs=$durationMs, " +
+            if (rawText == null) "result=timeout" else "rawLength=${rawText.length}"
+
+    /** End of the mic-tap path (#112): the length handed to the editor and whether it took it. */
+    fun dictationInserted(text: String, committed: Boolean, dictationId: String?, elapsedMs: Long): String =
+        "Dictation inserted: d=${dictationId ?: "-"}, length=${text.length}, committed=$committed, t+=${elapsedMs}ms"
 }
