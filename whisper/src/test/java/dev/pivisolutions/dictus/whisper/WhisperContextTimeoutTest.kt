@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.whisper
 
+import dev.pivisolutions.dictus.core.stt.SttTranscript
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
@@ -40,7 +41,8 @@ class WhisperContextTimeoutTest {
         dispatcher.close()
     }
 
-    private fun context(honorAbort: Boolean = true): WhisperContext = WhisperContext(
+    // Segments the long decode has finished when it is aborted.
+    private fun context(honorAbort: Boolean = true, segmentsAtAbort: Int = 0): WhisperContext = WhisperContext(
         ptr = 1L,
         dispatcher = dispatcher,
         abortFlag = abortFlag,
@@ -56,7 +58,8 @@ class WhisperContextTimeoutTest {
                     decodeMayReturn.await(POLL_MS, TimeUnit.MILLISECONDS)
                 }
             }
-            "run$run:${data.size}"
+            val aborted = flag.aborted
+            SttTranscript("run$run:${data.size}", if (aborted) segmentsAtAbort else 1, complete = !aborted)
         },
     )
 
@@ -125,6 +128,36 @@ class WhisperContextTimeoutTest {
         assertEquals("run2:32", ctx.transcribeData(FloatArray(32), "fr"))
         assertEquals(listOf(false, false), abortedAtStart)
         assertFalse("a finished decode left the flag set", abortFlag.aborted)
+    }
+
+    @Test
+    fun `timeout returns the segments decoded before the abort`() = runBlocking {
+        val ctx = context(segmentsAtAbort = 2)
+
+        val startMs = System.currentTimeMillis()
+        val partial = ctx.transcribeData(FloatArray(16), "fr", TIMEOUT_MS)
+        val elapsedMs = System.currentTimeMillis() - startMs
+
+        assertEquals(SttTranscript("run1:16", 2, complete = false), partial)
+        assertTrue("partial took $elapsedMs ms, the decode held it", elapsedMs < BLOCKED_DECODE_MS / 2)
+    }
+
+    @Test
+    fun `timeout before any segment returns null`() = runBlocking {
+        val ctx = context(segmentsAtAbort = 0)
+
+        assertNull(ctx.transcribeData(FloatArray(16), "fr", TIMEOUT_MS))
+        // The context stays usable.
+        assertEquals("run2:32", ctx.transcribeData(FloatArray(32), "fr"))
+    }
+
+    @Test
+    fun `decode within the timeout is complete`() = runBlocking {
+        decodeMayReturn.countDown()
+        val ctx = context()
+
+        assertEquals(SttTranscript("run1:16", 1, complete = true), ctx.transcribeData(FloatArray(16), "fr", 2_000L))
+        assertFalse(abortFlag.aborted)
     }
 
     private class FakeAbortFlag : AbortFlag {

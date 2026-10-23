@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.service
 
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import dev.pivisolutions.dictus.core.stt.SttTranscript
 import dev.pivisolutions.dictus.whisper.WhisperContext
 import timber.log.Timber
 
@@ -40,6 +41,13 @@ class WhisperProvider : SttProvider {
         val ctx = whisperContext
             ?: throw IllegalStateException("WhisperProvider not initialized")
         return ctx.transcribeData(samples, language)
+    }
+
+    /** Keeps the segments decoded before the timeout (#179). */
+    override suspend fun transcribe(samples: FloatArray, language: String, timeoutMs: Long): SttTranscript? {
+        val ctx = whisperContext
+            ?: throw IllegalStateException("WhisperProvider not initialized")
+        return ctx.transcribeData(samples, language, timeoutMs)
     }
 
     override suspend fun release() {

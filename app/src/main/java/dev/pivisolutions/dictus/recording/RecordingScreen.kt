@@ -410,7 +410,7 @@ fun RecordingScreen(
                                         TranscriptionRetention.PERSIST_HISTORY,
                                     )
                                     when (outcome) {
-                                        is TranscriptionOutcome.Text -> {
+                                        is TranscriptionOutcome.Transcribed -> {
                                             transcriptionResult = outcome.text
                                             // Keep the Home preview for a short, privacy-bounded period.
                                             dataStore?.let { LastTranscriptionStore.save(it, outcome.text) }

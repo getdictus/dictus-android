@@ -51,7 +51,6 @@ class DictationLogPrivacyTest {
         val id = DictationTrace.begin(source = "keyboard")
         DictationTrace.onRecordingRequested(fallbackSource = "app")
         val transcriber = DictationTranscriber(
-            timeoutMs = 120_000L,
             ensureModel = { "/models/tiny.bin" },
             withProvider = { _, _, use -> use(EchoProvider(transcript)) },
         )
