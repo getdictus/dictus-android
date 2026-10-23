@@ -154,6 +154,38 @@ class ModelDownloaderTest {
     }
 
     @Test
+    fun `whisper install resumes a part left by a network error, then verifies the whole file`() = runTest {
+        val bytes = Random(4).nextBytes(8192)
+        val etag = "\"tiny-v1\""
+        mockServer.enqueue(
+            MockResponse().setResponseCode(200).setHeader("ETag", etag).setBody(Buffer().write(bytes))
+                .setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY),
+        )
+        val url = mockServer.url("/tiny.bin").toString()
+
+        val failed = downloader.install(whisperInfo(bytes), url).toList()
+
+        assertTrue("Expected Error, got ${failed.last()}", failed.last() is DownloadProgress.Error)
+        val part = File(modelsDir, "ggml-tiny.bin.tmp.part")
+        val offset = part.length().toInt()
+        assertTrue("Part kept after the network error", offset in 1 until bytes.size)
+
+        mockServer.takeRequest()
+        mockServer.enqueue(
+            MockResponse().setResponseCode(206).setHeader("ETag", etag)
+                .setHeader("Content-Range", "bytes $offset-${bytes.size - 1}/${bytes.size}")
+                .setBody(Buffer().write(bytes.copyOfRange(offset, bytes.size))),
+        )
+
+        val events = downloader.install(whisperInfo(bytes), url).toList()
+
+        assertEquals("bytes=$offset-", mockServer.takeRequest().getHeader("Range"))
+        val complete = events.last() as DownloadProgress.Complete
+        assertTrue(File(complete.path).readBytes().contentEquals(bytes))
+        assertFalse(part.exists())
+    }
+
+    @Test
     fun `parakeet install extracts with progress, verifies, then moves the files into place`() = runTest {
         val model = Random(3).nextBytes(300_000)
         val tokens = "a 0\nb 1\n".toByteArray()

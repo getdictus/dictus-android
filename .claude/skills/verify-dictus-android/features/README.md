@@ -100,7 +100,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `models.download` | Free | present | no |
 | `models.select` | Free | present | no |
 | `models.delete` | Free | present | no |
-| `models.retry` | Free | partial — « Réessayer » yes; no explicit deletion of a partial download | no |
+| `models.retry` | Free | partial — « Réessayer » resumes the download (#131); no explicit deletion of a partial download | no |
 | `models.languages` | Free | partial — no language sheet; only Parakeet 110M carries « Anglais uniquement » | no |
 | `models.preparation` | Free | present — overlay in the keyboard and the recorder, snackbar in Models | no |
 | `models.device-gating` | Free | present — RAM threshold, card greyed out with the reason (#121) | no |

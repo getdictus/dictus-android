@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import timber.log.Timber
@@ -81,6 +80,8 @@ class ModelDownloader(
         .followRedirects(true)
         .build()
 ) {
+
+    private val resumableDownload = ResumableDownload(client)
 
     companion object {
         /**
@@ -200,44 +201,14 @@ class ModelDownloader(
     }
 
     /**
-     * Download [url] into [file], from byte 0.
-     *
-     * #131 adds resume here: keep the partial file and ask for the rest with `Range`. Callers
-     * only rely on [file] holding the whole body when this returns.
+     * Download [url] into [file]. Resumes from `<file>.part` left by an earlier network error
+     * or stall (#131); see [ResumableDownload]. Callers only rely on [file] holding the whole
+     * body when this returns.
      */
     private suspend fun FlowCollector<DownloadProgress>.download(url: String, file: File) {
         val start = System.currentTimeMillis()
         file.delete()
-        file.parentFile?.mkdirs()
-        client.newCall(Request.Builder().url(url).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            val body = response.body ?: throw IOException("Empty response body")
-            val totalBytes = body.contentLength()
-            var bytesRead = 0L
-            var lastPercent = -1
-            FileOutputStream(file).use { output ->
-                body.byteStream().use { input ->
-                    val buffer = ByteArray(64 * 1024)
-                    while (true) {
-                        currentCoroutineContext().ensureActive()
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        bytesRead += read
-                        if (totalBytes > 0) {
-                            val percent = ((bytesRead * 100) / totalBytes).toInt()
-                            if (percent != lastPercent) {
-                                lastPercent = percent
-                                emit(DownloadProgress.Progress(percent))
-                            }
-                        }
-                    }
-                }
-            }
-            if (totalBytes > 0 && bytesRead != totalBytes) {
-                throw IOException("Download truncated: $bytesRead of $totalBytes bytes")
-            }
-        }
+        resumableDownload.fetch(url, file) { percent -> emit(DownloadProgress.Progress(percent)) }
         Timber.d("Download took %d ms for %s (%d bytes)", System.currentTimeMillis() - start, file.name, file.length())
     }
 
