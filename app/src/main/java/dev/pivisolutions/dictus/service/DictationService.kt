@@ -20,6 +20,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.audio.DictationSoundPlayer
+import dev.pivisolutions.dictus.core.logging.DictationTrace
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.core.service.DictationController
@@ -252,17 +253,19 @@ class DictationService : Service(), DictationController {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     Timber.d("DictationService dropped ACTION_START cancelled before delivery")
+                    DictationTrace.end()
                     return START_NOT_STICKY
                 }
                 pendingStart = false
                 startAudioCapture()
-                Timber.d("DictationService started foreground with ACTION_START")
+                Timber.i("DictationService started foreground with ACTION_START, t+=%dms", DictationTrace.elapsedMs())
             }
             ACTION_STOP -> {
                 stopRecordingInternal(discard = true)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 Timber.d("DictationService stopped via ACTION_STOP")
+                DictationTrace.end()
             }
         }
         // START_NOT_STICKY: don't restart automatically if the system kills us.
@@ -281,6 +284,8 @@ class DictationService : Service(), DictationController {
             action = ACTION_START
         }
         pendingStart = true
+        val trace = DictationTrace.onRecordingRequested(fallbackSource = "app")
+        Timber.i("Recording requested: source=%s, t+=%dms", trace.source, DictationTrace.elapsedMs())
         startForegroundService(intent)
     }
 
@@ -302,6 +307,7 @@ class DictationService : Service(), DictationController {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Timber.d("Recording stopped, ${samples.size} samples captured")
+        DictationTrace.end()
         return samples
     }
 
@@ -318,6 +324,7 @@ class DictationService : Service(), DictationController {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Timber.d("Recording cancelled, samples discarded")
+        DictationTrace.end()
     }
 
     /**
@@ -346,7 +353,12 @@ class DictationService : Service(), DictationController {
         // Play stop cue when audio capture ends and transcription begins.
         if (soundEnabled) soundPlayer.playStop()
 
-        Timber.d("confirmAndTranscribe: %d samples captured, transitioning to Transcribing", samples.size)
+        Timber.i(
+            "Recording stopped: samples=%d, audioMs=%d, t+=%dms, transitioning to Transcribing",
+            samples.size,
+            samples.size * 1_000L / RecordingDurationPolicy.SAMPLE_RATE_HZ,
+            DictationTrace.elapsedMs(),
+        )
         _state.value = DictationState.Transcribing
 
         return try {
@@ -358,9 +370,10 @@ class DictationService : Service(), DictationController {
             // "auto" is passed through: whisper.cpp detects the language itself.
             val engineLanguage = TranscriptionLanguage.engineLanguage(languagePref)
 
-            Timber.d(
-                "confirmAndTranscribe: model=%s, language=%s",
+            Timber.i(
+                "confirmAndTranscribe: model=%s, engine=%s, language=%s",
                 activeModelKey,
+                ModelCatalog.findByKey(activeModelKey)?.provider ?: "UNKNOWN",
                 engineLanguage,
             )
 
@@ -399,6 +412,8 @@ class DictationService : Service(), DictationController {
         _state.value = DictationState.Idle
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+        Timber.i("Transcription pipeline done, t+=%dms", DictationTrace.elapsedMs())
+        DictationTrace.end()
     }
 
     /**

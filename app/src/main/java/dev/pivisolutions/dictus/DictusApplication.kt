@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.HiltAndroidApp
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
+import dev.pivisolutions.dictus.ui.settings.LogExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +30,16 @@ class DictusApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         TimberSetup.init(BuildConfig.DEBUG, filesDir)
-        Timber.d("Dictus application started")
+        // One banner per process (#112): the IME runs in this process too, so a keyboard-only
+        // session gets it as well, and a log read in isolation still names its build.
+        Timber.i(
+            "Session start: app=%s (%d) %s, rev=%s, pid=%d",
+            BuildConfig.VERSION_NAME,
+            BuildConfig.VERSION_CODE,
+            BuildConfig.BUILD_TYPE,
+            LogExporter.revision(),
+            android.os.Process.myPid(),
+        )
         // The Home preview is session-scoped: a process start is a new session, so the previous
         // one's transcription is dropped before any screen can read it back.
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {

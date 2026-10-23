@@ -66,7 +66,12 @@ internal class DictationTranscriber(
             }
 
             val rawText = withProvider(modelKey, modelPath) { provider ->
-                withTimeoutOrNull(timeoutMs) { provider.transcribe(samples, language) }
+                val startedAt = System.nanoTime()
+                Timber.i("Transcription started: engine=%s, samples=%d", provider.providerId, samples.size)
+                withTimeoutOrNull(timeoutMs) { provider.transcribe(samples, language) }.also { text ->
+                    val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+                    Timber.i(PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, text))
+                }
             }
             if (rawText == null) {
                 Timber.e("Provider initialization failed or transcription timed out")
