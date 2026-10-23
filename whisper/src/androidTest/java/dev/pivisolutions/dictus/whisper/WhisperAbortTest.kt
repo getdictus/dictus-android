@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -28,6 +29,12 @@ import java.nio.ByteOrder
  *   adb shell am instrument -w -e model ggml-small-q5_1.bin -e clip fr-bonjour-test.wav \
  *     dev.pivisolutions.dictus.whisper.test/androidx.test.runner.AndroidJUnitRunner
  * Logs (tag WhisperAbortTest) carry lengths and timings only.
+ *
+ * [decodeWithinTimeout] (#179) transcribes one WAV as it is, within -e timeoutMs: complete
+ * when the timeout leaves room, else the segments decoded before it:
+ *   adb shell am instrument -w -e class dev.pivisolutions.dictus.whisper.WhisperAbortTest#decodeWithinTimeout \
+ *     -e model ggml-small.bin -e audio long.wav -e timeoutMs 270000 \
+ *     dev.pivisolutions.dictus.whisper.test/androidx.test.runner.AndroidJUnitRunner
  */
 @RunWith(AndroidJUnit4::class)
 class WhisperAbortTest {
@@ -69,6 +76,37 @@ class WhisperAbortTest {
         val (_, releaseMs) = timed { ctx.release() }
         log("release after abort: $releaseMs ms")
         assertTrue("release waited $releaseMs ms, decode had $remainingMs ms left", releaseMs < remainingMs)
+    }
+
+    @Test
+    fun decodeWithinTimeout() = runBlocking {
+        val args = InstrumentationRegistry.getArguments()
+        val dir = InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null)
+        val model = File(dir, args.getString("model") ?: "ggml-tiny.bin")
+        val audioFile = File(dir, args.getString("audio") ?: "long.wav")
+        val timeoutMs = args.getString("timeoutMs")?.toLong() ?: 120_000L
+        assumeTrue("no model or audio in $dir", model.canRead() && audioFile.canRead())
+        if (Timber.treeCount == 0) Timber.plant(Timber.DebugTree())
+
+        val audio = readWav(audioFile)
+        val ctx = requireNotNull(WhisperContext.createFromFile(model.path))
+        try {
+            log("decode: model=${model.name}, audioMs=${audio.size / 16}, timeoutMs=$timeoutMs")
+            val (transcript, elapsedMs) = timed { ctx.transcribeData(audio, "fr", timeoutMs) }
+            val state = when {
+                transcript == null -> "Failed"
+                transcript.complete -> "Success"
+                else -> "Partial"
+            }
+            log(
+                "decode result: state=$state, elapsedMs=$elapsedMs, abortLatencyMs=${(elapsedMs - timeoutMs).coerceAtLeast(0)}, " +
+                    "segments=${transcript?.segmentCount}, length=${transcript?.text?.length ?: 0}",
+            )
+            assertNotNull("no segment decoded within $timeoutMs ms", transcript)
+            assertTrue("no text", transcript!!.text.isNotBlank())
+        } finally {
+            ctx.release()
+        }
     }
 
     private inline fun <T> timed(block: () -> T): Pair<T, Long> {
