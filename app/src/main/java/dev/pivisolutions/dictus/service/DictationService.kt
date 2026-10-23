@@ -324,11 +324,11 @@ class DictationService : Service(), DictationController {
      * Stop recording, transcribe audio, and return processed text.
      *
      * Full pipeline: stop recording -> ensure model downloaded -> init engine ->
-     * transcribe with 30s timeout -> post-process -> return text.
+     * transcribe with [TRANSCRIPTION_TIMEOUT_MS] timeout -> post-process -> return text.
      *
-     * WHY 30s timeout: On Pixel 4 with tiny model, transcription takes 2-5s for
-     * typical dictation (5-30s audio). 30s covers worst-case long recordings.
-     * A stuck JNI call should not block the UI indefinitely.
+     * WHY a 120 s timeout: Small Q5 already takes 30-40 s on the Pixel 4 (#145), and a
+     * stuck or very slow JNI call must not block the UI indefinitely. Both providers
+     * return at the timeout while their native call is still running (#158, #145).
      */
     override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
         // 1. Stop recording and get audio samples
