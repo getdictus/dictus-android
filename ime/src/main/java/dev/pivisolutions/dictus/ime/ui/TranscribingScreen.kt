@@ -45,7 +45,7 @@ fun TranscribingScreen(
     // Dedicated driver for processing animation.
     // The driver advances processingPhase per-frame via runLoop().
     val driver = remember {
-        WaveformDriver().apply { isProcessing = true }
+        WaveformDriver(logLabel = "keyboard").apply { isProcessing = true }
     }
 
     val phase by driver.processingPhase.collectAsState()
@@ -83,8 +83,8 @@ fun TranscribingScreen(
                 energyLevels = emptyList(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(100.dp),
+                    .padding(horizontal = 2.dp)
+                    .height(120.dp),
                 isProcessing = true,
                 processingPhase = phase,
             )
