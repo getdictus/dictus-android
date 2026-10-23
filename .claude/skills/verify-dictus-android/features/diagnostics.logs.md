@@ -31,7 +31,8 @@ Preconditions: Launch and Doctor OK.
 
 ## What the export contains (#112)
 
-- **Header**, before `---`: export time and zone; app version, versionCode, build type, `rev <sha>@<branch>`; manufacturer, model, Android version and API, build id, ABI; total and available RAM; active model, engine, transcription language; keyboard enabled and default IME; `RECORD_AUDIO` and `POST_NOTIFICATIONS`; the retained window.
+- **Files**: `files/dictus.log` rotates past 2 MB into `files/dictus.previous.log` (one previous file only). The ZIP holds `dictus.previous.log` first (when it exists), then `dictus.log`.
+- **Header**, at the top of `dictus.log`, before `---`: export time and zone; app version, versionCode, build type, `rev <sha>@<branch>`; manufacturer, model, Android version and API, build id, ABI; total and available RAM; active model, engine, transcription language; keyboard enabled and default IME; `RECORD_AUDIO` and `POST_NOTIFICATIONS`; the retained window, from the oldest line of the previous file to the newest of the current one.
 - **Lines**: `2026-10-23T00:12:03.456+02:00 INFO    [IME] DictusImeService d=7f3a01: …` — zoned time, level, category (`LIFECYCLE`, `UI`, `IME`, `KEYBOARD`, `SERVICE`, `AUDIO`, `STT`, `MODEL`, `INSERT`, `APP`), calling class, and the dictation id while one is in flight.
 - **One keyboard dictation**, `grep 'd=<id>'`: `Mic tap` → `Mic gate: command=START_RECORDING` → `Recording requested: source=keyboard` → `DictationService started foreground` → `AudioRecord started` → `Recording stopped: samples=…, audioMs=…` → `confirmAndTranscribe: model=…, engine=…` → `Transcription started` / `Transcription finished: engine=…, durationMs=…, rawLength=…` → `Transcription pipeline done` → `[INSERT] Dictation inserted: d=…, length=…, committed=…`. Lengths and timings only, never text.
 

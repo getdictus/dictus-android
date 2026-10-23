@@ -56,7 +56,11 @@ object LogExporter {
     }
 
     /**
-     * Create a ZIP archive in cacheDir containing the given log file.
+     * Create a ZIP archive in cacheDir containing the given log file and, when the log has
+     * rotated, the previous file.
+     *
+     * Entry order: `dictus.previous.log` (older lines, only if it exists), then `dictus.log`, which
+     * starts with the header. The header's window spans both files.
      *
      * Exposed for testing so that ZIP creation can be verified without
      * triggering FileProvider (which requires a registered manifest authority).
@@ -64,15 +68,22 @@ object LogExporter {
      * @param context Application context — provides cacheDir.
      * @param logFile The log file to pack into the ZIP.
      * @param settings The dictation settings to state in the header.
-     * @return The resulting ZIP File, or null if logFile does not exist.
+     * @return The resulting ZIP File, or null if neither file exists.
      */
     fun createZip(context: Context, logFile: File, settings: DictationSettings): File? {
-        if (!logFile.exists()) return null
+        val previousFile = FileLoggingTree.previousFileFor(logFile)
+        // Right after a rotation the current file does not exist until the next line is written.
+        if (!logFile.exists() && !previousFile.exists()) return null
         val zipFile = File(context.cacheDir, "dictus-logs.zip")
         ZipOutputStream(FileOutputStream(zipFile)).use { zip ->
-            zip.putNextEntry(ZipEntry("dictus.log"))
+            if (previousFile.exists()) {
+                zip.putNextEntry(ZipEntry(PREVIOUS_ENTRY))
+                previousFile.inputStream().use { input -> input.copyTo(zip) }
+                zip.closeEntry()
+            }
+            zip.putNextEntry(ZipEntry(CURRENT_ENTRY))
             zip.write(buildHeader(exportContext(context, logFile, settings)).toByteArray())
-            logFile.inputStream().use { input -> input.copyTo(zip) }
+            if (logFile.exists()) logFile.inputStream().use { input -> input.copyTo(zip) }
             zip.closeEntry()
         }
         return zipFile
@@ -154,7 +165,7 @@ object LogExporter {
             } else {
                 "not required (API ${Build.VERSION.SDK_INT})"
             },
-            window = window(logFile),
+            window = window(FileLoggingTree.previousFileFor(logFile), logFile),
         )
     }
 
@@ -171,21 +182,22 @@ object LogExporter {
     }
 
     /**
-     * First and last timestamp, line count and byte size of the retained file.
+     * First and last timestamp, line count and byte size of the retained files, oldest first.
      *
      * The log is a rotating buffer, so an export can silently be missing the very event it was
      * taken for. Stating the window turns that from a wrong conclusion into a visible gap.
      */
-    fun window(logFile: File): String {
-        if (!logFile.exists()) return "empty"
-        val lines = logFile.useLines { sequence -> sequence.filter(String::isNotBlank).toList() }
+    fun window(vararg logFiles: File): String {
+        // Oldest file first: the window runs from its first line to the newest file's last line.
+        val existing = logFiles.filter(File::exists)
+        val lines = existing.flatMap { file -> file.useLines { sequence -> sequence.filter(String::isNotBlank).toList() } }
         if (lines.isEmpty()) return "empty"
         // The first 19 characters are the second-precision time in both the current ISO format and
         // the space-separated one of lines written before #112.
         val stamp = { line: String -> line.take(TIMESTAMP_LENGTH).takeIf { it.length == TIMESTAMP_LENGTH } }
         val first = lines.firstNotNullOfOrNull(stamp) ?: "?"
         val last = lines.asReversed().firstNotNullOfOrNull(stamp) ?: "?"
-        return "$first -> $last | ${lines.size} lines | ${logFile.length()} bytes"
+        return "$first -> $last | ${lines.size} lines | ${existing.sumOf(File::length)} bytes"
     }
 
     private fun selectedInputMethod(context: Context): String =
@@ -219,6 +231,10 @@ object LogExporter {
     private fun megabytes(bytes: Long): Long = bytes / (1024 * 1024)
 
     private const val TIMESTAMP_LENGTH = 19
+
+    /** ZIP entry names; the previous file is written first. */
+    const val PREVIOUS_ENTRY = "dictus.previous.log"
+    const val CURRENT_ENTRY = "dictus.log"
 
     /**
      * Build an ACTION_SEND intent that opens the Android share sheet for the ZIP.

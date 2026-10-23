@@ -149,4 +149,41 @@ class LogExportHeaderTest {
         assertTrue(content, content.contains("Dictus application started"))
         assertTrue(content, content.indexOf("---") < content.indexOf("Dictus application started"))
     }
+
+    @Test
+    fun `a rotated log exports the previous file first and the window spans both files`() {
+        val dir = File(context.filesDir, "rotated").apply { mkdirs() }
+        File(dir, "dictus.previous.log").writeText("2026-10-20T08:00:00.000+02:00 INFO    [IME] DictusImeService: oldest\n")
+        val logFile = File(dir, "dictus.log").apply {
+            writeText("2026-10-23T02:18:42.450+02:00 INFO    [INSERT] DictusImeService: newest\n")
+        }
+
+        val zip = LogExporter.createZip(
+            context,
+            logFile,
+            LogExporter.DictationSettings(activeModel = "tiny", language = "fr"),
+        )!!
+        val entries = ZipFile(zip).use { archive -> archive.entries().toList().map { it.name } }
+        val current = ZipFile(zip).use { archive ->
+            archive.getInputStream(archive.getEntry("dictus.log")).bufferedReader().readText()
+        }
+
+        assertEquals(listOf("dictus.previous.log", "dictus.log"), entries)
+        assertTrue(current, current.contains("Window: 2026-10-20T08:00:00 -> 2026-10-23T02:18:42 | 2 lines |"))
+    }
+
+    @Test
+    fun `an export right after a rotation still works with only the previous file`() {
+        val dir = File(context.filesDir, "just-rotated").apply { mkdirs() }
+        File(dir, "dictus.previous.log").writeText("2026-10-20T08:00:00.000+02:00 INFO    [IME] DictusImeService: only\n")
+
+        val zip = LogExporter.createZip(
+            context,
+            File(dir, "dictus.log"),
+            LogExporter.DictationSettings(activeModel = "tiny", language = "fr"),
+        )
+
+        val entries = ZipFile(zip!!).use { archive -> archive.entries().toList().map { it.name } }
+        assertEquals(listOf("dictus.previous.log", "dictus.log"), entries)
+    }
 }

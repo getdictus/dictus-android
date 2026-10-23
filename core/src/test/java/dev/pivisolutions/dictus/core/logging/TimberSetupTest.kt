@@ -86,4 +86,15 @@ class TimberSetupTest {
         assertEquals(1, lines.count { it.contains("Privacy migration v1 purged the previous log") })
         assertFalse(lines.any { it == "legacy" })
     }
+
+    @Test
+    fun `the privacy purge also removes a rotated previous file`() {
+        val filesDir = tmpDir.newFolder("purge-previous")
+        val previous = filesDir.resolve("dictus.previous.log").apply { writeText("legacy\n") }
+
+        TimberSetup.init(isDebug = false, filesDir = filesDir)
+
+        assertFalse(previous.exists())
+        assertEquals(previous, TimberSetup.getPreviousLogFile())
+    }
 }

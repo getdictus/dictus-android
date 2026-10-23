@@ -26,16 +26,19 @@ object TimberSetup {
     private const val PRIVACY_MIGRATION_MARKER = ".privacy-log-v1"
 
     private var logFile: File? = null
+    private var previousLogFile: File? = null
 
     fun init(isDebug: Boolean, filesDir: File) {
         val file = File(filesDir, "dictus.log")
         logFile = null
+        previousLogFile = null
         val purge = purgeLegacySensitiveLogOnce(filesDir, file)
         if (isDebug) {
             Timber.plant(Timber.DebugTree())
         }
         if (purge != Purge.FAILED) {
             logFile = file
+            previousLogFile = FileLoggingTree.previousFileFor(file)
             Timber.plant(FileLoggingTree(file))
         }
         if (purge == Purge.DONE_NOW) {
@@ -52,7 +55,8 @@ object TimberSetup {
         val marker = File(filesDir, PRIVACY_MIGRATION_MARKER)
         if (marker.exists()) return Purge.ALREADY_DONE
 
-        if (file.exists() && !file.delete()) {
+        val previous = FileLoggingTree.previousFileFor(file)
+        if ((file.exists() && !file.delete()) || (previous.exists() && !previous.delete())) {
             return Purge.FAILED
         }
         return if (marker.createNewFile() || marker.exists()) Purge.DONE_NOW else Purge.FAILED
@@ -64,4 +68,7 @@ object TimberSetup {
      * Used by LogExporter to locate the file to include in the ZIP.
      */
     fun getLogFile(): File? = logFile
+
+    /** The file the last rotation moved the log to, or null if TimberSetup has not been initialised. */
+    fun getPreviousLogFile(): File? = previousLogFile
 }

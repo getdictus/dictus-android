@@ -23,7 +23,7 @@ import java.util.zip.ZipFile
 
 /**
  * A known transcript goes through the logged pipeline (engine call, post-processing, insertion)
- * and the export, and only its lengths come out the other side (#112).
+ * and the export (both files, after a rotation), and only its lengths come out the other side (#112).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -58,6 +58,9 @@ class DictationLogPrivacyTest {
 
         val outcome = transcriber.transcribe(FloatArray(16_000), "tiny", "fr")
         DictationTrace.end()
+        // Rotate by hand (the real cap is 2 MB) so the engine lines sit in the previous file.
+        val logFile = TimberSetup.getLogFile()!!
+        assertTrue(logFile.renameTo(TimberSetup.getPreviousLogFile()!!))
         val inserted = (outcome as TranscriptionOutcome.Text).text
         Timber.tag(LogCategory.INSERT.name).i(
             PrivacySafeLog.dictationInserted(inserted, true, DictationTrace.lastId(), DictationTrace.elapsedMs()),
@@ -80,7 +83,9 @@ class DictationLogPrivacyTest {
             LogExporter.DictationSettings(activeModel = "tiny", language = "fr"),
         )!!
         return ZipFile(zip).use { archive ->
-            archive.getInputStream(archive.getEntry("dictus.log")).bufferedReader().readText()
+            archive.entries().toList().joinToString("") { entry ->
+                archive.getInputStream(entry).bufferedReader().readText()
+            }
         }
     }
 

@@ -96,4 +96,63 @@ class FileLoggingTreeTest {
         )
         assertEquals("RecordingScreen", FileLoggingTree.simpleName("dev.pivisolutions.dictus.recording.RecordingScreenKt"))
     }
+
+    @Test
+    fun `writing past the cap moves the file to previous and starts an empty current file`() {
+        val dir = tmpDir.newFolder("rotate-once")
+        val current = File(dir, "dictus.log")
+        Timber.uprootAll()
+        Timber.plant(FileLoggingTree(current, now = { fixedMillis }, maxBytes = 300))
+
+        repeat(3) { Timber.i("line $it padded to make the file grow quickly past the cap") }
+        val previous = File(dir, "dictus.previous.log")
+
+        assertTrue(previous.exists())
+        assertTrue(previous.readText(), previous.readText().contains("line 0"))
+        assertTrue(!current.exists() || current.length() < 300)
+    }
+
+    @Test
+    fun `many rotations keep two files and bound the total size`() {
+        val dir = tmpDir.newFolder("rotate-many")
+        val current = File(dir, "dictus.log")
+        val cap = 500L
+        Timber.uprootAll()
+        Timber.plant(FileLoggingTree(current, now = { fixedMillis }, maxBytes = cap))
+
+        repeat(500) { Timber.i("line $it of a long session") }
+        Timber.i("tail")
+
+        val files = dir.listFiles()!!.map { it.name }.sorted()
+        assertEquals(listOf("dictus.log", "dictus.previous.log"), files)
+        val previous = File(dir, "dictus.previous.log")
+        val longestLine = previous.readLines().maxOf { it.length + 1 }
+        assertTrue(current.length() <= cap)
+        assertTrue(previous.length() <= cap + longestLine)
+        assertTrue(current.length() + previous.length() <= 2 * cap + longestLine)
+        // No line lost at the seam: the current file continues where the previous one stops.
+        val lineNumber = Regex("line (\\d+) of")
+        val lastPrevious = lineNumber.find(previous.readLines().last())!!.groupValues[1].toInt()
+        val firstCurrent = lineNumber.find(current.readLines().first())?.groupValues?.get(1)?.toInt() ?: 500
+        assertEquals(lastPrevious + 1, firstCurrent)
+    }
+
+    @Test
+    fun `a rotation that cannot rename truncates instead of growing`() {
+        val dir = tmpDir.newFolder("rotate-blocked")
+        val current = File(dir, "dictus.log")
+        // A non-empty directory where the previous file should go: delete and rename both fail.
+        File(dir, "dictus.previous.log").apply { mkdir() }.resolve("blocker").writeText("x")
+        Timber.uprootAll()
+        Timber.plant(FileLoggingTree(current, now = { fixedMillis }, maxBytes = 300))
+
+        repeat(50) { Timber.i("line $it padded to make the file grow quickly past the cap") }
+
+        assertTrue(current.length() <= 300)
+    }
+
+    @Test
+    fun `the previous file sits next to the log`() {
+        assertEquals(File("/data/files/dictus.previous.log"), FileLoggingTree.previousFileFor(File("/data/files/dictus.log")))
+    }
 }
