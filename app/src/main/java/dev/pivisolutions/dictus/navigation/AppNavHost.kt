@@ -160,10 +160,7 @@ private fun OnboardingScreen(
     val currentStep by viewModel.currentStep.collectAsState()
     val micGranted by viewModel.micPermissionGranted.collectAsState()
     val selectedLayout by viewModel.selectedLayout.collectAsState()
-    val downloadProgress by viewModel.downloadProgress.collectAsState()
-    val downloadComplete by viewModel.modelDownloadComplete.collectAsState()
-    val downloadError by viewModel.downloadError.collectAsState()
-    val isExtracting by viewModel.isExtracting.collectAsState()
+    val installState by viewModel.installState.collectAsState()
     val recommendedModel = viewModel.recommendedModelInfo
     val modelSizeMb = recommendedModel.expectedSizeBytes / (1024 * 1024)
 
@@ -193,10 +190,7 @@ private fun OnboardingScreen(
             modelName = recommendedModel.displayName,
             modelSize = "~$modelSizeMb MB",
             modelQualityLabel = recommendedModel.qualityLabel,
-            isExtracting = isExtracting,
-            downloadProgress = downloadProgress,
-            downloadComplete = downloadComplete,
-            downloadError = downloadError,
+            installState = installState,
             onStartDownload = { viewModel.startModelDownload() },
             onRetry = { viewModel.retryDownload() },
             onNext = { viewModel.advanceStep() },

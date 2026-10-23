@@ -11,10 +11,10 @@ The Modèles tab lists the offline speech models (Whisper and Parakeet), downloa
 
 - `models.catalogue`: Sections « Téléchargés » and « Disponibles »; each card shows name, engine badge (`WK` Whisper, `NV` Parakeet), a one-line description, « Précision » and « Vitesse » bars, size; Whisper Tiny/Base/Small/Small Q5/Medium, Parakeet 110M/0.6B. — présent
 - `models.recommended`: — partiel: the recommendation (by RAM) appears only in onboarding (« Recommandé pour votre appareil »); no badge in Modèles.
-- `models.download`: « Télécharger » on an available card, with « Téléchargement — N% » and « Extraction… » (Parakeet). — présent
+- `models.download`: « Télécharger » on an available card, with « Téléchargement — N% », « Extraction — N% » (Parakeet) and « Vérification des fichiers… ». The install runs in a WorkManager foreground worker with an « Installation de <modèle> » notification (#169): it survives leaving the tab, the screen off and the app in the background. A model counts as downloaded only when every file has its exact size; the SHA-256 is checked at the end of the install. — présent
 - `models.select`: Tap a downloaded card to make it « Actif ». — présent
 - `models.delete`: Trash icon (`Supprimer`) then « Supprimer <nom> ? ». — présent
-- `models.retry`: « Échec du téléchargement. » + « Réessayer », within 30 s of the last byte when the network drops (#131). Retry resumes from the bytes already on disk (`Range`, log line `range offset=<N> status=206`). — partiel: no explicit way to delete a partial download.
+- `models.retry`: « Échec du téléchargement. » + « Réessayer » (network error, HTTP error, no byte for 30 s, or a file failing its size/SHA-256 check). Retry resumes from the bytes already downloaded (`Range`, log line `range offset=<N> status=206`, #131); a file failing its size/SHA-256 check is not kept. — partiel: no explicit way to delete a partial download.
 - `models.languages`: — partiel: no per-model language sheet; only Parakeet 110M carries « Anglais uniquement » and activating it asks « Modèle anglais uniquement » (Parakeet 0.6B's description reads « 25 langues - Detection automatique »).
 - `models.preparation`: Loading the model shows « Chargement du modèle… » in Modèles and the « Préparation de la reconnaissance vocale » overlay over the keyboard or the recorder. — présent (different surface from iOS)
 - `models.device-gating`: Models above the RAM threshold are greyed with « Nécessite N Go de RAM ou plus » (#121); « RAM insuffisante » dialog. — présent
@@ -40,6 +40,6 @@ Preconditions: Launch and Doctor OK. Note the active model Doctor printed; it mu
 - **Never download or delete a model** on Pierre's phone unless the task needs it (75 MB to over 600 MB, real traffic; deleting loses his setup).
 - The active card has no trash icon: delete needs another downloaded model.
 - Card descriptions are unaccented (« Rapide et leger », « Precis et equilibre », « Haute precision », « Detection automatique »).
-- Selecting a model reloads the engine: the next dictation waits on the loading overlay.
+- Selecting a model starts loading it at once (log `Active model changed to <key>, prewarming`, #175). A mic tap while it still loads, or while the engine still holds the previous model, shows the loading overlay at the tap and records once the selected model is ready. The overlay never covers a recording or a transcription (iOS #458).
 - RAM gating rounds `ActivityManager.totalMem` up to the marketed size (#121); Parakeet 0.6B needs 6 GB, like iOS (#148): the 6 GB Pixel 4 (5.34 GiB reported) can download it; a phone below 6 GB sees it greyed with « Nécessite 6 Go de RAM ou plus ». Before #148 the gate was 8 GB and the Pixel showed « Nécessite 8 Go de RAM ou plus » (2026-10-20).
 - Parakeet does not run on the x86_64 emulator (sherpa-onnx ships ARM libraries only): the engine fails cleanly, the app does not crash. Verify Parakeet on the Pixel only.

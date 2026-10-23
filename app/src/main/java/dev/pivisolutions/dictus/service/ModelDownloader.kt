@@ -1,32 +1,38 @@
 package dev.pivisolutions.dictus.service
 
-import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelCatalog.isDirectoryModel
 import dev.pivisolutions.dictus.model.ModelInfo
+import dev.pivisolutions.dictus.model.ModelIntegrity
 import dev.pivisolutions.dictus.model.ModelManager
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import timber.log.Timber
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
- * Represents the state of an in-progress or completed model download.
- *
- * Sealed class ensures exhaustive handling in UI state machines:
- * - Progress: Download is in flight, emit current percentage (0–100)
- * - Complete: Download finished successfully, file written at [path]
- * - Error: Download failed with a human-readable [message]
+ * State of a model install, emitted in this order: [Progress]* → [Extracting]* (archives
+ * only) → [Verifying] → [Complete], or [Error] at any point.
  *
  * WHY sealed class (not enum): Each variant carries different data. The
  * sealed class hierarchy makes it impossible to forget to handle new states.
@@ -35,35 +41,38 @@ sealed class DownloadProgress {
     /** Download is in flight. [percent] is 0–100. */
     data class Progress(val percent: Int) : DownloadProgress()
 
-    /** Archive download finished, now extracting model files (Parakeet only). */
-    data object Extracting : DownloadProgress()
+    /** Archive downloaded, model files being extracted (Parakeet). [percent] is 0–100. */
+    data class Extracting(val percent: Int) : DownloadProgress()
 
-    /** Download completed successfully. [path] is the absolute path to the model file. */
+    /** Files written, size and SHA-256 being checked before they replace the model on disk. */
+    data object Verifying : DownloadProgress()
+
+    /** Install finished and verified. [path] is the absolute path to the main model file. */
     data class Complete(val path: String) : DownloadProgress()
 
-    /** Download failed. [message] describes the failure (HTTP code, IO error, etc.). */
+    /** Install failed. [message] describes the failure (HTTP code, IO error, integrity). */
     data class Error(val message: String) : DownloadProgress()
 }
 
 /**
- * Downloads Whisper GGML models from HuggingFace.
+ * Downloads and installs Whisper GGML models (HuggingFace) and Parakeet models (sherpa-onnx
+ * tar.bz2 archives).
  *
- * Provides two download APIs:
- * 1. [ensureModelAvailable] — blocking suspend function kept for [DictationService] backward compat
- * 2. [downloadWithProgress] — reactive Flow API for UI progress indicators (Phase 4)
+ * Every install takes the same path (#169): download to a temp file, extract an archive into
+ * a staging directory, check every file against [ModelInfo.files] (exact size and SHA-256),
+ * then rename into place. The engine never sees a partial or unverified file, and a failure
+ * leaves nothing behind.
  *
- * WHY OkHttp (not HttpURLConnection): OkHttp handles redirects (HuggingFace CDN uses 302),
- * connection pooling, and timeouts more robustly. It also supports in-flight call cancellation
- * which is required for Flow-based cancellation via awaitClose { call.cancel() }.
+ * Callers: [ModelInstallWorker] (the UI path, in the background) and
+ * [ensureModelAvailable] (DictationService, first use of a missing model).
  *
- * WHY callbackFlow for [downloadWithProgress]: callbackFlow bridges the imperative OkHttp
- * streaming API to Kotlin's reactive Flow model. awaitClose registers the cleanup action
- * (call.cancel()) that runs when the collector cancels the Flow.
+ * WHY OkHttp (not HttpURLConnection): OkHttp handles redirects (HuggingFace CDN uses 302,
+ * GitHub releases too), connection pooling, and timeouts more robustly.
  *
  * @param modelManager Source of model metadata and file path resolution.
  * @param client OkHttpClient used for HTTP requests. Injectable for testability.
  */
-open class ModelDownloader(
+class ModelDownloader(
     private val modelManager: ModelManager,
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -74,317 +83,181 @@ open class ModelDownloader(
 
     private val resumableDownload = ResumableDownload(client)
 
-    /**
-     * Ensure a model is available on disk. Downloads if not present.
-     *
-     * Kept for backward compatibility with DictationService. Uses the blocking
-     * OkHttp API rather than the Flow API to keep the call site simple.
-     *
-     * For Parakeet models (tar.bz2 archives), downloads to a temp file and
-     * extracts the archive contents (model.onnx + tokens.txt) into models/{key}/.
-     *
-     * @param modelKey Model identifier (e.g., "tiny", "small-q5_1", "parakeet-ctc-110m-int8")
-     * @return Absolute path to model file, or null if download failed
-     */
-    suspend fun ensureModelAvailable(modelKey: String): String? {
-        // Check if already downloaded
-        val existingPath = modelManager.getModelPath(modelKey)
-        if (existingPath != null) {
-            Timber.d("Model '%s' already available at %s", modelKey, existingPath)
-            return existingPath
-        }
-
-        val info = ModelCatalog.findByKey(modelKey) ?: run {
-            Timber.e("Unknown model key: %s", modelKey)
-            return null
-        }
-
-        val url = modelManager.downloadUrl(modelKey) ?: run {
-            Timber.e("No download URL for model: %s", modelKey)
-            return null
-        }
-        val targetPath = modelManager.getTargetPath(modelKey) ?: return null
-
-        Timber.d("Downloading model '%s' from %s to %s", modelKey, url, targetPath)
-
-        return if (info.isDirectoryModel()) {
-            // Parakeet: download archive to temp file, then extract
-            val targetDir = File(targetPath).parentFile?.absolutePath ?: return null
-            val archiveTempPath = "$targetPath.archive.tmp"
-            val downloaded = downloadFile(url, archiveTempPath)
-            if (downloaded == null) {
-                Timber.e("Failed to download Parakeet archive for: %s", modelKey)
-                return null
-            }
-            Timber.d("Extracting Parakeet archive for: %s", modelKey)
-            val extracted = extractTarBz2(archiveTempPath, targetDir, info)
-            File(archiveTempPath).delete()
-            if (extracted) modelManager.getModelPath(modelKey) else null
-        } else {
-            downloadFile(url, targetPath)
-        }
+    companion object {
+        /**
+         * One install per model at a time in this process. The worker, a retry and
+         * DictationService's first-use download all write the same temp and staging paths;
+         * a second caller waits, then finds the model installed. Before #169 a second tap on
+         * Download deleted the file an orphaned extraction was still writing.
+         */
+        private val installLocks = ConcurrentHashMap<String, Mutex>()
     }
 
     /**
-     * Download a model and emit progress events as a [Flow].
+     * Ensure a model is available on disk, installing it if needed.
      *
-     * Emits [DownloadProgress.Progress] events as bytes arrive, then a single
-     * [DownloadProgress.Complete] or [DownloadProgress.Error] terminal event.
+     * @param modelKey Model identifier (e.g., "tiny", "small-q5_1", "parakeet-ctc-110m-int8")
+     * @return Absolute path to model file, or null if the install failed
+     */
+    suspend fun ensureModelAvailable(modelKey: String): String? =
+        when (val result = downloadWithProgress(modelKey).last()) {
+            is DownloadProgress.Complete -> result.path
+            is DownloadProgress.Error -> {
+                Timber.e("Model '%s' unavailable: %s", modelKey, result.message)
+                null
+            }
+            else -> null
+        }
+
+    /**
+     * Install a model and emit its progress as a [Flow].
      *
-     * If the model is already downloaded, emits Progress(100) + Complete immediately.
+     * If the model is already installed, emits Progress(100) + Complete immediately.
      * If the model key is unknown, emits a single Error and completes.
-     *
-     * Flow cancellation cancels the underlying OkHttp call via [awaitClose].
+     * Cancelling the collector stops the download or the extraction at the next buffer and
+     * deletes the temp and staging files.
      *
      * @param modelKey Stable model key from [ModelCatalog] (e.g., "tiny", "base")
      */
-    open fun downloadWithProgress(modelKey: String): Flow<DownloadProgress> {
-        val url = modelManager.downloadUrl(modelKey)
-        return downloadWithProgress(modelKey, urlOverride = url)
+    fun downloadWithProgress(modelKey: String): Flow<DownloadProgress> {
+        val info = ModelCatalog.findByKey(modelKey)
+            ?: return flowOf(DownloadProgress.Error("Unknown model key: $modelKey"))
+        return install(info, ModelCatalog.downloadUrl(info))
     }
 
     /**
-     * Internal overload that allows injecting a custom URL for testing.
+     * Install [info] from [url]. Internal so tests can pass a mock server URL and a manifest
+     * that matches the bytes it serves.
      *
-     * In production, [downloadWithProgress(modelKey)] resolves the URL from [ModelManager].
-     * Tests inject a mock server URL via [urlOverride] without changing catalog constants.
-     *
-     * WHY flow {} + flowOn(Dispatchers.IO): Using a plain flow builder with flowOn is simpler
-     * and more test-friendly than callbackFlow + launch(Dispatchers.IO). Coroutine cancellation
-     * is propagated automatically. OkHttp call cancellation is handled via a Job.invokeOnCompletion
-     * hook registered on the collector's coroutine context.
-     *
-     * @param modelKey Stable model key used to locate the target file path on disk
-     * @param urlOverride When non-null, this URL is used instead of the catalog URL
+     * WHY catch() after the flow (not try/catch inside): it only sees upstream failures, so
+     * an exception from the collector is never turned into an Error event, and coroutine
+     * cancellation passes through.
      */
-    internal fun downloadWithProgress(
-        modelKey: String,
-        urlOverride: String?,
-    ): Flow<DownloadProgress> = flow {
-        // Validate model key
-        val info = ModelCatalog.findByKey(modelKey)
-        if (info == null) {
-            emit(DownloadProgress.Error("Unknown model key: $modelKey"))
-            return@flow
-        }
-
-        // Resolve URL — fail fast if neither catalog nor override provides one
-        val url = urlOverride ?: run {
-            emit(DownloadProgress.Error("No download URL for: $modelKey"))
-            return@flow
-        }
-
-        // Check if already downloaded (only when using catalog URL)
-        if (urlOverride == null) {
-            val existingPath = modelManager.getModelPath(modelKey)
+    internal fun install(info: ModelInfo, url: String): Flow<DownloadProgress> = flow {
+        installLocks.getOrPut(info.key) { Mutex() }.withLock {
+            val existingPath = modelManager.getModelPath(info.key)
             if (existingPath != null) {
                 emit(DownloadProgress.Progress(100))
                 emit(DownloadProgress.Complete(existingPath))
-                return@flow
+                return@withLock
             }
+            val target = File(modelManager.getTargetPath(info.key) ?: throw IOException("No target path for ${info.key}"))
+            if (info.isDirectoryModel()) installArchive(info, url, target) else installFile(info, url, target)
         }
-
-        val targetPath = modelManager.getTargetPath(modelKey) ?: run {
-            emit(DownloadProgress.Error("Cannot resolve target path for: $modelKey"))
-            return@flow
-        }
-
-        // For Parakeet archives, download to a .archive.tmp file; for Whisper, use .tmp directly.
-        val isArchive = info.isDirectoryModel()
-        val tempFile = if (isArchive) File("$targetPath.archive.tmp") else File("$targetPath.tmp")
-
-        // Clean up leftover temp/partial files from a previous interrupted download
-        tempFile.delete()
-        if (isArchive) {
-            val partialModel = File(targetPath)
-            if (partialModel.exists() && partialModel.length() < info.expectedSizeBytes * 0.95) {
-                Timber.d("Cleaning up partial extraction for %s (%d bytes)", modelKey, partialModel.length())
-                partialModel.delete()
-            }
-        }
-
-        try {
-            // Resumes from <temp>.part after an earlier network error or stall (#131).
-            resumableDownload.fetch(url, tempFile) { percent -> emit(DownloadProgress.Progress(percent)) }
-
-            if (isArchive) {
-                // Parakeet: extract tar.bz2 archive, then delete the archive temp file
-                Timber.d("Download complete, extracting archive for %s (%d bytes)", modelKey, tempFile.length())
-                emit(DownloadProgress.Extracting)
-                val targetDir = File(targetPath).parent ?: run {
-                    emit(DownloadProgress.Error("Cannot determine target directory for: $modelKey"))
-                    tempFile.delete()
-                    return@flow
-                }
-                val extracted = extractTarBz2(tempFile.absolutePath, targetDir, info)
-                tempFile.delete()
-                if (extracted) {
-                    val finalPath = modelManager.getModelPath(modelKey)
-                    if (finalPath != null) {
-                        emit(DownloadProgress.Complete(finalPath))
-                    } else {
-                        emit(DownloadProgress.Error("Archive extracted but model file not found for: $modelKey"))
-                    }
-                } else {
-                    emit(DownloadProgress.Error("Failed to extract archive for: $modelKey"))
-                }
-            } else {
-                if (tempFile.renameTo(File(targetPath))) {
-                    emit(DownloadProgress.Complete(targetPath))
-                } else {
-                    emit(DownloadProgress.Error("Failed to rename temp file"))
-                    tempFile.delete()
-                }
-            }
-        } catch (e: CancellationException) {
-            tempFile.delete()
-            throw e
-        } catch (e: Exception) {
-            Timber.e(e, "Download failed for %s", modelKey)
-            emit(DownloadProgress.Error(e.message ?: "Download failed"))
-            tempFile.delete()
-        }
+    }.catch { e ->
+        Timber.e(e, "Install failed for %s", info.key)
+        emit(DownloadProgress.Error(e.message ?: "Install failed"))
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Extract a tar.bz2 archive and place the model files into [targetDir].
-     *
-     * Parakeet archives from sherpa-onnx GitHub Releases contain a directory like
-     * `sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8/` with `model.int8.onnx`
-     * and `tokens.txt` inside. This method extracts those two files directly into
-     * [targetDir] (i.e., `models/{modelInfo.key}/`), then cleans up the archive.
-     *
-     * Uses Apache Commons Compress for pure-Java BZip2 + TAR handling — no `tar`
-     * binary required, works on all Android API levels.
-     *
-     * @param archivePath Absolute path to the downloaded .tar.bz2 file
-     * @param targetDir   Absolute path to the destination directory (models/{key}/)
-     * @param modelInfo   ModelInfo for the model being extracted (used to identify files)
-     * @return true if model file and tokens.txt were successfully extracted
-     */
-    private fun extractTarBz2(archivePath: String, targetDir: String, modelInfo: ModelInfo): Boolean {
-        val targetDirFile = File(targetDir).also { it.mkdirs() }
-        val startTime = System.currentTimeMillis()
-
-        // Build the set of files we need to extract from the archive.
-        // CTC models: model file + tokens.txt (2 files)
-        // Transducer models: encoder + decoder + joiner + tokens.txt (4 files)
-        val requiredFiles = mutableSetOf(modelInfo.fileName, "tokens.txt")
-        if (modelInfo.isTransducer) {
-            requiredFiles.addAll(listOf("decoder.int8.onnx", "decoder.onnx", "joiner.int8.onnx", "joiner.onnx"))
-        }
-        val extractedFiles = mutableSetOf<String>()
-
-        return try {
-            java.io.BufferedInputStream(java.io.FileInputStream(archivePath), 256 * 1024).use { bis ->
-                BZip2CompressorInputStream(bis).use { bzIn ->
-                    TarArchiveInputStream(bzIn).use { tarIn ->
-                        var entry = tarIn.nextEntry
-                        while (entry != null) {
-                            val entryName = File(entry.name).name
-                            if (!entry.isDirectory && entryName in requiredFiles) {
-                                val outFile = File(targetDirFile, entryName)
-                                java.io.BufferedOutputStream(FileOutputStream(outFile), 256 * 1024).use { out ->
-                                    val buffer = ByteArray(128 * 1024)
-                                    var n: Int
-                                    while (tarIn.read(buffer).also { n = it } != -1) {
-                                        out.write(buffer, 0, n)
-                                    }
-                                }
-                                extractedFiles.add(entryName)
-                                Timber.d("Extracted: %s → %s", entryName, outFile.absolutePath)
-                            }
-                            // Stop early once we have all required files
-                            val hasModel = modelInfo.fileName in extractedFiles
-                            val hasTokens = "tokens.txt" in extractedFiles
-                            val hasTransducerParts = !modelInfo.isTransducer ||
-                                (extractedFiles.any { it.startsWith("decoder") } &&
-                                 extractedFiles.any { it.startsWith("joiner") })
-                            if (hasModel && hasTokens && hasTransducerParts) break
-                            entry = tarIn.nextEntry
-                        }
-
-                        val elapsed = System.currentTimeMillis() - startTime
-                        Timber.d("Extraction took %d ms for %s (extracted: %s)", elapsed, modelInfo.key, extractedFiles)
-                        val hasModel = modelInfo.fileName in extractedFiles
-                        val hasTokens = "tokens.txt" in extractedFiles
-                        if (!hasModel) Timber.e("Model file '%s' not found in archive", modelInfo.fileName)
-                        if (!hasTokens) Timber.e("tokens.txt not found in archive for %s", modelInfo.key)
-                        hasModel && hasTokens
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to extract tar.bz2 archive: %s", archivePath)
-            false
+    /** Whisper: one file, downloaded to `<target>.tmp`, verified, renamed. */
+    private suspend fun FlowCollector<DownloadProgress>.installFile(info: ModelInfo, url: String, target: File) {
+        val temp = File("${target.path}.tmp")
+        try {
+            download(url, temp)
+            emit(DownloadProgress.Verifying)
+            verify(info) { ModelIntegrity.problemWithFile(temp, info.files.single()) }
+            if (!temp.renameTo(target)) throw IOException("Failed to rename ${temp.name}")
+            emit(DownloadProgress.Complete(target.absolutePath))
+        } finally {
+            temp.delete()
         }
     }
 
     /**
-     * Download a file from URL to target path.
-     * Runs on IO dispatcher to avoid blocking the caller's thread.
+     * Parakeet: archive downloaded to `models/<key>.archive.tmp`, extracted into the staging
+     * directory `models/<key>.part/`, verified, then the staging directory replaces
+     * `models/<key>/`. Nothing is written inside `models/<key>/` before that rename.
      */
-    private suspend fun downloadFile(url: String, targetPath: String): String? =
-        withContext(Dispatchers.IO) {
-            val targetFile = File(targetPath)
-            val tempFile = File("$targetPath.tmp")
+    private suspend fun FlowCollector<DownloadProgress>.installArchive(info: ModelInfo, url: String, target: File) {
+        val staging = modelManager.getStagingDir(info.key) ?: throw IOException("No staging dir for ${info.key}")
+        val archive = File(staging.parentFile, "${info.key}.archive.tmp")
+        val modelDir = target.parentFile ?: throw IOException("No model dir for ${info.key}")
+        try {
+            download(url, archive)
+            emit(DownloadProgress.Extracting(0))
+            staging.deleteRecursively()
+            staging.mkdirs()
+            extractTarBz2(archive, staging, info)
+            archive.delete()
+            emit(DownloadProgress.Verifying)
+            verify(info) { ModelIntegrity.problemWithDirectory(staging, info.files) }
+            // Only reached when getModelPath said the model is not installed: whatever is in
+            // modelDir is a broken earlier install, not files an engine has loaded.
+            modelDir.deleteRecursively()
+            if (!staging.renameTo(modelDir)) throw IOException("Failed to move ${staging.name} to ${modelDir.name}")
+            emit(DownloadProgress.Complete(target.absolutePath))
+        } finally {
+            archive.delete()
+            staging.deleteRecursively()
+        }
+    }
 
-            try {
-                val request = Request.Builder().url(url).build()
-                val response = client.newCall(request).execute()
+    private fun verify(info: ModelInfo, check: () -> String?) {
+        val start = System.currentTimeMillis()
+        val problem = check()
+        val elapsed = System.currentTimeMillis() - start
+        if (problem != null) throw IOException("Integrity check failed for ${info.key}: $problem")
+        Timber.d("Verification took %d ms for %s (%d files)", elapsed, info.key, info.files.size)
+    }
 
-                if (!response.isSuccessful) {
-                    Timber.e("Download failed: HTTP %d for %s", response.code, url)
-                    return@withContext null
-                }
+    /**
+     * Download [url] into [file]. Resumes from `<file>.part` left by an earlier network error
+     * or stall (#131); see [ResumableDownload]. Callers only rely on [file] holding the whole
+     * body when this returns.
+     */
+    private suspend fun FlowCollector<DownloadProgress>.download(url: String, file: File) {
+        val start = System.currentTimeMillis()
+        file.delete()
+        resumableDownload.fetch(url, file) { percent -> emit(DownloadProgress.Progress(percent)) }
+        Timber.d("Download took %d ms for %s (%d bytes)", System.currentTimeMillis() - start, file.name, file.length())
+    }
 
-                val body = response.body ?: run {
-                    Timber.e("Download returned empty body for %s", url)
-                    return@withContext null
-                }
-
-                val totalBytes = body.contentLength()
-                Timber.d("Download started: %d bytes expected", totalBytes)
-
-                // Write to temp file first, rename on success (atomic-ish)
-                tempFile.parentFile?.mkdirs()
-                FileOutputStream(tempFile).use { output ->
-                    body.byteStream().use { input ->
-                        val buffer = ByteArray(8192)
-                        var bytesRead: Long = 0
-                        var lastLogPercent = 0
-
+    /**
+     * Extract the files of [info] from a tar.bz2 archive into [dir].
+     *
+     * Parakeet archives from sherpa-onnx GitHub Releases hold a directory such as
+     * `sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/` with the model files and test WAVs; only the
+     * files named in [ModelInfo.files] are written, by their base name.
+     *
+     * Progress is the share of the compressed archive consumed: the read position of the
+     * underlying file, which BufferedInputStream advances 256 KB at a time. It moves at the
+     * pace of the bzip2 decoder, which is where the time goes.
+     *
+     * Uses Apache Commons Compress for pure-Java BZip2 + TAR handling — no `tar`
+     * binary required, works on all Android API levels.
+     */
+    private suspend fun FlowCollector<DownloadProgress>.extractTarBz2(archive: File, dir: File, info: ModelInfo) {
+        val start = System.currentTimeMillis()
+        val remaining = info.files.map { it.name }.toMutableSet()
+        FileInputStream(archive).use { fileIn ->
+            val archiveBytes = fileIn.channel.size()
+            var lastPercent = 0
+            TarArchiveInputStream(BZip2CompressorInputStream(BufferedInputStream(fileIn, 256 * 1024))).use { tarIn ->
+                while (remaining.isNotEmpty()) {
+                    val entry = tarIn.nextEntry ?: break
+                    val name = File(entry.name).name
+                    if (entry.isDirectory || name !in remaining) continue
+                    val fileStart = System.currentTimeMillis()
+                    BufferedOutputStream(FileOutputStream(File(dir, name)), 256 * 1024).use { out ->
+                        val buffer = ByteArray(128 * 1024)
                         while (true) {
-                            val read = input.read(buffer)
-                            if (read == -1) break
-                            output.write(buffer, 0, read)
-                            bytesRead += read
-
-                            // Log progress every 10%
-                            if (totalBytes > 0) {
-                                val percent = ((bytesRead * 100) / totalBytes).toInt()
-                                if (percent >= lastLogPercent + 10) {
-                                    lastLogPercent = percent
-                                    Timber.d("Download progress: %d%% (%d / %d bytes)", percent, bytesRead, totalBytes)
-                                }
+                            currentCoroutineContext().ensureActive()
+                            val n = tarIn.read(buffer)
+                            if (n == -1) break
+                            out.write(buffer, 0, n)
+                            val percent = ((fileIn.channel.position() * 100) / archiveBytes).toInt()
+                            if (percent != lastPercent) {
+                                lastPercent = percent
+                                emit(DownloadProgress.Extracting(percent))
                             }
                         }
                     }
+                    remaining -= name
+                    Timber.d("Extracted %s (%d bytes) in %d ms", name, entry.size, System.currentTimeMillis() - fileStart)
                 }
-
-                // Rename temp to final
-                if (tempFile.renameTo(targetFile)) {
-                    Timber.d("Model downloaded successfully to %s (%d bytes)", targetPath, targetFile.length())
-                    return@withContext targetPath
-                } else {
-                    Timber.e("Failed to rename temp file to %s", targetPath)
-                    tempFile.delete()
-                    return@withContext null
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Download failed for %s", url)
-                tempFile.delete()
-                return@withContext null
             }
         }
+        if (remaining.isNotEmpty()) throw IOException("Missing from archive: ${remaining.sorted()}")
+        Timber.d("Extraction took %d ms for %s", System.currentTimeMillis() - start, info.key)
+    }
 }

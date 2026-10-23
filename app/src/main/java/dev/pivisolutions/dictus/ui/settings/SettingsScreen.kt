@@ -80,6 +80,7 @@ fun SettingsScreen(
     onNavigateToSoundSettings: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
+    val activeModel by viewModel.activeModel.collectAsState()
     val keyboardLanguage by viewModel.keyboardLanguage.collectAsState()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsState()
     val autocorrectEnabled by viewModel.autocorrectEnabled.collectAsState()
@@ -220,7 +221,11 @@ fun SettingsScreen(
                 onClick = {
                     val logFile = TimberSetup.getLogFile()
                     if (logFile != null) {
-                        val uri = LogExporter.exportLogs(context, logFile)
+                        val uri = LogExporter.exportLogs(
+                            context,
+                            logFile,
+                            LogExporter.DictationSettings(activeModel = activeModel, language = language),
+                        )
                         if (uri != null) {
                             val shareIntent = LogExporter.createShareIntent(uri)
                             context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.settings_export_logs_chooser)))

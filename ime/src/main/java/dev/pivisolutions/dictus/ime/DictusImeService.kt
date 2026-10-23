@@ -25,9 +25,12 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.ModelPreparationGate
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
+import dev.pivisolutions.dictus.core.logging.DictationTrace
+import dev.pivisolutions.dictus.core.logging.LogCategory
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
 import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
@@ -634,6 +637,13 @@ class DictusImeService : LifecycleInputMethodService() {
     ) {
         super.onStartInputView(info, restarting)
         refreshFrenchAdaptiveKeyState()
+        // WHY (#112): "did the user ever open the Dictus keyboard?" was unanswerable from an export.
+        Timber.d("Keyboard shown: package=%s, restarting=%b", info?.packageName ?: "unknown", restarting)
+    }
+
+    override fun onFinishInputView(finishingInput: Boolean) {
+        Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
+        super.onFinishInputView(finishingInput)
     }
 
     override fun onFinishInput() {
@@ -670,6 +680,9 @@ class DictusImeService : LifecycleInputMethodService() {
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
+    /** State name without Recording's energy history, which would flood a log line. */
+    private fun stateName(state: DictationState): String = state::class.simpleName ?: "unknown"
+
     /**
      * Handle mic button tap: start or stop recording.
      *
@@ -678,7 +691,7 @@ class DictusImeService : LifecycleInputMethodService() {
      * When recording, stops and returns to idle.
      */
     private fun handleMicTap() {
-        Timber.d("handleMicTap called, state=%s, bound=%s", _serviceState.value, isBound)
+        Timber.d("handleMicTap called, state=%s, bound=%s", stateName(_serviceState.value), isBound)
         val controller = dictationController
         if (controller == null) {
             Timber.w("DictationService not bound, cannot toggle recording")
@@ -712,6 +725,10 @@ class DictusImeService : LifecycleInputMethodService() {
         val dictationState by _serviceState.collectAsState()
         val engineState by _engineState.collectAsState()
         val micGate = remember { PendingMicGate() }
+        // A Ready engine on the previous model is not ready for this tap (#175).
+        LaunchedEffect(micGate) {
+            entryPoint.dataStore().data.collect { micGate.selectedModelKey = it[PreferenceKeys.ACTIVE_MODEL] }
+        }
         var showFailureOverlay by remember { mutableStateOf(true) }
         // Only a real mic tap may surface the "no model" panel. A background prewarm must
         // never blanket the keyboard, which is what covered onboarding before the download step.
@@ -733,6 +750,12 @@ class DictusImeService : LifecycleInputMethodService() {
         )
 
         fun runGateCommand(command: MicGateCommand) {
+            if (command != MicGateCommand.NONE && dictationController == null) {
+                // The safe call below used to swallow this silently: a dead mic button and an
+                // unused keyboard then left the same empty log (#112).
+                Timber.w("Mic gate %s dropped: DictationService not bound", command)
+                return
+            }
             when (command) {
                 MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
                 MicGateCommand.START_RECORDING -> dictationController?.startRecording()
@@ -754,17 +777,29 @@ class DictusImeService : LifecycleInputMethodService() {
         val gatedMicTap = {
             autocorrectCoordinator.onOtherInput()
             dictationFeedback.withdraw()
+            val micGranted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+            if (dictationState is DictationState.Idle && micGranted) DictationTrace.begin(source = "keyboard")
+            // Logged on entry, before any branch can return, so a tap that goes nowhere still
+            // leaves a line saying why (#112).
+            Timber.i(
+                "Mic tap: state=%s, bound=%b, mic=%s, engine=%s",
+                stateName(dictationState),
+                isBound,
+                if (micGranted) "granted" else "denied",
+                engineState,
+            )
             if (dictationState is DictationState.Idle) {
-                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
-                    PackageManager.PERMISSION_GRANTED
-                ) {
+                if (micGranted) {
                     transcriptionRetentionSession.begin(
                         isCurrentEditorSuggestionEligible,
                         isPersonalizedLearningAllowed,
                     )
                     if (engineState is SttEngineState.Failed) showFailureOverlay = true
                     if (engineState is SttEngineState.ModelMissing) showModelMissingOverlay = true
-                    runGateCommand(micGate.request(engineState))
+                    val command = micGate.request(engineState)
+                    Timber.d("Mic gate: command=%s", command)
+                    runGateCommand(command)
                 } else {
                     Timber.w("RECORD_AUDIO permission not granted")
                 }
@@ -835,9 +870,11 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         }
 
-        val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
-            (engineState is SttEngineState.Failed && showFailureOverlay) ||
-            (engineState is SttEngineState.ModelMissing && showModelMissingOverlay)
+        // A load that starts under a dictation never covers it (#175).
+        val overlayEngineState = ModelPreparationGate.overlayState(engineState, dictationState)
+        val isEngineOverlayVisible = overlayEngineState is SttEngineState.Loading ||
+            (overlayEngineState is SttEngineState.Failed && showFailureOverlay) ||
+            (overlayEngineState is SttEngineState.ModelMissing && showModelMissingOverlay)
 
         ImeOverlayHost(
             content = {
@@ -1015,8 +1052,15 @@ class DictusImeService : LifecycleInputMethodService() {
                                 bindingScope.launch {
                                     val outcome = controller.confirmAndTranscribe(retention)
                                     dictationFeedback.onOutcome(outcome) { text ->
-                                        insertDictation(text)
-                                        Timber.d(PrivacySafeLog.transcriptionInserted(text))
+                                        val committed = insertDictation(text)
+                                        Timber.tag(LogCategory.INSERT.name).i(
+                                            PrivacySafeLog.dictationInserted(
+                                                text,
+                                                committed,
+                                                DictationTrace.lastId(),
+                                                DictationTrace.elapsedMs(),
+                                            ),
+                                        )
                                         // Clear suggestions after voice transcription so the bar
                                         // does not show stale suggestions from the last typed word.
                                         // Suggestions resume when user types on keyboard.
@@ -1051,11 +1095,11 @@ class DictusImeService : LifecycleInputMethodService() {
             overlay = {
                 ModelLoadingOverlay(
                     engineState = when {
-                        engineState is SttEngineState.Failed && !showFailureOverlay ->
+                        overlayEngineState is SttEngineState.Failed && !showFailureOverlay ->
                             SttEngineState.Cold
-                        engineState is SttEngineState.ModelMissing && !showModelMissingOverlay ->
+                        overlayEngineState is SttEngineState.ModelMissing && !showModelMissingOverlay ->
                             SttEngineState.Cold
-                        else -> engineState
+                        else -> overlayEngineState
                     },
                     onRetry = { runGateCommand(micGate.retry()) },
                     onCancel = {
@@ -1071,11 +1115,13 @@ class DictusImeService : LifecycleInputMethodService() {
 
     /**
      * Commits text to the currently focused editor field.
+     *
+     * @return false when there is no editor, or the editor refused the commit.
      */
-    fun commitText(text: String) {
-        val inputConnection = currentInputConnection ?: return
+    fun commitText(text: String): Boolean {
+        val inputConnection = currentInputConnection ?: return false
         dictationFeedback.withdraw()
-        if (text == " ") {
+        val committed = if (text == " ") {
             val result = autocorrectCoordinator.onSpace(InputConnectionAutocorrectEditor(inputConnection)) {
                 inputConnection.commitText(" ", 1)
             }
@@ -1088,12 +1134,14 @@ class DictusImeService : LifecycleInputMethodService() {
             } else {
                 clearSuggestionState()
             }
+            result != AutocorrectSpaceResult.INDETERMINATE
         } else {
             autocorrectCoordinator.onOtherInput()
             clearSuggestionState()
             inputConnection.commitText(text, 1)
         }
         refreshFrenchAdaptiveKeyState()
+        return committed
     }
 
     /**
@@ -1103,12 +1151,13 @@ class DictusImeService : LifecycleInputMethodService() {
      * the insertion starts at its lower bound. When the selection is unknown, [DictationUndo]
      * learns the position from the editor's next selection update instead.
      */
-    private fun insertDictation(text: String) {
-        if (currentInputConnection == null) return
+    private fun insertDictation(text: String): Boolean {
+        if (currentInputConnection == null) return false
         val selectionStart = minOf(editorSelStart, editorSelEnd)
         val cursorAfter = if (selectionStart >= 0) selectionStart + text.length else null
-        commitText(text)
+        val committed = commitText(text)
         dictationUndo.recordInsertion(text, cursorAfter)
+        return committed
     }
 
     /**

@@ -20,6 +20,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.audio.DictationSoundPlayer
+import dev.pivisolutions.dictus.core.logging.DictationTrace
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.core.service.DictationController
@@ -42,6 +43,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -185,6 +188,23 @@ class DictationService : Service(), DictationController {
         super.onCreate()
         soundPlayer = DictationSoundPlayer(applicationContext)
 
+        // Load a newly selected model right away, from the Models screen, Settings or onboarding,
+        // so it is ready before the next mic tap (#175, iOS ModelManager.selectModel). Without it
+        // the first dictation recorded on the previous model and loaded the new one while
+        // transcribing. drop(1): the current selection is the one onBind already prewarms.
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.ACTIVE_MODEL] }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { modelKey ->
+                    // A prewarm still running loads the previous selection and would swallow this one.
+                    prewarmJob?.join()
+                    Timber.i("Active model changed to %s, prewarming", modelKey)
+                    prewarmEngine()
+                }
+        }
+
         // Load sounds with user-selected names from DataStore on first launch.
         // Subsequent preference changes are handled by the reactive observers below.
         serviceScope.launch {
@@ -252,17 +272,19 @@ class DictationService : Service(), DictationController {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     Timber.d("DictationService dropped ACTION_START cancelled before delivery")
+                    DictationTrace.end()
                     return START_NOT_STICKY
                 }
                 pendingStart = false
                 startAudioCapture()
-                Timber.d("DictationService started foreground with ACTION_START")
+                Timber.i("DictationService started foreground with ACTION_START, t+=%dms", DictationTrace.elapsedMs())
             }
             ACTION_STOP -> {
                 stopRecordingInternal(discard = true)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 Timber.d("DictationService stopped via ACTION_STOP")
+                DictationTrace.end()
             }
         }
         // START_NOT_STICKY: don't restart automatically if the system kills us.
@@ -281,6 +303,8 @@ class DictationService : Service(), DictationController {
             action = ACTION_START
         }
         pendingStart = true
+        val trace = DictationTrace.onRecordingRequested(fallbackSource = "app")
+        Timber.i("Recording requested: source=%s, t+=%dms", trace.source, DictationTrace.elapsedMs())
         startForegroundService(intent)
     }
 
@@ -302,6 +326,7 @@ class DictationService : Service(), DictationController {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Timber.d("Recording stopped, ${samples.size} samples captured")
+        DictationTrace.end()
         return samples
     }
 
@@ -318,17 +343,18 @@ class DictationService : Service(), DictationController {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Timber.d("Recording cancelled, samples discarded")
+        DictationTrace.end()
     }
 
     /**
      * Stop recording, transcribe audio, and return processed text.
      *
      * Full pipeline: stop recording -> ensure model downloaded -> init engine ->
-     * transcribe with 30s timeout -> post-process -> return text.
+     * transcribe with [TRANSCRIPTION_TIMEOUT_MS] timeout -> post-process -> return text.
      *
-     * WHY 30s timeout: On Pixel 4 with tiny model, transcription takes 2-5s for
-     * typical dictation (5-30s audio). 30s covers worst-case long recordings.
-     * A stuck JNI call should not block the UI indefinitely.
+     * WHY a 120 s timeout: Small Q5 already takes 30-40 s on the Pixel 4 (#145), and a
+     * stuck or very slow JNI call must not block the UI indefinitely. Both providers
+     * return at the timeout while their native call is still running (#158, #145).
      */
     override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
         // 1. Stop recording and get audio samples
@@ -346,7 +372,12 @@ class DictationService : Service(), DictationController {
         // Play stop cue when audio capture ends and transcription begins.
         if (soundEnabled) soundPlayer.playStop()
 
-        Timber.d("confirmAndTranscribe: %d samples captured, transitioning to Transcribing", samples.size)
+        Timber.i(
+            "Recording stopped: samples=%d, audioMs=%d, t+=%dms, transitioning to Transcribing",
+            samples.size,
+            samples.size * 1_000L / RecordingDurationPolicy.SAMPLE_RATE_HZ,
+            DictationTrace.elapsedMs(),
+        )
         _state.value = DictationState.Transcribing
 
         return try {
@@ -358,9 +389,10 @@ class DictationService : Service(), DictationController {
             // "auto" is passed through: whisper.cpp detects the language itself.
             val engineLanguage = TranscriptionLanguage.engineLanguage(languagePref)
 
-            Timber.d(
-                "confirmAndTranscribe: model=%s, language=%s",
+            Timber.i(
+                "confirmAndTranscribe: model=%s, engine=%s, language=%s",
                 activeModelKey,
+                ModelCatalog.findByKey(activeModelKey)?.provider ?: "UNKNOWN",
                 engineLanguage,
             )
 
@@ -399,6 +431,8 @@ class DictationService : Service(), DictationController {
         _state.value = DictationState.Idle
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+        Timber.i("Transcription pipeline done, t+=%dms", DictationTrace.elapsedMs())
+        DictationTrace.end()
     }
 
     /**

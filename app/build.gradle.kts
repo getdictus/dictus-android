@@ -266,6 +266,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.work.runtime)
     ksp(libs.room.compiler)
 
     debugImplementation(libs.compose.ui.tooling)

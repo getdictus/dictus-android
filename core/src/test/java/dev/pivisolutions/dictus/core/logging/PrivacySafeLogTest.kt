@@ -34,9 +34,19 @@ class PrivacySafeLogTest {
 
     @Test
     fun `text insertion metadata never includes inserted text`() {
-        val message = PrivacySafeLog.transcriptionInserted(canary)
+        val message = PrivacySafeLog.dictationInserted(canary, committed = true, dictationId = "7f3a01", elapsedMs = 42)
 
         assertFalse(message.contains(canary))
         assertTrue(message.contains("length=${canary.length}"))
+        assertTrue(message.contains("d=7f3a01"))
+    }
+
+    @Test
+    fun `engine completion metadata never includes text`() {
+        val message = PrivacySafeLog.transcriptionFinished(engine = "whisper", durationMs = 812, rawText = canary)
+
+        assertFalse(message.contains(canary))
+        assertTrue(message.contains("engine=whisper"))
+        assertTrue(message.contains("rawLength=${canary.length}"))
     }
 }

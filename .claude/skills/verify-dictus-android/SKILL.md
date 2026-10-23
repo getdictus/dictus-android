@@ -26,9 +26,9 @@ Pick the lowest tier that can prove the change. Each tier proves what the one ab
 
 **2. Pixel 4, driven by Andy.** Use the steps below: Launch, Doctor, Drive, Evidence, Cleanup. This tier proves what needs the real hardware:
 
-- the microphone opens and closes: `DictationService started foreground with ACTION_START`, then `Recording cancelled, samples discarded` or `Transcribed text inserted: length=…` (see Drive);
+- the microphone opens and closes: `DictationService started foreground with ACTION_START`, then `Recording cancelled, samples discarded` or `Dictation inserted: d=…, length=…, committed=true` (see Drive);
 - `RECORD_AUDIO` is granted (Doctor) and the service runs in the foreground; notifications are denied for Dictus on this Pixel, so the proof is « 1 appli est active » in Quick Settings, not the notification;
-- transcription time with Tiny, Base, Small Q5 and Parakeet 0.6B v3, measured as the gap between the logcat timestamps of `confirmAndTranscribe: … samples captured` and `Transcribed text inserted`. The app logs no duration of its own. The Pixel 4 is the performance floor: a model too slow on it is too slow for Dictus.
+- transcription time with Tiny, Base, Small Q5 and Parakeet 0.6B v3: `Transcription finished: engine=…, durationMs=N` is the engine call alone, and the `t+=` of `Dictation inserted` is the whole path from the mic tap (#112). The Pixel 4 is the performance floor: a model too slow on it is too slow for Dictus.
 
 Andy's voice is not a test input. The room noise proves that the chain runs, not that the text is right.
 
@@ -135,7 +135,7 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | --- | --- |
 | Recording started (keyboard mic or Nouvelle dictée) | `DictationService started foreground with ACTION_START` |
 | ✕ in the keyboard | `Recording cancelled, samples discarded` (service), between `AudioRecord cancelled, samples discarded` and the IME's `Recording cancelled` |
-| ✓ in the keyboard | `confirmAndTranscribe: \d+ samples captured`, then `Transcribed text inserted: length=\d+` (never the text) |
+| ✓ in the keyboard | `Recording stopped: samples=\d+`, then `Transcription finished: engine=`, then `Dictation inserted: d=\w+, length=\d+, committed=true` (never the text) |
 | Undo chip | `Dictation undone: length=\d+` or `Dictation undo refused` |
 | Model warm-up | `Engine prewarm complete for model=…` / `Engine prewarm skipped` |
 

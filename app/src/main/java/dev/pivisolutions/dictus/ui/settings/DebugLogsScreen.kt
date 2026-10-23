@@ -147,6 +147,8 @@ fun DebugLogsScreen(onBack: () -> Unit) {
                         onClick = {
                             showMenu = false
                             logFile?.writeText("")
+                            // Rotated history goes too, or "Effacer" would leave it in the next export.
+                            TimberSetup.getPreviousLogFile()?.delete()
                             lines.clear()
                         },
                     )
