@@ -3,10 +3,13 @@ package dev.pivisolutions.dictus.whisper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import timber.log.Timber
@@ -30,24 +33,29 @@ class WhisperContext internal constructor(
     private var ptr: Long,
     // Single-thread executor ensures all whisper.cpp calls are serialized.
     private val dispatcher: ExecutorCoroutineDispatcher,
+    private val abortFlag: AbortFlag,
     // Injectable so a JVM test can stand in for whisper.cpp, which has no library there.
-    private val runFull: (ptr: Long, data: FloatArray, language: String) -> String = ::runWhisperFull,
+    private val runFull: (ptr: Long, abortFlag: AbortFlag, data: FloatArray, language: String) -> String =
+        ::runWhisperFull,
 ) {
 
     // Supervised: a transcription its caller gave up on must not cancel the next one.
     private val nativeScope = CoroutineScope(SupervisorJob() + dispatcher)
 
+    // The decode on the native thread, if any. Read and written under abortFlag's monitor,
+    // like the flag itself: an abort lands only on the decode it was meant for, never on
+    // the next one and never on a freed flag.
+    private var running: Job? = null
+
     /**
      * Transcribe audio samples to text.
      *
-     * WHY async + await rather than withContext (#145): whisper_full cannot be interrupted,
-     * and withContext waits for its block even once cancelled. The 120 s dictation timeout
-     * then never fired and the screen stayed on « Transcription en cours » for as long as
-     * the decode ran. await() returns on cancellation; the decode finishes on its own and
-     * its late result is dropped with its Deferred. A transcription still queued behind it
-     * is skipped. The context stays usable: the next transcription queues behind the late
-     * decode on the same thread, within its own timeout, and release() frees the context
-     * after it, never under it.
+     * WHY async + await rather than withContext (#145): withContext waits for its block even
+     * once cancelled, so the 120 s dictation timeout never fired while whisper_full ran.
+     * await() returns on cancellation at once; the decode itself is then aborted through
+     * whisper.cpp's abort_callback (#173) and returns once the encoder pass or decoder step
+     * under way ends, its result dropped with its Deferred. A transcription still queued behind it is skipped. The
+     * context stays usable, and release() frees it after the aborted decode, never under it.
      *
      * @param data FloatArray of 16kHz mono audio samples (from AudioCaptureManager)
      * @param language BCP-47 language code (e.g. "fr", "en"). Phase 3 always passes "fr".
@@ -56,12 +64,28 @@ class WhisperContext internal constructor(
     suspend fun transcribeData(data: FloatArray, language: String = "fr"): String {
         val run = nativeScope.async {
             require(ptr != 0L) { "WhisperContext has been released" }
-            runFull(ptr, data, language)
+            synchronized(abortFlag) {
+                running = coroutineContext.job
+                abortFlag.set(false)
+            }
+            try {
+                // A cancel that came before `running` was set found nothing to abort.
+                ensureActive()
+                runFull(ptr, abortFlag, data, language)
+            } finally {
+                synchronized(abortFlag) { running = null }
+            }
         }
         return try {
             run.await()
         } catch (cancellation: CancellationException) {
             run.cancel()
+            synchronized(abortFlag) {
+                if (running === run) {
+                    abortFlag.set(true)
+                    Timber.i("Whisper decode abort requested")
+                }
+            }
             throw cancellation
         }
     }
@@ -74,6 +98,7 @@ class WhisperContext internal constructor(
             withContext(dispatcher) {
                 if (ptr != 0L) {
                     WhisperLib.freeContext(ptr)
+                    synchronized(abortFlag) { abortFlag.free() }
                     Timber.d("WhisperContext released")
                     ptr = 0L
                 }
@@ -131,17 +156,28 @@ class WhisperContext internal constructor(
                 return null
             }
 
+            val abortFlag = NativeAbortFlag.create()
+            if (abortFlag == null) {
+                Timber.e("Failed to allocate the whisper abort flag")
+                withContext(NonCancellable + dispatcher) { WhisperLib.freeContext(ptr) }
+                dispatcher.close()
+                return null
+            }
+
             Timber.d("WhisperContext created in %d ms (ptr=%d)", System.currentTimeMillis() - startMs, ptr)
-            return WhisperContext(ptr, dispatcher)
+            return WhisperContext(ptr, dispatcher, abortFlag)
         }
 
         /** One whisper_full run and its joined segments. Called on the context's native thread. */
-        private fun runWhisperFull(ptr: Long, data: FloatArray, language: String): String {
+        private fun runWhisperFull(ptr: Long, abortFlag: AbortFlag, data: FloatArray, language: String): String {
             val numThreads = WhisperCpuConfig.preferredThreadCount
             Timber.d("Transcribing %d samples with %d threads, language=%s", data.size, numThreads, language)
             val startMs = System.currentTimeMillis()
 
-            WhisperLib.fullTranscribe(ptr, numThreads, data, language)
+            val code = WhisperLib.fullTranscribe(ptr, abortFlag.nativePtr, numThreads, data, language)
+            Timber.i("whisper_full returned %d after %d ms", code, System.currentTimeMillis() - startMs)
+            // Aborted or failed: the segments may be a partial decode, never return them.
+            check(code == 0) { "whisper_full failed with code $code" }
 
             val textCount = WhisperLib.getTextSegmentCount(ptr)
             val result = buildString {
