@@ -117,6 +117,7 @@ android {
         applicationId = "dev.pivisolutions.dictus"
         minSdk = 29
         targetSdk = 35
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // versionCode and versionName come from git tags, see appVersionName above (#165).
         // Injected into BuildConfig so every log export names the exact commit (#112).
         buildConfigField("String", "GIT_SHA", "\"${gitOutput("git", "rev-parse", "--short=12", "HEAD")}\"")
@@ -172,6 +173,14 @@ android {
 
     lint {
         baseline = file("lint-baseline.xml")
+    }
+
+    // ModelSpeedBenchmark (#180) builds its clips from the skill's synthesized French fixtures,
+    // packaged in the test APK only, so the repo keeps a single copy of each clip.
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDir(rootProject.file(".claude/skills/verify-dictus-android/fixtures/audio"))
+        }
     }
 
     testOptions {
@@ -280,4 +289,8 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.room.testing)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.coroutines.android)
 }
