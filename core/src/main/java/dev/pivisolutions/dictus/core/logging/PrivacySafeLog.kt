@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.core.logging
 
+import dev.pivisolutions.dictus.core.stt.SttTranscript
+
 /**
  * Builds diagnostic messages for text-processing paths without exposing user text.
  *
@@ -18,6 +20,11 @@ object PrivacySafeLog {
     fun transcriptionFinished(engine: String, durationMs: Long, rawText: String?): String =
         "Transcription finished: engine=$engine, durationMs=$durationMs, " +
             if (rawText == null) "result=timeout" else "rawLength=${rawText.length}"
+
+    /** Same, for a transcript that may stop at the timeout (#179). */
+    fun transcriptionFinished(engine: String, durationMs: Long, transcript: SttTranscript?): String =
+        transcriptionFinished(engine, durationMs, transcript?.text) +
+            if (transcript == null) "" else ", segments=${transcript.segmentCount ?: "-"}, complete=${transcript.complete}"
 
     /** End of the mic-tap path (#112): the length handed to the editor and whether it took it. */
     fun dictationInserted(text: String, committed: Boolean, dictationId: String?, elapsedMs: Long): String =

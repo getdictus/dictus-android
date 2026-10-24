@@ -35,6 +35,8 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param provider        Download source and inference engine.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
  * @param languages       Spoken languages the model transcribes (issue #133).
+ * @param timeoutFactor   Seconds of transcription allowed per second of audio, above the
+ *                        120 s floor (#179): see TranscriptionTimeout.
  */
 data class ModelInfo(
     val key: String,
@@ -50,6 +52,7 @@ data class ModelInfo(
     val isTransducer: Boolean = false,
     val minRamGb: Int = 0,
     val languages: ModelLanguages,
+    val timeoutFactor: Double,
 ) {
     /** Bytes on disk once installed, shown as the model size. */
     val expectedSizeBytes: Long get() = files.sumOf { it.sizeBytes }
@@ -118,6 +121,7 @@ object ModelCatalog {
             precision = 0.4f,
             speed = 1.0f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "base",
@@ -129,6 +133,7 @@ object ModelCatalog {
             precision = 0.6f,
             speed = 0.7f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "small",
@@ -140,6 +145,7 @@ object ModelCatalog {
             precision = 0.9f,
             speed = 0.35f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "small-q5_1",
@@ -151,6 +157,7 @@ object ModelCatalog {
             precision = 0.85f,
             speed = 0.55f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.0,
         ),
         ModelInfo(
             key = "medium-q5_0",
@@ -162,6 +169,7 @@ object ModelCatalog {
             precision = 0.9f,
             speed = 0.3f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.0,
         ),
         // --- Parakeet models (sherpa-onnx) ---
         // Downloaded as tar.bz2 archives, stored in models/{key}/ directory on device.
@@ -179,6 +187,7 @@ object ModelCatalog {
             speed = 0.85f,
             provider = AiProvider.PARAKEET,
             languages = ModelLanguages.ENGLISH,
+            timeoutFactor = 0.6,
         ),
         ModelInfo(
             key = "parakeet-tdt-0.6b-v3",
@@ -199,6 +208,7 @@ object ModelCatalog {
             isTransducer = true,
             minRamGb = BuildConfig.PARAKEET_MIN_RAM_GB,
             languages = ModelLanguages.PARAKEET_V3,
+            timeoutFactor = 0.6,
         ),
     )
 

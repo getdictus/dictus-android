@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.service
 
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import dev.pivisolutions.dictus.core.stt.SttTranscript
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runTest
@@ -9,7 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** How DictationService maps a take to "no words", "failed" or text (#153). */
+/** How DictationService maps a take to "no words", "failed", partial or whole text (#153, #179). */
 class DictationTranscriberTest {
 
     private val halfSecond = FloatArray(RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT)
@@ -18,10 +19,11 @@ class DictationTranscriberTest {
         engine: suspend (FloatArray, String) -> String = { _, _ -> "Bonjour" },
         modelPath: String? = "/models/tiny.bin",
         providerStarts: Boolean = true,
+        // What a segmented engine (Whisper) has decoded when the timeout fires; null: plain engine.
+        atTimeout: SttTranscript? = null,
     ) = DictationTranscriber(
-        timeoutMs = TIMEOUT_MS,
         ensureModel = { modelPath },
-        withProvider = { _, _, use -> if (providerStarts) use(FakeProvider(engine)) else null },
+        withProvider = { _, _, use -> if (providerStarts) use(FakeProvider(engine, atTimeout)) else null },
     )
 
     // --- No words ---
@@ -110,6 +112,47 @@ class DictationTranscriberTest {
     }
 
     @Test
+    fun `timeout before any segment is failed`() = runTest {
+        // Whisper returns null when the abort left no segment.
+        val outcome = transcriber(engine = { _, _ -> awaitCancellation() }, atTimeout = null)
+            .transcribe(halfSecond, "small", "fr")
+
+        assertEquals(TranscriptionOutcome.Failed, outcome)
+    }
+
+    @Test
+    fun `timeout after some segments is partial with their joined text`() = runTest {
+        val partial = SttTranscript(" Bonjour à tous. Voici la suite", segmentCount = 2, complete = false)
+        val outcome = transcriber(engine = { _, _ -> awaitCancellation() }, atTimeout = partial)
+            .transcribe(halfSecond, "small", "fr")
+
+        assertEquals(TranscriptionOutcome.Partial("Bonjour à tous. Voici la suite. "), outcome)
+    }
+
+    @Test
+    fun `partial segments without a word are failed, not no words`() = runTest {
+        val partial = SttTranscript(" [Musique]", segmentCount = 1, complete = false)
+        val outcome = transcriber(engine = { _, _ -> awaitCancellation() }, atTimeout = partial)
+            .transcribe(halfSecond, "small", "fr")
+
+        assertEquals(TranscriptionOutcome.Failed, outcome)
+    }
+
+    @Test
+    fun `the engine gets the model's proportional timeout`() = runTest {
+        var seenTimeoutMs: Long? = null
+        val threeMinutes = FloatArray(180 * RecordingDurationPolicy.SAMPLE_RATE_HZ)
+        DictationTranscriber(
+            ensureModel = { "/models/small.bin" },
+            withProvider = { _, _, use ->
+                use(FakeProvider({ _, _ -> "Ok" }, null) { timeoutMs -> seenTimeoutMs = timeoutMs })
+            },
+        ).transcribe(threeMinutes, "small", "fr")
+
+        assertEquals(324_000L, seenTimeoutMs)
+    }
+
+    @Test
     fun `engine exception is failed`() = runTest {
         val outcome = transcriber(engine = { _, _ -> throw IllegalStateException("native crash") })
             .transcribe(halfSecond, "tiny", "fr")
@@ -150,6 +193,8 @@ class DictationTranscriberTest {
 
     private class FakeProvider(
         private val engine: suspend (FloatArray, String) -> String,
+        private val atTimeout: SttTranscript?,
+        private val onTimeoutMs: (Long) -> Unit = {},
     ) : SttProvider {
         override val providerId = "fake"
         override val displayName = "Fake"
@@ -157,10 +202,10 @@ class DictationTranscriberTest {
         override val isReady = true
         override suspend fun initialize(modelPath: String) = true
         override suspend fun transcribe(samples: FloatArray, language: String) = engine(samples, language)
+        override suspend fun transcribe(samples: FloatArray, language: String, timeoutMs: Long): SttTranscript? {
+            onTimeoutMs(timeoutMs)
+            return super.transcribe(samples, language, timeoutMs) ?: atTimeout
+        }
         override suspend fun release() = Unit
-    }
-
-    private companion object {
-        const val TIMEOUT_MS = 120_000L
     }
 }

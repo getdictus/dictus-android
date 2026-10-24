@@ -27,7 +27,7 @@ class DictationFeedback(
      */
     fun onOutcome(outcome: TranscriptionOutcome, insert: (String) -> Unit) {
         when (outcome) {
-            is TranscriptionOutcome.Text -> insert(outcome.text)
+            is TranscriptionOutcome.Transcribed -> insert(outcome.text)
             TranscriptionOutcome.NoWordsDetected -> noWordsNotice.show()
             TranscriptionOutcome.Failed -> Unit
         }

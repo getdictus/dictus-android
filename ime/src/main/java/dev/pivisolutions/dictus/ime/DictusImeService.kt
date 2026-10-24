@@ -7,7 +7,9 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.IBinder
+import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -643,7 +645,24 @@ class DictusImeService : LifecycleInputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
+        cancelActiveTouch()
         super.onFinishInputView(finishingInput)
+    }
+
+    /**
+     * Ends any gesture still in progress on the keyboard.
+     *
+     * WHY (#212): a finger can still be on a key when the keyboard hides or the editor
+     * changes. The system only cancels that touch once the IME window is gone, ~0.8 s
+     * later on the emulator, and a held backspace keeps deleting until then. A cancel
+     * dispatched with no gesture in progress is ignored.
+     */
+    private fun cancelActiveTouch() {
+        val decorView = window?.window?.decorView ?: return
+        val now = SystemClock.uptimeMillis()
+        val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+        decorView.dispatchTouchEvent(cancel)
+        cancel.recycle()
     }
 
     override fun onFinishInput() {
@@ -1072,7 +1091,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                             Timber.i("No words detected notice shown: surface=keyboard")
                                         TranscriptionOutcome.Failed ->
                                             Timber.w("Transcription failed, nothing inserted")
-                                        is TranscriptionOutcome.Text -> Unit
+                                        is TranscriptionOutcome.Transcribed -> Unit
                                     }
                                 }
                             }
