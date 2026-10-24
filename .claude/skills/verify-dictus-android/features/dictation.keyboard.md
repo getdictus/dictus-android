@@ -51,5 +51,5 @@ Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the 
 - The first tap after the app process was killed can land while the model loads: the mic is dimmed (`Microphone indisponible pendant le chargement…`) and the recording starts by itself once the engine is ready (pending mic gate). Wait for `Engine prewarm complete` before asserting.
 - Clips under 0.5 s are dropped before transcription: no insertion, a warning in the log and « Aucun mot détecté » in the suggestion bar (log `No words detected notice shown: surface=keyboard`), the same notice as a blank transcription.
 - Fields marked password, e-mail, URL or search still accept dictation, but nothing is kept for learning (`typing.private-fields`).
-- The waveform logs `waveformHeartbeat surface=keyboard` every 2 s (`avgLevel`, `maxGapMs` = worst frame gap) and `waveformStall` above 500 ms. `avgLevel=0.000` for a whole take while a clip plays means the guest recorded silence: the take is lost (#156).
+- The waveform logs `waveformHeartbeat surface=keyboard` every 2 s (`avgLevel`, `maxGapMs` = worst frame gap) and `waveformStall` above 500 ms. `avgLevel=0.0` on every heartbeat of a take while a clip plays means the guest recorded silence: the take is lost (#156).
 - A `✓` inserts what the room said. Use `✕` unless the task needs a transcript.
