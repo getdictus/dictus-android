@@ -149,7 +149,7 @@ class DictationTranscriberTest {
             },
         ).transcribe(threeMinutes, "small", "fr")
 
-        assertEquals(270_000L, seenTimeoutMs)
+        assertEquals(324_000L, seenTimeoutMs)
     }
 
     @Test

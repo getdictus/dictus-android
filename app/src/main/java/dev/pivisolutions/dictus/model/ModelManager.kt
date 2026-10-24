@@ -121,7 +121,7 @@ object ModelCatalog {
             precision = 0.4f,
             speed = 1.0f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
-            timeoutFactor = 1.5,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "base",
@@ -133,7 +133,7 @@ object ModelCatalog {
             precision = 0.6f,
             speed = 0.7f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
-            timeoutFactor = 1.5,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "small",
@@ -145,7 +145,7 @@ object ModelCatalog {
             precision = 0.9f,
             speed = 0.35f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
-            timeoutFactor = 1.5,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "small-q5_1",

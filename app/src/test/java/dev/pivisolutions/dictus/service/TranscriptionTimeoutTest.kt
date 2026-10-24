@@ -8,15 +8,16 @@ class TranscriptionTimeoutTest {
 
     @Test
     fun `short audio keeps the 120 s floor`() {
-        assertEquals(120_000L, TranscriptionTimeout.timeoutMs(audioMs = 10_000, factor = 1.5))
-        assertEquals(120_000L, TranscriptionTimeout.timeoutMs(audioMs = 80_000, factor = 1.5))
+        assertEquals(120_000L, TranscriptionTimeout.timeoutMs(audioMs = 10_000, factor = 1.8))
+        assertEquals(120_000L, TranscriptionTimeout.timeoutMs(audioMs = 60_000, factor = 1.8))
     }
 
     @Test
-    fun `full Whisper gets 1,5 times the audio`() {
-        assertEquals(1.5, TranscriptionTimeout.factorFor("small"), 0.0)
-        assertEquals(1.5, TranscriptionTimeout.factorFor("tiny"), 0.0)
-        assertEquals(270_000L, TranscriptionTimeout.timeoutMs(180_000, TranscriptionTimeout.factorFor("small")))
+    fun `full Whisper gets 1,8 times the audio`() {
+        assertEquals(1.8, TranscriptionTimeout.factorFor("small"), 0.0)
+        assertEquals(1.8, TranscriptionTimeout.factorFor("base"), 0.0)
+        assertEquals(1.8, TranscriptionTimeout.factorFor("tiny"), 0.0)
+        assertEquals(324_000L, TranscriptionTimeout.timeoutMs(180_000, TranscriptionTimeout.factorFor("small")))
     }
 
     @Test

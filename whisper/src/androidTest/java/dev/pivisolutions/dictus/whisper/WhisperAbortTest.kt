@@ -33,7 +33,7 @@ import java.nio.ByteOrder
  * [decodeWithinTimeout] (#179) transcribes one WAV as it is, within -e timeoutMs: complete
  * when the timeout leaves room, else the segments decoded before it:
  *   adb shell am instrument -w -e class dev.pivisolutions.dictus.whisper.WhisperAbortTest#decodeWithinTimeout \
- *     -e model ggml-small.bin -e audio long.wav -e timeoutMs 270000 \
+ *     -e model ggml-small.bin -e audio long.wav -e timeoutMs 324000 \
  *     dev.pivisolutions.dictus.whisper.test/androidx.test.runner.AndroidJUnitRunner
  */
 @RunWith(AndroidJUnit4::class)
