@@ -24,7 +24,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
-import dev.pivisolutions.dictus.core.ui.WaveformBars
+import dev.pivisolutions.dictus.core.ui.LiveWaveform
 
 /**
  * Recording test area that mirrors the keyboard recording UI for testing purposes.
@@ -90,8 +90,9 @@ fun RecordingTestArea(
                     )
 
                     // Waveform visualization
-                    WaveformBars(
+                    LiveWaveform(
                         energyLevels = dictationState.energy,
+                        logLabel = "test",
                         modifier = Modifier
                             .width(200.dp)
                             .height(80.dp),

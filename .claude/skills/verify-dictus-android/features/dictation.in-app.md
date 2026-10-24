@@ -9,7 +9,7 @@ Dictus's Home tab starts a full-screen recording without any keyboard; the resul
 
 ## Sub-features
 
-- `dictation.start-in-app`: « Nouvelle dictée » on Accueil opens the recording screen **and starts recording at once**; « Toucher pour arrêter » stops and transcribes. A dictation that produces no text (silence, too short, blank transcription, or only non-speech tags and punctuation such as « [Musique]. » or « ... », #161) shows « Aucun mot détecté » in place of « Nouvelle dictée », clears « Dernière transcription » and saves nothing, like iOS (#153). — présent
+- `dictation.start-in-app`: « Nouvelle dictée » on Accueil opens the recording screen **and starts recording at once**, with the same 30-bar live waveform as the keyboard (120 dp, half opacity, #184); « Toucher pour arrêter » stops and transcribes. A dictation that produces no text (silence, too short, blank transcription, or only non-speech tags and punctuation such as « [Musique]. » or « ... », #161) shows « Aucun mot détecté » in place of « Nouvelle dictée », clears « Dernière transcription » and saves nothing, like iOS (#153). — présent
 - `dictation.copy-last`: The « Dernière transcription » card on Accueil copies its text (`Copier`). — présent
 - `dictation.download-prompt`: — partiel: Accueil never asks to download a model (it always shows « Modèle actif »); only the mic answers « Aucun modèle vocal » once tapped.
 - `dictation.from-widget`: — absent: no home-screen widget.
@@ -33,6 +33,7 @@ Preconditions: Launch and Doctor OK, onboarding completed, a model downloaded.
 
 ## Gotchas
 
+- The live waveform logs `waveformHeartbeat surface=app` every 2 s (`avgLevel`, `maxGapMs`) and `waveformStall` above 500 ms; the onboarding test logs `surface=onboarding`.
 - **Bug seen 2026-10-20:** leaving the recording screen with `Retour` (or system back) keeps recording: `DictationService` stays foreground (`dumpsys activity services` → `isForeground=true`), the mic chip stays green, no `Recording cancelled` line. Only `Arrêter`, the (invisible here) notification's Stop, or « Applis actives → Arrêter » ends it. Evidence: `dictus-proofs/verify-dictus-android/20261020-214307-0f15824/90-bug-recording-continues-after-retour.png`.
 - Pierre's Accueil shows no « Dernière transcription » card at the time of writing; it appears after the first in-app or keyboard dictation.
 
