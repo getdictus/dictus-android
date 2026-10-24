@@ -14,6 +14,7 @@ import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -168,11 +169,13 @@ class WhisperContextTimeoutTest {
 
     @Test
     fun `a device asleep past the deadline aborts the decode once awake (#225)`() = runBlocking {
-        // Once the decode runs, the clock is 10 minutes on, as after a suspend that the uptime
-        // clocks of coroutine delays did not see. Before it, an abort would cancel a decode
-        // that never started, which is not the case under test.
+        // The first read sets the deadline. Later reads are 10 minutes on once the decode runs,
+        // as after a suspend that the uptime clocks of coroutine delays did not see. Before the
+        // decode starts, an abort would cancel a decode that never ran: not the case under test.
+        val deadlineRead = AtomicBoolean(false)
         val ctx = context(segmentsAtAbort = 2, clock = {
-            System.nanoTime() / 1_000_000 + if (runs.get() == 0) 0L else SLEPT_MS
+            val slept = deadlineRead.getAndSet(true) && runs.get() > 0
+            System.nanoTime() / 1_000_000 + if (slept) SLEPT_MS else 0L
         })
 
         val startMs = System.currentTimeMillis()
