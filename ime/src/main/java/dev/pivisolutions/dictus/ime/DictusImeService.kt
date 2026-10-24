@@ -47,6 +47,9 @@ import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
+import dev.pivisolutions.dictus.ime.input.AutoCapitalization
+import dev.pivisolutions.dictus.ime.input.AutoCapMode
+import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
@@ -148,6 +151,12 @@ class DictusImeService : LifecycleInputMethodService() {
     private var isEditorSelectionCollapsed = false
     private var isCurrentEditorSuggestionEligible = false
     private var isPersonalizedLearningAllowed = false
+    // Autocapitalization (#213): the mode comes from EditorInfo; the last context read is kept
+    // only to skip a repeat decision for an unchanged editor, so a shift the user just tapped off
+    // is not re-armed by a late selection update.
+    private val _autoCapSignal = MutableStateFlow<AutoCapSignal?>(null)
+    private var autoCapMode = AutoCapMode.NONE
+    private var lastAutoCapContext: String? = null
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
     // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
     private val dictationUndo = DictationUndo()
@@ -414,6 +423,7 @@ class DictusImeService : LifecycleInputMethodService() {
         dictationUndo.onSelectionChanged(newSelStart, newSelEnd)
         isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
             clearSuggestionState()
@@ -608,6 +618,8 @@ class DictusImeService : LifecycleInputMethodService() {
         if (!restarting) dictationFeedback.withdraw()
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         refreshFrenchAdaptiveKeyState()
+        autoCapMode = AutoCapitalization.modeFor(attribute?.inputType ?: 0)
+        lastAutoCapContext = null
         logEditorSession(attribute, restarting)
     }
 
@@ -637,6 +649,8 @@ class DictusImeService : LifecycleInputMethodService() {
     ) {
         super.onStartInputView(info, restarting)
         refreshFrenchAdaptiveKeyState()
+        // Start of a field, or the same field shown again: always decide afresh.
+        refreshAutoCapitalization(force = true)
         // WHY (#112): "did the user ever open the Dictus keyboard?" was unanswerable from an export.
         Timber.d("Keyboard shown: package=%s, restarting=%b", info?.packageName ?: "unknown", restarting)
     }
@@ -663,6 +677,8 @@ class DictusImeService : LifecycleInputMethodService() {
         editorSelEnd = -1
         dictationFeedback.withdraw()
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
+        autoCapMode = AutoCapMode.NONE
+        lastAutoCapContext = null
         super.onFinishInput()
     }
 
@@ -741,6 +757,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
+        val autoCapSignal by _autoCapSignal.collectAsState()
         val activeKeyboardState by _activeKeyboardState.collectAsState()
         val activeLanguage = activeKeyboardState.language
         val activeLayout = activeKeyboardState.layout
@@ -1015,6 +1032,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     onFrenchAdaptiveVariant = { variant ->
                         if (usesFrenchAdaptiveKey) handleFrenchAdaptiveVariant(variant)
                     },
+                    autoCapSignal = autoCapSignal,
                 )
             }
             is DictationState.Recording -> {
@@ -1141,6 +1159,7 @@ class DictusImeService : LifecycleInputMethodService() {
             inputConnection.commitText(text, 1)
         }
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
         return committed
     }
 
@@ -1186,6 +1205,7 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         clearSuggestionState()
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
     }
 
     /**
@@ -1199,6 +1219,7 @@ class DictusImeService : LifecycleInputMethodService() {
             deletePrecedingCodePoint(inputConnection)
         }
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
     }
 
     /** Deletes the preceding token during accelerated backspace repetition. */
@@ -1209,6 +1230,7 @@ class DictusImeService : LifecycleInputMethodService() {
         clearSuggestionState()
         deletePrecedingWord(inputConnection)
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
     }
 
     /**
@@ -1225,6 +1247,34 @@ class DictusImeService : LifecycleInputMethodService() {
             android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER),
         )
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
+    }
+
+    /**
+     * Re-decides whether shift should be armed for the text now before the cursor (#213).
+     *
+     * Called synchronously after the keyboard's own edits, and from [onUpdateSelection] for
+     * everything else (cursor moves, paste, suggestion picks, the host's own edits). A field
+     * whose mode is NONE is never read. The context is neither logged nor stored beyond the
+     * comparison with the previous read.
+     */
+    private fun refreshAutoCapitalization(force: Boolean = false) {
+        if (autoCapMode == AutoCapMode.NONE) {
+            // Withdraw a shift armed in the previous field; a manual one stays.
+            if (force) publishAutoCap(shouldCapitalize = false)
+            return
+        }
+        val context = currentInputConnection
+            ?.getTextBeforeCursor(AutoCapitalization.CONTEXT_LENGTH, 0)
+            ?.toString()
+        if (!force && context == lastAutoCapContext) return
+        lastAutoCapContext = context
+        publishAutoCap(AutoCapitalization.shouldCapitalize(autoCapMode, context))
+    }
+
+    private fun publishAutoCap(shouldCapitalize: Boolean) {
+        val sequence = (_autoCapSignal.value?.sequence ?: 0) + 1
+        _autoCapSignal.value = AutoCapSignal(shouldCapitalize, sequence)
     }
 
     private fun refreshFrenchAdaptiveKeyState() {
