@@ -5,7 +5,7 @@ Thanks for your interest in contributing! This guide covers everything you need 
 ## Prerequisites
 
 - JDK 17
-- Android SDK (API 34 target, API 29 minimum)
+- Android SDK (API 36 target, API 29 minimum)
 - Android NDK 27.2 (required for whisper.cpp and sherpa-onnx native builds)
 
 ## Build
