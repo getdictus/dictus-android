@@ -168,11 +168,11 @@ class WhisperContextTimeoutTest {
 
     @Test
     fun `a device asleep past the deadline aborts the decode once awake (#225)`() = runBlocking {
-        // The first read sets the deadline; every later one is 10 minutes on, as after a
-        // suspend that the uptime clocks of coroutine delays did not see.
-        val reads = AtomicInteger(0)
+        // Once the decode runs, the clock is 10 minutes on, as after a suspend that the uptime
+        // clocks of coroutine delays did not see. Before it, an abort would cancel a decode
+        // that never started, which is not the case under test.
         val ctx = context(segmentsAtAbort = 2, clock = {
-            System.nanoTime() / 1_000_000 + if (reads.getAndIncrement() == 0) 0L else SLEPT_MS
+            System.nanoTime() / 1_000_000 + if (runs.get() == 0) 0L else SLEPT_MS
         })
 
         val startMs = System.currentTimeMillis()
