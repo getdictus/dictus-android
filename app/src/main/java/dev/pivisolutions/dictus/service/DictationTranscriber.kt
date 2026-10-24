@@ -6,6 +6,7 @@ import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.stt.SttTranscript
 import dev.pivisolutions.dictus.core.whisper.NonSpeechMarkers
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
+import dev.pivisolutions.dictus.whisper.WhisperContext
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
@@ -20,6 +21,7 @@ import timber.log.Timber
  * @param ensureModel the model path, downloading it on first use; null when it stays unavailable.
  * @param withProvider runs a block on the initialized provider for a model; null when the
  *   provider cannot be initialized. Engine init is outside the timeout, as it always was.
+ * @param wakeLock held while the engine transcribes, released however it ends (#225).
  * @param timeoutFactor the model's factor for [TranscriptionTimeout.timeoutMs].
  */
 internal class DictationTranscriber(
@@ -29,6 +31,7 @@ internal class DictationTranscriber(
         modelPath: String,
         use: suspend (SttProvider) -> SttTranscript?,
     ) -> SttTranscript?,
+    private val wakeLock: TranscriptionWakeLock,
     private val timeoutFactor: (modelKey: String) -> Double = TranscriptionTimeout::factorFor,
 ) {
 
@@ -76,9 +79,16 @@ internal class DictationTranscriber(
                     "Transcription started: engine=%s, model=%s, samples=%d, audioMs=%d, factor=%s, timeoutMs=%d",
                     provider.providerId, modelKey, samples.size, audioMs, factor, timeoutMs,
                 )
-                provider.transcribe(samples, language, timeoutMs).also { transcript ->
-                    val durationMs = (System.nanoTime() - startedAt) / 1_000_000
-                    Timber.i(PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, transcript))
+                // The lock's own timeout is a backstop: the latest the engine can return, the
+                // timeout plus the time an aborted Whisper decode gets to hand back its segments.
+                wakeLock.acquire(timeoutMs + WhisperContext.ABORT_GRACE_MS)
+                try {
+                    provider.transcribe(samples, language, timeoutMs).also { transcript ->
+                        val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+                        Timber.i(PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, transcript))
+                    }
+                } finally {
+                    wakeLock.release()
                 }
             }
             if (transcript == null) {

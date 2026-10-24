@@ -1,7 +1,5 @@
 package dev.pivisolutions.dictus.core.stt
 
-import kotlinx.coroutines.withTimeoutOrNull
-
 /**
  * Contract for all speech-to-text engines in Dictus.
  *
@@ -47,14 +45,14 @@ interface SttProvider {
     suspend fun transcribe(samples: FloatArray, language: String): String
 
     /**
-     * Transcribe within [timeoutMs].
+     * Transcribe within [timeoutMs] of elapsed real time, deep sleep included (#225).
      *
      * By default the whole decode is lost at the timeout (null). An engine that decodes in
      * segments overrides this to return the segments decoded before the timeout, with
      * [SttTranscript.complete] false (Whisper, #179); null then means none was decoded.
      */
     suspend fun transcribe(samples: FloatArray, language: String, timeoutMs: Long): SttTranscript? =
-        withTimeoutOrNull(timeoutMs) { transcribe(samples, language) }
+        withRealtimeTimeoutOrNull(timeoutMs) { transcribe(samples, language) }
             ?.let { text -> SttTranscript(text, segmentCount = null, complete = true) }
 
     /** Release native resources. */
