@@ -6,14 +6,18 @@ import dev.pivisolutions.dictus.core.stt.SttTranscript
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** How DictationService maps a take to "no words", "failed", partial or whole text (#153, #179). */
 class DictationTranscriberTest {
 
     private val halfSecond = FloatArray(RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT)
+    private val wakeLock = FakeWakeLock()
 
     private fun transcriber(
         engine: suspend (FloatArray, String) -> String = { _, _ -> "Bonjour" },
@@ -24,6 +28,7 @@ class DictationTranscriberTest {
     ) = DictationTranscriber(
         ensureModel = { modelPath },
         withProvider = { _, _, use -> if (providerStarts) use(FakeProvider(engine, atTimeout)) else null },
+        wakeLock = wakeLock,
     )
 
     // --- No words ---
@@ -147,6 +152,7 @@ class DictationTranscriberTest {
             withProvider = { _, _, use ->
                 use(FakeProvider({ _, _ -> "Ok" }, null) { timeoutMs -> seenTimeoutMs = timeoutMs })
             },
+            wakeLock = wakeLock,
         ).transcribe(threeMinutes, "small", "fr")
 
         assertEquals(324_000L, seenTimeoutMs)
@@ -191,6 +197,73 @@ class DictationTranscriberTest {
         assertEquals(halfSecond.size to "fr", seen)
     }
 
+    // --- Wake lock (#225) ---
+
+    // A half-second take gets the 120 s floor.
+    private val heldThenReleased = listOf("acquire(120000)", "release")
+
+    @Test
+    fun `the wake lock is held while the engine runs, capped at the timeout`() = runTest {
+        var heldDuringEngine = false
+        transcriber(engine = { _, _ -> heldDuringEngine = wakeLock.held; "Ok" }).transcribe(halfSecond, "tiny", "fr")
+
+        assertTrue("the engine ran without the wake lock", heldDuringEngine)
+        assertEquals(heldThenReleased, wakeLock.events)
+    }
+
+    @Test
+    fun `the wake lock is released after an engine exception`() = runTest {
+        transcriber(engine = { _, _ -> throw IllegalStateException("native crash") }).transcribe(halfSecond, "tiny", "fr")
+
+        assertEquals(heldThenReleased, wakeLock.events)
+    }
+
+    @Test
+    fun `the wake lock is released when the transcription is cancelled`() = runTest {
+        try {
+            transcriber(engine = { _, _ -> throw CancellationException("left the screen") })
+                .transcribe(halfSecond, "tiny", "fr")
+        } catch (expected: CancellationException) {
+        }
+
+        assertEquals(heldThenReleased, wakeLock.events)
+    }
+
+    @Test
+    fun `the wake lock is released when the caller gives up mid-decode`() = runTest {
+        // The service scope is cancelled (service destroyed) while the engine runs.
+        val result = withTimeoutOrNull(1_000L) {
+            transcriber(engine = { _, _ -> awaitCancellation() }).transcribe(halfSecond, "tiny", "fr")
+        }
+
+        assertNull(result)
+        assertEquals(heldThenReleased, wakeLock.events)
+    }
+
+    @Test
+    fun `the wake lock is released at a timeout with no segment`() = runTest {
+        transcriber(engine = { _, _ -> awaitCancellation() }).transcribe(halfSecond, "small", "fr")
+
+        assertEquals(heldThenReleased, wakeLock.events)
+    }
+
+    @Test
+    fun `the wake lock is released at a timeout with some segments`() = runTest {
+        val partial = SttTranscript(" Bonjour", segmentCount = 1, complete = false)
+        transcriber(engine = { _, _ -> awaitCancellation() }, atTimeout = partial).transcribe(halfSecond, "small", "fr")
+
+        assertEquals(heldThenReleased, wakeLock.events)
+    }
+
+    @Test
+    fun `no wake lock when the model is missing or the provider cannot start`() = runTest {
+        transcriber(modelPath = null).transcribe(halfSecond, "tiny", "fr")
+        transcriber(providerStarts = false).transcribe(halfSecond, "tiny", "fr")
+
+        assertFalse(wakeLock.held)
+        assertEquals(emptyList<String>(), wakeLock.events)
+    }
+
     private class FakeProvider(
         private val engine: suspend (FloatArray, String) -> String,
         private val atTimeout: SttTranscript?,
@@ -204,7 +277,10 @@ class DictationTranscriberTest {
         override suspend fun transcribe(samples: FloatArray, language: String) = engine(samples, language)
         override suspend fun transcribe(samples: FloatArray, language: String, timeoutMs: Long): SttTranscript? {
             onTimeoutMs(timeoutMs)
-            return super.transcribe(samples, language, timeoutMs) ?: atTimeout
+            // Virtual-time timeout: the default's elapsedRealtime clock needs a device.
+            return withTimeoutOrNull(timeoutMs) { engine(samples, language) }
+                ?.let { text -> SttTranscript(text, segmentCount = null, complete = true) }
+                ?: atTimeout
         }
         override suspend fun release() = Unit
     }

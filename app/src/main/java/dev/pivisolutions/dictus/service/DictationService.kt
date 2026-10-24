@@ -123,8 +123,10 @@ class DictationService : Service(), DictationController {
         DictationTranscriber(
             ensureModel = { modelKey -> modelDownloader.ensureModelAvailable(modelKey) },
             withProvider = { modelKey, modelPath, use -> withProviderForModel(modelKey, modelPath, use) },
+            wakeLock = transcriptionWakeLock,
         )
     }
+    private val transcriptionWakeLock by lazy { PowerManagerTranscriptionWakeLock(applicationContext) }
 
     /**
      * Local binder for same-process binding.
@@ -599,6 +601,8 @@ class DictationService : Service(), DictationController {
         super.onDestroy()
         if (::soundPlayer.isInitialized) soundPlayer.release()
         serviceScope.cancel()
+        // The cancelled transcription releases it in its finally; this covers a lock left held.
+        transcriptionWakeLock.release()
         cleanupScope.launch {
             try {
                 providerSlot.release()

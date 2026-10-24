@@ -20,6 +20,7 @@ import timber.log.Timber
  * @param ensureModel the model path, downloading it on first use; null when it stays unavailable.
  * @param withProvider runs a block on the initialized provider for a model; null when the
  *   provider cannot be initialized. Engine init is outside the timeout, as it always was.
+ * @param wakeLock held while the engine transcribes, released however it ends (#225).
  * @param timeoutFactor the model's factor for [TranscriptionTimeout.timeoutMs].
  */
 internal class DictationTranscriber(
@@ -29,6 +30,7 @@ internal class DictationTranscriber(
         modelPath: String,
         use: suspend (SttProvider) -> SttTranscript?,
     ) -> SttTranscript?,
+    private val wakeLock: TranscriptionWakeLock,
     private val timeoutFactor: (modelKey: String) -> Double = TranscriptionTimeout::factorFor,
 ) {
 
@@ -76,9 +78,15 @@ internal class DictationTranscriber(
                     "Transcription started: engine=%s, model=%s, samples=%d, audioMs=%d, factor=%s, timeoutMs=%d",
                     provider.providerId, modelKey, samples.size, audioMs, factor, timeoutMs,
                 )
-                provider.transcribe(samples, language, timeoutMs).also { transcript ->
-                    val durationMs = (System.nanoTime() - startedAt) / 1_000_000
-                    Timber.i(PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, transcript))
+                // The lock's own timeout is the cap: past it the engine has been told to stop.
+                wakeLock.acquire(timeoutMs)
+                try {
+                    provider.transcribe(samples, language, timeoutMs).also { transcript ->
+                        val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+                        Timber.i(PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, transcript))
+                    }
+                } finally {
+                    wakeLock.release()
                 }
             }
             if (transcript == null) {
