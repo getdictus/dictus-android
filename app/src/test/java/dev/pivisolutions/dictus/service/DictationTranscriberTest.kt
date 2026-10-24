@@ -199,11 +199,12 @@ class DictationTranscriberTest {
 
     // --- Wake lock (#225) ---
 
-    // A half-second take gets the 120 s floor.
-    private val heldThenReleased = listOf("acquire(120000)", "release")
+    // A half-second take gets the 120 s floor, plus the 60 s an aborted Whisper decode gets to
+    // return its segments.
+    private val heldThenReleased = listOf("acquire(180000)", "release")
 
     @Test
-    fun `the wake lock is held while the engine runs, capped at the timeout`() = runTest {
+    fun `the wake lock is held while the engine runs, capped at the timeout plus the abort grace`() = runTest {
         var heldDuringEngine = false
         transcriber(engine = { _, _ -> heldDuringEngine = wakeLock.held; "Ok" }).transcribe(halfSecond, "tiny", "fr")
 

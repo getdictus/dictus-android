@@ -195,7 +195,8 @@ class WhisperContext internal constructor(
 
         // An aborted decode returns once its encoder pass ends: up to about 40 s with full
         // Small on the Pixel 4. Past this, the timeout gives up on its segments (#179).
-        private const val ABORT_GRACE_MS = 60_000L
+        // Public so the transcription wake lock can cover it (#225).
+        const val ABORT_GRACE_MS = 60_000L
 
         /**
          * One whisper_full run and its joined segments, complete = false when it returned

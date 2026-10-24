@@ -6,6 +6,7 @@ import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.stt.SttTranscript
 import dev.pivisolutions.dictus.core.whisper.NonSpeechMarkers
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
+import dev.pivisolutions.dictus.whisper.WhisperContext
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
@@ -78,8 +79,9 @@ internal class DictationTranscriber(
                     "Transcription started: engine=%s, model=%s, samples=%d, audioMs=%d, factor=%s, timeoutMs=%d",
                     provider.providerId, modelKey, samples.size, audioMs, factor, timeoutMs,
                 )
-                // The lock's own timeout is the cap: past it the engine has been told to stop.
-                wakeLock.acquire(timeoutMs)
+                // The lock's own timeout is a backstop: the latest the engine can return, the
+                // timeout plus the time an aborted Whisper decode gets to hand back its segments.
+                wakeLock.acquire(timeoutMs + WhisperContext.ABORT_GRACE_MS)
                 try {
                     provider.transcribe(samples, language, timeoutMs).also { transcript ->
                         val durationMs = (System.nanoTime() - startedAt) / 1_000_000
