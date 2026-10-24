@@ -41,8 +41,13 @@ class WhisperContextTimeoutTest {
         dispatcher.close()
     }
 
-    // Segments the long decode has finished when it is aborted.
-    private fun context(honorAbort: Boolean = true, segmentsAtAbort: Int = 0): WhisperContext = WhisperContext(
+    // Segments the long decode has finished when it is aborted. The clock stands in for
+    // elapsedRealtime, which a JVM test does not have.
+    private fun context(
+        honorAbort: Boolean = true,
+        segmentsAtAbort: Int = 0,
+        clock: () -> Long = { System.nanoTime() / 1_000_000 },
+    ): WhisperContext = WhisperContext(
         ptr = 1L,
         dispatcher = dispatcher,
         abortFlag = abortFlag,
@@ -61,6 +66,7 @@ class WhisperContextTimeoutTest {
             val aborted = flag.aborted
             SttTranscript("run$run:${data.size}", if (aborted) segmentsAtAbort else 1, complete = !aborted)
         },
+        clock = clock,
     )
 
     @Test
@@ -160,6 +166,23 @@ class WhisperContextTimeoutTest {
         assertFalse(abortFlag.aborted)
     }
 
+    @Test
+    fun `a device asleep past the deadline aborts the decode once awake (#225)`() = runBlocking {
+        // The first read sets the deadline; every later one is 10 minutes on, as after a
+        // suspend that the uptime clocks of coroutine delays did not see.
+        val reads = AtomicInteger(0)
+        val ctx = context(segmentsAtAbort = 2, clock = {
+            System.nanoTime() / 1_000_000 + if (reads.getAndIncrement() == 0) 0L else SLEPT_MS
+        })
+
+        val startMs = System.currentTimeMillis()
+        val partial = ctx.transcribeData(FloatArray(16), "fr", timeoutMs = SLEPT_MS / 2)
+        val elapsedMs = System.currentTimeMillis() - startMs
+
+        assertEquals(SttTranscript("run1:16", 2, complete = false), partial)
+        assertTrue("timed out $elapsedMs ms after the sleep, the decode held it", elapsedMs < BLOCKED_DECODE_MS / 2)
+    }
+
     private class FakeAbortFlag : AbortFlag {
         @Volatile var aborted = false
         override val nativePtr: Long = 0L
@@ -172,5 +195,6 @@ class WhisperContextTimeoutTest {
         const val TIMEOUT_MS = 200L
         // Long enough to tell "returned at the timeout" from "waited for the decode".
         const val BLOCKED_DECODE_MS = 4_000L
+        const val SLEPT_MS = 600_000L
     }
 }

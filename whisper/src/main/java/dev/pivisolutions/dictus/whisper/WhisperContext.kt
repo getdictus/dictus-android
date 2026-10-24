@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.whisper
 
+import android.os.SystemClock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
@@ -8,8 +9,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import dev.pivisolutions.dictus.core.stt.SttTranscript
+import dev.pivisolutions.dictus.core.stt.withRealtimeTimeoutOrNull
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import timber.log.Timber
 import java.util.concurrent.Executors
@@ -36,6 +37,8 @@ class WhisperContext internal constructor(
     // Injectable so a JVM test can stand in for whisper.cpp, which has no library there.
     private val runFull: (ptr: Long, abortFlag: AbortFlag, data: FloatArray, language: String) -> SttTranscript =
         ::runWhisperFull,
+    // Clock of the timeout and the abort grace: elapsed real time, deep sleep included (#225).
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) {
 
     // Supervised: a transcription its caller gave up on must not cancel the next one.
@@ -62,7 +65,7 @@ class WhisperContext internal constructor(
         checkNotNull(transcribeData(data, language, Long.MAX_VALUE)).text
 
     /**
-     * Transcribe within [timeoutMs]. At the timeout the decode is aborted through
+     * Transcribe within [timeoutMs] of elapsed real time (#225). At the timeout the decode is aborted through
      * whisper.cpp's abort_callback (#173) and the segments decoded before it are returned,
      * with complete = false (#179). Null when none was decoded.
      *
@@ -92,9 +95,9 @@ class WhisperContext internal constructor(
             transcript
         }
         return try {
-            withTimeoutOrNull(timeoutMs) { decoding.await() } ?: run {
+            withRealtimeTimeoutOrNull(timeoutMs, clock) { decoding.await() } ?: run {
                 abort(decode)
-                withTimeoutOrNull(ABORT_GRACE_MS) { decoding.await() }
+                withRealtimeTimeoutOrNull(ABORT_GRACE_MS, clock) { decoding.await() }
                     ?.takeIf { it.complete || (it.segmentCount ?: 0) > 0 }
             }
         } catch (cancellation: CancellationException) {
