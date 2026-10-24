@@ -8,6 +8,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -46,6 +51,45 @@ class ModelCardTest {
         composeTestRule.onNodeWithText("Speed").assertIsDisplayed()
         composeTestRule.onAllNodesWithTag("model_precision_segment").assertCountEquals(5)
         composeTestRule.onAllNodesWithTag("model_speed_segment").assertCountEquals(5)
+    }
+
+    @Test
+    fun `precision bar fills the segments of Pierre's ranking for every catalog model`() {
+        // #180: Parakeet v3 full, Medium 4, Small and Small Q5 3, Base 2, Tiny 1.
+        val expected = mapOf(
+            "tiny" to 1,
+            "base" to 2,
+            "small" to 3,
+            "small-q5_1" to 3,
+            "medium-q5_0" to 4,
+            "parakeet-ctc-110m-int8" to 3,
+            "parakeet-tdt-0.6b-v3" to 5,
+        )
+        var model by mutableStateOf(ModelCatalog.ALL.first())
+
+        composeTestRule.setContent {
+            DictusTheme {
+                ModelCard(
+                    model = model,
+                    isDownloaded = false,
+                    isActive = false,
+                    downloadProgress = null,
+                    canDelete = false,
+                    onDownload = {},
+                    onDelete = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        val filledPrecision = hasTestTag("model_precision_segment") and
+            SemanticsMatcher.expectValue(MetricSegmentFilled, true)
+        ModelCatalog.ALL.forEach { info ->
+            model = info
+            composeTestRule.waitForIdle()
+            composeTestRule.onAllNodesWithTag("model_precision_segment").assertCountEquals(5)
+            composeTestRule.onAllNodes(filledPrecision).assertCountEquals(expected.getValue(info.key))
+        }
     }
 
     @Test

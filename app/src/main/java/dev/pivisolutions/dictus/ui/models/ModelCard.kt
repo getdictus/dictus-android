@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -494,6 +497,22 @@ private fun LanguageSummaryRow(model: ModelInfo, onClick: (() -> Unit)?) {
     }
 }
 
+/** Number of segments in a model card's Precision and Speed bars. */
+internal const val METRIC_SEGMENT_COUNT = 5
+
+/**
+ * Filled segments for a 0.0–1.0 score: score × 5, rounded to the nearest, so each count owns a
+ * band of 0.2 centred on count / 5 (3 segments: 0.5 to 0.7). A score on a band's edge (0.3, 0.5,
+ * 0.7, 0.9) rounds up, but a hair below it rounds down, so catalog scores stay clear of the
+ * edges. iOS's GaugeBarView rounds the same way (#180).
+ */
+internal fun filledSegmentCount(value: Float): Int =
+    (value.coerceIn(0f, 1f) * METRIC_SEGMENT_COUNT).roundToInt()
+
+/** Whether a metric segment is filled; read by tests, where the colour is the only other sign. */
+internal val MetricSegmentFilled = SemanticsPropertyKey<Boolean>("MetricSegmentFilled")
+private var SemanticsPropertyReceiver.metricSegmentFilled by MetricSegmentFilled
+
 /**
  * iOS-style segmented metric bar with 5 sub-bars.
  *
@@ -513,9 +532,8 @@ private fun SegmentedMetricBar(
     color: Color = DictusColors.Accent,
     modifier: Modifier = Modifier,
 ) {
-    val segmentCount = 5
-    // Map 0.0–1.0 to 0–5 filled segments (round to nearest)
-    val filledCount = (value.coerceIn(0f, 1f) * segmentCount).roundToInt()
+    val segmentCount = METRIC_SEGMENT_COUNT
+    val filledCount = filledSegmentCount(value)
     val filledColor = color
     // iOS uses color.opacity(0.15) for empty segments — same hue, very faded
     val emptyColor = color.copy(alpha = 0.15f)
@@ -536,6 +554,7 @@ private fun SegmentedMetricBar(
                 Box(
                     modifier = Modifier
                         .testTag(segmentTestTag)
+                        .semantics { metricSegmentFilled = i < filledCount }
                         .weight(1f)
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))

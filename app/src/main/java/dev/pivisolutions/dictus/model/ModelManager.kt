@@ -28,7 +28,8 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param expectedSizeBytes Expected byte size used to detect complete downloads.
  * @param qualityLabel    Short quality descriptor shown as a badge (e.g. "Rapide").
  * @param description     Short human-readable description shown on model card.
- * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
+ * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar (5 segments,
+ *                        see filledSegmentCount in ModelCard.kt).
  * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
  * @param provider        Download source and inference engine.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
@@ -97,7 +98,9 @@ object ModelCatalog {
             expectedSizeBytes = 77_691_713L,
             qualityLabel = "Rapide",
             description = "Rapide et leger",
-            precision = 0.4f,
+            // 1 of 5: below Base (Pierre's ranking, #180). iOS has 0.3, which lands on
+            // 1.5 and so shows 2 there, the same as Base; 0.2 keeps the two apart.
+            precision = 0.2f,
             speed = 1.0f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
         ),
@@ -108,7 +111,8 @@ object ModelCatalog {
             expectedSizeBytes = 147_951_465L,
             qualityLabel = "Equilibre",
             description = "Precis et equilibre",
-            precision = 0.6f,
+            // 2 of 5, iOS's value.
+            precision = 0.4f,
             speed = 0.7f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
         ),
@@ -119,7 +123,8 @@ object ModelCatalog {
             expectedSizeBytes = 487_601_967L,
             qualityLabel = "Precis",
             description = "Haute precision",
-            precision = 0.9f,
+            // 3 of 5, iOS's value.
+            precision = 0.6f,
             speed = 0.35f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
         ),
@@ -130,7 +135,8 @@ object ModelCatalog {
             expectedSizeBytes = 190_085_487L,
             qualityLabel = "Precis",
             description = "Meilleur compromis",
-            precision = 0.85f,
+            // 3 of 5 like Small, iOS's value (its Small Quantized). 2.75 rounds to 3.
+            precision = 0.55f,
             speed = 0.55f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
         ),
@@ -141,7 +147,8 @@ object ModelCatalog {
             expectedSizeBytes = 539_212_467L,
             qualityLabel = "Precis",
             description = "Meilleure precision",
-            precision = 0.9f,
+            // 4 of 5, iOS's value: below Parakeet v3, above Small.
+            precision = 0.8f,
             speed = 0.3f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
         ),
@@ -154,7 +161,10 @@ object ModelCatalog {
             expectedSizeBytes = 131_628_000L,
             qualityLabel = "Rapide",
             description = "Rapide et precis",
-            precision = 0.75f,
+            // 3 of 5. English only, so it is never ranked on French; on English it
+            // scores about like Whisper Small on the Open ASR Leaderboard, below Medium
+            // and Parakeet v3. iOS has no such model.
+            precision = 0.6f,
             speed = 0.85f,
             provider = AiProvider.PARAKEET,
             languages = ModelLanguages.ENGLISH,
@@ -167,6 +177,8 @@ object ModelCatalog {
             expectedSizeBytes = 622_000_000L,
             qualityLabel = "Premium",
             description = "Detection automatique de la langue",
+            // 5 of 5: the most accurate model on French (Pierre's ranking, #180). iOS has
+            // 0.85, which shows 4 there, the same as Medium.
             precision = 0.95f,
             speed = 0.40f,
             provider = AiProvider.PARAKEET,

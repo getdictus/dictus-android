@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.model
 
+import dev.pivisolutions.dictus.ui.models.filledSegmentCount
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -152,6 +153,50 @@ class ModelCatalogTest {
             assertTrue("${model.key} should have a description", model.description.isNotBlank())
             assertTrue("${model.key} precision should be in 0 to 1", model.precision in 0f..1f)
             assertTrue("${model.key} speed should be in 0 to 1", model.speed in 0f..1f)
+        }
+    }
+
+    // --- Precision bar (#180) ---
+
+    private fun precisionSegments(key: String) = filledSegmentCount(ModelCatalog.findByKey(key)!!.precision)
+
+    @Test
+    fun `precision bars follow Pierre's ranking`() {
+        val expected = mapOf(
+            "tiny" to 1,
+            "base" to 2,
+            "small" to 3,
+            "small-q5_1" to 3,
+            "medium-q5_0" to 4,
+            "parakeet-ctc-110m-int8" to 3,
+            "parakeet-tdt-0.6b-v3" to 5,
+        )
+        assertEquals(expected.keys, ModelCatalog.ALL.map { it.key }.toSet())
+        expected.forEach { (key, segments) ->
+            assertEquals("$key precision segments", segments, precisionSegments(key))
+        }
+    }
+
+    @Test
+    fun `parakeet v3 is the only model with a full precision bar`() {
+        val full = ModelCatalog.ALL.filter { filledSegmentCount(it.precision) == 5 }.map { it.key }
+        assertEquals(listOf("parakeet-tdt-0.6b-v3"), full)
+        assertTrue(precisionSegments("medium-q5_0") <= 4)
+        assertTrue(precisionSegments("tiny") <= precisionSegments("base"))
+        assertTrue(precisionSegments("base") < 3)
+    }
+
+    @Test
+    fun `precision scores stay off the segment rounding edges`() {
+        // An edge (0.3, 0.5, 0.7, 0.9) rounds up, a hair below it rounds down: keep 0.05 clear.
+        // Speed is not checked yet: Base (0.7) and Medium (0.3) sit on edges until the Pixel
+        // measurements of #180 replace every speed score.
+        ModelCatalog.ALL.forEach { model ->
+            val scaled = model.precision * 5
+            assertTrue(
+                "${model.key} precision ${model.precision} is within 0.05 of a rounding edge",
+                kotlin.math.abs(scaled - Math.round(scaled)) <= 0.25f + 1e-4f,
+            )
         }
     }
 
