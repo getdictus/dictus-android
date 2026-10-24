@@ -311,7 +311,7 @@ fun OnboardingTestRecordingScreen(
                                             TranscriptionRetention.EPHEMERAL,
                                         )
                                         transcriptionResult = when (outcome) {
-                                            is TranscriptionOutcome.Text -> outcome.text
+                                            is TranscriptionOutcome.Transcribed -> outcome.text
                                             TranscriptionOutcome.NoWordsDetected ->
                                                 context.getString(CoreR.string.dictation_no_words_detected)
                                             TranscriptionOutcome.Failed, null ->

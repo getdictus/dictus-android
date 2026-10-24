@@ -1072,7 +1072,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                             Timber.i("No words detected notice shown: surface=keyboard")
                                         TranscriptionOutcome.Failed ->
                                             Timber.w("Transcription failed, nothing inserted")
-                                        is TranscriptionOutcome.Text -> Unit
+                                        is TranscriptionOutcome.Transcribed -> Unit
                                     }
                                 }
                             }
