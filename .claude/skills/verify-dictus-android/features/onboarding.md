@@ -17,7 +17,7 @@ A first launch walks through seven steps with progress dots: welcome, microphone
 - `onboarding.smart-mode-pick`: — absent.
 - `onboarding.model-download`: « Modèle vocal »: the model recommended for the phone's RAM (« Recommandé pour votre appareil »), « Télécharger », then « Téléchargement — N% », « Extraction des fichiers — N% » (Parakeet), « Vérification des fichiers… », « Continuer »; on failure « Échec du téléchargement. » + « Réessayer ». The install runs in a WorkManager foreground worker (#169): it goes on with the screen off or the app in the background, and the step shows its state again when reopened. — présent
 - `onboarding.microphone`: « Microphone », « Autoriser le micro » then the system prompt. — présent
-- `onboarding.first-dictation`: « Testez la dictée »: tap the mic, speak, see « Résultat ». — présent
+- `onboarding.first-dictation`: « Testez la dictée »: tap the mic, speak (live waveform, same as the recording screen, #184), see « Résultat ». — présent
 - `onboarding.stop-standby`: — Spécifique iOS.
 - `onboarding.completion`: « C'est prêt ! », « Commencer » opens Accueil. — présent
 - `onboarding.resume`: — partiel: the step survives the system killing the process (`SavedStateHandle`), not a force-stop or a reboot (back to step 1).

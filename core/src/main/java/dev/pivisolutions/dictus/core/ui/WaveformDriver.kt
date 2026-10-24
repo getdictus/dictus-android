@@ -6,9 +6,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import timber.log.Timber
-import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -116,17 +116,30 @@ class WaveformDriver(
                     if (logLabel != null) {
                         if (gapNanos > STALL_THRESHOLD_NANOS) {
                             Timber.tag(LogCategory.UI.name).w(
-                                "waveformStall surface=$logLabel gapMs=${gapNanos / 1_000_000} renderTick=$frames",
+                                "waveformStall surface=%s gapMs=%d renderTick=%d",
+                                logLabel,
+                                gapNanos / 1_000_000,
+                                frames,
                             )
                         }
                         maxGapNanos = maxOf(maxGapNanos, gapNanos)
                         if (heartbeatStartNanos == 0L) heartbeatStartNanos = frameTimeNanos
                         if (frameTimeNanos - heartbeatStartNanos >= HEARTBEAT_INTERVAL_NANOS) {
-                            val levels = _displayLevels.value
+                            val levels = if (isProcessing) {
+                                List(BAR_COUNT) { processingEnergy(it, _processingPhase.value) }
+                            } else {
+                                _displayLevels.value
+                            }
+                            // Rounded here rather than with %.3f, which would follow the
+                            // device locale (a comma in French) and break log greps.
+                            val avgLevel = (levels.average() * 1000).roundToInt() / 1000.0
                             Timber.tag(LogCategory.UI.name).d(
-                                "waveformHeartbeat surface=$logLabel processing=$isProcessing " +
-                                    "renderTick=$frames avgLevel=${String.format(Locale.ROOT, "%.3f", levels.average())} " +
-                                    "maxGapMs=${maxGapNanos / 1_000_000}",
+                                "waveformHeartbeat surface=%s processing=%s renderTick=%d avgLevel=%s maxGapMs=%d",
+                                logLabel,
+                                isProcessing,
+                                frames,
+                                avgLevel,
+                                maxGapNanos / 1_000_000,
                             )
                             heartbeatStartNanos = frameTimeNanos
                             maxGapNanos = 0L
