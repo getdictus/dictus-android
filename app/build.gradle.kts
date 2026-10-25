@@ -1,4 +1,9 @@
+import com.android.build.api.artifact.SingleArtifact
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import javax.inject.Inject
 
 /**
@@ -84,6 +89,75 @@ val appVersionName: Provider<String> = providers.environmentVariable("VERSION_NA
 val appVersionCode: Provider<Int> = providers.environmentVariable("VERSION_CODE")
     .map { it.toInt() }
     .orElse(devVersion.map { it.getValue("version_code").toInt() })
+
+/**
+ * Fails the build when a 64-bit native library in an APK or AAB has an ELF LOAD segment
+ * aligned below 16 KB, or is stored compressed in an APK (#218). An AAB always holds its
+ * libraries compressed: bundletool decides how the APKs it builds from it store them.
+ *
+ * WHY: Google Play requires 16 KB page support for apps targeting API 35+, and a 4 KB
+ * aligned library fails to load (UnsatisfiedLinkError) on an Android 15+ device that uses
+ * 16 KB pages. A new native dependency or an NDK change could silently bring 4 KB back;
+ * hooked into assemble and bundle, CI's assembleDebug catches it.
+ *
+ * 32-bit ABIs are listed in the report but not enforced: the requirement covers 64-bit only.
+ */
+abstract class CheckNativePageAlignment : DefaultTask() {
+    /** APK output directories or AAB files. */
+    @get:InputFiles
+    abstract val archives: ConfigurableFileCollection
+
+    @get:OutputFile
+    abstract val report: RegularFileProperty
+
+    @TaskAction
+    fun check() {
+        val lines = mutableListOf<String>()
+        val failures = mutableListOf<String>()
+        archives.asFileTree.filter { it.extension == "apk" || it.extension == "aab" }.sortedBy { it.name }.forEach { archive ->
+            ZipFile(archive).use { zip ->
+                zip.entries().asSequence()
+                    .mapNotNull { entry -> LIB_PATH.find(entry.name)?.let { entry to it.groupValues[1] } }
+                    .forEach { (entry, abi) ->
+                        val align = minLoadAlignment(zip.getInputStream(entry).readBytes())
+                        val stored = entry.method == ZipEntry.STORED
+                        val line = "${archive.name}!${entry.name} align=0x${align.toString(16)} " +
+                            (if (stored) "stored" else "compressed")
+                        lines += line
+                        val mustBeStored = archive.extension == "apk"
+                        if (abi in ABIS_64 && (align < PAGE_16K || (mustBeStored && !stored))) failures += line
+                    }
+            }
+        }
+        report.get().asFile.writeText(lines.joinToString("\n", postfix = "\n"))
+        if (failures.isNotEmpty()) {
+            throw GradleException(
+                "64-bit native libraries must be stored uncompressed with 16 KB LOAD alignment " +
+                    "(see #218):\n" + failures.joinToString("\n"),
+            )
+        }
+    }
+
+    /** Smallest p_align of the PT_LOAD segments of a little-endian ELF32 or ELF64 file. */
+    private fun minLoadAlignment(elf: ByteArray): Long {
+        val buffer = ByteBuffer.wrap(elf).order(ByteOrder.LITTLE_ENDIAN)
+        require(buffer.getInt(0) == 0x464C457F) { "not an ELF file" }
+        val is64 = elf[4].toInt() == 2
+        val phoff = if (is64) buffer.getLong(0x20).toInt() else buffer.getInt(0x1C)
+        val phentsize = buffer.getShort(if (is64) 0x36 else 0x2A).toInt()
+        val phnum = buffer.getShort(if (is64) 0x38 else 0x2C).toInt()
+        return (0 until phnum).map { phoff + it * phentsize }
+            .filter { buffer.getInt(it) == PT_LOAD }
+            .minOf { if (is64) buffer.getLong(it + 0x30) else buffer.getInt(it + 0x1C).toLong() }
+    }
+
+    private companion object {
+        val LIB_PATH = Regex("""(?:^|/)lib/([^/]+)/[^/]+\.so$""")
+        val ABIS_64 = setOf("arm64-v8a", "x86_64")
+        const val PAGE_16K = 16384L
+        const val PT_LOAD = 1
+    }
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -183,6 +257,9 @@ android {
     packaging {
         jniLibs {
             pickFirsts += setOf("**/libc++_shared.so")
+            // Keep native libraries uncompressed and 16 KB zip-aligned in the APK, loaded in
+            // place rather than extracted (the default for minSdk 23+, pinned for #218).
+            useLegacyPackaging = false
         }
     }
 }
@@ -225,6 +302,18 @@ androidComponents {
         }
 
         variant.sources.assets?.addStaticSourceDirectory(outputDir.get().asFile.absolutePath)
+
+        // 16 KB page-size guard on the packaged APK and AAB (#218), see CheckNativePageAlignment.
+        val apkAlignment = tasks.register<CheckNativePageAlignment>("check${capitalizedVariant}ApkNativeAlignment") {
+            archives.from(variant.artifacts.get(SingleArtifact.APK))
+            report.set(layout.buildDirectory.file("reports/native-alignment/${variantName}-apk.txt"))
+        }
+        val bundleAlignment = tasks.register<CheckNativePageAlignment>("check${capitalizedVariant}BundleNativeAlignment") {
+            archives.from(variant.artifacts.get(SingleArtifact.BUNDLE))
+            report.set(layout.buildDirectory.file("reports/native-alignment/${variantName}-bundle.txt"))
+        }
+        tasks.matching { it.name == "assemble$capitalizedVariant" }.configureEach { dependsOn(apkAlignment) }
+        tasks.matching { it.name == "bundle$capitalizedVariant" }.configureEach { dependsOn(bundleAlignment) }
 
         tasks.matching { it.name == "merge${capitalizedVariant}Assets" }.configureEach {
             dependsOn(copyTask)
