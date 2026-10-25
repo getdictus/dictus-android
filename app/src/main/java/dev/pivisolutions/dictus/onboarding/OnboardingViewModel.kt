@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -94,7 +96,13 @@ class OnboardingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val stored = dataStore.data.first()[PreferenceKeys.ONBOARDING_STEP]
+            val stored = try {
+                dataStore.data.first()[PreferenceKeys.ONBOARDING_STEP]
+            } catch (e: IOException) {
+                // An unreadable store starts at the welcome screen rather than crashing.
+                Timber.w(e, "Cannot read the onboarding step")
+                null
+            }
             // A step change made before the read finished wins over the stored step.
             _currentStep.compareAndSet(null, OnboardingStep.resumed(stored))
         }
@@ -208,7 +216,12 @@ class OnboardingViewModel @Inject constructor(
     private fun show(step: OnboardingStep) {
         _currentStep.value = step
         viewModelScope.launch {
-            dataStore.edit { prefs -> prefs[PreferenceKeys.ONBOARDING_STEP] = step.storedName }
+            try {
+                dataStore.edit { prefs -> prefs[PreferenceKeys.ONBOARDING_STEP] = step.storedName }
+            } catch (e: IOException) {
+                // The flow goes on from memory; only a relaunch would miss this step.
+                Timber.w(e, "Cannot save the onboarding step ${step.storedName}")
+            }
         }
     }
 

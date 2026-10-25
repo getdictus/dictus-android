@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -91,6 +92,15 @@ fun OnboardingTestRecordingScreen(
 
     LaunchedEffect(dictationController) {
         dictationController?.prewarmEngine()
+    }
+
+    // « Passer » can leave the step mid-recording: stop it, or it goes on behind the next step.
+    DisposableEffect(dictationController) {
+        onDispose {
+            if (dictationController?.state?.value is DictationState.Recording) {
+                dictationController.cancelRecording()
+            }
+        }
     }
 
     fun runGateCommand(command: MicGateCommand) {

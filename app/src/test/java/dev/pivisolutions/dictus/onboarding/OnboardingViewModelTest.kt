@@ -130,6 +130,23 @@ class OnboardingViewModelTest {
         assertEquals(true, fakeDataStore.data.first()[PreferenceKeys.HAS_COMPLETED_ONBOARDING])
     }
 
+    @Test
+    fun `resume - an unreadable store starts at the welcome screen`() = runTest(testDispatcher) {
+        val vm = OnboardingViewModel(context, FailingDataStore(), fakeInstaller, SavedStateHandle())
+
+        assertEquals(OnboardingStep.Welcome, vm.currentStep.value)
+    }
+
+    @Test
+    fun `resume - a failed write keeps the flow moving`() = runTest(testDispatcher) {
+        val vm = OnboardingViewModel(context, FailingDataStore(), fakeInstaller, SavedStateHandle())
+
+        vm.advanceStep()
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.Microphone, vm.currentStep.value)
+    }
+
     // --- SavedStateHandle restoration ---
 
     @Test
@@ -401,6 +418,15 @@ class FakeDataStore : DataStore<Preferences> {
         }
         return updated
     }
+}
+
+/** DataStore whose disk fails: every read and write throws [java.io.IOException]. */
+class FailingDataStore : DataStore<Preferences> {
+    override val data: Flow<Preferences> = kotlinx.coroutines.flow.flow { throw java.io.IOException("disk") }
+
+    override suspend fun updateData(
+        transform: suspend (t: Preferences) -> Preferences,
+    ): Preferences = throw java.io.IOException("disk")
 }
 
 /**
