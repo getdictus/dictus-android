@@ -160,6 +160,17 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
+     * [advanceStep] on behalf of the page of [step]; ignored once [step] is no longer on screen.
+     *
+     * WHY: the shell slides the pages, so the page that just moved on stays composed for the
+     * length of the slide and can still run its effects. The microphone step's auto-advance
+     * fired a second time from there and skipped the keyboard setup.
+     */
+    fun advanceFrom(step: OnboardingStep) {
+        if (currentStep.value == step) advanceStep()
+    }
+
+    /**
      * The shell's back control and the system back: moves to [OnboardingStep.stepBack] and
      * records it, so an app killed now resumes on the step the user went back to. Does
      * nothing on a step without a back control.

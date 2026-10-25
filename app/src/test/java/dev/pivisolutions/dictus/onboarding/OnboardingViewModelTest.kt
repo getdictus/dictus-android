@@ -239,6 +239,16 @@ class OnboardingViewModelTest {
         assertEquals(OnboardingStep.KeyboardLayout, viewModel.currentStep.value)
     }
 
+    @Test
+    fun `advanceFrom a page no longer on screen is ignored`() = runTest(testDispatcher) {
+        // The microphone page, sliding away after the grant moved the flow on, runs its
+        // auto-advance a second time: it must not skip the keyboard setup.
+        viewModel.advanceStep() // -> Microphone
+        viewModel.advanceFrom(OnboardingStep.Microphone) // -> KeyboardSetup
+        viewModel.advanceFrom(OnboardingStep.Microphone)
+        assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
+    }
+
     // --- Skip (#196) ---
 
     @Test

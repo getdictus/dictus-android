@@ -183,26 +183,28 @@ private fun OnboardingScreen(
         onBack = { viewModel.goBack() },
         onSkip = { viewModel.skipStep() },
     ) { pageStep ->
+        // A page's moves only count while it is the step on screen (see advanceFrom).
+        val onNext = { viewModel.advanceFrom(pageStep) }
         when (pageStep) {
             OnboardingStep.Welcome -> OnboardingWelcomeScreen(
-                onNext = { viewModel.advanceStep() },
+                onNext = onNext,
             )
             OnboardingStep.Microphone -> OnboardingMicPermissionScreen(
                 micGranted = micGranted,
                 onPermissionResult = { viewModel.setMicPermissionGranted(it) },
-                onNext = { viewModel.advanceStep() },
+                onNext = onNext,
             )
             OnboardingStep.KeyboardSetup -> OnboardingKeyboardSetupScreen(
                 imeEnabled = imeEnabled,
                 imeSelected = imeSelected,
                 onOpenSettings = onOpenKeyboardSettings,
                 onOpenPicker = onShowKeyboardPicker,
-                onNext = { viewModel.advanceStep() },
+                onNext = onNext,
             )
             OnboardingStep.KeyboardLayout -> OnboardingModeSelectionScreen(
                 selectedLayout = selectedLayout,
                 onSelectLayout = { viewModel.setLayout(it) },
-                onNext = { viewModel.advanceStep() },
+                onNext = onNext,
             )
             OnboardingStep.ModelPreparation -> OnboardingModelDownloadScreen(
                 modelName = recommendedModel.displayName,
@@ -211,14 +213,14 @@ private fun OnboardingScreen(
                 installState = installState,
                 onStartDownload = { viewModel.startModelDownload() },
                 onRetry = { viewModel.retryDownload() },
-                onNext = { viewModel.advanceStep() },
+                onNext = onNext,
             )
             OnboardingStep.FirstDictation -> OnboardingTestRecordingScreen(
                 dictationController = dictationController,
-                onNext = { viewModel.advanceStep() },
+                onNext = onNext,
             )
             OnboardingStep.Completion -> OnboardingSuccessScreen(
-                onComplete = { viewModel.advanceStep() },
+                onComplete = onNext,
             )
         }
     }
