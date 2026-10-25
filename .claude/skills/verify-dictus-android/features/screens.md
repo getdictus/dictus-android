@@ -6,7 +6,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 
 | Screen ID | Screen | How to reach it | Features | States | Capture |
 | --- | --- | --- | --- | --- | --- |
-| `app.onboarding.welcome` | Onboarding 1/7: « Dictus — Dictation vocale, 100 % offline », « Commencer » | fresh install only | onboarding | — | no — onboarding completed on the Pixel; seeing it again requires wiping the data (forbidden) |
+| `app.onboarding.welcome` | Onboarding 1/7: « Dictus — Dictation vocale, 100 % offline », « Commencer »; no progress bar | fresh install only | onboarding | — | no — onboarding completed on the Pixel; seeing it again requires wiping the data (forbidden) |
 | `app.onboarding.language` | — | — | onboarding | absent on Android | — |
 | `app.onboarding.keyboard-setup` | — | — | onboarding | iOS-only; see app.onboarding.ime-setup | — |
 | `app.onboarding.apple-intelligence` | — | — | onboarding | iOS-only | — |
@@ -16,10 +16,10 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `app.onboarding.vocabulary-scene` | — | — | onboarding, vocabulary | absent | — |
 | `app.onboarding.history-scene` | — | — | onboarding, history | absent | — |
 | `app.onboarding.model-preparation` | Onboarding 5/7: « Modèle vocal », recommended model, « Télécharger » | fresh install, after step 4 | onboarding, models.transcription | to download / « Téléchargement — N% » / « Extraction des fichiers — N% » / « Vérification des fichiers… » / « Échec du téléchargement. » + « Réessayer » / « Continuer » | no — onboarding completed; besides, the step downloads a model |
-| `app.onboarding.microphone` | Onboarding 2/7: « Microphone », « Autoriser le micro » | fresh install, after step 1 | onboarding | not granted / granted (« Continuer ») | no — onboarding completed on the Pixel |
-| `app.onboarding.first-dictation` | Onboarding 6/7: « Testez la dictée », mic, « Résultat » | fresh install, after step 5 | onboarding, dictation.in-app | idle / recording « Toucher pour arrêter » / « Transcription en cours… » / result | no — onboarding completed on the Pixel |
+| `app.onboarding.microphone` | Onboarding 2/7: back chevron, bar segment 1/5, « Microphone », « Autoriser le micro » | fresh install, after step 1 | onboarding | not granted / granted (« Continuer ») | no — onboarding completed on the Pixel |
+| `app.onboarding.first-dictation` | Onboarding 6/7: bar segment 5/5, « Testez la dictée », mic, « Résultat », « Passer » | fresh install, after step 5 | onboarding, dictation.in-app | idle / recording « Toucher pour arrêter » / « Transcription en cours… » / result | no — onboarding completed on the Pixel |
 | `app.onboarding.stop-standby` | — | — | onboarding | iOS-only | — |
-| `app.onboarding.completion` | Onboarding 7/7: « C'est prêt ! », « Commencer » | fresh install, after step 6 | onboarding | — | no — onboarding completed on the Pixel |
+| `app.onboarding.completion` | Onboarding 7/7: « C'est prêt ! », « Commencer »; no progress bar | fresh install, after step 6 | onboarding | — | no — onboarding completed on the Pixel |
 | `app.whats-new` | — | — | onboarding | absent | — |
 | `app.home` | Home tab: logo, « Modèle actif », « Dernière transcription » + « Copier », « Nouvelle dictée » | tap `Accueil` | dictation.in-app | without a last transcription (captured) / with one | [yes](../screens/app.home.png) |
 | `app.recording` | Full-screen dictation: timer, « Arrêter », « Toucher pour arrêter » | Accueil → `Nouvelle dictée` (starts recording at once; `Retour` does not stop it) | dictation.in-app | idle / recording / transcription / « Résultat » + « Copier » / « Aucun mot détecté » (empty dictation) / loading overlay or « Aucun modèle vocal » | [yes](../screens/app.recording.png) |

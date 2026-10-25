@@ -54,6 +54,11 @@
     <string name="onboarding_success_body">Dictus is configured and ready to use.</string>
     <string name="onboarding_success_cta">Start</string>
 
+    <!-- Onboarding: shell around every step (#196) -->
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_progress">Step %1$d of %2$d</string>
+
     <!-- Settings: Section headers -->
     <string name="settings_section_transcription">TRANSCRIPTION</string>
     <string name="settings_section_keyboard">KEYBOARD</string>

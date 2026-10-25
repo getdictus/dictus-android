@@ -35,10 +35,11 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.service.ModelInstallState
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingPage
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 
 /**
- * Onboarding Step 5 — Model download.
+ * Onboarding Step 5 — Model download, in the shell's page.
  *
  * Shows the recommended model's info card with its install state:
  * - Idle: "Telecharger" CTA → calls [onStartDownload]
@@ -84,42 +85,18 @@ fun OnboardingModelDownloadScreen(
         else -> onStartDownload
     }
 
-    OnboardingStepScaffold(
-        currentStep = 5,
-        ctaText = ctaText,
-        ctaEnabled = ctaEnabled,
-        ctaIcon = if (!downloadComplete && !isDownloading) Icons.Default.Download else null,
-        onCtaClick = ctaAction,
+    OnboardingPage(
+        title = stringResource(R.string.onboarding_model_download_title),
+        subtitle = stringResource(R.string.onboarding_model_download_body),
+        bottom = {
+            OnboardingPrimaryButton(
+                text = ctaText,
+                enabled = ctaEnabled,
+                icon = if (!downloadComplete && !isDownloading) Icons.Default.Download else null,
+                onClick = ctaAction,
+            )
+        },
     ) {
-        Icon(
-            imageVector = Icons.Default.Download,
-            contentDescription = null,
-            tint = DictusColors.Accent,
-            modifier = Modifier.size(64.dp),
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = stringResource(R.string.onboarding_model_download_title),
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = (-0.5).sp,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = stringResource(R.string.onboarding_model_download_body),
-            color = LocalDictusColors.current.textSecondary,
-            fontSize = 15.sp,
-            lineHeight = (15 * 1.5).sp,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
         // Model card
         ModelInfoCard(
             modelName = modelName,
