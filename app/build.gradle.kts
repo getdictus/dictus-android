@@ -96,7 +96,7 @@ plugins {
 
 android {
     namespace = "dev.pivisolutions.dictus"
-    compileSdk = 35
+    compileSdk = 36
 
     signingConfigs {
         create("release") {
@@ -116,7 +116,7 @@ android {
     defaultConfig {
         applicationId = "dev.pivisolutions.dictus"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         // versionCode and versionName come from git tags, see appVersionName above (#165).
         // Injected into BuildConfig so every log export names the exact commit (#112).
         buildConfigField("String", "GIT_SHA", "\"${gitOutput("git", "rev-parse", "--short=12", "HEAD")}\"")

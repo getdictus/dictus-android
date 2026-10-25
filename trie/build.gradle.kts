@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "dev.pivisolutions.dictus.trie"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
