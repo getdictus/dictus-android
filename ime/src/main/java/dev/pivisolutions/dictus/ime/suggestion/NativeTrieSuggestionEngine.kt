@@ -420,11 +420,15 @@ class NativeTrieSuggestionEngine(
             if (normalized in learnedKeys) learnedNative += word else normalNative += word
         }
 
+        // Candidates come back in dictionary case; the user's capitals must survive (#224).
+        val locale = live?.language?.let { Locale.forLanguageTag(it.code) } ?: Locale.ROOT
         return QueryResult(
             isKnownWord = isKnownWord,
             knownInputDominance = profileCorrection?.knownInputDominance == true,
-            primaryCorrection = primaryCorrection,
-            suggestions = (learnedPrefixWords + learnedNative + normalNative).take(maxResults),
+            primaryCorrection = primaryCorrection?.let { TypedCase.applyTo(it, input, locale) },
+            suggestions = (learnedPrefixWords + learnedNative + normalNative)
+                .take(maxResults)
+                .map { TypedCase.applyTo(it, input, locale) },
             contextIdentity = contextIdentity,
         )
     }
