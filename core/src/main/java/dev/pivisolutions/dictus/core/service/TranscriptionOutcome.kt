@@ -3,14 +3,26 @@ package dev.pivisolutions.dictus.core.service
 /**
  * What one dictation produced, as returned by [DictationController.confirmAndTranscribe].
  *
- * WHY three cases (not a nullable String): "nothing was said" and "the engine broke" call for
+ * WHY distinct cases (not a nullable String): "nothing was said" and "the engine broke" call for
  * different feedback. Like iOS (DictationFailureMessage.noWordsDetected, iOS #313), every way a
  * dictation can end without words collapses into one notice, and it is not an error.
  */
 sealed interface TranscriptionOutcome {
 
-    /** Post-processed text, never blank. */
-    data class Text(val text: String) : TranscriptionOutcome
+    /** Post-processed text to insert, never blank: [Text] or [Partial]. */
+    sealed interface Transcribed : TranscriptionOutcome {
+        val text: String
+    }
+
+    /** The whole dictation, post-processed. */
+    data class Text(override val text: String) : Transcribed
+
+    /**
+     * The timeout cut the decode (#179): [text] holds the segments decoded before it, and the
+     * end of the dictation is missing. Inserted like [Text]; #182 will tell the user the end
+     * is missing.
+     */
+    data class Partial(override val text: String) : Transcribed
 
     /**
      * No words to insert: no audio captured, a recording under the minimum duration, or a
@@ -19,7 +31,7 @@ sealed interface TranscriptionOutcome {
      */
     data object NoWordsDetected : TranscriptionOutcome
 
-    /** Model unavailable, engine failure, timeout or exception. */
+    /** Model unavailable, engine failure, timeout before any segment, or exception. */
     data object Failed : TranscriptionOutcome
 
     companion object {
@@ -29,5 +41,12 @@ sealed interface TranscriptionOutcome {
          */
         fun fromProcessedText(text: String): TranscriptionOutcome =
             if (text.none { it.isLetterOrDigit() }) NoWordsDetected else Text(text)
+
+        /**
+         * Segments decoded before the timeout: [Partial], or [Failed] when they hold no word,
+         * since the end of the dictation, maybe all its words, is missing.
+         */
+        fun fromPartialText(text: String): TranscriptionOutcome =
+            if (text.none { it.isLetterOrDigit() }) Failed else Partial(text)
     }
 }
