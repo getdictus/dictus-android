@@ -253,6 +253,7 @@
     <string name="model_preparation_title_ready">Your model is ready</string>
     <string name="model_preparation_title_failed">The voice model could not be prepared</string>
     <string name="model_preparation_subtitle">%1$s. Once ready, everything runs offline.</string>
+    <string name="model_preparation_subtitle_onboarding">%1$s, picked for this phone. After that, everything runs offline.</string>
     <string name="model_preparation_subtitle_ready">%1$s runs on your phone. Dictation works even without a network.</string>
     <string name="model_preparation_step_downloading">Downloading</string>
     <string name="model_preparation_step_downloaded">Downloaded \u00b7 %1$d MB</string>

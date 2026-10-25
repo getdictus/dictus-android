@@ -255,9 +255,10 @@
     <string name="model_preparation_title_ready">Votre mod\u00e8le est pr\u00eat</string>
     <string name="model_preparation_title_failed">Le mod\u00e8le vocal n\u2019a pas pu \u00eatre pr\u00e9par\u00e9</string>
     <string name="model_preparation_subtitle">%1$s. Une fois pr\u00eat, tout se passe hors ligne.</string>
+    <string name="model_preparation_subtitle_onboarding">%1$s, choisi pour ce t\u00e9l\u00e9phone. Ensuite, tout se passe hors ligne.</string>
     <string name="model_preparation_subtitle_ready">%1$s tourne sur votre t\u00e9l\u00e9phone. La dict\u00e9e marche m\u00eame sans r\u00e9seau.</string>
     <string name="model_preparation_step_downloading">T\u00e9l\u00e9chargement</string>
-    <string name="model_preparation_step_downloaded">T\u00e9l\u00e9charg\u00e9 \u00b7 %1$d Mo</string>
+    <string name="model_preparation_step_downloaded">T\u00e9l\u00e9charg\u00e9 \u00b7 %1$d\u202fMo</string>
     <string name="model_preparation_step_preparing">Pr\u00e9paration pour ce t\u00e9l\u00e9phone</string>
     <string name="model_preparation_step_loading">Chargement du mod\u00e8le</string>
     <string name="model_preparation_step_prepared">Pr\u00e9par\u00e9 pour ce t\u00e9l\u00e9phone</string>

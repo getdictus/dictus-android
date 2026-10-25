@@ -216,7 +216,7 @@ fun ModelPreparationScreen(
             Spacer(Modifier.weight(1f))
             PreparationRing(ring = ModelPreparationRing.of(phase), colors = colors)
             Title(phase, colors)
-            Subtitle(phase, target, colors)
+            Subtitle(phase, target, context, colors)
             StepsCard(
                 steps = ModelPreparationSteps.of(phase, memory.lastWorkPhase),
                 phase = phase,
@@ -295,12 +295,19 @@ private fun Title(phase: ModelPreparationPhase, colors: PreparationColors) {
 }
 
 @Composable
-private fun Subtitle(phase: ModelPreparationPhase, target: ModelPreparationTarget, colors: PreparationColors) {
+private fun Subtitle(
+    phase: ModelPreparationPhase,
+    target: ModelPreparationTarget,
+    context: ModelPreparationContext,
+    colors: PreparationColors,
+) {
     val name = target.info.displayName
-    val text = if (phase == ModelPreparationPhase.Ready) {
-        stringResource(R.string.model_preparation_subtitle_ready, name)
-    } else {
-        stringResource(R.string.model_preparation_subtitle, name)
+    // The onboarding names why this model: iOS says « choisi pour le français et cet iPhone ».
+    // Android picks it from the phone's RAM alone, so the sentence names the phone only.
+    val text = when {
+        phase == ModelPreparationPhase.Ready -> stringResource(R.string.model_preparation_subtitle_ready, name)
+        context == ModelPreparationContext.Onboarding -> stringResource(R.string.model_preparation_subtitle_onboarding, name)
+        else -> stringResource(R.string.model_preparation_subtitle, name)
     }
     Box(
         modifier = Modifier
