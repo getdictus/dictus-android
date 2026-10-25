@@ -50,6 +50,8 @@ import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.AutoCapitalization
+import dev.pivisolutions.dictus.ime.input.AutoFullStop
+import dev.pivisolutions.dictus.ime.input.AutoFullStopInput
 import dev.pivisolutions.dictus.ime.input.AutoCapMode
 import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
@@ -159,6 +161,9 @@ class DictusImeService : LifecycleInputMethodService() {
     private val _autoCapSignal = MutableStateFlow<AutoCapSignal?>(null)
     private var autoCapMode = AutoCapMode.NONE
     private var lastAutoCapContext: String? = null
+    // Double-space full stop (#193): allowed per field from EditorInfo, undone by the next Backspace.
+    private val autoFullStop = AutoFullStopInput()
+    private var isAutoFullStopAllowed = false
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
     // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
     private val dictationUndo = DictationUndo()
@@ -423,6 +428,7 @@ class DictusImeService : LifecycleInputMethodService() {
         editorSelStart = newSelStart
         editorSelEnd = newSelEnd
         dictationUndo.onSelectionChanged(newSelStart, newSelEnd)
+        autoFullStop.onSelectionChanged(newSelStart, newSelEnd)
         isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
@@ -622,6 +628,8 @@ class DictusImeService : LifecycleInputMethodService() {
         refreshFrenchAdaptiveKeyState()
         autoCapMode = AutoCapitalization.modeFor(attribute?.inputType ?: 0)
         lastAutoCapContext = null
+        autoFullStop.clear()
+        isAutoFullStopAllowed = AutoFullStop.allowedFor(attribute?.inputType ?: 0)
         logEditorSession(attribute, restarting)
     }
 
@@ -698,6 +706,8 @@ class DictusImeService : LifecycleInputMethodService() {
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         autoCapMode = AutoCapMode.NONE
         lastAutoCapContext = null
+        autoFullStop.clear()
+        isAutoFullStopAllowed = false
         super.onFinishInput()
     }
 
@@ -1158,7 +1168,16 @@ class DictusImeService : LifecycleInputMethodService() {
     fun commitText(text: String): Boolean {
         val inputConnection = currentInputConnection ?: return false
         dictationFeedback.withdraw()
-        val committed = if (text == " ") {
+        val committed = if (
+            text == " " && isAutoFullStopAllowed &&
+            autoFullStop.onSpace(inputConnection, isEditorSelectionCollapsed)
+        ) {
+            // Second space after a word: ". " was written instead. Like iOS, it also closes the
+            // autocorrect undo window, since the text no longer matches what that undo expects.
+            autocorrectCoordinator.onOtherInput()
+            requestNextWordPredictions()
+            true
+        } else if (text == " ") {
             val result = autocorrectCoordinator.onSpace(InputConnectionAutocorrectEditor(inputConnection)) {
                 inputConnection.commitText(" ", 1)
             }
@@ -1173,6 +1192,7 @@ class DictusImeService : LifecycleInputMethodService() {
             }
             result != AutocorrectSpaceResult.INDETERMINATE
         } else {
+            autoFullStop.clear()
             autocorrectCoordinator.onOtherInput()
             clearSuggestionState()
             inputConnection.commitText(text, 1)
@@ -1234,8 +1254,12 @@ class DictusImeService : LifecycleInputMethodService() {
         val inputConnection = currentInputConnection ?: return
         dictationFeedback.withdraw()
         clearSuggestionState()
-        autocorrectCoordinator.onBackspace(InputConnectionAutocorrectEditor(inputConnection)) {
-            deletePrecedingCodePoint(inputConnection)
+        if (autoFullStop.onBackspace(inputConnection, isEditorSelectionCollapsed)) {
+            autocorrectCoordinator.onOtherInput()
+        } else {
+            autocorrectCoordinator.onBackspace(InputConnectionAutocorrectEditor(inputConnection)) {
+                deletePrecedingCodePoint(inputConnection)
+            }
         }
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
@@ -1245,6 +1269,7 @@ class DictusImeService : LifecycleInputMethodService() {
     fun deleteWordBackward() {
         val inputConnection = currentInputConnection ?: return
         dictationFeedback.withdraw()
+        autoFullStop.clear()
         autocorrectCoordinator.onOtherInput()
         clearSuggestionState()
         deletePrecedingWord(inputConnection)
@@ -1256,6 +1281,7 @@ class DictusImeService : LifecycleInputMethodService() {
      * Sends an Enter/Return key event to the editor.
      */
     fun sendReturnKey() {
+        autoFullStop.clear()
         autocorrectCoordinator.onOtherInput()
         dictationFeedback.withdraw()
         clearSuggestionState()
