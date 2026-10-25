@@ -53,6 +53,7 @@ class DictationLogPrivacyTest {
         val transcriber = DictationTranscriber(
             ensureModel = { "/models/tiny.bin" },
             withProvider = { _, _, use -> use(EchoProvider(transcript)) },
+            wakeLock = FakeWakeLock(),
         )
 
         val outcome = transcriber.transcribe(FloatArray(16_000), "tiny", "fr")
