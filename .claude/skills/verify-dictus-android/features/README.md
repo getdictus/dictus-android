@@ -146,6 +146,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.accents` | Free | present — long press, accent strip | no |
 | `typing.dead-keys` | Free | absent | no |
 | `typing.autocorrect-toggle` | Free | present | no |
+| `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |
 | `learned-words.learn` | Free | present | no |
 | `learned-words.reset` | Free | absent — no button; only clearing the app's data | no |
 | `keyboard.language-switch` | Free | present — tap on the language code (FR→EN→ES→DE), no panel | no |
