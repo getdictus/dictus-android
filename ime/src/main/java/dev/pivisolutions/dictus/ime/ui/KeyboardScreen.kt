@@ -17,6 +17,7 @@ import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
@@ -57,7 +58,7 @@ fun KeyboardScreen(
     predictionToken: NextWordPredictionToken? = null,
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
-    isNoWordsNoticeVisible: Boolean = false,
+    dictationNotice: DictationNotice.Message? = null,
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
@@ -112,7 +113,7 @@ fun KeyboardScreen(
                     onCurrentWordSelected = onCurrentWordSelected,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = onUndoDictation,
-                    isNoWordsNoticeVisible = isNoWordsNoticeVisible,
+                    dictationNotice = dictationNotice,
                 )
 
                 // Mic button row above keyboard (46.dp)

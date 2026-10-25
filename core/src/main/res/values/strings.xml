@@ -18,4 +18,6 @@
     <string name="model_missing_accessibility">No speech recognition model is downloaded. Microphone unavailable.</string>
     <!-- A dictation that produced no text. A notice, not an error; same sentence as iOS (#153, iOS #313). -->
     <string name="dictation_no_words_detected">No words detected</string>
+    <!-- A dictation that failed (missing model, engine failure, timeout). Names no cause; iOS unexplainedFailure (#182). -->
+    <string name="dictation_failed">The dictation failed. Tap the microphone to try again.</string>
 </resources>

@@ -56,7 +56,7 @@ import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.input.DictationFeedback
 import dev.pivisolutions.dictus.ime.input.DictationUndo
-import dev.pivisolutions.dictus.ime.input.NoWordsNotice
+import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
 import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionCoordinator
@@ -153,10 +153,11 @@ class DictusImeService : LifecycleInputMethodService() {
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
     // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
     private val dictationUndo = DictationUndo()
-    // "No words detected" after a dictation that produced no text, in the suggestion bar (#153).
-    private val noWordsNotice = NoWordsNotice(bindingScope)
+    // "No words detected" or "The dictation failed" after a dictation that inserted nothing,
+    // in the suggestion bar (#153, #182).
+    private val dictationNotice = DictationNotice(bindingScope)
     // Withdraws both offers together wherever the field changes.
-    private val dictationFeedback = DictationFeedback(dictationUndo, noWordsNotice)
+    private val dictationFeedback = DictationFeedback(dictationUndo, dictationNotice)
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
@@ -756,7 +757,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
         val isDictationUndoAvailable by dictationUndo.isAvailable.collectAsState()
-        val isNoWordsNoticeVisible by noWordsNotice.isVisible.collectAsState()
+        val dictationNoticeMessage by dictationNotice.message.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
@@ -928,7 +929,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
-                    isNoWordsNoticeVisible = isNoWordsNoticeVisible,
+                    dictationNotice = dictationNoticeMessage,
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
                         dictationFeedback.withdraw()

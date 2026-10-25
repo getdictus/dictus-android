@@ -27,12 +27,14 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.core.R as CoreR
+import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
 
 enum class SuggestionPresentationMode { COMPLETION, PREDICTION }
@@ -49,10 +51,10 @@ fun SuggestionBar(
     predictionToken: NextWordPredictionToken? = null,
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
-    isNoWordsNoticeVisible: Boolean = false,
+    dictationNotice: DictationNotice.Message? = null,
 ) {
-    if (isNoWordsNoticeVisible) {
-        NoWordsNoticeBar(modifier = modifier)
+    if (dictationNotice != null) {
+        DictationNoticeBar(message = dictationNotice, modifier = modifier)
         return
     }
     if (isDictationUndoAvailable) {
@@ -166,12 +168,17 @@ private fun DictationUndoBar(onUndoDictation: () -> Unit, modifier: Modifier = M
 }
 
 /**
- * Shown in place of the suggestion slots after a dictation that produced no text (#153). Grey,
- * like the iOS toolbar: the app works, there was simply nothing to transcribe. A polite live
- * region so TalkBack users hear it too.
+ * Shown in place of the suggestion slots after a dictation that inserted nothing (#153, #182).
+ * Grey for a failure too, like the iOS toolbar: a red line right after the red recording
+ * overlay reads as an alarm. Two lines, as iOS allows, because the failure sentence is an
+ * instruction that one line would cut. A polite live region so TalkBack users hear it too.
  */
 @Composable
-private fun NoWordsNoticeBar(modifier: Modifier = Modifier) {
+private fun DictationNoticeBar(message: DictationNotice.Message, modifier: Modifier = Modifier) {
+    val text = when (message) {
+        DictationNotice.Message.NoWordsDetected -> CoreR.string.dictation_no_words_detected
+        DictationNotice.Message.Failed -> CoreR.string.dictation_failed
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -182,10 +189,12 @@ private fun NoWordsNoticeBar(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(CoreR.string.dictation_no_words_detected),
+            text = stringResource(text),
             color = LocalDictusColors.current.textSecondary,
             fontSize = 13.sp,
-            maxLines = 1,
+            lineHeight = 15.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
     }
