@@ -12,7 +12,7 @@ While typing with the Dictus keyboard, a three-slot bar above the keys offers co
 - `typing.suggestions`: Suggestion bar (three slots) with completions of the current word and next-word predictions after a space. — présent
 - `typing.autocorrect-on-space`: A misspelt word is replaced on space (FR, EN, ES, DE dictionaries). — présent
 - `typing.undo-correction`: — partiel: Backspace immediately after a correction restores the original word (and learns it); there is no undo chip in the bar as on iOS.
-- `typing.auto-full-stop`: — absent: double space inserts two spaces.
+- `typing.auto-full-stop`: a second space after anything but a space or a `.` becomes `. ` and the next letter is capitalised (same rule as iOS `AutoFullStop.shouldSubstitute`: digits and other punctuation get it too). ⌫ right after turns `. ` back into one space; iOS has no such undo. Never in password fields; no setting, as on iOS. — présent
 - `typing.accents`: Long-press a letter to open its accent strip, slide to choose. — présent
 - `typing.dead-keys`: — absent.
 - `typing.autocorrect-toggle`: « Correction automatique » in Réglages → CLAVIER. — présent
@@ -35,6 +35,7 @@ Preconditions: Launch and Doctor OK, a scratch note focused, keyboard language F
 - **Misspell, then space.** Type `b o n j o r u`, tap space. → the field reads `bonjour ` in the tree (`evidence.sh 02-after-space`).
 - **Undo the correction (test device only, see Gotchas).** Tap ⌫ once. → the field reads `bonjoru` again.
 - **Auto-capitalization.** Focus an empty scratch note. → the shift key is lit (accent background) and the letter keys show capitals (`evidence.sh 04-autocap-start`). Type `o k . ` with the keys (`.` from the 123 page, back with `ABC`). → shift is lit again after the space (`evidence.sh 05-autocap-after-stop`). Focus an e-mail or password field (a login screen). → shift stays off.
+- **Double-space full stop.** In a scratch note, type `o k` with the keys, then tap space twice. → the field reads `ok. ` and shift is lit (`evidence.sh 06-full-stop`). Tap ⌫ once. → the field reads `ok ` and shift is off (`evidence.sh 07-full-stop-undo`).
 - **Proof.** The field's value in `mcp__argent__describe` before and after space, and after ⌫. Autocorrect decisions are not logged with text (privacy): the field value is the proof.
 
 ## Gotchas
