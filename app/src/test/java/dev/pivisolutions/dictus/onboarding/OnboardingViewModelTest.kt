@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.model.ModelManager
+import dev.pivisolutions.dictus.models.ModelPreparationPhase
 import dev.pivisolutions.dictus.service.ModelInstallState
 import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,7 +48,7 @@ class OnboardingViewModelTest {
         context = RuntimeEnvironment.getApplication()
         fakeDataStore = FakeDataStore()
         fakeInstaller = FakeModelInstaller(context)
-        viewModel = OnboardingViewModel(context, fakeDataStore, fakeInstaller, SavedStateHandle())
+        viewModel = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), SavedStateHandle())
     }
 
     // --- Initial state ---
@@ -80,6 +82,7 @@ class OnboardingViewModelTest {
             context,
             fakeDataStore,
             fakeInstaller,
+            ModelManager(context),
             SavedStateHandle(mapOf("currentStep" to 3)),
         )
         assertEquals(3, restoredVm.currentStep.value)
@@ -91,6 +94,7 @@ class OnboardingViewModelTest {
             context,
             fakeDataStore,
             fakeInstaller,
+            ModelManager(context),
             SavedStateHandle(mapOf("micPermissionGranted" to true)),
         )
         assertTrue(restoredVm.micPermissionGranted.value)
@@ -100,7 +104,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - advanceStep writes to savedStateHandle`() = runTest(testDispatcher) {
         val ssh = SavedStateHandle()
-        val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ssh)
+        val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), ssh)
         vm.advanceStep()
         assertEquals(2, ssh.get<Int>("currentStep"))
     }
@@ -108,7 +112,7 @@ class OnboardingViewModelTest {
     @Test
     fun `savedStateHandle - setMicPermissionGranted writes to savedStateHandle`() = runTest(testDispatcher) {
         val ssh = SavedStateHandle()
-        val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ssh)
+        val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), ssh)
         vm.setMicPermissionGranted(true)
         assertEquals(true, ssh.get<Boolean>("micPermissionGranted"))
     }
@@ -251,7 +255,7 @@ class OnboardingViewModelTest {
         runTest(testDispatcher) {
             // The worker succeeded before this ViewModel existed (screen left, process restarted)
             fakeInstaller.state.value = ModelInstallState.Done
-            val recreated = OnboardingViewModel(context, fakeDataStore, fakeInstaller, SavedStateHandle())
+            val recreated = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), SavedStateHandle())
             advanceUntilIdle()
 
             assertEquals(ModelInstallState.Done, recreated.installState.value)
@@ -291,6 +295,57 @@ class OnboardingViewModelTest {
         viewModel.retryDownload()
 
         assertEquals(listOf(viewModel.recommendedKey), fakeInstaller.installed)
+    }
+
+    // --- Preparation screen (#181) ---
+
+    /** Run the test coroutines, then the main looper: viewModelScope's combine posts to it. */
+    private fun kotlinx.coroutines.test.TestScope.settle() {
+        advanceUntilIdle()
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+    }
+
+
+    @Test
+    fun `opening step 5 starts the install when nothing ran yet`() = runTest(testDispatcher) {
+        viewModel.startPreparation()
+        settle()
+
+        assertEquals(listOf(viewModel.recommendedKey), fakeInstaller.installed)
+    }
+
+    @Test
+    fun `opening step 5 does not restart a failed install, the screen offers Retry`() = runTest(testDispatcher) {
+        fakeInstaller.state.value = ModelInstallState.Failed
+        viewModel.startPreparation()
+        settle()
+
+        assertTrue(fakeInstaller.installed.isEmpty())
+        assertEquals(ModelPreparationPhase.Failed, ModelPreparationPhase.of(viewModel.preparation.value, null))
+    }
+
+    @Test
+    fun `opening step 5 does not start a second install over a running one`() = runTest(testDispatcher) {
+        fakeInstaller.state.value = ModelInstallState.Downloading(20)
+        viewModel.startPreparation()
+        settle()
+
+        assertTrue(fakeInstaller.installed.isEmpty())
+        assertEquals(ModelPreparationPhase.Downloading(20), ModelPreparationPhase.of(viewModel.preparation.value, null))
+    }
+
+    @Test
+    fun `retry masks the failed run until the new install reports`() = runTest(testDispatcher) {
+        fakeInstaller.state.value = ModelInstallState.Failed
+        settle()
+
+        viewModel.retryDownload()
+        settle()
+        assertEquals(ModelPreparationPhase.Downloading(0), ModelPreparationPhase.of(viewModel.preparation.value, null))
+
+        fakeInstaller.state.value = ModelInstallState.Downloading(3)
+        settle()
+        assertEquals(ModelPreparationPhase.Downloading(3), ModelPreparationPhase.of(viewModel.preparation.value, null))
     }
 }
 

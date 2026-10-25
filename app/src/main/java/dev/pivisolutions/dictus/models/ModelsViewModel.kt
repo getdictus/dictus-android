@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.DeviceRam
@@ -17,13 +16,11 @@ import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.service.ModelInstallState
 import dev.pivisolutions.dictus.service.ModelInstaller
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -90,9 +87,30 @@ class ModelsViewModel @Inject constructor(
             initialValue = ModelCatalog.DEFAULT_KEY,
         )
 
-    // Snackbar event for model loading feedback during engine swap
-    private val _snackbarEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
+    /**
+     * The model the full-screen preparation is showing, or null (#181).
+     *
+     * @param awaitingInstall see [ModelPreparationTarget.awaitingInstall].
+     * @param loadsEngine     see [ModelPreparationTarget.loadsEngine].
+     */
+    private data class Preparation(val key: String, val awaitingInstall: Boolean, val loadsEngine: Boolean)
+
+    private val _preparation = MutableStateFlow<Preparation?>(null)
+
+    /** What the preparation screen draws, or null when it is closed. */
+    val preparation: StateFlow<ModelPreparationTarget?> = combine(_preparation, _models) { preparation, models ->
+        preparation?.let { p ->
+            models.firstOrNull { it.info.key == p.key }?.let { model ->
+                ModelPreparationTarget(
+                    info = model.info,
+                    install = model.installState,
+                    awaitingInstall = p.awaitingInstall,
+                    filesOnDisk = model.isDownloaded,
+                    loadsEngine = p.loadsEngine,
+                )
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // Parakeet language mismatch dialog state — holds the pending model key, or null
     private val _showParakeetLanguageDialog = MutableStateFlow<String?>(null)
@@ -111,6 +129,7 @@ class ModelsViewModel @Inject constructor(
                 modelInstaller.state(info.key).collect { state ->
                     _installStates.update { it + (info.key to state) }
                     refreshModels()
+                    onInstallStateChanged(info.key, state)
                 }
             }
         }
@@ -144,7 +163,44 @@ class ModelsViewModel @Inject constructor(
      *
      * @param modelKey Stable catalog key for the model to download.
      */
-    fun downloadModel(modelKey: String) = modelInstaller.install(modelKey)
+    fun downloadModel(modelKey: String) {
+        viewModelScope.launch {
+            // Like iOS, a downloaded model becomes the active one and loads, unless activating it
+            // needs the English-only confirmation: then the screen ends with the install.
+            val info = ModelCatalog.findByKey(modelKey) ?: return@launch
+            val loadsEngine = !needsLanguageConfirmation(info)
+            _preparation.value = Preparation(modelKey, awaitingInstall = true, loadsEngine = loadsEngine)
+            modelInstaller.install(modelKey)
+        }
+    }
+
+    /**
+     * React to [modelKey]'s install state for the preparation screen.
+     *
+     * The first state reported after an install was asked for belongs to that install (the
+     * flow only emits changes), so it ends [Preparation.awaitingInstall]. A finished install
+     * activates the model when the screen expects a load. An install running while no screen
+     * is up (started before this screen was recreated) raises the screen again, as iOS does.
+     */
+    private suspend fun onInstallStateChanged(modelKey: String, state: ModelInstallState) {
+        val preparation = _preparation.value
+        if (preparation == null) {
+            if (state.isInProgress) _preparation.value = Preparation(modelKey, awaitingInstall = false, loadsEngine = false)
+            return
+        }
+        if (preparation.key != modelKey) return
+        if (preparation.awaitingInstall) {
+            _preparation.value = preparation.copy(awaitingInstall = false)
+        }
+        if (state is ModelInstallState.Done && preparation.loadsEngine) {
+            dataStore.edit { it[PreferenceKeys.ACTIVE_MODEL] = modelKey }
+        }
+    }
+
+    /** The preparation screen left: after its ready state, or « Fermer » after a failure. */
+    fun closePreparation() {
+        _preparation.value = null
+    }
 
     /**
      * Delete a downloaded model from disk.
@@ -182,20 +238,13 @@ class ModelsViewModel @Inject constructor(
      *
      * Only meaningful for downloaded models. The change is reflected immediately
      * via the [activeModelKey] StateFlow which is backed by DataStore.
-     * Emits a snackbar event when switching between provider types (Whisper ↔ Parakeet).
+     * Raises the preparation screen, which follows the engine loading the model (#181).
      *
      * @param key Stable catalog key for the model to make active.
      */
     fun setActiveModel(key: String) {
+        _preparation.value = Preparation(key, awaitingInstall = false, loadsEngine = true)
         viewModelScope.launch {
-            // Emit loading snackbar when switching providers
-            val newInfo = ModelCatalog.findByKey(key)
-            val currentKey = dataStore.data.first()[PreferenceKeys.ACTIVE_MODEL]
-            val currentInfo = currentKey?.let { ModelCatalog.findByKey(it) }
-            if (newInfo != null && currentInfo != null && newInfo.provider != currentInfo.provider) {
-                _snackbarEvent.emit(appContext.getString(R.string.model_loading_snackbar))
-            }
-
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.ACTIVE_MODEL] = key
             }
@@ -216,18 +265,18 @@ class ModelsViewModel @Inject constructor(
             val info = ModelCatalog.findByKey(key) ?: return@launch
             if (!DeviceRam.meetsRequirement(info, totalMemBytes)) return@launch
 
-            // Language mismatch check for English-only models
-            if (info.isEnglishOnly) {
-                val lang = dataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto"
-                if (lang != "en") {
-                    _showParakeetLanguageDialog.value = key
-                    return@launch
-                }
+            if (needsLanguageConfirmation(info)) {
+                _showParakeetLanguageDialog.value = key
+                return@launch
             }
 
             setActiveModel(key)
         }
     }
+
+    /** An English-only model while the transcription language is not English. */
+    private suspend fun needsLanguageConfirmation(info: ModelInfo): Boolean =
+        info.isEnglishOnly && (dataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto") != "en"
 
     /** Confirm Parakeet activation despite language mismatch. */
     fun confirmParakeetActivation() {
