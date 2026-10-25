@@ -65,6 +65,10 @@ sealed interface ModelPreparationPhase {
                 // Idle or Done without the files: the install is about to start.
                 !target.filesOnDisk -> Downloading(0)
                 !target.loadsEngine || engine == null -> Ready
+                // Keyed on this model: a Ready still held by the previously loaded model is not
+                // this load's end. iOS gets this wrong (ModelLoadingOverlay.rawPhase reads the
+                // previous model's load state, so a download while another model is loaded
+                // skips « Chargement du modèle » and turns green before the load ends).
                 engine is SttEngineState.Ready && engine.modelKey == key -> Ready
                 engine is SttEngineState.Failed && engine.modelKey == key -> Failed
                 // Cold, the previous model, or a ModelMissing read before the files existed:

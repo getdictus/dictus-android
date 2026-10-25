@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.service.ModelInstallState
@@ -246,6 +247,19 @@ class ModelsViewModelTest {
         advanceUntilIdle()
 
         assertEquals("base", fakeDataStore.data.first()[PreferenceKeys.ACTIVE_MODEL])
+    }
+
+    @Test
+    fun `a download while another model is loaded shows the loading step until the new model is loaded`() = testScope.runTest {
+        viewModel.downloadModel("base")
+        fakeInstaller.states.getValue("base").value = ModelInstallState.Downloading(99)
+        fakeInstaller.states.getValue("base").value = ModelInstallState.Done
+        advanceUntilIdle()
+        val target = viewModel.preparation.value!!.copy(filesOnDisk = true)
+
+        // Tiny is still the loaded model: not ready yet (iOS ModelLoadingOverlay.rawPhase bug)
+        assertEquals(ModelPreparationPhase.Loading, ModelPreparationPhase.of(target, SttEngineState.Ready("tiny")))
+        assertEquals(ModelPreparationPhase.Ready, ModelPreparationPhase.of(target, SttEngineState.Ready("base")))
     }
 
     @Test

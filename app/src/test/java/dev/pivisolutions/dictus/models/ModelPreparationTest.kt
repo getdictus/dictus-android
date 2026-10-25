@@ -49,6 +49,20 @@ class ModelPreparationTest {
     }
 
     @Test
+    fun `a download while another model is loaded waits for the new model's load, unlike iOS`() {
+        // The Models tab sequence: the previous model stays loaded through the whole install,
+        // then the engine swaps. Ready must come from the new model only.
+        val previous = SttEngineState.Ready("tiny")
+        assertEquals(Downloading(80), ModelPreparationPhase.of(target(ModelInstallState.Downloading(80)), previous))
+        assertEquals(Preparing, ModelPreparationPhase.of(target(ModelInstallState.Verifying), previous))
+        val installed = target(ModelInstallState.Done, filesOnDisk = true)
+        assertEquals(Loading, ModelPreparationPhase.of(installed, previous))
+        assertEquals(Loading, ModelPreparationPhase.of(installed, SttEngineState.Cold))
+        assertEquals(Loading, ModelPreparationPhase.of(installed, SttEngineState.Loading(small.key)))
+        assertEquals(Ready, ModelPreparationPhase.of(installed, SttEngineState.Ready(small.key)))
+    }
+
+    @Test
     fun `a model missing reading taken before the files existed still means loading`() {
         val installed = target(ModelInstallState.Done, filesOnDisk = true)
         assertEquals(Loading, ModelPreparationPhase.of(installed, SttEngineState.ModelMissing(small.key)))
