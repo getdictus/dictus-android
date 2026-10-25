@@ -10,7 +10,7 @@ In any app, the Dictus keyboard's blue mic pill records the voice on the phone, 
 ## Sub-features
 
 - `dictation.start`: Tap the mic pill (top right of the keyboard) to start recording. — présent
-- `dictation.stop`: ✓ stops, transcribes (« Transcription… ») and inserts the text at the cursor. When the dictation produces no text (including only non-speech tags or punctuation, #161), nothing is inserted and the suggestion bar reads « Aucun mot détecté » in grey for 3 s, like the iOS toolbar (#153). — présent
+- `dictation.stop`: ✓ stops, transcribes (« Transcription… ») and inserts the text at the cursor. When the dictation produces no text (including only non-speech tags or punctuation, #161), nothing is inserted and the suggestion bar reads « Aucun mot détecté » in grey for 3 s, like the iOS toolbar (#153). When the transcription fails (model missing, engine failure, timeout), nothing is inserted and the bar reads « La dictée a échoué. Touchez le micro pour réessayer. » in grey, on up to two lines, for 3 s, like the iOS toolbar (`kbd.dictation-error`, #182). — présent
 - `dictation.cancel`: ✕ stops and discards the audio; nothing is inserted. — présent
 - `dictation.status`: Recording panel with waveform, MM:SS timer and « En écoute… », then « Transcription… »; while the model loads the mic is dimmed and an overlay reads « Préparation de la reconnaissance vocale ». — présent
 - `dictation.undo-insert`: After an insertion, the suggestion bar shows « Annuler » (`Annuler la dernière dictée`): it deletes the inserted text if it is still right before the cursor. — présent (#137)
@@ -50,5 +50,6 @@ Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the 
 - With no model downloaded, a mic tap shows « Aucun modèle vocal — Téléchargez un modèle vocal pour commencer à dicter. » (`kbd.dictation-error`) and nothing records: that is the expected end state, not a failure of the recipe.
 - The first tap after the app process was killed can land while the model loads: the mic is dimmed (`Microphone indisponible pendant le chargement…`) and the recording starts by itself once the engine is ready (pending mic gate). Wait for `Engine prewarm complete` before asserting.
 - Clips under 0.5 s are dropped before transcription: no insertion, a warning in the log and « Aucun mot détecté » in the suggestion bar (log `No words detected notice shown: surface=keyboard`), the same notice as a blank transcription.
+- To force a failed transcription on the emulator (debug build): start a dictation, remove the active model file with `run-as dev.pivisolutions.dictus` while it records, then ✓. → log `Model not available, cannot transcribe` then `Transcription failed, nothing inserted`; the bar shows the failure line for 3 s. Reinstall the model afterwards.
 - Fields marked password, e-mail, URL or search still accept dictation, but nothing is kept for learning (`typing.private-fields`).
 - A `✓` inserts what the room said. Use `✕` unless the task needs a transcript.
