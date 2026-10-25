@@ -15,7 +15,7 @@ A first launch walks through seven steps with progress dots: welcome, microphone
 - `onboarding.apple-intelligence`: — Spécifique iOS.
 - `onboarding.pro-scenes`: — absent.
 - `onboarding.smart-mode-pick`: — absent.
-- `onboarding.model-download`: « Modèle vocal »: the model recommended for the phone's RAM (« Recommandé pour votre appareil »), « Télécharger », then « Téléchargement — N% », « Extraction des fichiers — N% » (Parakeet), « Vérification des fichiers… », « Continuer »; on failure « Échec du téléchargement. » + « Réessayer ». The install runs in a WorkManager foreground worker (#169): it goes on with the screen off or the app in the background, and the step shows its state again when reopened. — présent
+- `onboarding.model-download`: the full-screen preparation screen (`app.onboarding.model-preparation`, #181) for the model recommended for the phone's RAM. The install starts when the step opens (no « Télécharger »): « On prépare votre modèle », « Téléchargement  N % », « X Mo sur Y Mo », « Le téléchargement continue si vous quittez l'app. », then « Préparation pour ce téléphone » (extraction, verification), « Chargement du modèle » (engine load), « Votre modèle est prêt »; after 1.5 s the step moves on by itself (no « Continuer »). On failure « Le modèle vocal n'a pas pu être préparé » + « Réessayer ». The install runs in a WorkManager foreground worker (#169): it goes on with the screen off or the app in the background, and the step shows its state again when reopened. — présent
 - `onboarding.microphone`: « Microphone », « Autoriser le micro » then the system prompt. — présent
 - `onboarding.first-dictation`: « Testez la dictée »: tap the mic, speak, see « Résultat ». — présent
 - `onboarding.stop-standby`: — Spécifique iOS.
@@ -41,7 +41,7 @@ Preconditions: a phone where Dictus has **never completed onboarding**. Pierre's
 ## Gotchas
 
 - Clearing data to see onboarding again would delete Pierre's models and settings: never on the Pixel.
-- The model step downloads for real (Parakeet 0.6B: a 487 MB archive, ~670 MB installed, from 6 GB of RAM, so on the Pixel 4; Small Q5 ~190 MB below). Parakeet's archive then takes ~3.5 min to extract on the Pixel 4, and every file's SHA-256 is checked before « Continuer ».
+- The model step downloads for real (Parakeet 0.6B: a 487 MB archive, ~670 MB installed, from 6 GB of RAM, so on the Pixel 4; Small Q5 ~190 MB below). Parakeet's archive then takes ~3.5 min to extract on the Pixel 4, and every file's SHA-256 is checked before the engine loads it and the step moves on.
 - On the emulator (2 GB of RAM) onboarding recommends Small Q5. To drive the Parakeet install there, build with `-Pdictus.parakeetMinRamGb=1` (debug only); the install works, the engine itself does not load on x86_64.
 - Logs of an install (`helpers/log.sh`): `Model install started for <key>`, `Download took … ms`, `Extracted <file> (… bytes) in … ms`, `Extraction took … ms`, `Verification took … ms`, `Model install succeeded for <key> in … ms` (or `failed … : <reason>`).
 - The keyboard step leaves Dictus for Android's settings and its picker; `MainActivity` re-reads the IME state on return.
