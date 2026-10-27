@@ -54,8 +54,8 @@ class OnboardingViewModelTest {
     // --- Initial state ---
 
     @Test
-    fun `initial state - step is 1`() = runTest(testDispatcher) {
-        assertEquals(1, viewModel.currentStep.value)
+    fun `initial state - a fresh install starts at the welcome screen`() = runTest(testDispatcher) {
+        assertEquals(OnboardingStep.Welcome, viewModel.currentStep.value)
     }
 
     @Test
@@ -74,19 +74,82 @@ class OnboardingViewModelTest {
         assertEquals(ModelInstallState.Idle, viewModel.installState.value)
     }
 
-    // --- SavedStateHandle restoration ---
+    // --- Resume after a force-stop (#196) ---
+
+    /** A new ViewModel on the same DataStore: what a relaunch after a force-stop reads. */
+    private fun relaunch() = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), SavedStateHandle())
 
     @Test
-    fun `savedStateHandle - restores currentStep from saved state`() = runTest(testDispatcher) {
-        val restoredVm = OnboardingViewModel(
-            context,
-            fakeDataStore,
-            fakeInstaller,
-            ModelManager(context),
-            SavedStateHandle(mapOf("currentStep" to 3)),
-        )
-        assertEquals(3, restoredVm.currentStep.value)
+    fun `resume - a relaunch resumes on the step the user left`() = runTest(testDispatcher) {
+        viewModel.advanceStep() // -> Microphone
+        viewModel.advanceStep() // -> KeyboardSetup
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.KeyboardSetup, relaunch().currentStep.value)
     }
+
+    @Test
+    fun `resume - every step is written under its stable name`() = runTest(testDispatcher) {
+        viewModel.advanceStep()
+        advanceUntilIdle()
+
+        assertEquals("microphone", fakeDataStore.data.first()[PreferenceKeys.ONBOARDING_STEP])
+    }
+
+    @Test
+    fun `resume - every stored step is restored`() = runTest(testDispatcher) {
+        for (step in OnboardingStep.entries) {
+            fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = step.storedName }
+            assertEquals("$step", step, relaunch().currentStep.value)
+        }
+    }
+
+    @Test
+    fun `resume - an unknown stored name starts at the welcome screen`() = runTest(testDispatcher) {
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = "someFutureStep" }
+
+        assertEquals(OnboardingStep.Welcome, relaunch().currentStep.value)
+    }
+
+    @Test
+    fun `resume - going back is what a relaunch resumes on`() = runTest(testDispatcher) {
+        viewModel.advanceStep() // -> Microphone
+        viewModel.goBack() // -> Welcome
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.Welcome, relaunch().currentStep.value)
+    }
+
+    @Test
+    fun `resume - completing the onboarding resets the stored step`() = runTest(testDispatcher) {
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Completion.storedName }
+        val vm = relaunch()
+
+        vm.advanceStep()
+        advanceUntilIdle()
+
+        assertEquals("welcome", fakeDataStore.data.first()[PreferenceKeys.ONBOARDING_STEP])
+        assertEquals(true, fakeDataStore.data.first()[PreferenceKeys.HAS_COMPLETED_ONBOARDING])
+    }
+
+    @Test
+    fun `resume - an unreadable store starts at the welcome screen`() = runTest(testDispatcher) {
+        val vm = OnboardingViewModel(context, FailingDataStore(), fakeInstaller, ModelManager(context), SavedStateHandle())
+
+        assertEquals(OnboardingStep.Welcome, vm.currentStep.value)
+    }
+
+    @Test
+    fun `resume - a failed write keeps the flow moving`() = runTest(testDispatcher) {
+        val vm = OnboardingViewModel(context, FailingDataStore(), fakeInstaller, ModelManager(context), SavedStateHandle())
+
+        vm.advanceStep()
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.Microphone, vm.currentStep.value)
+    }
+
+    // --- SavedStateHandle restoration ---
 
     @Test
     fun `savedStateHandle - restores micPermissionGranted from saved state`() = runTest(testDispatcher) {
@@ -102,14 +165,6 @@ class OnboardingViewModelTest {
 
 
     @Test
-    fun `savedStateHandle - advanceStep writes to savedStateHandle`() = runTest(testDispatcher) {
-        val ssh = SavedStateHandle()
-        val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), ssh)
-        vm.advanceStep()
-        assertEquals(2, ssh.get<Int>("currentStep"))
-    }
-
-    @Test
     fun `savedStateHandle - setMicPermissionGranted writes to savedStateHandle`() = runTest(testDispatcher) {
         val ssh = SavedStateHandle()
         val vm = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), ssh)
@@ -120,16 +175,16 @@ class OnboardingViewModelTest {
     // --- Step navigation ---
 
     @Test
-    fun `advanceStep from step 1 moves to step 2`() = runTest(testDispatcher) {
+    fun `advanceStep from the welcome screen moves to the microphone`() = runTest(testDispatcher) {
         viewModel.advanceStep()
-        assertEquals(2, viewModel.currentStep.value)
+        assertEquals(OnboardingStep.Microphone, viewModel.currentStep.value)
     }
 
     @Test
-    fun `advanceStep from step 2 moves to step 3`() = runTest(testDispatcher) {
-        viewModel.advanceStep() // -> 2
-        viewModel.advanceStep() // -> 3
-        assertEquals(3, viewModel.currentStep.value)
+    fun `advanceStep from the microphone moves to the keyboard setup`() = runTest(testDispatcher) {
+        viewModel.advanceStep() // -> Microphone
+        viewModel.advanceStep() // -> KeyboardSetup
+        assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
     }
 
     @Test
@@ -137,11 +192,11 @@ class OnboardingViewModelTest {
         runTest(testDispatcher) {
             // Move to step 5
             repeat(4) { viewModel.advanceStep() }
-            assertEquals(5, viewModel.currentStep.value)
+            assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
 
             // Attempt advance — blocked since download not complete
             viewModel.advanceStep()
-            assertEquals(5, viewModel.currentStep.value)
+            assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
         }
 
     @Test
@@ -159,7 +214,7 @@ class OnboardingViewModelTest {
 
             // Now advance should work
             viewModel.advanceStep()
-            assertEquals(6, viewModel.currentStep.value)
+            assertEquals(OnboardingStep.FirstDictation, viewModel.currentStep.value)
         }
 
     @Test
@@ -185,16 +240,54 @@ class OnboardingViewModelTest {
         }
 
     @Test
-    fun `goBack from step 2 moves to step 1`() = runTest(testDispatcher) {
-        viewModel.advanceStep() // -> 2
+    fun `goBack from the microphone returns to the welcome screen`() = runTest(testDispatcher) {
+        viewModel.advanceStep() // -> Microphone
         viewModel.goBack()
-        assertEquals(1, viewModel.currentStep.value)
+        assertEquals(OnboardingStep.Welcome, viewModel.currentStep.value)
     }
 
     @Test
-    fun `goBack from step 1 stays at step 1`() = runTest(testDispatcher) {
+    fun `goBack from the welcome screen stays there`() = runTest(testDispatcher) {
         viewModel.goBack()
-        assertEquals(1, viewModel.currentStep.value)
+        assertEquals(OnboardingStep.Welcome, viewModel.currentStep.value)
+    }
+
+    @Test
+    fun `goBack does nothing on a step without a way back`() = runTest(testDispatcher) {
+        repeat(3) { viewModel.advanceStep() } // -> KeyboardLayout
+        viewModel.goBack()
+        assertEquals(OnboardingStep.KeyboardLayout, viewModel.currentStep.value)
+    }
+
+    @Test
+    fun `advanceFrom a page no longer on screen is ignored`() = runTest(testDispatcher) {
+        // The microphone page, sliding away after the grant moved the flow on, runs its
+        // auto-advance a second time: it must not skip the keyboard setup.
+        viewModel.advanceStep() // -> Microphone
+        viewModel.advanceFrom(OnboardingStep.Microphone) // -> KeyboardSetup
+        viewModel.advanceFrom(OnboardingStep.Microphone)
+        assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
+    }
+
+    // --- Skip (#196) ---
+
+    @Test
+    fun `skip on the first dictation moves to the completion`() = runTest(testDispatcher) {
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.FirstDictation.storedName }
+        val vm = relaunch()
+
+        vm.skipStep()
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.Completion, vm.currentStep.value)
+        assertEquals("completion", fakeDataStore.data.first()[PreferenceKeys.ONBOARDING_STEP])
+    }
+
+    @Test
+    fun `skip does nothing on a step that does not offer it`() = runTest(testDispatcher) {
+        repeat(4) { viewModel.advanceStep() } // -> ModelPreparation, install not done
+        viewModel.skipStep()
+        assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
 
     // --- State mutations ---
@@ -237,7 +330,7 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         viewModel.advanceStep()
-        assertEquals(5, viewModel.currentStep.value)
+        assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
 
     @Test
@@ -379,6 +472,15 @@ class FakeDataStore : DataStore<Preferences> {
         }
         return updated
     }
+}
+
+/** DataStore whose disk fails: every read and write throws [java.io.IOException]. */
+class FailingDataStore : DataStore<Preferences> {
+    override val data: Flow<Preferences> = kotlinx.coroutines.flow.flow { throw java.io.IOException("disk") }
+
+    override suspend fun updateData(
+        transform: suspend (t: Preferences) -> Preferences,
+    ): Preferences = throw java.io.IOException("disk")
 }
 
 /**

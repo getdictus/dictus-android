@@ -11,20 +11,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
-import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingCenteredPage
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 
 /**
- * Onboarding Step 1 — Welcome screen.
+ * Onboarding welcome screen, in the shell's centred page.
  *
  * Displays the Dictus wordmark with an animated 30-bar sine-wave waveform above it
  * and a tagline below.
@@ -56,10 +58,14 @@ fun OnboardingWelcomeScreen(
         if (syntheticMotionEnabled) driver.runLoop() else driver.reset()
     }
 
-    OnboardingStepScaffold(
-        currentStep = 1,
-        ctaText = stringResource(R.string.onboarding_welcome_cta),
-        onCtaClick = onNext,
+    OnboardingCenteredPage(
+        title = null,
+        bottom = {
+            OnboardingPrimaryButton(
+                text = stringResource(R.string.onboarding_welcome_cta),
+                onClick = onNext,
+            )
+        },
     ) {
         // Animated sine-wave waveform using the shared WaveformBars component from core/ui
         WaveformBars(
@@ -73,13 +79,14 @@ fun OnboardingWelcomeScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // "Dictus" wordmark
+        // "Dictus" wordmark: the page's heading, in its own style (#197 replaces this screen)
         Text(
             text = stringResource(R.string.onboarding_welcome_wordmark),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 42.sp,
             fontWeight = FontWeight.ExtraLight,
             letterSpacing = (-0.5).sp,
+            modifier = Modifier.semantics { heading() },
         )
 
         Spacer(modifier = Modifier.height(12.dp))

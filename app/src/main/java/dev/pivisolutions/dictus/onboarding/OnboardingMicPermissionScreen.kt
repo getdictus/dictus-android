@@ -3,32 +3,25 @@ package dev.pivisolutions.dictus.onboarding
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
-import androidx.compose.ui.text.font.FontWeight
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
-import dev.pivisolutions.dictus.core.theme.LocalDictusColors
-import androidx.compose.material3.MaterialTheme
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingCenteredPage
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 
 /**
- * Onboarding Step 2 — Microphone permission request.
+ * Onboarding microphone step — permission request, in the shell's centred page.
  *
  * The CTA button changes based on permission state:
  * - Before grant: "Autoriser le micro" with mic icon → triggers system permission dialog
@@ -85,16 +78,21 @@ fun OnboardingMicPermissionScreen(
     val ctaText = if (micGranted) stringResource(R.string.onboarding_mic_permission_cta_continue) else stringResource(R.string.onboarding_mic_permission_cta_grant)
     val ctaIcon = if (micGranted) null else Icons.Default.Mic
 
-    OnboardingStepScaffold(
-        currentStep = 2,
-        ctaText = ctaText,
-        ctaIcon = ctaIcon,
-        onCtaClick = {
-            if (micGranted) {
-                onNext()
-            } else {
-                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
+    OnboardingCenteredPage(
+        title = stringResource(R.string.onboarding_mic_permission_title),
+        message = stringResource(R.string.onboarding_mic_permission_body),
+        bottom = {
+            OnboardingPrimaryButton(
+                text = ctaText,
+                icon = ctaIcon,
+                onClick = {
+                    if (micGranted) {
+                        onNext()
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+            )
         },
     ) {
         Icon(
@@ -102,26 +100,6 @@ fun OnboardingMicPermissionScreen(
             contentDescription = null,
             tint = DictusColors.Accent,
             modifier = Modifier.size(72.dp),
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = stringResource(R.string.onboarding_mic_permission_title),
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = (-0.5).sp,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = stringResource(R.string.onboarding_mic_permission_body),
-            color = LocalDictusColors.current.textSecondary,
-            fontSize = 15.sp,
-            lineHeight = (15 * 1.5).sp,
-            textAlign = TextAlign.Center,
         )
     }
 }

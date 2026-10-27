@@ -43,6 +43,11 @@
     <string name="onboarding_success_body">Dictus est configur\u00e9 et pr\u00eat \u00e0 l\u2019emploi.</string>
     <string name="onboarding_success_cta">Commencer</string>
 
+    <!-- Onboarding: shell around every step (#196) -->
+    <string name="onboarding_back">Retour</string>
+    <string name="onboarding_skip">Passer</string>
+    <string name="onboarding_progress">\u00c9tape %1$d sur %2$d</string>
+
     <!-- Settings: Section headers -->
     <string name="settings_section_transcription">TRANSCRIPTION</string>
     <string name="settings_section_keyboard">CLAVIER</string>

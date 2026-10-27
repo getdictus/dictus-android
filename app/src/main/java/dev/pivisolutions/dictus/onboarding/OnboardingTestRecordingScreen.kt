@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -59,20 +60,20 @@ import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingCTAButton
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingProgressDots
-import dev.pivisolutions.dictus.ui.onboarding.accentGradient
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingBottomBlock
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 import kotlinx.coroutines.launch
 import dev.pivisolutions.dictus.core.R as CoreR
 
 /**
- * Onboarding Step 6 — Test recording screen.
+ * Onboarding first dictation step — test recording screen.
  *
  * Uses a layered Box layout so the mic/stop button stays at a fixed position
  * (200dp from bottom) regardless of state. Three layers:
  * 1. Upper content (text, waveform, timer) — centered above the button
  * 2. Button layer — fixed 200dp from bottom, stable across all states
- * 3. Bottom bar (Passer/Continuer + progress dots) — pinned to bottom
+ * 3. The shell's bottom block — « Continuer » once there is a result, and the shell's
+ *    « Passer » under it ([OnboardingStep.isSkippable])
  *
  * @param dictationController Controller for the DictationService (may be null if not yet bound).
  * @param onNext Called when the user taps "Continuer" after seeing the result, or "Passer" to skip.
@@ -93,6 +94,15 @@ fun OnboardingTestRecordingScreen(
 
     LaunchedEffect(dictationController) {
         dictationController?.prewarmEngine()
+    }
+
+    // « Passer » can leave the step mid-recording: stop it, or it goes on behind the next step.
+    DisposableEffect(dictationController) {
+        onDispose {
+            if (dictationController?.state?.value is DictationState.Recording) {
+                dictationController.cancelRecording()
+            }
+        }
     }
 
     fun runGateCommand(command: MicGateCommand) {
@@ -385,29 +395,24 @@ fun OnboardingTestRecordingScreen(
             }
         }
 
-        // ── Layer 3: Bottom bar (Passer/Continuer + dots) ──
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 60.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (hasResult) {
-                OnboardingCTAButton(
-                    text = stringResource(R.string.onboarding_test_recording_cta_continue),
-                    onClick = onNext,
-                    gradient = accentGradient,
-                )
-            } else {
-                Spacer(modifier = Modifier.height(56.dp))
-            }
-
-            Spacer(modifier = Modifier.padding(top = 24.dp))
-
-            OnboardingProgressDots(currentStep = 6)
         }
 
+        // ── Layer 3: the shell's bottom block (Continuer once there is a result + Passer) ──
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .then(
+                    if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
+                ),
+        ) {
+            OnboardingBottomBlock {
+                if (hasResult) {
+                    OnboardingPrimaryButton(
+                        text = stringResource(R.string.onboarding_test_recording_cta_continue),
+                        onClick = onNext,
+                    )
+                }
+            }
         }
 
         ModelLoadingOverlay(

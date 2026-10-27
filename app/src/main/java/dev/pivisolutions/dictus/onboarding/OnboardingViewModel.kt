@@ -25,16 +25,18 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 /**
- * ViewModel for the 7-step onboarding flow.
+ * ViewModel for the onboarding flow ([OnboardingStep]).
  *
  * Manages state transitions between onboarding steps with validation guards:
- * - Step 2 (Mic): user must grant RECORD_AUDIO permission
- * - Step 3 (Keyboard): user must enable the Dictus IME
- * - Step 5 (Model preparation): model install must complete before advancing
- * - Step 7 (Success): tapping "Commencer" writes HAS_COMPLETED_ONBOARDING=true to DataStore
+ * - Microphone: user must grant RECORD_AUDIO permission
+ * - Keyboard setup: user must enable the Dictus IME
+ * - Model preparation: model install must complete before advancing
+ * - Completion: tapping "Commencer" writes HAS_COMPLETED_ONBOARDING=true to DataStore
  *
  * WHY ViewModel (not stateless composable): Onboarding state survives configuration changes
  * (e.g. screen rotation during download).
@@ -43,11 +45,14 @@ import javax.inject.Inject
  * ViewModel stopped with the screen and lost its result when the ViewModel was cleared
  * (#169). [ModelInstaller] runs it in WorkManager; this ViewModel only observes its state.
  *
- * WHY SavedStateHandle for currentStep/micPermissionGranted: The system can kill
- * the app process when showing a system dialog (e.g. the mic permission prompt on step 2).
- * SavedStateHandle persists these values in the Activity's saved instance state bundle so that
- * when the user returns to the app, the onboarding resumes at the correct step instead of
- * resetting to step 1.
+ * WHY DataStore for currentStep (#196): the step has to survive a force-stop and a reboot,
+ * not only the system killing the process, which is all SavedStateHandle covered. Every step
+ * change is written under the step's stable name ([OnboardingStep.storedName]) and read back
+ * when the ViewModel is created, as iOS does with `OnboardingStep.save` and `current()`.
+ *
+ * WHY SavedStateHandle for micPermissionGranted: The system can kill the app process when
+ * showing the mic permission prompt. The flag only mirrors the system's permission, which
+ * the microphone step re-reads on entry, so it needs no more than that.
  *
  * WHY regular MutableStateFlow for selectedLayout: transient, the layout can be re-chosen.
  * The install state needs no saving either: WorkManager keeps it across process death.
@@ -61,8 +66,8 @@ import javax.inject.Inject
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
  * @param modelInstaller Starts and observes the install of the recommended model.
  * @param modelManager Says whether the recommended model's files are already on disk.
- * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists step/flags across
- *   process death caused by system dialogs (mic permission, etc.).
+ * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists the mic flag
+ *   across process death caused by the mic permission dialog.
  */
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
@@ -81,10 +86,32 @@ class OnboardingViewModel @Inject constructor(
     /** Full ModelInfo for the recommended model, used by the UI to display name/size/quality. */
     val recommendedModelInfo: ModelInfo = ModelCatalog.findByKey(recommendedKey)!!
 
-    // --- Step state machine (SavedStateHandle-backed for process-death survival) ---
+    // --- Step state machine (DataStore-backed, #196) ---
 
-    /** Current onboarding step (1–7). Survives process death via SavedStateHandle. */
-    val currentStep: StateFlow<Int> = savedStateHandle.getStateFlow("currentStep", 1)
+    private val _currentStep = MutableStateFlow<OnboardingStep?>(null)
+
+    /**
+     * The step on screen; null until the persisted step has been read, which the screen
+     * shows as the bare background.
+     *
+     * WHY HELD HERE AND WRITTEN TO DATASTORE (not read back from it): a tap moves the step at
+     * once, without waiting for the write, and the write only matters to the next launch.
+     */
+    val currentStep: StateFlow<OnboardingStep?> = _currentStep.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val stored = try {
+                dataStore.data.first()[PreferenceKeys.ONBOARDING_STEP]
+            } catch (e: IOException) {
+                // An unreadable store starts at the welcome screen rather than crashing.
+                Timber.w(e, "Cannot read the onboarding step")
+                null
+            }
+            // A step change made before the read finished wins over the stored step.
+            _currentStep.compareAndSet(null, OnboardingStep.resumed(stored))
+        }
+    }
 
     // --- Permission / activation flags (SavedStateHandle-backed) ---
 
@@ -151,26 +178,49 @@ class OnboardingViewModel @Inject constructor(
 
     /**
      * Advance to the next onboarding step, respecting validation guards:
-     * - Step 5: blocked until model download completes.
-     * - Step 7: triggers DataStore persistence and completes onboarding.
+     * - Model preparation: blocked until model download completes.
+     * - Completion: triggers DataStore persistence and completes onboarding.
      */
     fun advanceStep() {
-        val step = currentStep.value
+        val step = currentStep.value ?: return
         when {
             // Block: install not complete
-            step == 5 && installState.value !is ModelInstallState.Done && !modelManager.isDownloaded(recommendedKey) -> return
-            step == 7 -> completeOnboarding()
-            step < 7 -> savedStateHandle["currentStep"] = step + 1
+            step == OnboardingStep.ModelPreparation && installState.value !is ModelInstallState.Done && !modelManager.isDownloaded(recommendedKey) -> return
+            step == OnboardingStep.Completion -> completeOnboarding()
+            else -> step.next?.let { show(it) }
         }
     }
 
     /**
-     * Navigate back to the previous step.
-     * Does nothing when already on step 1.
+     * [advanceStep] on behalf of the page of [step]; ignored once [step] is no longer on screen.
+     *
+     * WHY: the shell slides the pages, so the page that just moved on stays composed for the
+     * length of the slide and can still run its effects. The microphone step's auto-advance
+     * fired a second time from there and skipped the keyboard setup.
+     */
+    fun advanceFrom(step: OnboardingStep) {
+        if (currentStep.value == step) advanceStep()
+    }
+
+    /**
+     * The shell's back control and the system back: moves to [OnboardingStep.stepBack] and
+     * records it, so an app killed now resumes on the step the user went back to. Does
+     * nothing on a step without a back control.
      */
     fun goBack() {
-        val step = currentStep.value
-        if (step > 1) savedStateHandle["currentStep"] = step - 1
+        val back = currentStep.value?.stepBack ?: return
+        show(back)
+    }
+
+    /**
+     * The shell's « Passer », on the steps that offer it ([OnboardingStep.isSkippable]):
+     * moves on as the step's own button would. On the first dictation that is the
+     * completion screen, as a finished dictation goes.
+     */
+    fun skipStep() {
+        val step = currentStep.value ?: return
+        if (!step.isSkippable) return
+        step.next?.let { show(it) }
     }
 
     /**
@@ -208,17 +258,34 @@ class OnboardingViewModel @Inject constructor(
 
     // --- Private ---
 
+    /** Puts [step] on screen and records it as the step to resume at. */
+    private fun show(step: OnboardingStep) {
+        _currentStep.value = step
+        viewModelScope.launch {
+            try {
+                dataStore.edit { prefs -> prefs[PreferenceKeys.ONBOARDING_STEP] = step.storedName }
+            } catch (e: IOException) {
+                // The flow goes on from memory; only a relaunch would miss this step.
+                Timber.w(e, "Cannot save the onboarding step ${step.storedName}")
+            }
+        }
+    }
+
     /**
      * Persist the selected layout, active model, and onboarding completion flag to DataStore.
      *
-     * Called when the user taps "Commencer" on step 7. The DataStore write causes AppNavHost
-     * to recompose and switch from the onboarding flow to the main tab layout.
+     * Called when the user taps "Commencer" on the completion step. The DataStore write causes
+     * AppNavHost to recompose and switch from the onboarding flow to the main tab layout.
+     *
+     * The stored step goes back to the welcome screen, as on iOS, so a later reset of the
+     * onboarding starts from the beginning instead of resuming on the completion screen.
      */
     private fun completeOnboarding() {
         viewModelScope.launch {
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.KEYBOARD_LAYOUT] = _selectedLayout.value
                 prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey
+                prefs[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Welcome.storedName
                 prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true
             }
         }
