@@ -523,8 +523,8 @@ class DictationService : Service(), DictationController {
         audioCaptureManager = manager
 
         // Energy updates come from the capture read loop (Dispatchers.Default).
-        // We update the state flow with the latest energy history each time.
-        manager.onEnergyUpdate = { _ ->
+        // We update the state flow with the latest waveform levels each time.
+        manager.onEnergyUpdate = {
             _state.value = DictationState.Recording(
                 elapsedMs = elapsedMs,
                 energy = manager.getEnergyHistory(),

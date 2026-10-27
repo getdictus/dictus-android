@@ -12,12 +12,15 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
+import dev.pivisolutions.dictus.model.ModelManager
+import dev.pivisolutions.dictus.models.ModelPreparationTarget
 import dev.pivisolutions.dictus.service.ModelInstallState
 import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -62,6 +65,7 @@ import javax.inject.Inject
  * @param context Application context for device capability checks (RAM-based model recommendation).
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
  * @param modelInstaller Starts and observes the install of the recommended model.
+ * @param modelManager Says whether the recommended model's files are already on disk.
  * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists the mic flag
  *   across process death caused by the mic permission dialog.
  */
@@ -70,6 +74,7 @@ class OnboardingViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val dataStore: DataStore<Preferences>,
     private val modelInstaller: ModelInstaller,
+    private val modelManager: ModelManager,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -124,6 +129,9 @@ class OnboardingViewModel @Inject constructor(
 
     // --- Model install (owned by WorkManager, observed here) ---
 
+    /** An install was asked for and WorkManager still reports the previous one (see [ModelPreparationTarget]). */
+    private val _awaitingInstall = MutableStateFlow(false)
+
     /**
      * Install state of the recommended model.
      *
@@ -133,11 +141,27 @@ class OnboardingViewModel @Inject constructor(
      */
     val installState: StateFlow<ModelInstallState> = modelInstaller.state(recommendedKey)
         .onEach { state ->
+            // The first state reported after an install was asked for is that install's.
+            _awaitingInstall.value = false
             if (state is ModelInstallState.Done) {
                 dataStore.edit { prefs -> prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey }
             }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ModelInstallState.Idle)
+
+    /** What step 5's preparation screen draws (#181). */
+    val preparation: StateFlow<ModelPreparationTarget> = combine(installState, _awaitingInstall) { install, awaiting ->
+        ModelPreparationTarget(
+            info = recommendedModelInfo,
+            install = install,
+            awaitingInstall = awaiting,
+            filesOnDisk = modelManager.isDownloaded(recommendedKey),
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        ModelPreparationTarget(recommendedModelInfo, ModelInstallState.Idle, filesOnDisk = modelManager.isDownloaded(recommendedKey)),
+    )
 
     // --- Public actions ---
 
@@ -161,7 +185,7 @@ class OnboardingViewModel @Inject constructor(
         val step = currentStep.value ?: return
         when {
             // Block: install not complete
-            step == OnboardingStep.ModelPreparation && installState.value !is ModelInstallState.Done -> return
+            step == OnboardingStep.ModelPreparation && installState.value !is ModelInstallState.Done && !modelManager.isDownloaded(recommendedKey) -> return
             step == OnboardingStep.Completion -> completeOnboarding()
             else -> step.next?.let { show(it) }
         }
@@ -200,12 +224,34 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
+     * Step 5 opened: start the install unless one runs, failed or already finished (#181).
+     *
+     * WHY no « Télécharger » tap: like iOS, the step is the preparation screen and the download
+     * starts with it. A failure is not retried here: the screen shows it with « Réessayer ».
+     * Reads WorkManager's state itself: [installState] starts as Idle before WorkManager answers.
+     */
+    fun startPreparation() {
+        viewModelScope.launch {
+            if (modelManager.isDownloaded(recommendedKey)) {
+                // Installed outside this run's WorkManager history: select it so the engine loads it.
+                dataStore.edit { prefs -> prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey }
+                return@launch
+            }
+            val state = modelInstaller.state(recommendedKey).first()
+            if (!state.isInProgress && state != ModelInstallState.Failed) startModelDownload()
+        }
+    }
+
+    /**
      * Start installing the recommended model in the background.
      *
      * Progress, completion and failure arrive through [installState]. A tap while an install
      * is already running is ignored by [ModelInstaller].
      */
-    fun startModelDownload() = modelInstaller.install(recommendedKey)
+    fun startModelDownload() {
+        _awaitingInstall.value = true
+        modelInstaller.install(recommendedKey)
+    }
 
     /** Retry a failed install. Equivalent to calling startModelDownload() again. */
     fun retryDownload() = startModelDownload()

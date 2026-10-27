@@ -163,10 +163,7 @@ private fun OnboardingScreen(
     val currentStep by viewModel.currentStep.collectAsState()
     val micGranted by viewModel.micPermissionGranted.collectAsState()
     val selectedLayout by viewModel.selectedLayout.collectAsState()
-    val installState by viewModel.installState.collectAsState()
-    val recommendedModel = viewModel.recommendedModelInfo
-    val modelSizeMb = recommendedModel.expectedSizeBytes / (1024 * 1024)
-
+    val preparation by viewModel.preparation.collectAsState()
 
     // The persisted step is still being read: the bare background, as AppNavHost does above.
     val step = currentStep ?: run {
@@ -207,12 +204,11 @@ private fun OnboardingScreen(
                 onNext = onNext,
             )
             OnboardingStep.ModelPreparation -> OnboardingModelDownloadScreen(
-                modelName = recommendedModel.displayName,
-                modelSize = "~$modelSizeMb MB",
-                modelQualityLabel = recommendedModel.qualityLabel,
-                installState = installState,
-                onStartDownload = { viewModel.startModelDownload() },
-                onRetry = { viewModel.retryDownload() },
+                preparation = preparation,
+                engine = dictationController?.engineState?.collectAsState()?.value,
+                onStart = { viewModel.startPreparation() },
+                onRetryInstall = { viewModel.retryDownload() },
+                onLoadEngine = { dictationController?.prewarmEngine() },
                 onNext = onNext,
             )
             OnboardingStep.FirstDictation -> OnboardingTestRecordingScreen(
@@ -314,7 +310,7 @@ private fun MainTabsScreen(
                 }
             }
             composable(AppDestination.Models.route) {
-                ModelsScreen()
+                ModelsScreen(dictationController = dictationController)
             }
             composable(AppDestination.Settings.route) {
                 SettingsScreen(

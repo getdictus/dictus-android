@@ -25,17 +25,6 @@
     <string name="onboarding_mode_selection_cta">Continue</string>
 
     <!-- Onboarding: Model download screen (Step 5) -->
-    <string name="onboarding_model_download_title">Voice model</string>
-    <string name="onboarding_model_download_body">Download the recommended speech recognition model for your device.</string>
-    <string name="onboarding_model_download_cta_download">Download</string>
-    <string name="onboarding_model_download_cta_downloading">Downloading\u2026</string>
-    <string name="onboarding_model_download_cta_continue">Continue</string>
-    <string name="onboarding_model_download_error">Download failed.</string>
-    <string name="onboarding_model_download_retry">Retry</string>
-    <string name="onboarding_model_download_recommended">Recommended for your device</string>
-    <string name="onboarding_model_download_progress">Downloading \u2014 %1$d%%</string>
-    <string name="onboarding_model_download_extracting">Extracting model files \u2014 %1$d%%</string>
-    <string name="onboarding_model_download_verifying">Verifying model files\u2026</string>
 
     <!-- Onboarding: Test recording screen (Step 6) -->
     <string name="onboarding_test_recording_title">Test dictation</string>
@@ -176,7 +165,6 @@
     <string name="parakeet_lang_dialog_message">This model only supports English. Continue?</string>
     <string name="ram_warning_dialog_title">Insufficient RAM</string>
     <string name="ram_warning_dialog_message">This model requires 8+ GB of RAM. Your device does not have enough memory to run it.</string>
-    <string name="model_loading_snackbar">Loading model\u2026</string>
     <string name="dialog_continue">Continue</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_ok">OK</string>
@@ -264,5 +252,23 @@
     <!-- Shared content descriptions -->
     <string name="cd_back">Back</string>
     <string name="cd_selected">Selected</string>
+
+    <!-- Model preparation screen (#181), copy from iOS ModelLoadingOverlay.swift -->
+    <string name="model_preparation_title">Preparing your model</string>
+    <string name="model_preparation_title_ready">Your model is ready</string>
+    <string name="model_preparation_title_failed">The voice model could not be prepared</string>
+    <string name="model_preparation_subtitle">%1$s. Once ready, everything runs offline.</string>
+    <string name="model_preparation_subtitle_onboarding">%1$s, picked for this phone. After that, everything runs offline.</string>
+    <string name="model_preparation_subtitle_ready">%1$s runs on your phone. Dictation works even without a network.</string>
+    <string name="model_preparation_step_downloading">Downloading</string>
+    <string name="model_preparation_step_downloaded">Downloaded \u00b7 %1$d MB</string>
+    <string name="model_preparation_step_preparing">Preparing for this phone</string>
+    <string name="model_preparation_step_loading">Loading the model</string>
+    <string name="model_preparation_step_prepared">Prepared for this phone</string>
+    <string name="model_preparation_percent">%1$d%%</string>
+    <string name="model_preparation_bytes">%1$d MB of %2$d MB</string>
+    <string name="model_preparation_stay">Please stay on this page and do not leave the app.</string>
+    <string name="model_preparation_download_continues">The download continues if you leave the app.</string>
+    <string name="model_preparation_close">Close</string>
 
 </resources>

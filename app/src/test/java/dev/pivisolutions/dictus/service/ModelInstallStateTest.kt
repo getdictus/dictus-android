@@ -4,6 +4,7 @@ import androidx.work.Data
 import androidx.work.WorkInfo
 import androidx.work.workDataOf
 import org.junit.Assert.assertEquals
+import kotlinx.coroutines.flow.toList
 import org.junit.Test
 import java.util.UUID
 
@@ -53,5 +54,15 @@ class ModelInstallStateTest {
         assertEquals(ModelInstallState.Done, info(WorkInfo.State.SUCCEEDED).toModelInstallState())
         assertEquals(ModelInstallState.Failed, info(WorkInfo.State.FAILED).toModelInstallState())
         assertEquals(ModelInstallState.Idle, info(WorkInfo.State.CANCELLED).toModelInstallState())
+    }
+
+    @Test
+    fun `a new run failing again still reports its failure`() = kotlinx.coroutines.test.runTest {
+        // A fast retry can reach the collector as Failed straight away (#181 review)
+        val first = info(WorkInfo.State.FAILED)
+        val retry = info(WorkInfo.State.FAILED)
+        val states = kotlinx.coroutines.flow.flowOf(first, first, retry).installStatesPerRun().toList()
+
+        assertEquals(listOf(ModelInstallState.Failed, ModelInstallState.Failed), states)
     }
 }
