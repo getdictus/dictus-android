@@ -45,13 +45,13 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `app.voice-note.result` | — | — | voice-notes | absent | — |
 | `kbd.keys` | Dictus keyboard: suggestion bar, language code + mic row, AZERTY keys | focus a text field in another app (scratch note) | dictation.keyboard, typing.*, keyboard.languages | letters / 123 / #+= / shift (manual or automatic at a sentence start) / accent strip / trackpad (key labels hidden) / FR EN ES DE | [yes](../screens/kbd.keys.png) |
 | `kbd.no-full-access` | — | — | dictation.keyboard | iOS-only | — |
-| `kbd.dictation-error` | Keyboard overlay: « Aucun modèle vocal » or « Impossible de démarrer la reconnaissance vocale » + « Réessayer » / « Annuler » | mic tap with no model / engine failure | dictation.keyboard | no model / loading failure | no — Pierre has a model: triggering the error would require deleting his model |
+| `kbd.dictation-error` | Keyboard overlay: « Aucun modèle vocal » or « Impossible de démarrer la reconnaissance vocale » + « Réessayer » / « Annuler »; after a failed transcription, the suggestion bar reads « La dictée a échoué. Touchez le micro pour réessayer. » in grey for 3 s (#182) | mic tap with no model / engine failure / a dictation ending in `Failed` (model file removed mid-recording, timeout) | dictation.keyboard | no model / loading failure / failed transcription | no — Pierre has a model: triggering the error would require deleting his model |
 | `kbd.recording` | Keyboard while dictating: ✕ / ✓, waveform, timer, « En écoute… », gear | mic tap | dictation.keyboard | recording / « Transcription… » | [yes](../screens/kbd.recording.png) |
 | `kbd.panel` | — | — | keyboard.languages | absent (tap on the language code instead) | — |
 | `kbd.emoji` | Emoji picker, ABC and ⌫ at the bottom | tap 😊 | keyboard.emoji | categories / recents | [yes](../screens/kbd.emoji.png) |
 | `kbd.voice-note-reader` | — | — | voice-notes | absent | — |
 | `kbd.smart-mode-fan` | — | — | smart-modes | absent | — |
-| `kbd.suggestions` | Suggestion bar (3 slots); « Annuler » chip after a dictation | type in a scratch note | typing.autocorrect, dictation.keyboard | completions / predictions / dictation undo chip / « Aucun mot détecté » notice (3 s) | [yes](../screens/kbd.suggestions.png) |
+| `kbd.suggestions` | Suggestion bar (3 slots); « Annuler » chip after a dictation | type in a scratch note | typing.autocorrect, dictation.keyboard | completions / predictions / dictation undo chip / « Aucun mot détecté » or « La dictée a échoué… » notice (3 s) | [yes](../screens/kbd.suggestions.png) |
 | `sys.settings.full-access` | — | — | dictation.keyboard | iOS-only | — |
 | `share.voice-note` | — | — | voice-notes | absent | — |
 | `widget.live-activity` | — | — | live-activity | iOS-only | — |

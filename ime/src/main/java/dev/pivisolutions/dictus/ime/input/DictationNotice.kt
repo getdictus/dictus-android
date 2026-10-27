@@ -9,33 +9,38 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * The "No words detected" notice the suggestion bar shows after a dictation that produced no
- * text (#153). Nothing was inserted, so without it the user cannot tell the dictation ran.
+ * The line the suggestion bar shows after a dictation that inserted nothing: "No words
+ * detected" (#153) or "The dictation failed" (#182). Without it the user cannot tell either
+ * from a dictation that never ran.
  *
  * Mirrors the iOS keyboard toolbar (ToolbarView.swift, iOS #313): a plain grey line, not an
- * error, gone after [DISPLAY_DURATION_MS] (iOS StatusMessageLifetime.displayDuration). Anything
+ * alarm, gone after [DISPLAY_DURATION_MS] (iOS StatusMessageLifetime.displayDuration). Anything
  * that changes the field withdraws it earlier, through [DictationFeedback.withdraw].
  */
-class NoWordsNotice(private val scope: CoroutineScope) {
+class DictationNotice(private val scope: CoroutineScope) {
 
-    private val _isVisible = MutableStateFlow(false)
-    val isVisible: StateFlow<Boolean> = _isVisible.asStateFlow()
+    enum class Message { NoWordsDetected, Failed }
+
+    private val _message = MutableStateFlow<Message?>(null)
+
+    /** The line on show, null when the bar shows its usual content. */
+    val message: StateFlow<Message?> = _message.asStateFlow()
 
     private var hideJob: Job? = null
 
-    fun show() {
+    fun show(message: Message) {
         hideJob?.cancel()
-        _isVisible.value = true
+        _message.value = message
         hideJob = scope.launch {
             delay(DISPLAY_DURATION_MS)
-            _isVisible.value = false
+            _message.value = null
         }
     }
 
     fun clear() {
         hideJob?.cancel()
         hideJob = null
-        _isVisible.value = false
+        _message.value = null
     }
 
     companion object {
