@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,7 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -67,7 +65,7 @@ import kotlin.math.roundToInt
  * Displays model info (name, provider badge, description, precision/speed bars) and
  * adapts to the download state:
  * - Not downloaded: shows "Télécharger" accent button
- * - Downloading: shows linear progress bar + percentage label
+ * - Installing: nothing more, the full-screen preparation screen covers the tab (#181)
  * - Downloaded: swipe left to reveal red delete button (iOS-style)
  *
  * WHY swipe-to-delete: Matches iOS Dictus behavior — cards stay compact without a
@@ -83,8 +81,8 @@ import kotlin.math.roundToInt
  * @param isDownloaded   True if the model file exists on disk with correct size.
  * @param isActive       True if this is the currently selected model.
  * @param canDelete      True if this model can be deleted (not the last one).
- * @param installState   State of this model's background install: progress while it runs,
- *                       error + Retry when the last one failed.
+ * @param installState   State of this model's background install: error + Retry when the
+ *                       last one failed. Its progress is the preparation screen's (#181).
  * @param onDownload     Callback to start downloading this model.
  * @param onDelete       Callback to request deletion (shows confirmation sheet).
  * @param onRetry        Callback to retry after a download failure.
@@ -340,32 +338,7 @@ fun ModelCard(
                 // Download progress or action buttons
                 when {
                     installState.isInProgress -> {
-                        val (fraction, label) = when (installState) {
-                            is ModelInstallState.Extracting -> installState.percent / 100f to
-                                stringResource(R.string.model_extracting, installState.percent)
-                            ModelInstallState.Verifying -> 1f to stringResource(R.string.model_verifying)
-                            else -> {
-                                val percent = (installState as? ModelInstallState.Downloading)?.percent ?: 0
-                                percent / 100f to stringResource(R.string.model_download_progress, percent)
-                            }
-                        }
-                        LinearProgressIndicator(
-                            progress = { fraction },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = DictusColors.Accent,
-                            trackColor = MaterialTheme.colorScheme.background,
-                            strokeCap = StrokeCap.Round,
-                        )
-                        Text(
-                            text = label,
-                            color = DictusColors.AccentHighlight,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                        )
+                        // The preparation screen shows the progress (#181)
                     }
                     installState is ModelInstallState.Failed -> {
                         // Error state with retry

@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.service
 import android.content.Context
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import kotlinx.coroutines.flow.Flow
@@ -40,11 +41,23 @@ open class ModelInstaller(private val context: Context) {
         Timber.d("Model install requested for %s", modelKey)
     }
 
-    /** The install state of [modelKey], updated as the worker reports progress. */
+    /**
+     * The install state of [modelKey], updated as the worker reports progress.
+     *
+     * WHY deduplicated per run, not per state: a retry that fails fast reports Failed again.
+     * Deduplicated on the state alone, that second Failed was dropped, and the preparation
+     * screen, waiting for the new run's first report (#181), stayed on the download at 0 %.
+     */
     open fun state(modelKey: String): Flow<ModelInstallState> =
         workManager.getWorkInfosForUniqueWorkFlow(workName(modelKey))
-            .map { infos -> (infos.firstOrNull { !it.state.isFinished } ?: infos.lastOrNull()).toModelInstallState() }
-            .distinctUntilChanged()
+            .map { infos -> infos.firstOrNull { !it.state.isFinished } ?: infos.lastOrNull() }
+            .installStatesPerRun()
 
     private fun workName(modelKey: String) = "model-install-$modelKey"
 }
+
+/** Each run's state changes: the same state reported by a new run (another WorkInfo id) is kept. */
+internal fun Flow<WorkInfo?>.installStatesPerRun(): Flow<ModelInstallState> =
+    map { info -> info?.id to info.toModelInstallState() }
+        .distinctUntilChanged()
+        .map { (_, state) -> state }
