@@ -38,7 +38,6 @@ import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
 import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
-import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
@@ -218,9 +217,6 @@ class DictusImeService : LifecycleInputMethodService() {
         }
     }
 
-    // Waveform animation driver: smooths raw microphone energy for organic bar movement.
-    // smoothingFactor=0.3 (fast rise) and decayFactor=0.85 (slow fall) match iOS BrandWaveformDriver.
-    private val waveformDriver = WaveformDriver()
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -1057,18 +1053,8 @@ class DictusImeService : LifecycleInputMethodService() {
             is DictationState.Recording -> {
                 val recording = dictationState as DictationState.Recording
 
-                // Feed raw energy into the driver so it has up-to-date targets.
-                waveformDriver.update(recording.energy)
-
-                // Run the per-frame animation loop. LaunchedEffect(Unit) starts it when
-                // the Recording composable enters composition and cancels automatically
-                // when it leaves (i.e. when state transitions away from Recording).
-                LaunchedEffect(Unit) {
-                    waveformDriver.runLoop()
-                }
-
-                // Collect the smoothed display levels for WaveformBars.
-                val smoothedEnergy by waveformDriver.displayLevels.collectAsState()
+                // RecordingScreen smooths the raw levels itself (LiveWaveform), so the
+                // per-frame animation never recomposes this root.
 
                 // Wrap in DictusTheme so MaterialTheme.colorScheme.background
                 // resolves to the Dictus brand colors instead of Material 3 defaults
@@ -1076,7 +1062,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 DictusTheme(themeMode = themeMode) {
                     RecordingScreen(
                         elapsedMs = recording.elapsedMs,
-                        energy = smoothedEnergy,
+                        energy = recording.energy,
                         onCancel = {
                             dictationController?.cancelRecording()
                             transcriptionRetentionSession.reset()

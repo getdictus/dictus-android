@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -54,6 +55,7 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
+import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
@@ -110,7 +112,7 @@ fun OnboardingTestRecordingScreen(
     // Processing animation driver for the transcribing state.
     // Uses WaveformDriver.processingEnergy() — same formula as iOS BrandWaveformDriver.
     val processingDriver = remember {
-        WaveformDriver().apply { isProcessing = true }
+        WaveformDriver(logLabel = "onboarding").apply { isProcessing = true }
     }
     val processingPhase by processingDriver.processingPhase.collectAsState()
     val syntheticMotionEnabled by rememberSyntheticMotionEnabled()
@@ -253,11 +255,14 @@ fun OnboardingTestRecordingScreen(
                     isRecording -> {
                         val recording = dictationState as DictationState.Recording
 
-                        WaveformBars(
+                        // iOS RecordingView: BrandWaveform 120 pt at opacity 0.5 while recording.
+                        LiveWaveform(
                             energyLevels = recording.energy,
+                            logLabel = "onboarding",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp),
+                                .height(120.dp)
+                                .alpha(0.5f),
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -284,11 +289,13 @@ fun OnboardingTestRecordingScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // iOS RecordingView: opacity 0.3 once recording has stopped.
                         WaveformBars(
                             energyLevels = emptyList(),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp),
+                                .height(120.dp)
+                                .alpha(0.3f),
                             isProcessing = true,
                             processingPhase = processingPhase,
                         )

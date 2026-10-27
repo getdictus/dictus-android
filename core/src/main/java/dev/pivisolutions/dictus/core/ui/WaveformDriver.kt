@@ -1,10 +1,14 @@
 package dev.pivisolutions.dictus.core.ui
 
 import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
+import dev.pivisolutions.dictus.core.logging.LogCategory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import timber.log.Timber
 import kotlin.math.PI
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -14,6 +18,11 @@ import kotlin.math.sin
  * values each frame, each bar interpolates toward its target with:
  *   - smoothingFactor = 0.3: fast rise (microphone energy spikes up quickly)
  *   - decayFactor = 0.85: slow fall (bars drift down organically after peak)
+ *
+ * WHY the factors are scaled to the frame time: iOS applies them once per
+ * CADisplayLink frame, which runs at 60 Hz. The Pixel 4 draws at 90 Hz, where the
+ * same per-frame factors would rise and fall 1.5x faster. [frameFactors] turns them
+ * into the per-frame values that give the iOS 60 Hz curve at any refresh rate.
  *
  * Supports two modes:
  *   - Recording: live energy levels smoothed per-frame
@@ -28,10 +37,14 @@ import kotlin.math.sin
  *    leaving composition) to stop the animation.
  * 3. Collect displayLevels and pass it to WaveformBars().
  * 4. For processing mode, set isProcessing = true and collect processingPhase.
+ *
+ * @param logLabel Surface name for the heartbeat and stall logs (iOS
+ *   `waveformHeartbeat` / `waveformStall`, #314). Null keeps the driver silent.
  */
 class WaveformDriver(
     private val smoothingFactor: Float = 0.3f,
     private val decayFactor: Float = 0.85f,
+    private val logLabel: String? = null,
 ) {
     private val _displayLevels = MutableStateFlow(List(BAR_COUNT) { 0f })
     val displayLevels: StateFlow<List<Float>> = _displayLevels.asStateFlow()
@@ -73,26 +86,66 @@ class WaveformDriver(
     suspend fun runLoop() {
         isRunning = true
         lastFrameTimeNanos = 0L
+        // Each run is a new stage: the sweep starts from the centre, like iOS
+        // resetting to ProcessingWaveform.centredPhase on every status change.
+        if (isProcessing) _processingPhase.value = CENTRED_PHASE
+        var heartbeatStartNanos = 0L
+        var maxGapNanos = 0L
+        var frames = 0
         try {
             while (isRunning) {
                 withInfiniteAnimationFrameNanos { frameTimeNanos ->
+                    val gapNanos = if (lastFrameTimeNanos == 0L) 0L else frameTimeNanos - lastFrameTimeNanos
+                    // The nominal 60 Hz frame stands in on the first frame, which has no
+                    // previous timestamp to measure from.
+                    val dtSeconds = if (lastFrameTimeNanos == 0L) NOMINAL_FRAME_SECONDS else gapNanos / 1e9
+                    lastFrameTimeNanos = frameTimeNanos
+
                     if (isProcessing) {
-                        // Advance the sinusoidal phase based on elapsed time.
-                        // iOS uses link.duration / 2.0 which at 60fps ~ 0.0083s.
-                        // We replicate by computing dt from frame timestamps.
-                        if (lastFrameTimeNanos != 0L) {
-                            val dtSeconds = (frameTimeNanos - lastFrameTimeNanos) / 1_000_000_000.0
-                            _processingPhase.value += dtSeconds / 2.0
-                        }
+                        _processingPhase.value += phaseAdvance(dtSeconds)
                     } else {
+                        val (rise, decay) = frameFactors(dtSeconds, smoothingFactor, decayFactor)
                         _displayLevels.value = tickLevels(
                             current = _displayLevels.value,
                             targets = targetLevels,
-                            smoothingFactor = smoothingFactor,
-                            decayFactor = decayFactor,
+                            smoothingFactor = rise,
+                            decayFactor = decay,
                         )
                     }
-                    lastFrameTimeNanos = frameTimeNanos
+
+                    if (logLabel != null) {
+                        if (gapNanos > STALL_THRESHOLD_NANOS) {
+                            Timber.tag(LogCategory.UI.name).w(
+                                "waveformStall surface=%s gapMs=%d renderTick=%d",
+                                logLabel,
+                                gapNanos / 1_000_000,
+                                frames,
+                            )
+                        }
+                        maxGapNanos = maxOf(maxGapNanos, gapNanos)
+                        if (heartbeatStartNanos == 0L) heartbeatStartNanos = frameTimeNanos
+                        if (frameTimeNanos - heartbeatStartNanos >= HEARTBEAT_INTERVAL_NANOS) {
+                            val levels = if (isProcessing) {
+                                List(BAR_COUNT) { processingEnergy(it, _processingPhase.value) }
+                            } else {
+                                _displayLevels.value
+                            }
+                            // Rounded here rather than with %.3f, which would follow the
+                            // device locale (a comma in French) and break log greps.
+                            val avgLevel = (levels.average() * 1000).roundToInt() / 1000.0
+                            Timber.tag(LogCategory.UI.name).d(
+                                "waveformHeartbeat surface=%s processing=%s renderTick=%d avgLevel=%s maxGapMs=%d",
+                                logLabel,
+                                isProcessing,
+                                frames,
+                                avgLevel,
+                                maxGapNanos / 1_000_000,
+                            )
+                            heartbeatStartNanos = frameTimeNanos
+                            maxGapNanos = 0L
+                        }
+                    }
+                    frames++
                 }
             }
         } finally {
@@ -120,6 +173,43 @@ class WaveformDriver(
 
     companion object {
         const val BAR_COUNT = 30
+
+        /** iOS `ProcessingWaveform.sweepPhaseRate`: the sine crosses the row in 2 s. */
+        const val SWEEP_PHASE_RATE = 0.5
+
+        /** iOS `ProcessingWaveform.maxPhaseAdvanceSeconds`: one frame never advances more. */
+        const val MAX_FRAME_SECONDS = 0.1
+
+        /** iOS `ProcessingWaveform.centredPhase`. */
+        const val CENTRED_PHASE = 0.0
+
+        /** The iOS display-link rate the smoothing factors are defined against. */
+        const val REFERENCE_FPS = 60.0
+        private const val NOMINAL_FRAME_SECONDS = 1.0 / REFERENCE_FPS
+        private const val STALL_THRESHOLD_NANOS = 500_000_000L
+        private const val HEARTBEAT_INTERVAL_NANOS = 2_000_000_000L
+
+        /** Clamps a frame's elapsed time to [0, [MAX_FRAME_SECONDS]]. */
+        fun clampFrameSeconds(dtSeconds: Double): Double = dtSeconds.coerceIn(0.0, MAX_FRAME_SECONDS)
+
+        /** How far the sweep phase moves in [dtSeconds] (iOS `phaseAdvance(for: .sweep)`). */
+        fun phaseAdvance(dtSeconds: Double): Double = clampFrameSeconds(dtSeconds) * SWEEP_PHASE_RATE
+
+        /**
+         * Per-frame rise and decay factors for a frame of [dtSeconds], equivalent to
+         * applying the 60 Hz factors `dt * 60` times: `1 - (1 - rise)^(dt*60)` and
+         * `decay^(dt*60)`. At exactly 1/60 s they are the iOS factors unchanged.
+         */
+        fun frameFactors(
+            dtSeconds: Double,
+            smoothingFactor: Float = 0.3f,
+            decayFactor: Float = 0.85f,
+        ): Pair<Float, Float> {
+            val frames = clampFrameSeconds(dtSeconds) * REFERENCE_FPS
+            val rise = 1.0 - (1.0 - smoothingFactor).pow(frames)
+            val decay = decayFactor.toDouble().pow(frames)
+            return rise.toFloat() to decay.toFloat()
+        }
 
         /**
          * Compute synthetic processing energy for a bar at the given index.

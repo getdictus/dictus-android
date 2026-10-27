@@ -26,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
@@ -123,13 +124,15 @@ fun RecordingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            // Waveform visualization — fills most of the center
-            WaveformBars(
+            // Waveform visualization — fills most of the center.
+            // iOS RecordingOverlay: maxHeight 120 with 2 pt horizontal padding.
+            LiveWaveform(
                 energyLevels = energy,
+                logLabel = "keyboard",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(100.dp),
+                    .padding(horizontal = 2.dp)
+                    .height(120.dp),
             )
 
             // Timer MM:SS
