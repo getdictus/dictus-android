@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Free, open-source Android keyboard for voice dictation — 100% on-device.</strong><br />
-  Speak in any app. No cloud, no account, no subscription.
+  Speak in any app. No cloud, no account. Dictation is free.
 </p>
 
 <p align="center">
@@ -31,12 +31,12 @@
 
 ---
 
-Dictus is a free, open-source Android keyboard that adds voice dictation to any app. All speech recognition runs **on-device** via Whisper (whisper.cpp) and NVIDIA Parakeet (sherpa-onnx) — no server, no account, no subscription.
+Dictus is a free, open-source Android keyboard that adds voice dictation to any app. All speech recognition runs **on-device** via Whisper (whisper.cpp) and NVIDIA Parakeet (sherpa-onnx), with no server and no account. Dictation is free; Dictus Pro, with optional paid features, is in development.
 
 ## Why Dictus?
 
 - 🔒 **100% on-device** — your voice never leaves your phone. No cloud, no telemetry, no account.
-- 🆓 **Free & open source** — MIT licensed, no subscription, fully auditable code.
+- 🆓 **Free dictation, open source**: MIT licensed, fully auditable code.
 - ⌨️ **System-wide IME** — works in every app as your default keyboard.
 - ⚡ **Multi-engine** — Whisper (multilingual) or Parakeet (English, fast).
 - 🌐 **FR + EN dictionaries** — smart word predictions while typing.
@@ -45,7 +45,7 @@ Dictus is a free, open-source Android keyboard that adds voice dictation to any 
 
 | Feature | **Dictus** | Wispr Flow | Gboard Voice | SuperWhisper |
 | --- | :---: | :---: | :---: | :---: |
-| Price | **Free** | Free / $15/mo | Free | Free / $8.49/mo |
+| Price | **Free** dictation (Pro in development) | Free / $15/mo | Free | Free / $8.49/mo |
 | 100% offline | ✅ | ❌ | ⚠️ | ⚠️ |
 | Privacy-first | ✅ | ❌ | ⚠️ | ⚠️ |
 | Open source | ✅ | ❌ | ❌ | ❌ |
@@ -87,7 +87,7 @@ Dictus is currently in public beta — install by sideloading the APK from [GitH
 - [x] On-device Whisper + Parakeet engines
 - [x] System IME with AZERTY / QWERTY layouts
 - [x] FR + EN word predictions and personal dictionary
-- [ ] Smart Mode Pro — on-device LLM reformulation
+- [ ] Smart Modes (Dictus Pro) — on-device LLM reformulation
 - [ ] Custom vocabulary (technical terms, names)
 - [ ] Searchable local transcription history
 - [ ] Audio-file transcription
@@ -116,7 +116,7 @@ Dictus collects no user data. All speech processing happens on your device. See 
 
 ## Support the project
 
-Dictus is free and will stay free. If it helps you every day, consider [supporting development](https://getdictus.com/donate) — it directly funds new features and platform support.
+Dictation in Dictus is free and the code is open source. If it helps you every day, you can [donate](https://getdictus.com/donate): donations fund the free version of Dictus, including Dictus Desktop. They do not unlock Dictus Pro.
 
 ## Community
 
