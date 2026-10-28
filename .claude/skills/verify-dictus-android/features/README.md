@@ -242,7 +242,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | [`appearance`](appearance.md) | Free | present — theme and interface language | yes |
 | `appearance.theme` | Free | present | yes |
 | `appearance.ui-language` | Free | present | yes |
-| `dictation.notification` | Free | present — « Dictus - Recording » notification + Stop (not visible on the Pixel: notifications denied) | yes |
+| `dictation.notification` | Free | present — « Dictus – Enregistrement » notification + « Arrêter » (not visible on the Pixel: notifications denied) | yes |
 | `dictation.switch-keyboard` | Free | present — gear during a recording → keyboard picker | yes |
 | `typing.trackpad` | Free | present — long press on space + drag | yes |
 | `typing.adaptive-accent-key` | Free | present — AZERTY ' key → é à ù î ô | yes |
@@ -276,7 +276,7 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: merge into a single bar following the #139 mockup.
 2. **Dictation in the keyboard — `kbd.recording`**
    - iOS: ✕ and ✓ in the keyboard bar, waveform above the keys.
-   - Android: a panel that replaces the whole keyboard: ✕ / ✓ at the top, waveform + timer + « En écoute… » in the middle, and at the bottom left a gear stuck to the system keyboard's navigation bar (next to ⌄), whose accessibility label is in English (`Settings`) and which opens… the Android keyboard picker, not the settings.
+   - Android: a panel that replaces the whole keyboard: ✕ / ✓ at the top, waveform + timer + « En écoute… » in the middle, and at the bottom left a gear stuck to the system keyboard's navigation bar (next to ⌄), labelled `Réglages` (English until #185), which opens… the Android keyboard picker, not the settings.
    - Proposal: align the recording bar with #139; replace the gear with a switch-keyboard icon labelled « Changer de clavier ».
 3. **Keyboard languages — `kbd.panel`**
    - iOS: long press on ☰: a panel lists « Français » / « English » / « Español » / « Deutsch » and the layouts, closed with ✕.
@@ -288,20 +288,20 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: the same prompt card on Home when no model is downloaded.
 5. **Model cards — `app.models`**
    - iOS: engine badge (`WK`, `PK`), « Recommandé » badge on the model advised for the device, ⓘ « Langues prises en charge » on every card.
-   - Android: engine badges `WK` / `NV` present, but no Recommended badge (only in onboarding) and no ⓘ; only Parakeet 110M carries « Anglais uniquement »; descriptions without accents (« Rapide et leger », « Precis et equilibre », « Haute precision », « Detection automatique »); « Stockage utilisé » line at the bottom.
-   - Proposal: « Recommandé » badge and a language sheet per model; add the accents to the descriptions.
+   - Android: engine badges `WK` / `NV` present, but no Recommended badge (only in onboarding) and no ⓘ; only Parakeet 110M carries « Anglais uniquement »; descriptions accented since #185 (« Rapide et léger », « Précis et équilibré »…) but still French-only, hardcoded in `ModelManager.kt`; « Stockage utilisé » line at the bottom.
+   - Proposal: « Recommandé » badge and a language sheet per model; move the descriptions to strings.xml (FR/EN).
 6. **Settings — `app.settings`**
    - iOS: section headers in normal case (« Transcription », « Clavier »), transcription language « Suivre la langue du clavier », ABC / 123 choice as a segment with a keyboard preview.
-   - Android: no page title (the screen starts straight with « TRANSCRIPTION », while Models has its large title); headers in capitals, including « A PROPOS » without its accent; every choice goes through sheets (`app.settings.picker`); an extra APPARENCE section; no « Suivre la langue du clavier » option.
-   - Proposal: a « Réglages » title like on Models; fix « À PROPOS »; an inline ABC / 123 segment; add « Suivre la langue du clavier » to the transcription language.
+   - Android: no page title (the screen starts straight with « TRANSCRIPTION », while Models has its large title); headers in capitals (« À PROPOS » accented since #185); every choice goes through sheets (`app.settings.picker`); an extra APPARENCE section; no « Suivre la langue du clavier » option.
+   - Proposal: a « Réglages » title like on Models; an inline ABC / 123 segment; add « Suivre la langue du clavier » to the transcription language.
 7. **Sounds — `app.settings.sounds`**
    - iOS: « Activer les sons » with an explanatory note, « Sons par événement »: « Début », « Fin », « Annuler » with the chosen sound shown on the right.
-   - Android: « Son de dictée » without an explanatory note, sections « GENERAL » (without its accent) and « SONS », rows « Son de début / de fin / d'annulation » with the sound on the right (greyed out while sound is off).
-   - Proposal: « GÉNÉRAL »; the short iOS labels (« Début », « Fin », « Annuler ») and a note under the switch.
+   - Android (since #185): the iOS labels « Activer les sons », « SONS PAR ÉVÉNEMENT », « Début », « Fin », « Annuler », and the note « Les sons respectent le mode silencieux du téléphone. » under the card; sections stay in capitals (« GÉNÉRAL ») and the volume shares the switch's card.
+   - Proposal: done in #185.
 8. **Recording notification — `sys.notification.recording`**
    - iOS: no notification (Dynamic Island, iOS-only).
-   - Android: notification in English « Dictus - Recording » with the « Stop » action, on a French device.
-   - Proposal: translate it (« Dictus — Enregistrement », « Arrêter »).
+   - Android (since #185): « Dictus – Enregistrement » with the « Arrêter » action in French, « Dictus – Recording » / « Stop » in English.
+   - Proposal: done in #185.
 9. **Onboarding — `app.onboarding.*`**
    - iOS: dashed progress bar at the top, illustrations, tagline « Parlez. Dictus écrit. », language + layout step.
    - Android: progress dots, tagline « Dictation vocale, 100 % offline » (« Dictation » is English; in French: « Dictée vocale »), no language step but an ABC / 123 step.
@@ -316,8 +316,8 @@ Screen by screen, what looks different between the Android captures of `../scree
     - Proposal: a single « Dictus » subtype (or one per language actually supported).
 12. **Keyboard accessibility labels — `kbd.keys`, `kbd.recording`**
     - iOS: labels in French on a French device.
-    - Android: `Keyboard language DE`, `Settings` in English (the rest is in French: `Microphone`, `Annuler la dernière dictée`).
-    - Proposal: translate these content descriptions (strings.xml FR/EN).
+    - Android (since #185): `Langue du clavier DE`, `Réglages`, and the actions « Changer la langue du clavier » / « Ouvrir les réglages Dictus », from strings.xml FR/EN.
+    - Proposal: done in #185.
 
 ## Functional anomaly seen during the captures (not design)
 

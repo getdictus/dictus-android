@@ -1,6 +1,6 @@
 # Debug logs and diagnostics
 
-Réglages → A PROPOS shows the version, the app's own log (without any dictated or typed text), an export of that log, the licences, GitHub and legal notices.
+Réglages → À PROPOS shows the version, the app's own log (without any dictated or typed text), an export of that log, the licences, GitHub and legal notices.
 
 - **ID:** `diagnostics.logs`
 - **Tier:** Gratuit
@@ -16,14 +16,14 @@ Réglages → A PROPOS shows the version, the app's own log (without any dictate
 
 ## How to get to it (user POV)
 
-1. Dictus → Réglages, scroll to A PROPOS.
+1. Dictus → Réglages, scroll to À PROPOS.
 2. « Debug Logs » to read; « Exporter les logs de débogage » to send.
 
 ## Driving it with Argent
 
 Preconditions: Launch and Doctor OK.
 
-- **Scroll.** Réglages, `gesture-swipe` (0.5, 0.8) → (0.5, 0.2) twice. → `A PROPOS`, `Version`, `Debug Logs` (`evidence.sh about`).
+- **Scroll.** Réglages, `gesture-swipe` (0.5, 0.8) → (0.5, 0.2) twice. → `À PROPOS`, `Version`, `Debug Logs` (`evidence.sh about`).
 - **Read the log.** Tap `Debug Logs`. → title `Debug Logs`, the menu `⋮`, log lines oldest first (`screen.sh app.settings.debug-logs`); `Retour`.
 - **Export (sheet only).** Tap `Exporter les logs de débogage`. → the share sheet `Partage de 1 fichier`, `dictus-logs.zip` (seen 2026-10-20); system back, never pick a destination.
 - **Licences.** Tap `Licences`. → the list (`screen.sh app.settings.licences`); `Retour`.

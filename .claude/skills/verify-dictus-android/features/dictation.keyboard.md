@@ -17,8 +17,8 @@ In any app, the Dictus keyboard's blue mic pill records the voice on the phone, 
 - `dictation.handoff`: — Spécifique iOS (Android's IME binds to the app's `DictationService` directly; no app switch).
 - `dictation.requires-full-access`: — Spécifique iOS (no Full Access on Android; only the `RECORD_AUDIO` permission).
 - `dictation.device-gating`: — absent: no device is refused as a whole; only heavy models are refused per RAM (`models.device-gating`).
-- `dictation.notification` *(Spécifique Android)*: while recording, a foreground-service notification « Dictus - Recording » with a « Stop » action (required by Android for microphone use in the background).
-- `dictation.switch-keyboard` *(Spécifique Android)*: during a recording the gear (`Settings`) under the waveform opens the system keyboard picker.
+- `dictation.notification` *(Spécifique Android)*: while recording, a foreground-service notification « Dictus – Enregistrement » with an « Arrêter » action (EN: « Dictus – Recording », « Stop ») (required by Android for microphone use in the background).
+- `dictation.switch-keyboard` *(Spécifique Android)*: during a recording the gear (`Réglages`) under the waveform opens the system keyboard picker.
 
 ## How to get to it (user POV)
 
@@ -32,9 +32,9 @@ Proven on the Pixel on 2026-10-20 (runs `20261020-215152-0f15824` and `20261020-
 
 Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the default IME, `RECORD_AUDIO` granted, at least one model in `files/models`); Argent device `99071FFAZ00EBN`.
 
-- **Open a scratch field.** `mcp__argent__launch-app {bundleId:"dev.dettmer.simplenotes"}`, tap `Nouvelle note` then `Note textuelle` (`run-sequence` with `delayMs: 1000`). → the tree lists `TextField "Titre"` with no value and the keyboard's nodes: `Keyboard language DE`, `Microphone`, the keys (`helpers/evidence.sh 01-dictation.cancel-keyboard-before`).
+- **Open a scratch field.** `mcp__argent__launch-app {bundleId:"dev.dettmer.simplenotes"}`, tap `Nouvelle note` then `Note textuelle` (`run-sequence` with `delayMs: 1000`). → the tree lists `TextField "Titre"` with no value and the keyboard's nodes: `Langue du clavier DE`, `Microphone`, the keys (`helpers/evidence.sh 01-dictation.cancel-keyboard-before`).
 - **Mark the log.** `M=$(helpers/log.sh mark)`.
-- **Start.** Tap the centre of `Microphone`. → `helpers/log.sh wait 'ACTION_START' 15 "$M"` prints `DictationService: DictationService started foreground with ACTION_START`; the tree shows `✕`, `✓`, `00:01`, `En écoute…`, `Settings`; the status bar shows the green mic chip (`helpers/evidence.sh 02-dictation.cancel-recording "$M"`).
+- **Start.** Tap the centre of `Microphone`. → `helpers/log.sh wait 'ACTION_START' 15 "$M"` prints `DictationService: DictationService started foreground with ACTION_START`; the tree shows `✕`, `✓`, `00:01`, `En écoute…`, `Réglages`; the status bar shows the green mic chip (`helpers/evidence.sh 02-dictation.cancel-recording "$M"`).
 - **Cancel.** Tap the centre of `✕`. → `helpers/log.sh wait 'Recording cancelled' 10 "$M"` prints `DictationService: Recording cancelled, samples discarded` (preceded by `AudioCaptureManager: AudioRecord cancelled, samples discarded`, followed by the IME's `Recording cancelled`); the keys are back.
 - **Check nothing was inserted.** `mcp__argent__describe`: `TextField "Titre"` still has no value, the app shows `0 character`; `helpers/log.sh since "$M" | grep -cE 'confirmAndTranscribe|Transcribed text inserted'` prints `0`; `dumpsys activity services dev.pivisolutions.dictus` lists `DictationService` without `isForeground=true` (`helpers/evidence.sh 03-dictation.cancel-after "$M"`).
 - **Delete the scratch note.** `Plus d'options` → `Supprimer`; if it reached the bin, `Paramètres` → `Corbeille` → `Supprimer la note définitivement` on it. An empty note is not kept at all.
@@ -45,7 +45,7 @@ Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the 
 
 - The keyboard's keys are all in Argent's tree as `StaticText` (labels follow the keyboard language: `Leertaste` / `Eingabe` in DE); tap the centre of their frames.
 - On this Pixel the recording notification is invisible (notifications denied for Dictus): `dictation.notification` cannot be shown without changing Pierre's permission. The running service shows only as « 1 appli est active » in Quick Settings.
-- The recording panel's `Settings` gear sits in the bottom-left corner, in the band of the system's keyboard nav bar (`⌄`, keyboard switcher): aim at its frame, not at the nav icons.
+- The recording panel's `Réglages` gear sits in the bottom-left corner, in the band of the system's keyboard nav bar (`⌄`, keyboard switcher): aim at its frame, not at the nav icons.
 - Never tap the nav bar's keyboard switcher (`Changer le mode de saisie`): a tap switches to the AOSP keyboard at once.
 - With no model downloaded, a mic tap shows « Aucun modèle vocal — Téléchargez un modèle vocal pour commencer à dicter. » (`kbd.dictation-error`) and nothing records: that is the expected end state, not a failure of the recipe.
 - The first tap after the app process was killed can land while the model loads: the mic is dimmed (`Microphone indisponible pendant le chargement…`) and the recording starts by itself once the engine is ready (pending mic gate). Wait for `Engine prewarm complete` before asserting.
