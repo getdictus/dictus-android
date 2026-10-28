@@ -25,17 +25,6 @@
     <string name="onboarding_mode_selection_cta">Continuer</string>
 
     <!-- Onboarding: Model download screen (Step 5) -->
-    <string name="onboarding_model_download_title">Mod\u00e8le vocal</string>
-    <string name="onboarding_model_download_body">T\u00e9l\u00e9chargez le mod\u00e8le de reconnaissance vocale recommand\u00e9 pour votre appareil.</string>
-    <string name="onboarding_model_download_cta_download">T\u00e9l\u00e9charger</string>
-    <string name="onboarding_model_download_cta_downloading">T\u00e9l\u00e9chargement en cours\u2026</string>
-    <string name="onboarding_model_download_cta_continue">Continuer</string>
-    <string name="onboarding_model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
-    <string name="onboarding_model_download_retry">R\u00e9essayer</string>
-    <string name="onboarding_model_download_recommended">Recommand\u00e9 pour votre appareil</string>
-    <string name="onboarding_model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
-    <string name="onboarding_model_download_extracting">Extraction des fichiers \u2014 %1$d%%</string>
-    <string name="onboarding_model_download_verifying">V\u00e9rification des fichiers\u2026</string>
 
     <!-- Onboarding: Test recording screen (Step 6) -->
     <string name="onboarding_test_recording_title">Testez la dict\u00e9e</string>
@@ -53,6 +42,11 @@
     <string name="onboarding_success_title">C\u2019est pr\u00eat\u00a0!</string>
     <string name="onboarding_success_body">Dictus est configur\u00e9 et pr\u00eat \u00e0 l\u2019emploi.</string>
     <string name="onboarding_success_cta">Commencer</string>
+
+    <!-- Onboarding: shell around every step (#196) -->
+    <string name="onboarding_back">Retour</string>
+    <string name="onboarding_skip">Passer</string>
+    <string name="onboarding_progress">\u00c9tape %1$d sur %2$d</string>
 
     <!-- Settings: Section headers -->
     <string name="settings_section_transcription">TRANSCRIPTION</string>
@@ -180,7 +174,6 @@
     <string name="parakeet_lang_dialog_message">Ce mod\u00e8le ne supporte que l\u2019anglais. Continuer\u00a0?</string>
     <string name="ram_warning_dialog_title">RAM insuffisante</string>
     <string name="ram_warning_dialog_message">Ce mod\u00e8le n\u00e9cessite 8\u00a0Go de RAM ou plus. Votre appareil n\u2019a pas assez de m\u00e9moire.</string>
-    <string name="model_loading_snackbar">Chargement du mod\u00e8le\u2026</string>
     <string name="dialog_continue">Continuer</string>
     <string name="dialog_cancel">Annuler</string>
     <string name="dialog_ok">OK</string>
@@ -268,5 +261,23 @@
     <!-- Shared content descriptions -->
     <string name="cd_back">Retour</string>
     <string name="cd_selected">S\u00e9lectionn\u00e9</string>
+
+    <!-- Model preparation screen (#181), copy from iOS ModelLoadingOverlay.swift -->
+    <string name="model_preparation_title">On pr\u00e9pare votre mod\u00e8le</string>
+    <string name="model_preparation_title_ready">Votre mod\u00e8le est pr\u00eat</string>
+    <string name="model_preparation_title_failed">Le mod\u00e8le vocal n\u2019a pas pu \u00eatre pr\u00e9par\u00e9</string>
+    <string name="model_preparation_subtitle">%1$s. Une fois pr\u00eat, tout se passe hors ligne.</string>
+    <string name="model_preparation_subtitle_onboarding">%1$s, choisi pour ce t\u00e9l\u00e9phone. Ensuite, tout se passe hors ligne.</string>
+    <string name="model_preparation_subtitle_ready">%1$s tourne sur votre t\u00e9l\u00e9phone. La dict\u00e9e marche m\u00eame sans r\u00e9seau.</string>
+    <string name="model_preparation_step_downloading">T\u00e9l\u00e9chargement</string>
+    <string name="model_preparation_step_downloaded">T\u00e9l\u00e9charg\u00e9 \u00b7 %1$d\u202fMo</string>
+    <string name="model_preparation_step_preparing">Pr\u00e9paration pour ce t\u00e9l\u00e9phone</string>
+    <string name="model_preparation_step_loading">Chargement du mod\u00e8le</string>
+    <string name="model_preparation_step_prepared">Pr\u00e9par\u00e9 pour ce t\u00e9l\u00e9phone</string>
+    <string name="model_preparation_percent">%1$d\u202f%%</string>
+    <string name="model_preparation_bytes">%1$d Mo sur %2$d Mo</string>
+    <string name="model_preparation_stay">Restez sur cette page, ne quittez pas l\u2019application.</string>
+    <string name="model_preparation_download_continues">Le t\u00e9l\u00e9chargement continue si vous quittez l\u2019app.</string>
+    <string name="model_preparation_close">Fermer</string>
 
 </resources>

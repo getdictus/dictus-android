@@ -5,7 +5,7 @@ Thanks for your interest in contributing! This guide covers everything you need 
 ## Prerequisites
 
 - JDK 17
-- Android SDK (API 34 target, API 29 minimum)
+- Android SDK (API 36 target, API 29 minimum)
 - Android NDK 27.2 (required for whisper.cpp and sherpa-onnx native builds)
 
 ## Build
@@ -17,6 +17,8 @@ cd dictus-android
 ```
 
 Debug builds target ARM devices (arm64-v8a, armeabi-v7a). To run the app on an x86_64 emulator, add `-Pdictus.emulatorAbi=true`: whisper.cpp and the keyboard trie are then also built for x86_64 (debug only). Parakeet (sherpa-onnx) ships ARM libraries only and is unavailable on the emulator.
+
+Native libraries must support 16 KB memory pages (Google Play, Android 15+). `:whisper` and `:trie` link their 64-bit libraries with 16 KB LOAD segments, and `assemble*` / `bundle*` fail when a 64-bit `.so` in the APK or AAB is aligned below 16 KB, or is compressed in the APK (`checkDebugApkNativeAlignment`, report in `app/build/reports/native-alignment/`). A new native dependency has to ship 16 KB aligned libraries.
 
 ## Module Map
 

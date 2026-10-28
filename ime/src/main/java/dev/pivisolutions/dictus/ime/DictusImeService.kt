@@ -7,7 +7,9 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.IBinder
+import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,7 +38,6 @@ import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
 import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
-import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
@@ -47,6 +48,11 @@ import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
+import dev.pivisolutions.dictus.ime.input.AutoCapitalization
+import dev.pivisolutions.dictus.ime.input.AutoFullStop
+import dev.pivisolutions.dictus.ime.input.AutoFullStopInput
+import dev.pivisolutions.dictus.ime.input.AutoCapMode
+import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
@@ -54,7 +60,7 @@ import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.input.DictationFeedback
 import dev.pivisolutions.dictus.ime.input.DictationUndo
-import dev.pivisolutions.dictus.ime.input.NoWordsNotice
+import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
 import dev.pivisolutions.dictus.ime.input.InputConnectionAutocorrectEditor
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionCoordinator
@@ -148,13 +154,23 @@ class DictusImeService : LifecycleInputMethodService() {
     private var isEditorSelectionCollapsed = false
     private var isCurrentEditorSuggestionEligible = false
     private var isPersonalizedLearningAllowed = false
+    // Autocapitalization (#213): the mode comes from EditorInfo; the last context read is kept
+    // only to skip a repeat decision for an unchanged editor, so a shift the user just tapped off
+    // is not re-armed by a late selection update.
+    private val _autoCapSignal = MutableStateFlow<AutoCapSignal?>(null)
+    private var autoCapMode = AutoCapMode.NONE
+    private var lastAutoCapContext: String? = null
+    // Double-space full stop (#193): allowed per field from EditorInfo, undone by the next Backspace.
+    private val autoFullStop = AutoFullStopInput()
+    private var isAutoFullStopAllowed = false
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
     // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
     private val dictationUndo = DictationUndo()
-    // "No words detected" after a dictation that produced no text, in the suggestion bar (#153).
-    private val noWordsNotice = NoWordsNotice(bindingScope)
+    // "No words detected" or "The dictation failed" after a dictation that inserted nothing,
+    // in the suggestion bar (#153, #182).
+    private val dictationNotice = DictationNotice(bindingScope)
     // Withdraws both offers together wherever the field changes.
-    private val dictationFeedback = DictationFeedback(dictationUndo, noWordsNotice)
+    private val dictationFeedback = DictationFeedback(dictationUndo, dictationNotice)
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
@@ -207,9 +223,6 @@ class DictusImeService : LifecycleInputMethodService() {
         }
     }
 
-    // Waveform animation driver: smooths raw microphone energy for organic bar movement.
-    // smoothingFactor=0.3 (fast rise) and decayFactor=0.85 (slow fall) match iOS BrandWaveformDriver.
-    private val waveformDriver = WaveformDriver()
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -412,8 +425,10 @@ class DictusImeService : LifecycleInputMethodService() {
         editorSelStart = newSelStart
         editorSelEnd = newSelEnd
         dictationUndo.onSelectionChanged(newSelStart, newSelEnd)
+        autoFullStop.onSelectionChanged(newSelStart, newSelEnd)
         isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
             clearSuggestionState()
@@ -608,6 +623,10 @@ class DictusImeService : LifecycleInputMethodService() {
         if (!restarting) dictationFeedback.withdraw()
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
         refreshFrenchAdaptiveKeyState()
+        autoCapMode = AutoCapitalization.modeFor(attribute?.inputType ?: 0)
+        lastAutoCapContext = null
+        autoFullStop.clear()
+        isAutoFullStopAllowed = AutoFullStop.allowedFor(attribute?.inputType ?: 0)
         logEditorSession(attribute, restarting)
     }
 
@@ -637,13 +656,32 @@ class DictusImeService : LifecycleInputMethodService() {
     ) {
         super.onStartInputView(info, restarting)
         refreshFrenchAdaptiveKeyState()
+        // Start of a field, or the same field shown again: always decide afresh.
+        refreshAutoCapitalization(force = true)
         // WHY (#112): "did the user ever open the Dictus keyboard?" was unanswerable from an export.
         Timber.d("Keyboard shown: package=%s, restarting=%b", info?.packageName ?: "unknown", restarting)
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
+        cancelActiveTouch()
         super.onFinishInputView(finishingInput)
+    }
+
+    /**
+     * Ends any gesture still in progress on the keyboard.
+     *
+     * WHY (#212): a finger can still be on a key when the keyboard hides or the editor
+     * changes. The system only cancels that touch once the IME window is gone, ~0.8 s
+     * later on the emulator, and a held backspace keeps deleting until then. A cancel
+     * dispatched with no gesture in progress is ignored.
+     */
+    private fun cancelActiveTouch() {
+        val decorView = window?.window?.decorView ?: return
+        val now = SystemClock.uptimeMillis()
+        val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+        decorView.dispatchTouchEvent(cancel)
+        cancel.recycle()
     }
 
     override fun onFinishInput() {
@@ -663,6 +701,10 @@ class DictusImeService : LifecycleInputMethodService() {
         editorSelEnd = -1
         dictationFeedback.withdraw()
         _frenchAdaptiveKeyState.value = FrenchAdaptiveKey.DEFAULT
+        autoCapMode = AutoCapMode.NONE
+        lastAutoCapContext = null
+        autoFullStop.clear()
+        isAutoFullStopAllowed = false
         super.onFinishInput()
     }
 
@@ -737,10 +779,11 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
         val isDictationUndoAvailable by dictationUndo.isAvailable.collectAsState()
-        val isNoWordsNoticeVisible by noWordsNotice.isVisible.collectAsState()
+        val dictationNoticeMessage by dictationNotice.message.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
+        val autoCapSignal by _autoCapSignal.collectAsState()
         val activeKeyboardState by _activeKeyboardState.collectAsState()
         val activeLanguage = activeKeyboardState.language
         val activeLayout = activeKeyboardState.layout
@@ -909,7 +952,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
-                    isNoWordsNoticeVisible = isNoWordsNoticeVisible,
+                    dictationNotice = dictationNoticeMessage,
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
                         dictationFeedback.withdraw()
@@ -1015,23 +1058,14 @@ class DictusImeService : LifecycleInputMethodService() {
                     onFrenchAdaptiveVariant = { variant ->
                         if (usesFrenchAdaptiveKey) handleFrenchAdaptiveVariant(variant)
                     },
+                    autoCapSignal = autoCapSignal,
                 )
             }
             is DictationState.Recording -> {
                 val recording = dictationState as DictationState.Recording
 
-                // Feed raw energy into the driver so it has up-to-date targets.
-                waveformDriver.update(recording.energy)
-
-                // Run the per-frame animation loop. LaunchedEffect(Unit) starts it when
-                // the Recording composable enters composition and cancels automatically
-                // when it leaves (i.e. when state transitions away from Recording).
-                LaunchedEffect(Unit) {
-                    waveformDriver.runLoop()
-                }
-
-                // Collect the smoothed display levels for WaveformBars.
-                val smoothedEnergy by waveformDriver.displayLevels.collectAsState()
+                // RecordingScreen smooths the raw levels itself (LiveWaveform), so the
+                // per-frame animation never recomposes this root.
 
                 // Wrap in DictusTheme so MaterialTheme.colorScheme.background
                 // resolves to the Dictus brand colors instead of Material 3 defaults
@@ -1039,7 +1073,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 DictusTheme(themeMode = themeMode) {
                     RecordingScreen(
                         elapsedMs = recording.elapsedMs,
-                        energy = smoothedEnergy,
+                        energy = recording.energy,
                         onCancel = {
                             dictationController?.cancelRecording()
                             transcriptionRetentionSession.reset()
@@ -1072,7 +1106,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                             Timber.i("No words detected notice shown: surface=keyboard")
                                         TranscriptionOutcome.Failed ->
                                             Timber.w("Transcription failed, nothing inserted")
-                                        is TranscriptionOutcome.Text -> Unit
+                                        is TranscriptionOutcome.Transcribed -> Unit
                                     }
                                 }
                             }
@@ -1121,7 +1155,16 @@ class DictusImeService : LifecycleInputMethodService() {
     fun commitText(text: String): Boolean {
         val inputConnection = currentInputConnection ?: return false
         dictationFeedback.withdraw()
-        val committed = if (text == " ") {
+        val committed = if (
+            text == " " && isAutoFullStopAllowed &&
+            autoFullStop.onSpace(inputConnection, isEditorSelectionCollapsed)
+        ) {
+            // Second space after a word: ". " was written instead. Like iOS, it also closes the
+            // autocorrect undo window, since the text no longer matches what that undo expects.
+            autocorrectCoordinator.onOtherInput()
+            requestNextWordPredictions()
+            true
+        } else if (text == " ") {
             val result = autocorrectCoordinator.onSpace(InputConnectionAutocorrectEditor(inputConnection)) {
                 inputConnection.commitText(" ", 1)
             }
@@ -1136,11 +1179,13 @@ class DictusImeService : LifecycleInputMethodService() {
             }
             result != AutocorrectSpaceResult.INDETERMINATE
         } else {
+            autoFullStop.clear()
             autocorrectCoordinator.onOtherInput()
             clearSuggestionState()
             inputConnection.commitText(text, 1)
         }
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
         return committed
     }
 
@@ -1186,6 +1231,7 @@ class DictusImeService : LifecycleInputMethodService() {
         }
         clearSuggestionState()
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
     }
 
     /**
@@ -1195,26 +1241,34 @@ class DictusImeService : LifecycleInputMethodService() {
         val inputConnection = currentInputConnection ?: return
         dictationFeedback.withdraw()
         clearSuggestionState()
-        autocorrectCoordinator.onBackspace(InputConnectionAutocorrectEditor(inputConnection)) {
-            deletePrecedingCodePoint(inputConnection)
+        if (autoFullStop.onBackspace(inputConnection, isEditorSelectionCollapsed)) {
+            autocorrectCoordinator.onOtherInput()
+        } else {
+            autocorrectCoordinator.onBackspace(InputConnectionAutocorrectEditor(inputConnection)) {
+                deletePrecedingCodePoint(inputConnection)
+            }
         }
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
     }
 
     /** Deletes the preceding token during accelerated backspace repetition. */
     fun deleteWordBackward() {
         val inputConnection = currentInputConnection ?: return
         dictationFeedback.withdraw()
+        autoFullStop.clear()
         autocorrectCoordinator.onOtherInput()
         clearSuggestionState()
         deletePrecedingWord(inputConnection)
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
     }
 
     /**
      * Sends an Enter/Return key event to the editor.
      */
     fun sendReturnKey() {
+        autoFullStop.clear()
         autocorrectCoordinator.onOtherInput()
         dictationFeedback.withdraw()
         clearSuggestionState()
@@ -1225,6 +1279,34 @@ class DictusImeService : LifecycleInputMethodService() {
             android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER),
         )
         refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
+    }
+
+    /**
+     * Re-decides whether shift should be armed for the text now before the cursor (#213).
+     *
+     * Called synchronously after the keyboard's own edits, and from [onUpdateSelection] for
+     * everything else (cursor moves, paste, suggestion picks, the host's own edits). A field
+     * whose mode is NONE is never read. The context is neither logged nor stored beyond the
+     * comparison with the previous read.
+     */
+    private fun refreshAutoCapitalization(force: Boolean = false) {
+        if (autoCapMode == AutoCapMode.NONE) {
+            // Withdraw a shift armed in the previous field; a manual one stays.
+            if (force) publishAutoCap(shouldCapitalize = false)
+            return
+        }
+        val context = currentInputConnection
+            ?.getTextBeforeCursor(AutoCapitalization.CONTEXT_LENGTH, 0)
+            ?.toString()
+        if (!force && context == lastAutoCapContext) return
+        lastAutoCapContext = context
+        publishAutoCap(AutoCapitalization.shouldCapitalize(autoCapMode, context))
+    }
+
+    private fun publishAutoCap(shouldCapitalize: Boolean) {
+        val sequence = (_autoCapSignal.value?.sequence ?: 0) + 1
+        _autoCapSignal.value = AutoCapSignal(shouldCapitalize, sequence)
     }
 
     private fun refreshFrenchAdaptiveKeyState() {

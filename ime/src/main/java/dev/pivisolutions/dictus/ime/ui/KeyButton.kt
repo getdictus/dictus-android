@@ -23,7 +23,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -53,6 +58,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import timber.log.Timber
 
 internal val KeyPressedSemantics = SemanticsPropertyKey<Boolean>("KeyPressed")
 internal var SemanticsPropertyReceiver.keyPressed by KeyPressedSemantics
@@ -64,6 +70,23 @@ internal fun pressedKeyBackground(
 ): Color = if (isPressed) lerp(releasedColor, keyTextColor, 0.18f) else releasedColor
 
 /**
+ * Waits until the delete gesture that started with [pointerId] ends and returns why:
+ * the finger lifted or the system cancelled the pointer (a cancel arrives as an
+ * unpressed change), the pointer left the key, or something else took the pointer.
+ */
+private suspend fun AwaitPointerEventScope.awaitDeleteGestureEnd(pointerId: PointerId): String {
+    while (true) {
+        val change = awaitPointerEvent().changes.firstOrNull { it.id == pointerId }
+            ?: return "pointer lost"
+        when {
+            !change.pressed -> return "released"
+            change.isConsumed -> return "consumed"
+            change.isOutOfBounds(size, extendedTouchPadding) -> return "slid off"
+        }
+    }
+}
+
+/**
  * Renders a single keyboard key with appropriate styling and gesture handling.
  *
  * Character keys use KeyBackground, special keys (shift, delete, etc.) use
@@ -72,7 +95,8 @@ internal fun pressedKeyBackground(
  * Gesture handling varies by key type:
  * - Character keys: tap to type, long-press to open a local accent strip when available
  * - Other keys: tap on release
- * - DELETE: custom pointer input for key-repeat (400ms delay, then every 100ms)
+ * - DELETE: custom pointer input for key-repeat (400ms delay, then every 100ms),
+ *   stopped by release, pointer cancel, sliding off the key or disposal
  */
 @Composable
 fun KeyButton(
@@ -167,22 +191,24 @@ fun KeyButton(
     val gestureModifier = if (key.type == KeyType.DELETE) {
         Modifier.pointerInput(Unit) {
             coroutineScope {
-                while (isActive) {
-                    val initiatingPointerId = awaitPointerEventScope {
-                        val event = awaitPointerEvent()
-                        if (event.type != PointerEventType.Press) return@awaitPointerEventScope null
-                        event.changes.firstOrNull { it.pressed && !it.previousPressed }?.id
-                    }
-                    if (initiatingPointerId == null) continue
+                // The whole gesture stays in one pointer-event scope: events that arrive
+                // while the handler is outside a scope are dropped, so a release landing
+                // between "pressed" and "wait for release" used to leave the repeat
+                // running (#212).
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
 
                     isPressed = true
                     if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
                     currentOnSound.value(key.type)
                     currentOnPress.value()
                     var deletionCommandIndex = 1
+                    var repeating = false
 
                     val repeatJob = launch {
                         delay(BackspaceRepeatPolicy.INITIAL_DELAY_MS)
+                        repeating = true
+                        Timber.d("Backspace repeat started")
                         while (isActive) {
                             if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
                             currentOnSound.value(key.type)
@@ -195,18 +221,16 @@ fun KeyButton(
                         }
                     }
 
-                    awaitPointerEventScope {
-                        var released = false
-                        while (!released) {
-                            val event = awaitPointerEvent()
-                            if (event.changes.any { it.id == initiatingPointerId && !it.pressed }) {
-                                released = true
-                            }
-                        }
+                    // Disposal cancels this coroutine mid-wait, so the finally block
+                    // also covers the key leaving composition.
+                    var stopReason = "disposed"
+                    try {
+                        stopReason = awaitDeleteGestureEnd(down.id)
+                    } finally {
+                        repeatJob.cancel()
+                        isPressed = false
+                        if (repeating) Timber.d("Backspace repeat stopped: %s", stopReason)
                     }
-
-                    isPressed = false
-                    repeatJob.cancel()
                 }
             }
         }

@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "dev.pivisolutions.dictus.trie"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
@@ -16,7 +16,8 @@ android {
         }
         externalNativeBuild {
             cmake {
-                arguments("-DCMAKE_BUILD_TYPE=Release")
+                // 16 KB LOAD segments on 64-bit ABIs, same as :whisper (#218).
+                arguments("-DCMAKE_BUILD_TYPE=Release", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
             }
         }
     }

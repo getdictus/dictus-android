@@ -29,6 +29,9 @@ object PreferenceKeys {
     // --- Onboarding (Phase 4) ---
     val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
 
+    /** The onboarding step to resume at, by its stable name (`OnboardingStep.storedName`, #196). */
+    val ONBOARDING_STEP = stringPreferencesKey("onboarding_step")
+
     // --- Audio feedback settings (Phase 4 + Phase 5) ---
     val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
     val KEY_SOUNDS_ENABLED = booleanPreferencesKey("key_sounds_enabled")

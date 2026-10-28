@@ -93,7 +93,6 @@ class DictationService : Service(), DictationController {
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
-        private const val TRANSCRIPTION_TIMEOUT_MS = 120_000L
         private const val ENGINE_IDLE_TIMEOUT_MS = 10 * 60 * 1_000L
     }
 
@@ -122,11 +121,12 @@ class DictationService : Service(), DictationController {
     private val modelDownloader by lazy { ModelDownloader(modelManager) }
     private val transcriber by lazy {
         DictationTranscriber(
-            timeoutMs = TRANSCRIPTION_TIMEOUT_MS,
             ensureModel = { modelKey -> modelDownloader.ensureModelAvailable(modelKey) },
             withProvider = { modelKey, modelPath, use -> withProviderForModel(modelKey, modelPath, use) },
+            wakeLock = transcriptionWakeLock,
         )
     }
+    private val transcriptionWakeLock by lazy { PowerManagerTranscriptionWakeLock(applicationContext) }
 
     /**
      * Local binder for same-process binding.
@@ -350,11 +350,11 @@ class DictationService : Service(), DictationController {
      * Stop recording, transcribe audio, and return processed text.
      *
      * Full pipeline: stop recording -> ensure model downloaded -> init engine ->
-     * transcribe with [TRANSCRIPTION_TIMEOUT_MS] timeout -> post-process -> return text.
+     * transcribe within [TranscriptionTimeout] -> post-process -> return text.
      *
-     * WHY a 120 s timeout: Small Q5 already takes 30-40 s on the Pixel 4 (#145), and a
-     * stuck or very slow JNI call must not block the UI indefinitely. Both providers
-     * return at the timeout while their native call is still running (#158, #145).
+     * WHY a timeout: a stuck or very slow JNI call must not block the UI indefinitely. Both
+     * providers return at the timeout while their native call is still running (#158, #145);
+     * Whisper aborts its decode and keeps the segments decoded so far (#173, #179).
      */
     override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
         // 1. Stop recording and get audio samples
@@ -400,7 +400,7 @@ class DictationService : Service(), DictationController {
             val outcome = transcriber.transcribe(samples, activeModelKey, engineLanguage)
 
             // 4. Only a dictation with words reaches history.
-            if (outcome is TranscriptionOutcome.Text) {
+            if (outcome is TranscriptionOutcome.Transcribed) {
                 val model = ModelCatalog.findByKey(activeModelKey)
                 transcriptionHistoryWriter.persist(
                     // Pro gate: callers still express the retention their context deserves,
@@ -523,8 +523,8 @@ class DictationService : Service(), DictationController {
         audioCaptureManager = manager
 
         // Energy updates come from the capture read loop (Dispatchers.Default).
-        // We update the state flow with the latest energy history each time.
-        manager.onEnergyUpdate = { _ ->
+        // We update the state flow with the latest waveform levels each time.
+        manager.onEnergyUpdate = {
             _state.value = DictationState.Recording(
                 elapsedMs = elapsedMs,
                 energy = manager.getEnergyHistory(),
@@ -601,6 +601,8 @@ class DictationService : Service(), DictationController {
         super.onDestroy()
         if (::soundPlayer.isInitialized) soundPlayer.release()
         serviceScope.cancel()
+        // The cancelled transcription releases it in its finally; this covers a lock left held.
+        transcriptionWakeLock.release()
         cleanupScope.launch {
             try {
                 providerSlot.release()

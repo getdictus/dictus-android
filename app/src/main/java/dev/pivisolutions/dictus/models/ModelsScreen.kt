@@ -27,14 +27,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +51,17 @@ import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.ui.models.ModelCard
+import dev.pivisolutions.dictus.ui.models.ModelPreparationContext
+import dev.pivisolutions.dictus.ui.models.ModelPreparationScreen
+import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.SttEngineState
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.SideEffect
+import android.view.WindowManager
+import androidx.core.view.WindowCompat
 import dev.pivisolutions.dictus.ui.models.ModelLanguagesSheet
 import kotlinx.coroutines.launch
 
@@ -75,6 +82,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelsScreen(
+    dictationController: DictationController?,
     viewModel: ModelsViewModel = hiltViewModel(),
 ) {
     val models by viewModel.models.collectAsState()
@@ -92,15 +100,17 @@ fun ModelsScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    // Snackbar for engine swap feedback
-    val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(Unit) {
-        viewModel.snackbarEvent.collect { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short,
-            )
-        }
+    // Full-screen model preparation: download, preparation, engine load (#181)
+    val preparation by viewModel.preparation.collectAsState()
+    preparation?.let { target ->
+        val engineState = dictationController?.engineState?.collectAsState()?.value
+        ModelPreparationDialog(
+            target = target,
+            engine = engineState,
+            onRetryInstall = { viewModel.retryDownload(target.info.key) },
+            onLoadEngine = { dictationController?.prewarmEngine() },
+            onClose = { viewModel.closePreparation() },
+        )
     }
 
     // Parakeet language mismatch confirmation dialog
@@ -123,7 +133,6 @@ fun ModelsScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
 
@@ -249,6 +258,54 @@ fun ModelsScreen(
 
     } // end Scaffold content lambda
 } // end ModelsScreen
+
+/**
+ * The preparation screen over the whole app, bottom bar included, as iOS's full-screen cover.
+ *
+ * WHY a Dialog: the screen is drawn from the Models tab, inside the tab Scaffold, and the
+ * bottom bar belongs to the Scaffold above it. A full-screen Dialog window covers both without
+ * moving the preparation state up to the navigation host. Back does nothing while the work
+ * runs (iOS refuses the dismissal too); after a failure it closes, like « Fermer ».
+ */
+@Composable
+private fun ModelPreparationDialog(
+    target: ModelPreparationTarget,
+    engine: SttEngineState?,
+    onRetryInstall: () -> Unit,
+    onLoadEngine: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val failed = ModelPreparationPhase.of(target, engine) == ModelPreparationPhase.Failed
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(
+            dismissOnBackPress = failed,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
+    ) {
+        // A Dialog window stops at the status bar and dims what is behind it, which left a
+        // darker band above the screen. Full window, no dim, drawn under the system bars.
+        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            window?.let {
+                it.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+                it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                WindowCompat.setDecorFitsSystemWindows(it, false)
+            }
+        }
+        ModelPreparationScreen(
+            target = target,
+            engine = engine,
+            context = ModelPreparationContext.ModelSelection,
+            onRetryInstall = onRetryInstall,
+            onLoadEngine = onLoadEngine,
+            onFinished = onClose,
+            onClose = onClose,
+        )
+    }
+}
 
 @Composable
 private fun ModelSection(

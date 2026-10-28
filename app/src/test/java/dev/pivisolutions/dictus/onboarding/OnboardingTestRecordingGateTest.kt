@@ -13,7 +13,11 @@ import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -93,6 +97,44 @@ class OnboardingTestRecordingGateTest {
         composeRule.runOnIdle { assertEquals(0, controller.startCalls) }
     }
 
+    @Test
+    fun `leaving the step mid-recording cancels the recording`() {
+        // « Passer » (#196) takes the user off this step while the microphone may be recording.
+        val controller = FakeController(initialEngineState = SttEngineState.Ready("tiny"))
+        var shown by mutableStateOf(true)
+        composeRule.setContent {
+            DictusTheme {
+                if (shown) {
+                    OnboardingTestRecordingScreen(dictationController = controller, onNext = {})
+                }
+            }
+        }
+        composeRule.onNodeWithContentDescription("Record").performClick()
+        composeRule.runOnIdle { assertTrue(controller.state.value is DictationState.Recording) }
+
+        shown = false
+        composeRule.runOnIdle {
+            assertEquals(1, controller.cancelCalls)
+            assertEquals(DictationState.Idle, controller.state.value)
+        }
+    }
+
+    @Test
+    fun `leaving the step while idle cancels nothing`() {
+        val controller = FakeController(initialEngineState = SttEngineState.Ready("tiny"))
+        var shown by mutableStateOf(true)
+        composeRule.setContent {
+            DictusTheme {
+                if (shown) {
+                    OnboardingTestRecordingScreen(dictationController = controller, onNext = {})
+                }
+            }
+        }
+
+        shown = false
+        composeRule.runOnIdle { assertEquals(0, controller.cancelCalls) }
+    }
+
     private class FakeController(
         initialEngineState: SttEngineState = SttEngineState.Cold,
     ) : DictationController {
@@ -115,7 +157,10 @@ class OnboardingTestRecordingGateTest {
         }
 
         override fun stopRecording(): FloatArray = FloatArray(0)
+        var cancelCalls = 0
+
         override fun cancelRecording() {
+            cancelCalls++
             dictation.value = DictationState.Idle
         }
         override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {

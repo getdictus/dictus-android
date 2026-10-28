@@ -87,4 +87,64 @@ class WaveformDriverTest {
             assertTrue("Bar $i should be >= bar ${i - 1}", result[i] >= result[i - 1] - 0.001f)
         }
     }
+
+    // --- frameFactors: iOS 60 Hz smoothing at any refresh rate ---
+
+    @Test
+    fun `frameFactors at 60 Hz are the iOS factors`() {
+        val (rise, decay) = WaveformDriver.frameFactors(1.0 / 60)
+        assertEquals(0.3f, rise, 0.0001f)
+        assertEquals(0.85f, decay, 0.0001f)
+    }
+
+    @Test
+    fun `three 90 Hz frames match two 60 Hz frames on rise and decay`() {
+        fun run(fps: Double, frames: Int, start: Float, target: Float): Float {
+            val (rise, decay) = WaveformDriver.frameFactors(1.0 / fps)
+            var levels = listOf(start)
+            repeat(frames) {
+                levels = WaveformDriver.tickLevels(levels, listOf(target), rise, decay)
+            }
+            return levels[0]
+        }
+        // Rise 0 -> 1 over 1/30 s: 1 - 0.7^2 = 0.51
+        assertEquals(0.51f, run(60.0, 2, 0f, 1f), 0.0001f)
+        assertEquals(0.51f, run(90.0, 3, 0f, 1f), 0.0001f)
+        // Decay 1 -> 0 over 1/30 s: 0.85^2 = 0.7225
+        assertEquals(0.7225f, run(60.0, 2, 1f, 0f), 0.0001f)
+        assertEquals(0.7225f, run(90.0, 3, 1f, 0f), 0.0001f)
+    }
+
+    @Test
+    fun `frameFactors clamp a long gap to 100 ms and a negative one to zero`() {
+        assertEquals(WaveformDriver.frameFactors(0.1), WaveformDriver.frameFactors(5.0))
+        val (rise, decay) = WaveformDriver.frameFactors(-1.0)
+        assertEquals(0f, rise, 0f)
+        assertEquals(1f, decay, 0f)
+    }
+
+    @Test
+    fun `step response reaches the iOS curve and snaps to zero on silence`() {
+        val (rise, decay) = WaveformDriver.frameFactors(1.0 / 60)
+        var levels = listOf(0f)
+        repeat(10) { levels = WaveformDriver.tickLevels(levels, listOf(1f), rise, decay) }
+        // 1 - 0.7^10
+        assertEquals(0.97175f, levels[0], 0.0001f)
+        // 0.97 * 0.85^n < 0.005 after 33 frames, then snaps to exactly 0.
+        repeat(33) { levels = WaveformDriver.tickLevels(levels, listOf(0f), rise, decay) }
+        assertEquals(0f, levels[0], 0f)
+    }
+
+    // --- phaseAdvance: iOS ProcessingWaveform.phaseAdvance(for: .sweep) ---
+
+    @Test
+    fun `phaseAdvance runs at half a cycle per second`() {
+        assertEquals(1.0 / 120, WaveformDriver.phaseAdvance(1.0 / 60), 1e-9)
+    }
+
+    @Test
+    fun `phaseAdvance clamps one frame to 100 ms`() {
+        assertEquals(0.05, WaveformDriver.phaseAdvance(3.0), 1e-9)
+        assertEquals(0.0, WaveformDriver.phaseAdvance(-0.5), 1e-9)
+    }
 }

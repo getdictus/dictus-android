@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,7 +17,10 @@ import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
+import dev.pivisolutions.dictus.ime.model.ShiftState
+import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
@@ -57,7 +61,7 @@ fun KeyboardScreen(
     predictionToken: NextWordPredictionToken? = null,
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
-    isNoWordsNoticeVisible: Boolean = false,
+    dictationNotice: DictationNotice.Message? = null,
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
@@ -68,12 +72,14 @@ fun KeyboardScreen(
     frenchAdaptiveKeyState: FrenchAdaptiveKey.State = FrenchAdaptiveKey.DEFAULT,
     onFrenchAdaptiveKey: () -> Unit = {},
     onFrenchAdaptiveVariant: (String) -> Unit = {},
+    autoCapSignal: AutoCapSignal? = null,
 ) {
     // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
     // remember(initialLayer) ensures recomposition resets the layer if the preference changes.
     var currentLayer by remember(initialLayer) { mutableStateOf(initialLayer) }
-    var isShifted by remember { mutableStateOf(false) }
-    var isCapsLock by remember { mutableStateOf(false) }
+    var shiftState by remember { mutableStateOf(ShiftState()) }
+    val isShifted = shiftState.isShifted
+    val isCapsLock = shiftState.isCapsLock
     var isTrackpadActive by remember { mutableStateOf(false) }
     // keyboardLayout comes from DataStore via DictusImeService.
     // remember(keyboardLayout) resets the state when the preference changes in Settings,
@@ -82,6 +88,12 @@ fun KeyboardScreen(
 
     // Track last tap time for double-tap shift detection
     var lastShiftTapTime by remember { mutableStateOf(0L) }
+
+    // The service re-evaluates autocapitalization after every editor change (#213). The effect
+    // runs after the key handler, so a letter's one-shot unshift happens before the new decision.
+    LaunchedEffect(autoCapSignal) {
+        autoCapSignal?.let { shiftState = shiftState.afterAutoCapCheck(it.shouldCapitalize) }
+    }
 
     DictusTheme(themeMode = themeMode) {
         if (isEmojiPickerOpen) {
@@ -112,7 +124,7 @@ fun KeyboardScreen(
                     onCurrentWordSelected = onCurrentWordSelected,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = onUndoDictation,
-                    isNoWordsNoticeVisible = isNoWordsNoticeVisible,
+                    dictationNotice = dictationNotice,
                 )
 
                 // Mic button row above keyboard (46.dp)
@@ -143,7 +155,6 @@ fun KeyboardScreen(
                         handleKeyPress(
                             key = key,
                             isShifted = isShifted,
-                            isCapsLock = isCapsLock,
                             currentLayer = currentLayer,
                             lastShiftTapTime = lastShiftTapTime,
                             onCommitText = onCommitText,
@@ -151,11 +162,14 @@ fun KeyboardScreen(
                             onSendReturn = onSendReturn,
                             onEmojiToggle = onEmojiToggle,
                             onFrenchAdaptiveKey = onFrenchAdaptiveKey,
-                            onShiftChanged = { shifted, caps, tapTime ->
-                                isShifted = shifted
-                                isCapsLock = caps
+                            onShiftTapped = { isDoubleTap, tapTime ->
+                                shiftState = shiftState.afterShiftTap(isDoubleTap)
                                 lastShiftTapTime = tapTime
-                                Timber.d("Shift toggled: %s, CapsLock: %s", shifted, caps)
+                                Timber.d(
+                                    "Shift toggled: %s, CapsLock: %s",
+                                    shiftState.isShifted,
+                                    shiftState.isCapsLock,
+                                )
                             },
                             onLayerChanged = { layer ->
                                 currentLayer = layer
@@ -163,21 +177,17 @@ fun KeyboardScreen(
                             },
                             onAutoUnshift = {
                                 // Turn off shift after typing a character (unless caps lock)
-                                if (isShifted && !isCapsLock) {
-                                    isShifted = false
-                                }
+                                shiftState = shiftState.afterLetterTyped()
                             },
                         )
                     },
                     onAccentSelected = { accent ->
                         onCommitText(accent)
-                        if (isShifted && !isCapsLock) {
-                            isShifted = false
-                        }
+                        shiftState = shiftState.afterLetterTyped()
                     },
                     onFrenchAdaptiveVariant = { accent ->
                         onFrenchAdaptiveVariant(accent)
-                        if (isShifted && !isCapsLock) isShifted = false
+                        shiftState = shiftState.afterLetterTyped()
                     },
                     modifier = Modifier.height(264.dp),
                 )
@@ -195,7 +205,6 @@ fun KeyboardScreen(
 private fun handleKeyPress(
     key: KeyDefinition,
     isShifted: Boolean,
-    isCapsLock: Boolean,
     currentLayer: KeyboardLayer,
     lastShiftTapTime: Long,
     onCommitText: (String) -> Unit,
@@ -203,7 +212,7 @@ private fun handleKeyPress(
     onSendReturn: () -> Unit,
     onEmojiToggle: () -> Unit = {},
     onFrenchAdaptiveKey: () -> Unit,
-    onShiftChanged: (shifted: Boolean, caps: Boolean, tapTime: Long) -> Unit,
+    onShiftTapped: (isDoubleTap: Boolean, tapTime: Long) -> Unit,
     onLayerChanged: (KeyboardLayer) -> Unit,
     onAutoUnshift: () -> Unit,
 ) {
@@ -223,14 +232,9 @@ private fun handleKeyPress(
             onDeleteBackward()
         }
         KeyType.SHIFT -> {
+            // A second tap within 300 ms toggles caps lock; a single tap toggles shift.
             val now = System.currentTimeMillis()
-            if (now - lastShiftTapTime < 300) {
-                // Double-tap: toggle caps lock
-                onShiftChanged(!isCapsLock, !isCapsLock, now)
-            } else {
-                // Single tap: toggle shift
-                onShiftChanged(!isShifted, false, now)
-            }
+            onShiftTapped(now - lastShiftTapTime < 300, now)
         }
         KeyType.LAYER_SWITCH -> {
             val newLayer = when (key.label) {
