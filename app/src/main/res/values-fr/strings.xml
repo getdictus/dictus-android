@@ -58,7 +58,7 @@
     <string name="settings_section_transcription">TRANSCRIPTION</string>
     <string name="settings_section_keyboard">CLAVIER</string>
     <string name="settings_section_appearance">APPARENCE</string>
-    <string name="settings_section_about">A PROPOS</string>
+    <string name="settings_section_about">\u00c0 PROPOS</string>
 
     <!-- Settings: Row labels -->
     <string name="settings_language">Langue</string>
@@ -110,13 +110,14 @@
 
     <!-- SoundSettingsScreen -->
     <string name="sound_settings_title">Sons</string>
-    <string name="sound_settings_section_general">GENERAL</string>
-    <string name="sound_settings_section_sounds">SONS</string>
-    <string name="sound_settings_dictation_sound">Son de dict\u00e9e</string>
+    <string name="sound_settings_section_general">G\u00c9N\u00c9RAL</string>
+    <string name="sound_settings_section_sounds">SONS PAR \u00c9V\u00c9NEMENT</string>
+    <string name="sound_settings_dictation_sound">Activer les sons</string>
+    <string name="sound_settings_note">Les sons respectent le mode silencieux du t\u00e9l\u00e9phone.</string>
     <string name="sound_settings_volume">Volume</string>
-    <string name="sound_settings_start_sound">Son de d\u00e9but</string>
-    <string name="sound_settings_stop_sound">Son de fin</string>
-    <string name="sound_settings_cancel_sound">Son d\'annulation</string>
+    <string name="sound_settings_start_sound">D\u00e9but</string>
+    <string name="sound_settings_stop_sound">Fin</string>
+    <string name="sound_settings_cancel_sound">Annuler</string>
     <string name="sound_settings_back_cd">Retour</string>
 
     <!-- DebugLogsScreen -->
@@ -137,6 +138,12 @@
     <string name="ime_status_not_enabled">Clavier non activ\u00e9</string>
     <string name="ime_status_select_keyboard">S\u00e9lectionner le clavier</string>
     <string name="ime_status_enable_keyboard">Activer le clavier</string>
+
+    <!-- DictationService: recording notification -->
+    <string name="recording_notification_title">Dictus \u2013 Enregistrement</string>
+    <string name="recording_notification_stop">Arr\u00eater</string>
+    <string name="recording_notification_channel_name">Enregistrement Dictus</string>
+    <string name="recording_notification_channel_description">Notification d\u2019enregistrement en cours</string>
 
     <!-- RecordingTestArea -->
     <string name="recording_test_title">Test enregistrement</string>
@@ -254,9 +261,9 @@
     <string name="nav_settings">R\u00e9glages</string>
 
     <!-- Sound picker -->
-    <string name="sound_picker_title_start">Son de d\u00e9but</string>
-    <string name="sound_picker_title_stop">Son de fin</string>
-    <string name="sound_picker_title_cancel">Son d\'annulation</string>
+    <string name="sound_picker_title_start">D\u00e9but</string>
+    <string name="sound_picker_title_stop">Fin</string>
+    <string name="sound_picker_title_cancel">Annuler</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">Retour</string>

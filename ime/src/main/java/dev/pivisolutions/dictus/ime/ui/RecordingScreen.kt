@@ -36,7 +36,7 @@ import dev.pivisolutions.dictus.ime.haptics.HapticHelper
  * Total height matches KeyboardScreen (310.dp = 46.dp top + 264.dp content).
  * Layout follows the mockup (Keyboard Recording frame):
  * - Top row (46.dp): Cancel (X) left, Confirm (✓) right — outlined pills
- * - Center (218.dp): Waveform + timer + "En ecoute..."
+ * - Center (218.dp): Waveform + timer + "En écoute…"
  * - Bottom row (46.dp): Settings gear only (no mic pill during recording)
  *
  * The top row replaces the MicButtonRow's gear+mic with outlined pill
@@ -171,7 +171,7 @@ fun RecordingScreen(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_settings),
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(R.string.ime_recording_settings_description),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier
                         .width(20.dp)

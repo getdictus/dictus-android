@@ -53,6 +53,10 @@ fun MicButtonRow(
     val view = LocalView.current
     val activeMicColor = if (isRecording) DictusColors.Recording else DictusColors.Accent
     val micColor = if (isMicEnabled) activeMicColor else activeMicColor.copy(alpha = 0.35f)
+    // Resolved here: the semantics block below is not composable.
+    val languageKeyDescription = stringResource(R.string.ime_language_key_description, languageShortCode)
+    val cycleLanguageLabel = stringResource(R.string.ime_language_key_cycle_action)
+    val openSettingsLabel = stringResource(R.string.ime_language_key_settings_action)
 
     Row(
         modifier = modifier
@@ -68,13 +72,13 @@ fun MicButtonRow(
             modifier = Modifier
                 .size(32.dp)
                 .semantics {
-                    contentDescription = "Keyboard language $languageShortCode"
-                    onClick("Cycle keyboard language") {
+                    contentDescription = languageKeyDescription
+                    onClick(cycleLanguageLabel) {
                         HapticHelper.performKeyHaptic(view)
                         onCycleLanguage()
                         true
                     }
-                    onLongClick("Open Dictus Settings") {
+                    onLongClick(openSettingsLabel) {
                         HapticHelper.performKeyHaptic(view)
                         onOpenSettings()
                         true

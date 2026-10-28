@@ -7,4 +7,9 @@
     <string name="ime_emoji_return_keyboard">ABC</string>
     <string name="ime_undo_dictation">Annuler</string>
     <string name="ime_undo_dictation_description">Annuler la derni\u00e8re dict\u00e9e</string>
+    <!-- Language key: %1$s is the short code shown on the key (FR, EN, ES, DE) -->
+    <string name="ime_language_key_description">Langue du clavier %1$s</string>
+    <string name="ime_language_key_cycle_action">Changer la langue du clavier</string>
+    <string name="ime_language_key_settings_action">Ouvrir les r\u00e9glages Dictus</string>
+    <string name="ime_recording_settings_description">R\u00e9glages</string>
 </resources>
