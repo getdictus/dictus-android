@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -81,6 +82,12 @@ fun MicButtonRow(
         animationSpec = MicPressSpring,
         label = "micPress",
     )
+    // The haptic lands on touch-down (#24); the tap itself still waits for the release.
+    LaunchedEffect(micInteraction) {
+        micInteraction.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Press) HapticHelper.performMicHaptic(view)
+        }
+    }
     val successFlashAlpha = remember { Animatable(0f) }
     val currentFlashToken by rememberUpdatedState(successFlashToken)
     val currentOnFlashShown by rememberUpdatedState(onSuccessFlashShown)
@@ -171,7 +178,6 @@ fun MicButtonRow(
                     indication = null,
                     enabled = isMicEnabled,
                 ) {
-                    HapticHelper.performMicHaptic(view)
                     onMicTap()
                 },
             contentAlignment = Alignment.Center,
