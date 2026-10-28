@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -86,9 +87,10 @@ class RecordingScreenControllerBindingTest {
             mutableEngineState.value = state
         }
 
-        override fun startRecording() {
+        override fun startRecording(source: DictationSource): Boolean {
             startRecordingCallCount++
-            mutableState.value = DictationState.Recording()
+            mutableState.value = DictationState.Recording(source)
+            return true
         }
 
         override fun stopRecording(): FloatArray = FloatArray(0)

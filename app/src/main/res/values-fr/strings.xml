@@ -221,6 +221,7 @@
     <string name="recording_copy_cd">Copier</string>
     <string name="recording_back_cd">Retour</string>
     <string name="recording_stop_cd">Arr\u00eater</string>
+    <string name="recording_cancel_cd">Annuler la dict\u00e9e</string>
     <string name="recording_record_cd">Enregistrer</string>
     <string name="recording_new_dictation_cd">Nouvelle dict\u00e9e</string>
     <string name="recording_idle_title">Nouvelle dict\u00e9e</string>

@@ -15,6 +15,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -118,7 +119,7 @@ class RecordingScreenLeaveTest {
 
         assertEquals(0, controller.cancelRecordingCallCount)
         assertEquals(1, controller.startRecordingCallCount)
-        assertEquals(DictationState.Recording(), controller.state.value)
+        assertEquals(DictationState.Recording(DictationSource.APP), controller.state.value)
 
         // The recreated screen still owns the recording, so leaving (here: going to the
         // background, a real stop rather than a configuration change) still releases the mic.
@@ -157,12 +158,12 @@ class RecordingScreenLeaveTest {
         composeTestRule.waitForIdle()
         assertEquals(0, sharedController.startRecordingCallCount)
 
-        sharedController.startRecording()
+        sharedController.startRecording(DictationSource.KEYBOARD)
         showScreen = false
         composeTestRule.waitForIdle()
 
         assertEquals(0, sharedController.cancelRecordingCallCount)
-        assertEquals(DictationState.Recording(), sharedController.state.value)
+        assertEquals(DictationState.Recording(DictationSource.KEYBOARD), sharedController.state.value)
     }
 
     private class TestLifecycleOwner : LifecycleOwner {
@@ -186,9 +187,10 @@ class RecordingScreenLeaveTest {
 
         override fun prewarmEngine() = Unit
 
-        override fun startRecording() {
+        override fun startRecording(source: DictationSource): Boolean {
             startRecordingCallCount++
-            if (startsImmediately) mutableState.value = DictationState.Recording()
+            if (startsImmediately) mutableState.value = DictationState.Recording(source)
+            return true
         }
 
         override fun stopRecording(): FloatArray = FloatArray(0)

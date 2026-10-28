@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -151,9 +152,10 @@ class OnboardingTestRecordingGateTest {
             prewarmCalls++
         }
 
-        override fun startRecording() {
+        override fun startRecording(source: DictationSource): Boolean {
             startCalls++
-            dictation.value = DictationState.Recording()
+            dictation.value = DictationState.Recording(source)
+            return true
         }
 
         override fun stopRecording(): FloatArray = FloatArray(0)

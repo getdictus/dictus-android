@@ -22,7 +22,7 @@ class ModelPreparationGateTest {
         engineStates.forEach { state ->
             assertEquals(
                 SttEngineState.Cold,
-                ModelPreparationGate.overlayState(state, DictationState.Recording()),
+                ModelPreparationGate.overlayState(state, DictationState.Recording(DictationSource.APP)),
             )
         }
     }

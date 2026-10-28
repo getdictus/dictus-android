@@ -24,6 +24,8 @@ import dev.pivisolutions.dictus.core.logging.DictationTrace
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
+import dev.pivisolutions.dictus.core.service.DictationStartGuard
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -39,7 +41,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,7 +48,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import dev.pivisolutions.dictus.asr.ParakeetProvider
 import dev.pivisolutions.dictus.model.AiProvider
@@ -145,15 +145,13 @@ class DictationService : Service(), DictationController {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private var audioCaptureManager: AudioCaptureManager? = null
-    private var timerJob: Job? = null
     private var prewarmJob: Job? = null
-    private var elapsedMs: Long = 0L
 
     // True between startRecording() and the ACTION_START it queues. startForegroundService()
     // is asynchronous, so a cancel can land first; the start must then not open the mic.
     // Only touched on the main thread (binder calls from UI and onStartCommand).
     private var pendingStart = false
+    private var pendingSource = DictationSource.APP
 
     // Sound feedback for recording lifecycle events.
     // Initialized in onCreate(); conditionally played based on SOUND_ENABLED preference.
@@ -169,6 +167,10 @@ class DictationService : Service(), DictationController {
 
     /** Observable state for the IME to collect. */
     override val state: StateFlow<DictationState> = _state.asStateFlow()
+
+    private val recorder = DictationRecorder(serviceScope, _state) {
+        AudioCaptureManager(getSystemService(AudioManager::class.java))
+    }
 
     /** Native engine readiness for IME/UI loading gates. */
     override val engineState: StateFlow<SttEngineState>
@@ -266,6 +268,11 @@ class DictationService : Service(), DictationController {
                     buildNotification(),
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
                 )
+                if (recorder.isCapturing || !DictationStartGuard.canStartNewDictation(_state.value)) {
+                    // Backstop (#237): a live dictation owns the microphone and the foreground.
+                    Timber.w("ACTION_START refused: state=%s", _state.value::class.simpleName)
+                    return START_NOT_STICKY
+                }
                 if (!pendingStart) {
                     // Cancelled before this start was delivered. startForeground() above is
                     // still required after startForegroundService(), then nothing records.
@@ -276,11 +283,13 @@ class DictationService : Service(), DictationController {
                     return START_NOT_STICKY
                 }
                 pendingStart = false
-                startAudioCapture()
+                recorder.start(pendingSource)
+                if (soundEnabled) soundPlayer.playStart()
                 Timber.i("DictationService started foreground with ACTION_START, t+=%dms", DictationTrace.elapsedMs())
             }
             ACTION_STOP -> {
-                stopRecordingInternal(discard = true)
+                pendingStart = false
+                discardRecording()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 Timber.d("DictationService stopped via ACTION_STOP")
@@ -296,16 +305,28 @@ class DictationService : Service(), DictationController {
      * Start recording via foreground service promotion.
      *
      * Sends ACTION_START to self, which triggers onStartCommand to call
-     * startForeground() (required for microphone access) then startAudioCapture().
+     * startForeground() (required for microphone access) then starts the capture.
+     * Refused while a dictation records, transcribes or is still being started (#237).
      */
-    override fun startRecording() {
+    override fun startRecording(source: DictationSource): Boolean {
+        if (!DictationStartGuard.canStartNewDictation(_state.value, pendingStart)) {
+            Timber.w(
+                "Recording start refused: source=%s, state=%s, pendingStart=%b",
+                source,
+                _state.value::class.simpleName,
+                pendingStart,
+            )
+            return false
+        }
         val intent = Intent(this, DictationService::class.java).apply {
             action = ACTION_START
         }
         pendingStart = true
-        val trace = DictationTrace.onRecordingRequested(fallbackSource = "app")
+        pendingSource = source
+        val trace = DictationTrace.onRecordingRequested(fallbackSource = source.name.lowercase())
         Timber.i("Recording requested: source=%s, t+=%dms", trace.source, DictationTrace.elapsedMs())
         startForegroundService(intent)
+        return true
     }
 
     /**
@@ -317,10 +338,8 @@ class DictationService : Service(), DictationController {
      * @return FloatArray of captured audio samples, or empty array if not recording.
      */
     override fun stopRecording(): FloatArray {
-        val samples = audioCaptureManager?.stop() ?: FloatArray(0)
-        timerJob?.cancel()
-        timerJob = null
-        elapsedMs = 0L
+        pendingStart = false
+        val samples = recorder.stop()
         if (soundEnabled) soundPlayer.playStop()
         _state.value = DictationState.Idle
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -339,7 +358,7 @@ class DictationService : Service(), DictationController {
     override fun cancelRecording() {
         pendingStart = false
         if (soundEnabled) soundPlayer.playCancel()
-        stopRecordingInternal(discard = true)
+        discardRecording()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Timber.d("Recording cancelled, samples discarded")
@@ -358,11 +377,8 @@ class DictationService : Service(), DictationController {
      */
     override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
         // 1. Stop recording and get audio samples
-        val samples = audioCaptureManager?.stop() ?: FloatArray(0)
-        timerJob?.cancel()
-        timerJob = null
-        elapsedMs = 0L
-        audioCaptureManager = null
+        pendingStart = false
+        val samples = recorder.stop()
 
         transcriber.rejectBeforeEngine(samples)?.let { outcome ->
             finishTranscription()
@@ -499,58 +515,10 @@ class DictationService : Service(), DictationController {
         )
     }
 
-    /**
-     * Internal helper to stop recording, optionally discarding samples.
-     */
-    private fun stopRecordingInternal(discard: Boolean) {
-        if (discard) {
-            audioCaptureManager?.cancel()
-        } else {
-            audioCaptureManager?.stop()
-        }
-        audioCaptureManager = null
-        timerJob?.cancel()
-        timerJob = null
-        elapsedMs = 0L
+    /** Discard the capture, if any, and reach Idle even when nothing was recording. */
+    private fun discardRecording() {
+        recorder.cancel()
         _state.value = DictationState.Idle
-    }
-
-    /**
-     * Initialize AudioCaptureManager and start the read loop + timer.
-     */
-    private fun startAudioCapture() {
-        val manager = AudioCaptureManager(getSystemService(AudioManager::class.java))
-        audioCaptureManager = manager
-
-        // Energy updates come from the capture read loop (Dispatchers.Default).
-        // We update the state flow with the latest waveform levels each time.
-        manager.onEnergyUpdate = {
-            _state.value = DictationState.Recording(
-                elapsedMs = elapsedMs,
-                energy = manager.getEnergyHistory(),
-            )
-        }
-
-        manager.start(serviceScope)
-
-        // Timer coroutine: increments elapsed time every second.
-        // Runs on Main dispatcher since it only updates the state flow.
-        elapsedMs = 0L
-        timerJob = serviceScope.launch {
-            while (isActive) {
-                delay(1000L)
-                elapsedMs += 1000L
-                _state.value = DictationState.Recording(
-                    elapsedMs = elapsedMs,
-                    energy = manager.getEnergyHistory(),
-                )
-            }
-        }
-
-        _state.value = DictationState.Recording(elapsedMs = 0L, energy = emptyList())
-
-        // Play start cue after transitioning to Recording state.
-        if (soundEnabled) soundPlayer.playStart()
     }
 
     /**
@@ -600,6 +568,8 @@ class DictationService : Service(), DictationController {
     override fun onDestroy() {
         super.onDestroy()
         if (::soundPlayer.isInitialized) soundPlayer.release()
+        // Cancelling the scope alone would leave a live AudioRecord unreleased.
+        recorder.cancel()
         serviceScope.cancel()
         // The cancelled transcription releases it in its finally; this covers a lock left held.
         transcriptionWakeLock.release()
