@@ -59,7 +59,6 @@ import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
 import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.input.DictationFeedback
-import dev.pivisolutions.dictus.ime.input.DictationSuccessFlash
 import dev.pivisolutions.dictus.ime.input.DictationUndo
 import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.EditorEligibilityPolicy
@@ -172,8 +171,6 @@ class DictusImeService : LifecycleInputMethodService() {
     private val dictationNotice = DictationNotice(bindingScope)
     // Withdraws both offers together wherever the field changes.
     private val dictationFeedback = DictationFeedback(dictationUndo, dictationNotice)
-    // Green flash on the mic pill once the keyboard is back after an inserted dictation (#24).
-    private val dictationSuccessFlash = DictationSuccessFlash()
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
@@ -668,7 +665,6 @@ class DictusImeService : LifecycleInputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
         cancelActiveTouch()
-        dictationSuccessFlash.clear()
         super.onFinishInputView(finishingInput)
     }
 
@@ -784,7 +780,6 @@ class DictusImeService : LifecycleInputMethodService() {
         val suggestions by _suggestions.collectAsState()
         val isDictationUndoAvailable by dictationUndo.isAvailable.collectAsState()
         val dictationNoticeMessage by dictationNotice.message.collectAsState()
-        val successFlashToken by dictationSuccessFlash.pending.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
@@ -945,8 +940,6 @@ class DictusImeService : LifecycleInputMethodService() {
                     onOpenSettings = openDictusSettings,
                     onMicTap = gatedMicTap,
                     isMicEnabled = engineState !is SttEngineState.Loading,
-                    successFlashToken = successFlashToken,
-                    onSuccessFlashShown = dictationSuccessFlash::consume,
                     isEmojiPickerOpen = isEmojiPickerOpen,
                     onEmojiToggle = {
                         autocorrectCoordinator.onOtherInput()
@@ -1094,7 +1087,6 @@ class DictusImeService : LifecycleInputMethodService() {
                                     val outcome = controller.confirmAndTranscribe(retention)
                                     dictationFeedback.onOutcome(outcome) { text ->
                                         val committed = insertDictation(text)
-                                        if (committed) dictationSuccessFlash.arm()
                                         Timber.tag(LogCategory.INSERT.name).i(
                                             PrivacySafeLog.dictationInserted(
                                                 text,

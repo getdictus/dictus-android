@@ -1,10 +1,7 @@
 package dev.pivisolutions.dictus.ime.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -26,12 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -48,7 +42,6 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
-import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.PI
 
 /**
@@ -59,8 +52,7 @@ import kotlin.math.PI
  *
  * Motion ported from iOS `AnimatedMicButton` (#24). The idle glow stays still, as the iOS
  * keyboard pill does (`animatesIdleGlow: false`, iOS #510). Recording and transcribing replace
- * this row with their own screens, so the pill only adds the press feedback and a one-shot green
- * flash when [successFlashToken] is armed after an inserted dictation.
+ * this row with their own screens, so the pill only adds the press feedback.
  */
 @Composable
 fun MicButtonRow(
@@ -70,8 +62,6 @@ fun MicButtonRow(
     onMicTap: () -> Unit = {},
     isRecording: Boolean = false,
     isMicEnabled: Boolean = true,
-    successFlashToken: Int? = null,
-    onSuccessFlashShown: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -86,18 +76,6 @@ fun MicButtonRow(
     LaunchedEffect(micInteraction) {
         micInteraction.interactions.collect { interaction ->
             if (interaction is PressInteraction.Press) HapticHelper.performMicHaptic(view)
-        }
-    }
-    val successFlashAlpha = remember { Animatable(0f) }
-    val currentFlashToken by rememberUpdatedState(successFlashToken)
-    val currentOnFlashShown by rememberUpdatedState(onSuccessFlashShown)
-    // Collected rather than keyed on the token: consuming it sets it back to null, which would
-    // cancel a LaunchedEffect keyed on it before the fade ends.
-    LaunchedEffect(Unit) {
-        snapshotFlow { currentFlashToken }.filterNotNull().collect { token ->
-            currentOnFlashShown(token)
-            successFlashAlpha.snapTo(1f)
-            successFlashAlpha.animateTo(0f, tween(SUCCESS_FLASH_MS, easing = SwiftUiEaseOut))
         }
     }
     val activeMicColor = if (isRecording) DictusColors.Recording else DictusColors.Accent
@@ -168,10 +146,6 @@ fun MicButtonRow(
                 )
                 .clip(RoundedCornerShape(20.dp))
                 .background(micColor)
-                .drawBehind {
-                    val flash = successFlashAlpha.value
-                    if (flash > 0f) drawRect(DictusColors.Success.copy(alpha = SUCCESS_FLASH_ALPHA * flash))
-                }
                 .clickable(
                     interactionSource = micInteraction,
                     // iOS GlassPressStyle replaces the Material ripple on this pill.
@@ -204,7 +178,3 @@ private val MicPressSpring = spring<Float>(
     stiffness = ((2 * PI / 0.3) * (2 * PI / 0.3)).toFloat(),
 )
 
-// iOS success flash: dictusSuccess at 0.6 opacity, faded out with .easeOut(duration: 0.3).
-private const val SUCCESS_FLASH_ALPHA = 0.6f
-private const val SUCCESS_FLASH_MS = 300
-private val SwiftUiEaseOut = CubicBezierEasing(0f, 0f, 0.58f, 1f)
