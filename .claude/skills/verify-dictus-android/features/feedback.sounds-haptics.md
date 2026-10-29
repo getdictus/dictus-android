@@ -1,6 +1,6 @@
 # Sounds and haptics
 
-Dictation start, stop and cancel can play a sound chosen per event at a set volume; keys vibrate and click if wanted.
+Dictation start, stop and cancel can play a sound chosen per event at a set volume; keys vibrate and click if wanted, and an inserted dictation gives one light tick.
 
 - **ID:** `feedback.sounds-haptics`
 - **Tier:** Gratuit
@@ -12,7 +12,7 @@ Dictation start, stop and cancel can play a sound chosen per event at a set volu
 - `sounds.toggle`: « Son de dictée » in Réglages → Sons. — présent
 - `sounds.volume`: « Volume » slider. — présent
 - `sounds.per-event`: « Son de début », « Son de fin », « Son d'annulation », each a list of sounds played on tap. — présent
-- `haptics.toggle`: « Retour haptique » in Réglages → CLAVIER. — présent
+- `haptics.toggle`: « Retour haptique » in Réglages → CLAVIER: key presses, and one light tick when a keyboard dictation inserts its text (#238). — présent
 - `sounds.key-clicks` *(Spécifique Android)*: « Sons du clavier »: a click on each key, distinct from the dictation sounds.
 
 ## How to get to it (user POV)

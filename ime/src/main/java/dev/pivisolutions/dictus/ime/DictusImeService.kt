@@ -43,6 +43,8 @@ import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
+import dev.pivisolutions.dictus.ime.haptics.HapticHelper
+import dev.pivisolutions.dictus.ime.haptics.InsertHaptic
 import dev.pivisolutions.dictus.ime.suggestion.AndroidNativeTrieOpener
 import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.ImeOverlayHost
@@ -173,6 +175,11 @@ class DictusImeService : LifecycleInputMethodService() {
     private val dictationNotice = DictationNotice(bindingScope)
     // Withdraws both offers together wherever the field changes.
     private val dictationFeedback = DictationFeedback(dictationUndo, dictationNotice)
+
+    // The IME window outlives the recording screen, which is gone by the time the text lands.
+    private val insertHaptic = InsertHaptic {
+        window?.window?.decorView?.let(HapticHelper::performInsertHaptic)
+    }
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
@@ -1096,6 +1103,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                     val outcome = controller.confirmAndTranscribe(retention)
                                     dictationFeedback.onOutcome(outcome) { text ->
                                         val committed = insertDictation(text)
+                                        insertHaptic.onInserted(committed, hapticsEnabled)
                                         Timber.tag(LogCategory.INSERT.name).i(
                                             PrivacySafeLog.dictationInserted(
                                                 text,
