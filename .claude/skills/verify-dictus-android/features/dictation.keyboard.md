@@ -18,6 +18,7 @@ In any app, the Dictus keyboard's blue mic pill records the voice on the phone, 
 - `dictation.requires-full-access`: — Spécifique iOS (no Full Access on Android; only the `RECORD_AUDIO` permission).
 - `dictation.device-gating`: — absent: no device is refused as a whole; only heavy models are refused per RAM (`models.device-gating`).
 - `dictation.notification` *(Spécifique Android)*: while recording, a foreground-service notification « Dictus – Enregistrement » with an « Arrêter » action (EN: « Dictus – Recording », « Stop ») (required by Android for microphone use in the background).
+- App dictation running *(Spécifique Android, #248)*: while a dictation started in the app records or transcribes, the keyboard keeps typing, its mic is greyed out and the suggestion bar reads « Dictée en cours dans Dictus » (EN « Dictation in progress in Dictus »); no recording overlay, no ✓. Log `Keyboard mic refused: dictation in progress in the app`. — présent
 - `dictation.switch-keyboard` *(Spécifique Android)*: during a recording the gear (`Réglages`) under the waveform opens the system keyboard picker.
 
 ## How to get to it (user POV)
