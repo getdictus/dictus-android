@@ -74,6 +74,7 @@ import dev.pivisolutions.dictus.ime.input.AutocorrectSpaceDiagnosis
 import dev.pivisolutions.dictus.ime.input.AutocorrectSpaceResult
 import dev.pivisolutions.dictus.ime.input.ImeServicePrivacyPolicy
 import dev.pivisolutions.dictus.ime.input.ImeTranscriptionRetentionSession
+import dev.pivisolutions.dictus.ime.input.KeyboardDictationOwnership
 import dev.pivisolutions.dictus.ime.input.PersonalizedLearningEntryPoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
@@ -146,6 +147,9 @@ class DictusImeService : LifecycleInputMethodService() {
     // Local mirror of the DictationService state, observed by Compose via collectAsState().
     // This MutableStateFlow is updated by collecting the service's StateFlow after binding.
     private val _serviceState = MutableStateFlow<DictationState>(DictationState.Idle)
+    // True while the service runs a dictation the app started: the keyboard hides it (#248).
+    private val _appDictationActive = MutableStateFlow(false)
+    private val dictationOwnership = KeyboardDictationOwnership()
     private val _engineState = MutableStateFlow<SttEngineState>(SttEngineState.Cold)
 
     // Emoji picker visibility state, hoisted here so back key can dismiss it via onKeyDown.
@@ -250,6 +254,11 @@ class DictusImeService : LifecycleInputMethodService() {
                     // Observe service state and mirror to local flow
                     stateCollectionJob = bindingScope.launch {
                         service.state.collect { state ->
+                            val appDictation = dictationOwnership.isForeign(state)
+                            if (appDictation && !_appDictationActive.value) {
+                                Timber.i("Keyboard mic refused: dictation in progress in the app")
+                            }
+                            _appDictationActive.value = appDictation
                             _serviceState.value = state
                         }
                     }
@@ -274,6 +283,7 @@ class DictusImeService : LifecycleInputMethodService() {
             engineCollectionJob?.cancel()
             engineCollectionJob = null
             _serviceState.value = DictationState.Idle
+            _appDictationActive.value = false
             _engineState.value = SttEngineState.Cold
             Timber.d("Unbound from DictationService")
         }
@@ -774,6 +784,7 @@ class DictusImeService : LifecycleInputMethodService() {
     @Composable
     override fun KeyboardContent() {
         val dictationState by _serviceState.collectAsState()
+        val appDictationActive by _appDictationActive.collectAsState()
         val engineState by _engineState.collectAsState()
         val micGate = remember { PendingMicGate() }
         // A Ready engine on the previous model is not ready for this tap (#175).
@@ -944,7 +955,8 @@ class DictusImeService : LifecycleInputMethodService() {
                             if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
                         ),
                 ) {
-                    when (dictationState) {
+                    // An app dictation shows the keyboard, mic disabled, never its recording UI or ✓ (#248).
+                    when (if (appDictationActive) DictationState.Idle else dictationState) {
             is DictationState.Idle -> {
                 KeyboardScreen(
                     onCommitText = { text -> commitText(text) },
@@ -955,7 +967,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     onCycleLanguage = cycleKeyboardLanguage,
                     onOpenSettings = openDictusSettings,
                     onMicTap = gatedMicTap,
-                    isMicEnabled = engineState !is SttEngineState.Loading,
+                    isMicEnabled = engineState !is SttEngineState.Loading && !appDictationActive,
                     isEmojiPickerOpen = isEmojiPickerOpen,
                     onEmojiToggle = {
                         autocorrectCoordinator.onOtherInput()
@@ -968,7 +980,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
-                    dictationNotice = dictationNoticeMessage,
+                    dictationNotice = if (appDictationActive) DictationNotice.Message.AppDictationInProgress else dictationNoticeMessage,
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
                         dictationFeedback.withdraw()

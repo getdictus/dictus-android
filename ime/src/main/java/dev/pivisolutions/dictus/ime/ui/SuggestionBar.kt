@@ -178,6 +178,7 @@ private fun DictationNoticeBar(message: DictationNotice.Message, modifier: Modif
     val text = when (message) {
         DictationNotice.Message.NoWordsDetected -> CoreR.string.dictation_no_words_detected
         DictationNotice.Message.Failed -> CoreR.string.dictation_failed
+        DictationNotice.Message.AppDictationInProgress -> R.string.ime_app_dictation_in_progress
     }
     Box(
         modifier = modifier
