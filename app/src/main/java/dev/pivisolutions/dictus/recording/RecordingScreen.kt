@@ -115,11 +115,10 @@ fun RecordingScreen(
         dataStore?.data?.collect { micGate.selectedModelKey = it[PreferenceKeys.ACTIVE_MODEL] }
     }
 
-    // True while a recording this screen started has not been stopped yet. The service is
-    // shared with the keyboard, so leaving must never cancel a dictation the IME owns.
-    // Saveable, like autoStarted below, so both survive activity recreation (rotation): the
-    // recording keeps running in the service and the recreated screen picks it up.
-    var ownsRecording by rememberSaveable { mutableStateOf(false) }
+    // True between a start this screen asked for and the recording it opens: startForegroundService()
+    // is asynchronous, so the service is still Idle meanwhile. Saveable, like autoStarted below, so
+    // both survive activity recreation (rotation): the recreated screen picks the dictation up.
+    var startPending by rememberSaveable { mutableStateOf(false) }
     var autoStarted by rememberSaveable { mutableStateOf(false) }
 
     fun runGateCommand(command: MicGateCommand) {
@@ -127,7 +126,7 @@ fun RecordingScreen(
             MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
             // The service refuses a start that arrives while another dictation runs (#237).
             MicGateCommand.START_RECORDING ->
-                ownsRecording = dictationController?.startRecording(DictationSource.APP) == true
+                startPending = dictationController?.startRecording(DictationSource.APP) == true
             MicGateCommand.NONE -> Unit
         }
     }
@@ -136,41 +135,49 @@ fun RecordingScreen(
     // whoever started it, then leave. After a result there is nothing left to end.
     fun close() {
         micGate.cancel()
-        // ownsRecording also covers a start still queued in the service, where the state is Idle.
-        if (ownsRecording || dictationController?.state?.value is DictationState.Recording) {
+        // startPending also covers a start still queued in the service, where the state is Idle.
+        if (startPending || dictationController?.state?.value is DictationState.Recording) {
             dictationController?.cancelRecording()
         }
-        ownsRecording = false
+        startPending = false
         onBack()
     }
     BackHandler(onBack = ::close)
 
-    // Leaving the screen releases the microphone (#142): any navigation and the app going to
-    // the background end here. It is
-    // the discard path, so nothing is transcribed. A stop already tapped is untouched: its
-    // result only lives on this screen. A configuration change is not leaving: the activity
-    // is recreated around the same recording, so it is skipped.
+    // The service has opened the microphone: the start is no longer pending.
+    LaunchedEffect(dictationState is DictationState.Recording) {
+        if (dictationState is DictationState.Recording) startPending = false
+    }
+
+    // Leaving the app or locking the screen keeps an app dictation recording (#248, iOS parity):
+    // the microphone foreground service started while the app was visible may go on in the
+    // background, and coming back reopens this screen (ActiveDictationRedirect). It used to be
+    // cancelled here (#142). Only a start still pending is cancelled: the foreground service
+    // cannot start from the background, and a tap still waiting for the engine must not start
+    // recording there. A configuration change is not leaving, so it is skipped.
     val lifecycleOwner = LocalLifecycleOwner.current
     val activity = LocalContext.current.findActivity()
     val currentController by rememberUpdatedState(dictationController)
     val currentMicGate by rememberUpdatedState(micGate)
     DisposableEffect(lifecycleOwner) {
-        fun releaseMicrophone() {
+        fun leave(event: String) {
             if (activity?.isChangingConfigurations == true) return
-            // A tap still waiting for the engine must not start recording in the background.
             currentMicGate.cancel()
-            // Not gated on the Recording state: a start still queued in the service is
-            // still Idle here, and cancelling it is what keeps it from opening the mic.
-            if (ownsRecording) currentController?.cancelRecording()
-            ownsRecording = false
+            if (startPending) {
+                Timber.i("%s: pending app start cancelled", event)
+                currentController?.cancelRecording()
+                startPending = false
+            } else if (currentController?.state?.value is DictationState.Recording) {
+                Timber.i("%s ignored, dictation continues", event)
+            }
         }
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) releaseMicrophone()
+            if (event == Lifecycle.Event.ON_STOP) leave("ON_STOP")
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            releaseMicrophone()
+            leave("Screen disposed")
         }
     }
 
@@ -439,7 +446,7 @@ fun RecordingScreen(
                             .clip(CircleShape)
                             .background(DictusColors.Recording)
                             .clickable {
-                                ownsRecording = false
+                                startPending = false
                                 // A keyboard dictation may come from a field that must not be kept
                                 // (password, incognito): the app cannot tell, so it keeps nothing.
                                 val fromApp = (dictationState as? DictationState.Recording)?.source == DictationSource.APP

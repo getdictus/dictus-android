@@ -31,7 +31,10 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
-/** Leaving the recording screen must release the microphone without transcribing (#142). */
+/**
+ * Only ✕ (or system back) discards an app dictation. Going to the background or locking the
+ * screen keeps it recording (#248, which reverses #142); only a start still pending is cancelled.
+ */
 @RunWith(RobolectricTestRunner::class)
 class RecordingScreenLeaveTest {
 
@@ -47,7 +50,7 @@ class RecordingScreenLeaveTest {
             CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
                 DictusTheme {
                     if (showScreen) {
-                        RecordingScreen(dictationController = controller, onBack = {})
+                        RecordingScreen(dictationController = controller, onBack = { showScreen = false })
                     }
                 }
             }
@@ -55,13 +58,17 @@ class RecordingScreenLeaveTest {
         composeTestRule.waitForIdle()
     }
 
+    private fun goToBackground() {
+        composeTestRule.runOnIdle { lifecycleOwner.registry.currentState = Lifecycle.State.CREATED }
+        composeTestRule.waitForIdle()
+    }
+
     @Test
-    fun `leaving while recording cancels without transcribing`() {
+    fun `close while recording cancels without transcribing`() {
         setRecordingScreen()
         assertEquals(1, controller.startRecordingCallCount)
 
-        // Back (arrow or system) pops the destination, which disposes the screen.
-        showScreen = false
+        composeTestRule.onNodeWithContentDescription("Close").performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(1, controller.cancelRecordingCallCount)
@@ -70,11 +77,45 @@ class RecordingScreenLeaveTest {
     }
 
     @Test
-    fun `going to the background while recording cancels without transcribing`() {
+    fun `going to the background while recording keeps the dictation`() {
         setRecordingScreen()
 
-        composeTestRule.runOnIdle { lifecycleOwner.registry.currentState = Lifecycle.State.CREATED }
+        goToBackground()
+
+        assertEquals(0, controller.cancelRecordingCallCount)
+        assertEquals(DictationState.Recording(DictationSource.APP), controller.state.value)
+
+        // Coming back, the dictation is still there to confirm.
+        composeTestRule.runOnIdle { lifecycleOwner.registry.currentState = Lifecycle.State.RESUMED }
+        composeTestRule.onNodeWithContentDescription("Stop").performClick()
         composeTestRule.waitForIdle()
+        assertEquals(1, controller.confirmAndTranscribeCallCount)
+        assertEquals(0, controller.cancelRecordingCallCount)
+    }
+
+    @Test
+    fun `the activity going away while recording keeps the dictation`() {
+        // Not ✕: the activity is destroyed under the screen, the service keeps recording.
+        setRecordingScreen()
+
+        goToBackground()
+        showScreen = false
+        composeTestRule.waitForIdle()
+
+        assertEquals(0, controller.cancelRecordingCallCount)
+        assertEquals(DictationState.Recording(DictationSource.APP), controller.state.value)
+    }
+
+    @Test
+    fun `going to the background before the queued start lands cancels it`() {
+        // startForegroundService() is asynchronous, and a microphone foreground service cannot
+        // start from the background: the state is still Idle when the user leaves.
+        controller.startsImmediately = false
+        setRecordingScreen()
+        assertEquals(1, controller.startRecordingCallCount)
+        assertEquals(DictationState.Idle, controller.state.value)
+
+        goToBackground()
 
         assertEquals(1, controller.cancelRecordingCallCount)
         assertEquals(0, controller.confirmAndTranscribeCallCount)
@@ -87,11 +128,8 @@ class RecordingScreenLeaveTest {
 
     @Test
     fun `leaving before the queued start lands still cancels it`() {
-        // startForegroundService() is asynchronous: the state is still Idle when the user leaves.
         controller.startsImmediately = false
         setRecordingScreen()
-        assertEquals(1, controller.startRecordingCallCount)
-        assertEquals(DictationState.Idle, controller.state.value)
 
         showScreen = false
         composeTestRule.waitForIdle()
@@ -101,7 +139,7 @@ class RecordingScreenLeaveTest {
     }
 
     @Test
-    fun `rotation keeps the recording and leaving afterwards still cancels`() {
+    fun `rotation keeps the recording, and so does going to the background afterwards`() {
         val activityController = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         fun ComponentActivity.showRecordingScreen() = setContent {
             DictusTheme {
@@ -121,12 +159,10 @@ class RecordingScreenLeaveTest {
         assertEquals(1, controller.startRecordingCallCount)
         assertEquals(DictationState.Recording(DictationSource.APP), controller.state.value)
 
-        // The recreated screen still owns the recording, so leaving (here: going to the
-        // background, a real stop rather than a configuration change) still releases the mic.
         activityController.pause().stop()
         shadowOf(Looper.getMainLooper()).idle()
-        assertEquals(1, controller.cancelRecordingCallCount)
-        assertEquals(0, controller.confirmAndTranscribeCallCount)
+        assertEquals(0, controller.cancelRecordingCallCount)
+        assertEquals(DictationState.Recording(DictationSource.APP), controller.state.value)
     }
 
     @Test
