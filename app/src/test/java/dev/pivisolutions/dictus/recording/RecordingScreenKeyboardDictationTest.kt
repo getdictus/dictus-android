@@ -1,11 +1,12 @@
 package dev.pivisolutions.dictus.recording
 
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -34,16 +35,17 @@ import org.robolectric.RobolectricTestRunner
 class RecordingScreenKeyboardDictationTest {
 
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private val lifecycleOwner = TestLifecycleOwner()
     private var showScreen by mutableStateOf(true)
+    private var backCount = 0
 
     private fun setRecordingScreen(controller: DictationController) {
         composeTestRule.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
                 DictusTheme {
-                    if (showScreen) RecordingScreen(dictationController = controller, onBack = {})
+                    if (showScreen) RecordingScreen(dictationController = controller, onBack = { backCount++ })
                 }
             }
         }
@@ -51,14 +53,15 @@ class RecordingScreenKeyboardDictationTest {
     }
 
     @Test
-    fun `a keyboard dictation is shown with only Stop and Cancel, never restarted`() {
+    fun `a keyboard dictation is shown with only Stop and a single close, never restarted`() {
         val controller = GuardedController(SttEngineState.Ready("tiny"))
         controller.startRecording(DictationSource.KEYBOARD)
         setRecordingScreen(controller)
 
         assertEquals(1, controller.startRecordingCallCount)
         composeTestRule.onNodeWithContentDescription("Stop").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("Cancel dictation").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Close").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Back").assertDoesNotExist()
         composeTestRule.onNodeWithContentDescription("Record").assertDoesNotExist()
         composeTestRule.onNodeWithContentDescription("New dictation").assertDoesNotExist()
     }
@@ -78,21 +81,64 @@ class RecordingScreenKeyboardDictationTest {
     }
 
     @Test
-    fun `Cancel discards the keyboard dictation and starts nothing`() {
+    fun `close cancels the keyboard dictation, starts nothing and leaves`() {
         val controller = GuardedController(SttEngineState.Ready("tiny"))
         controller.startRecording(DictationSource.KEYBOARD)
         setRecordingScreen(controller)
 
-        composeTestRule.onNodeWithContentDescription("Cancel dictation").performClick()
+        composeTestRule.onNodeWithContentDescription("Close").performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(1, controller.cancelRecordingCallCount)
         assertEquals(DictationState.Idle, controller.state.value)
         assertEquals(1, controller.startRecordingCallCount)
+        assertEquals(1, backCount)
     }
 
     @Test
-    fun `leaving does not cancel the keyboard dictation`() {
+    fun `system back does what close does`() {
+        val controller = GuardedController(SttEngineState.Ready("tiny"))
+        controller.startRecording(DictationSource.KEYBOARD)
+        setRecordingScreen(controller)
+
+        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.waitForIdle()
+
+        assertEquals(1, controller.cancelRecordingCallCount)
+        assertEquals(DictationState.Idle, controller.state.value)
+        assertEquals(1, backCount)
+    }
+
+    @Test
+    fun `close cancels the app's own dictation too`() {
+        val controller = GuardedController(SttEngineState.Ready("tiny"))
+        setRecordingScreen(controller)
+        assertEquals(DictationSource.APP, (controller.state.value as DictationState.Recording).source)
+
+        composeTestRule.onNodeWithContentDescription("Close").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(1, controller.cancelRecordingCallCount)
+        assertEquals(1, backCount)
+    }
+
+    @Test
+    fun `close after a result only leaves`() {
+        val controller = GuardedController(SttEngineState.Ready("tiny"))
+        controller.startRecording(DictationSource.KEYBOARD)
+        setRecordingScreen(controller)
+        composeTestRule.onNodeWithContentDescription("Stop").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Close").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(0, controller.cancelRecordingCallCount)
+        assertEquals(1, backCount)
+    }
+
+    @Test
+    fun `leaving without close does not cancel the keyboard dictation`() {
         val controller = GuardedController(SttEngineState.Ready("tiny"))
         controller.startRecording(DictationSource.KEYBOARD)
         setRecordingScreen(controller)

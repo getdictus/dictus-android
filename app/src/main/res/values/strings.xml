@@ -217,9 +217,8 @@
     <!-- RecordingScreen -->
     <string name="recording_result_title">Result</string>
     <string name="recording_copy_cd">Copy</string>
-    <string name="recording_back_cd">Back</string>
+    <string name="recording_close_cd">Close</string>
     <string name="recording_stop_cd">Stop</string>
-    <string name="recording_cancel_cd">Cancel dictation</string>
     <string name="recording_record_cd">Record</string>
     <string name="recording_new_dictation_cd">New dictation</string>
     <string name="recording_idle_title">New dictation</string>

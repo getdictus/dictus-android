@@ -8,24 +8,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.currentStateAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
-import dev.pivisolutions.dictus.core.service.DictationSource
-import dev.pivisolutions.dictus.core.service.DictationState
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
@@ -253,16 +247,11 @@ private fun MainTabsScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: AppDestination.Home.route
 
-    // A keyboard dictation running while the app is in front is shown on the recording screen,
-    // which offers only Stop and Cancel for it (#237, iOS MainTabView covers the app likewise).
-    val dictationState = dictationController?.state?.collectAsState()?.value
-    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    val showKeyboardDictation = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) &&
-        (dictationState as? DictationState.Recording)?.source == DictationSource.KEYBOARD
-    LaunchedEffect(showKeyboardDictation) {
-        if (showKeyboardDictation && currentRoute != AppDestination.Recording.route) {
-            navController.navigate(AppDestination.Recording.route) { launchSingleTop = true }
-        }
+    ActiveDictationRedirect(
+        dictationController = dictationController,
+        onRecordingScreen = currentRoute == AppDestination.Recording.route,
+    ) {
+        navController.navigate(AppDestination.Recording.route) { launchSingleTop = true }
     }
 
     // Hide the bottom nav bar when on the Recording screen so it gets full-screen immersion.

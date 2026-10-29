@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Mic
@@ -86,15 +86,15 @@ import dev.pivisolutions.dictus.core.R as CoreR
  * (200dp from bottom) regardless of state:
  * 1. Upper content (idle text OR result card) — fills the area above the button
  * 2. Bottom block (waveform + timer + button) — anchored to BottomCenter
- * 3. Back button — top-left, always visible
+ * 3. Close button (✕) — top-left, always visible
  *
  * Recording auto-starts on first composition so the user lands directly in recording
  * state — matching iOS Dictus behavior where tapping "Nouvelle dictée" starts immediately.
  * A dictation already running, from the keyboard for instance, is shown instead of starting
- * a second one (#237): it offers only Stop and Cancel.
+ * a second one (#237): it offers only Stop and ✕.
  *
  * @param dictationController Controller for the DictationService (may be null if not yet bound).
- * @param onBack Called when the user taps the back arrow to return to Home.
+ * @param onBack Called once ✕ or system back has ended the dictation, to return to Home.
  */
 @Composable
 fun RecordingScreen(
@@ -132,8 +132,21 @@ fun RecordingScreen(
         }
     }
 
-    // Leaving the screen releases the microphone (#142): the back arrow, the system back
-    // gesture, any other navigation and the app going to the background all end here. It is
+    // ✕ and system back (#243, iOS RecordingView close + resetStatus): end the running dictation,
+    // whoever started it, then leave. After a result there is nothing left to end.
+    fun close() {
+        micGate.cancel()
+        // ownsRecording also covers a start still queued in the service, where the state is Idle.
+        if (ownsRecording || dictationController?.state?.value is DictationState.Recording) {
+            dictationController?.cancelRecording()
+        }
+        ownsRecording = false
+        onBack()
+    }
+    BackHandler(onBack = ::close)
+
+    // Leaving the screen releases the microphone (#142): any navigation and the app going to
+    // the background end here. It is
     // the discard path, so nothing is transcribed. A stop already tapped is untouched: its
     // result only lives on this screen. A configuration change is not leaving: the activity
     // is recreated around the same recording, so it is skipped.
@@ -239,44 +252,21 @@ fun RecordingScreen(
                     if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
                 ),
         ) {
-        // ── Back button (top-left, always visible) ──
+        // ── Close (top-left, always visible): the screen's only way out ──
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(top = 16.dp)
                 .clip(CircleShape)
-                .clickable(onClick = onBack)
+                .clickable(onClick = ::close)
                 .padding(8.dp),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.recording_back_cd),
+                imageVector = Icons.Default.Close,
+                contentDescription = stringResource(R.string.recording_close_cd),
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(24.dp),
             )
-        }
-
-        // ── Cancel (top-right, while recording): discards the dictation, whoever started it ──
-        if (isRecording) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 16.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        ownsRecording = false
-                        micGate.cancel()
-                        dictationController?.cancelRecording()
-                    }
-                    .padding(8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.recording_cancel_cd),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
         }
 
         // ── Layer 1: Upper content (idle text OR result card) ──
