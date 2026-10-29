@@ -66,7 +66,6 @@ fun MicButtonRow(
     onMicTap: () -> Unit = {},
     isRecording: Boolean = false,
     isTranscribing: Boolean = false,
-    isMicEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -84,12 +83,11 @@ fun MicButtonRow(
         }
     }
     // iOS fill and halo per status (AnimatedMicButton buttonFillColor / ringEffect).
-    val activeMicColor = when {
+    val micColor = when {
         isRecording -> DictusColors.Recording
         isTranscribing -> DictusColors.AccentHighlight.copy(alpha = 0.5f)
         else -> DictusColors.Accent
     }
-    val micColor = if (isMicEnabled) activeMicColor else activeMicColor.copy(alpha = 0.35f)
     val haloStroke = when {
         isRecording -> DictusColors.Recording.copy(alpha = 0.5f)
         isTranscribing -> DictusColors.Accent.copy(alpha = 0.4f)
@@ -180,7 +178,6 @@ fun MicButtonRow(
                     interactionSource = micInteraction,
                     // iOS GlassPressStyle replaces the Material ripple on this pill.
                     indication = null,
-                    enabled = isMicEnabled,
                 ) {
                     onMicTap()
                 },
@@ -188,9 +185,7 @@ fun MicButtonRow(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_mic),
-                contentDescription = stringResource(
-                    if (isMicEnabled) R.string.mic_button_description else R.string.mic_button_loading_description,
-                ),
+                contentDescription = stringResource(R.string.mic_button_description),
                 tint = Color.White,
                 // 20dp draws the glyph 16dp tall, as SF mic.fill at 14 pt in the iOS pill.
                 modifier = Modifier.size(20.dp),

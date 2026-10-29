@@ -5,14 +5,14 @@ In any app, the Dictus keyboard's blue mic pill records the voice on the phone, 
 - **ID:** `dictation.keyboard`
 - **Tier:** Gratuit (nothing is gated on Android)
 - **Statut Android:** présent
-- **Screens:** `kbd.keys`, `kbd.recording`, `kbd.dictation-error`, `kbd.model-loading`, `sys.notification.recording`, `sys.ime-picker` — see [screens.md](screens.md)
+- **Screens:** `kbd.keys`, `kbd.recording`, `kbd.dictation-error`, `sys.notification.recording`, `sys.ime-picker` — see [screens.md](screens.md)
 
 ## Sub-features
 
-- `dictation.start`: Tap the mic pill (top right of the keyboard) to start recording. — présent
+- `dictation.start`: Tap the mic pill (top right of the keyboard) to start recording. With a model on disk the recording starts at once, even while the model loads or after a failed load, which the tap retries; the transcription waits for the load (#247). With no model downloaded, the tap opens Dictus on « Modèles » and nothing records. Deliberate deviation from iOS, which opens its preparation screen during a real load. — présent
 - `dictation.stop`: ✓ stops, transcribes (« Transcription… ») and inserts the text at the cursor. When the dictation produces no text (including only non-speech tags or punctuation, #161), nothing is inserted and the suggestion bar reads « Aucun mot détecté » in grey for 3 s, like the iOS toolbar (#153). When the transcription fails (`Failed`: model missing, engine failure, a timeout before any segment), nothing is inserted and the bar reads « La dictée a échoué. Touchez le micro pour réessayer. » in grey, on up to two lines, for 3 s, like the iOS toolbar (`kbd.dictation-error`, #182). A timeout after some segments is `Partial`: those words are inserted and no failure line shows. — présent
 - `dictation.cancel`: ✕ stops and discards the audio; nothing is inserted. — présent
-- `dictation.status`: Recording panel with a 30-bar waveform that follows the voice (iOS pipeline and smoothing, #184; flat thin bars in silence), MM:SS timer and « En écoute… », then « Transcription… » with a travelling sine; while the model loads the mic is dimmed and an overlay reads « Préparation de la reconnaissance vocale ». The mic pill shrinks and dims under the finger (iOS `GlassPressStyle`: scale 0.88, opacity 0.85). Its glow stays still and it never flashes green after a dictation, like the iOS keyboard pill (#24). — présent
+- `dictation.status`: Recording panel with a 30-bar waveform that follows the voice (iOS pipeline and smoothing, #184; flat thin bars in silence), MM:SS timer and « En écoute… », then « Transcription… » with a travelling sine. Nothing ever covers the keys: the keyboard types while the model loads, has failed or is missing (#247). The mic pill shrinks and dims under the finger (iOS `GlassPressStyle`: scale 0.88, opacity 0.85). Its glow stays still and it never flashes green after a dictation, like the iOS keyboard pill (#24). — présent
 - `dictation.undo-insert`: After an insertion, the suggestion bar shows « Annuler » (`Annuler la dernière dictée`): it deletes the inserted text if it is still right before the cursor. — présent (#137)
 - `dictation.handoff`: — Spécifique iOS (Android's IME binds to the app's `DictationService` directly; no app switch).
 - `dictation.requires-full-access`: — Spécifique iOS (no Full Access on Android; only the `RECORD_AUDIO` permission).
@@ -48,8 +48,8 @@ Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the 
 - On this Pixel the recording notification is invisible (notifications denied for Dictus): `dictation.notification` cannot be shown without changing Pierre's permission. The running service shows only as « 1 appli est active » in Quick Settings.
 - The recording panel's `Réglages` gear sits in the bottom-left corner, in the band of the system's keyboard nav bar (`⌄`, keyboard switcher): aim at its frame, not at the nav icons.
 - Never tap the nav bar's keyboard switcher (`Changer le mode de saisie`): a tap switches to the AOSP keyboard at once.
-- With no model downloaded, a mic tap shows « Aucun modèle vocal — Téléchargez un modèle vocal pour commencer à dicter. » (`kbd.dictation-error`) and nothing records: that is the expected end state, not a failure of the recipe.
-- The first tap after the app process was killed can land while the model loads: the mic is dimmed (`Microphone indisponible pendant le chargement…`) and the recording starts by itself once the engine is ready (pending mic gate). Wait for `Engine prewarm complete` before asserting.
+- With no model downloaded, a mic tap opens Dictus on the « Modèles » tab (log `Mic tap with no model: opened Dictus on Models`) and nothing records: that is the expected end state, not a failure of the recipe.
+- The first tap after the app process was killed can land while the model loads: the recording starts at once and `Engine prewarm complete` can come after `ACTION_START`. After ✓, « Transcription… » lasts until the load ends (Parakeet: seconds on the Pixel).
 - Clips under 0.5 s are dropped before transcription: no insertion, a warning in the log and « Aucun mot détecté » in the suggestion bar (log `No words detected notice shown: surface=keyboard`), the same notice as a blank transcription.
 - To force a failed transcription on the emulator (debug build): start a dictation, remove the active model file with `run-as dev.pivisolutions.dictus` while it records, then ✓. → log `Model not available, cannot transcribe` then `Transcription failed, nothing inserted`; the bar shows the failure line for 3 s. Reinstall the model afterwards.
 - Fields marked password, e-mail, URL or search still accept dictation, but nothing is kept for learning (`typing.private-fields`).

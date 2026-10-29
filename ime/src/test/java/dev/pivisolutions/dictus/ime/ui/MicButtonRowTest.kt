@@ -3,7 +3,7 @@ package dev.pivisolutions.dictus.ime.ui
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.down
@@ -17,10 +17,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class MicButtonRowLoadingTest {
+class MicButtonRowTest {
     @get:Rule val composeRule = createComposeRule()
 
-    @Test fun `loading mic is disabled and exposes accessible reason`() {
+    // The mic has no loading state: a tap while the model loads starts the recording (#247).
+    @Test fun `mic is always enabled and a tap reaches the keyboard`() {
         var taps = 0
         composeRule.setContent {
             DictusTheme {
@@ -29,15 +30,12 @@ class MicButtonRowLoadingTest {
                     onCycleLanguage = {},
                     onOpenSettings = {},
                     onMicTap = { taps++ },
-                    isMicEnabled = false,
                 )
             }
         }
 
-        composeRule.onNodeWithContentDescription(
-            "Microphone unavailable while speech recognition loads",
-        ).assertIsNotEnabled()
-        composeRule.runOnIdle { assertEquals(0, taps) }
+        composeRule.onNodeWithContentDescription("Microphone").assertIsEnabled().performClick()
+        composeRule.runOnIdle { assertEquals(1, taps) }
     }
 
     @Test fun `tap cycles once while long press opens settings without cycling`() {

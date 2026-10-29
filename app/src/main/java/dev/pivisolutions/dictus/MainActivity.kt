@@ -156,6 +156,7 @@ class MainActivity : AppCompatActivity() {
                     onShowKeyboardPicker = { showKeyboardPicker() },
                     onOpenAppSettings = { openAppSettings() },
                     openSettingsRequested = restrictedSettingsLaunch,
+                    openModelsRequested = intent?.action == AppLaunchContract.ACTION_OPEN_MODELS,
                 )
             }
         }
