@@ -5,6 +5,8 @@
     <string name="ime_recording_cancel">Cancel dictation</string>
     <string name="ime_recording_confirm">Finish dictation</string>
     <string name="ime_transcribing">Transcribing\u2026</string>
+    <!-- Over the disabled mic while a dictation started in the app runs (#248). -->
+    <string name="ime_app_dictation_in_progress">Dictation in progress in Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
     <string name="ime_undo_dictation">Undo</string>
     <string name="ime_undo_dictation_description">Undo last dictation</string>

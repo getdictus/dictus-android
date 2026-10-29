@@ -63,6 +63,15 @@ class SuggestionBarNoticeUiTest {
     }
 
     @Test
+    @Config(qualifiers = "fr")
+    fun `an app dictation says why the mic is off`() {
+        setBar(DictationNotice.Message.AppDictationInProgress)
+
+        composeRule.onNodeWithText("Dictée en cours dans Dictus").assertIsDisplayed()
+        composeRule.onNodeWithText("bonjour").assertDoesNotExist()
+    }
+
+    @Test
     fun `suggestions show when there is no notice`() {
         setBar(null)
 

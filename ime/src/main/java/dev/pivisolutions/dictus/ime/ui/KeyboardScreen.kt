@@ -50,6 +50,8 @@ fun KeyboardScreen(
     onCycleLanguage: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onMicTap: () -> Unit = {},
+    // False only during an app dictation (#248); never tied to a model load (#247).
+    isMicEnabled: Boolean = true,
     isEmojiPickerOpen: Boolean = false,
     onEmojiToggle: () -> Unit = {},
     onEmojiSelected: (String) -> Unit = {},
@@ -133,6 +135,7 @@ fun KeyboardScreen(
                     onOpenSettings = onOpenSettings,
                     onMicTap = onMicTap,
                     isRecording = false,
+                    isMicEnabled = isMicEnabled,
                 )
 
                 // Keyboard area (264.dp) for 48.dp keys with existing row spacing.

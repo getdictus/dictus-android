@@ -147,6 +147,10 @@ class DictationService : Service(), DictationController {
 
     private var prewarmJob: Job? = null
 
+    // The transcription of a take stopped without confirm (#248). It runs on cleanupScope so a
+    // service destroyed meanwhile does not cancel it; onDestroy waits for it before the release.
+    private var unconfirmedJob: Job? = null
+
     // True between startRecording() and the ACTION_START it queues. startForegroundService()
     // is asynchronous, so a cancel can land first; the start must then not open the mic.
     // Only touched on the main thread (binder calls from UI and onStartCommand).
@@ -170,6 +174,12 @@ class DictationService : Service(), DictationController {
 
     private val recorder = DictationRecorder(serviceScope, _state) {
         AudioCaptureManager(getSystemService(AudioManager::class.java))
+    }
+
+    private val unconfirmedStop by lazy {
+        UnconfirmedStop(recorder, _state, dataStore) { samples ->
+            transcriber.rejectBeforeEngine(samples) ?: transcribeTake(samples, TranscriptionRetention.PERSIST_HISTORY)
+        }
     }
 
     /** Native engine readiness for IME/UI loading gates. */
@@ -285,10 +295,24 @@ class DictationService : Service(), DictationController {
                 pendingStart = false
                 recorder.start(pendingSource)
                 if (soundEnabled) soundPlayer.playStart()
-                Timber.i("DictationService started foreground with ACTION_START, t+=%dms", DictationTrace.elapsedMs())
+                Timber.i(
+                    "DictationService started foreground with ACTION_START: source=%s, t+=%dms",
+                    pendingSource,
+                    DictationTrace.elapsedMs(),
+                )
             }
             ACTION_STOP -> {
                 pendingStart = false
+                if (_state.value is DictationState.Transcribing) {
+                    // Stopping now would tear down the transcription that holds the take.
+                    Timber.i("ACTION_STOP ignored: transcription in progress")
+                    return START_NOT_STICKY
+                }
+                unconfirmedStop.stop(UnconfirmedStop.Reason.NOTIFICATION_STOP, cleanupScope, ::finishTranscription)?.let {
+                    unconfirmedJob = it
+                    if (soundEnabled) soundPlayer.playStop()
+                    return START_NOT_STICKY
+                }
                 discardRecording()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -397,6 +421,15 @@ class DictationService : Service(), DictationController {
         _state.value = DictationState.Transcribing
 
         return try {
+            transcribeTake(samples, retention)
+        } finally {
+            finishTranscription()
+        }
+    }
+
+    /** Transcribes a take that passed rejectBeforeEngine; the caller owns the state and the foreground. */
+    private suspend fun transcribeTake(samples: FloatArray, retention: TranscriptionRetention): TranscriptionOutcome {
+        return try {
             // 2. Read user preferences at transcription time so changes take effect
             //    without needing a service restart.
             val prefs = dataStore.data.first()
@@ -437,8 +470,6 @@ class DictationService : Service(), DictationController {
         } catch (e: Exception) {
             Timber.e(e, "Transcription failed")
             TranscriptionOutcome.Failed
-        } finally {
-            finishTranscription()
         }
     }
 
@@ -565,16 +596,32 @@ class DictationService : Service(), DictationController {
             .build()
     }
 
+    // Swiping Dictus away from Recents ends its dictation like the notification's Stop (#248).
+    // A keyboard dictation does not belong to the app's task and keeps running.
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        unconfirmedStop.stop(UnconfirmedStop.Reason.TASK_REMOVED, cleanupScope, ::finishTranscription)
+            ?.let { unconfirmedJob = it }
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         if (::soundPlayer.isInitialized) soundPlayer.release()
+        // The cancelled transcription releases it in its finally; this covers a lock left held.
+        transcriptionWakeLock.release()
+        // Torn down while an app dictation records (#248): its take is transcribed on cleanupScope,
+        // which outlives the service, before the engine is released. A take already transcribing
+        // after a stop without confirm is waited for the same way. A process kill still loses it.
+        val keptTake = unconfirmedStop.stop(UnconfirmedStop.Reason.SERVICE_DESTROYED, cleanupScope) {
+            _state.value = DictationState.Idle
+            DictationTrace.end()
+        } ?: unconfirmedJob
         // Cancelling the scope alone would leave a live AudioRecord unreleased.
         recorder.cancel()
         serviceScope.cancel()
-        // The cancelled transcription releases it in its finally; this covers a lock left held.
-        transcriptionWakeLock.release()
         cleanupScope.launch {
             try {
+                keptTake?.join()
                 providerSlot.release()
             } finally {
                 cleanupScope.cancel()

@@ -5,6 +5,7 @@
     <string name="ime_recording_cancel">Annuler la dict\u00e9e</string>
     <string name="ime_recording_confirm">Terminer la dict\u00e9e</string>
     <string name="ime_transcribing">Transcription\u2026</string>
+    <string name="ime_app_dictation_in_progress">Dictée en cours dans Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
     <string name="ime_undo_dictation">Annuler</string>
     <string name="ime_undo_dictation_description">Annuler la derni\u00e8re dict\u00e9e</string>
