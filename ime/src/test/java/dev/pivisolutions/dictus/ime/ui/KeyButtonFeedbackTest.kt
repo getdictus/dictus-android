@@ -131,7 +131,6 @@ class KeyButtonFeedbackTest {
                         key = KeyDefinition(label = "space", type = KeyType.SPACE),
                         isShifted = false,
                         onPress = {},
-                        hapticsEnabled = false,
                         onTrackpadActiveChange = activeStates::add,
                         modifier = Modifier.testTag(KEY_TAG),
                     )
@@ -208,7 +207,6 @@ class KeyButtonFeedbackTest {
                     onPress = onPress,
                     accentChars = accents,
                     onAccentSelected = {},
-                    hapticsEnabled = false,
                     onTrackpadActiveChange = onTrackpadActiveChange,
                     onTrackpadMove = onTrackpadMove,
                     modifier = Modifier.testTag(KEY_TAG),

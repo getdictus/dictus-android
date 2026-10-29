@@ -64,7 +64,6 @@ fun KeyboardScreen(
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
-    hapticsEnabled: Boolean = true,
     onKeySound: (KeyType) -> Unit = {},
     onMoveCursor: (Int) -> Unit = {},
     keyboardLayout: String = "azerty",  // NEW — AZERTY/QWERTY from DataStore
@@ -143,7 +142,6 @@ fun KeyboardScreen(
                     layout = currentLayout,
                     languageProfile = languageProfile,
                     onDeleteWord = onDeleteWordBackward,
-                    hapticsEnabled = hapticsEnabled,
                     onKeySound = onKeySound,
                     labelsVisible = !isTrackpadActive,
                     onTrackpadActiveChange = { isTrackpadActive = it },

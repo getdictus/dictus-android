@@ -107,7 +107,6 @@ fun KeyButton(
     onDeleteWord: () -> Unit = onPress,
     accentChars: List<String>? = null,
     onAccentSelected: ((String) -> Unit)? = null,
-    hapticsEnabled: Boolean = true,
     onSound: (KeyType) -> Unit = {},
     labelsVisible: Boolean = true,
     onTrackpadActiveChange: (Boolean) -> Unit = {},
@@ -170,7 +169,6 @@ fun KeyButton(
     val currentOnPress = rememberUpdatedState(onPress)
     val currentOnDeleteWord = rememberUpdatedState(onDeleteWord)
     val currentOnAccentSelected = rememberUpdatedState(onAccentSelected)
-    val currentHapticsEnabled = rememberUpdatedState(hapticsEnabled)
     val currentOnSound = rememberUpdatedState(onSound)
     val currentOnTrackpadActiveChange = rememberUpdatedState(onTrackpadActiveChange)
     val currentOnTrackpadMove = rememberUpdatedState(onTrackpadMove)
@@ -199,7 +197,7 @@ fun KeyButton(
                     val down = awaitFirstDown(requireUnconsumed = false)
 
                     isPressed = true
-                    if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                    HapticHelper.performKeyHaptic(view)
                     currentOnSound.value(key.type)
                     currentOnPress.value()
                     var deletionCommandIndex = 1
@@ -210,7 +208,7 @@ fun KeyButton(
                         repeating = true
                         Timber.d("Backspace repeat started")
                         while (isActive) {
-                            if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                            HapticHelper.performKeyHaptic(view)
                             currentOnSound.value(key.type)
                             deletionCommandIndex++
                             when (BackspaceRepeatPolicy.deletionFor(deletionCommandIndex)) {
@@ -252,7 +250,7 @@ fun KeyButton(
                         val motion = TrackpadMotionAccumulator(8.dp.toPx())
 
                         isPressed = true
-                        if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                        HapticHelper.performKeyHaptic(view)
                         currentOnSound.value(key.type)
 
                         val activationJob = launch {
@@ -260,7 +258,7 @@ fun KeyButton(
                             motion.start(latestPositionX)
                             trackpadActive = true
                             currentOnTrackpadActiveChange.value(true)
-                            if (currentHapticsEnabled.value) HapticHelper.performMicHaptic(view)
+                            HapticHelper.performMicHaptic(view)
                         }
 
                         try {
@@ -277,10 +275,8 @@ fun KeyButton(
                                             val steps = motion.moveTo(latestPositionX)
                                             if (steps != 0) {
                                                 currentOnTrackpadMove.value(steps)
-                                                if (currentHapticsEnabled.value) {
-                                                    repeat(abs(steps)) {
-                                                        HapticHelper.performKeyHaptic(view)
-                                                    }
+                                                repeat(abs(steps)) {
+                                                    HapticHelper.performKeyHaptic(view)
                                                 }
                                             }
                                         }
@@ -324,7 +320,7 @@ fun KeyButton(
                         isPressed = true
                         showAccentPopup = false
                         highlightedAccentIndex = null
-                        if (currentHapticsEnabled.value) HapticHelper.performKeyHaptic(view)
+                        HapticHelper.performKeyHaptic(view)
                         currentOnSound.value(key.type)
 
                         val longPressJob = launch {

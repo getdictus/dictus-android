@@ -57,7 +57,6 @@ class KeyButtonDeleteRepeatTest {
                                 key = KeyDefinition(label = "⌫", type = KeyType.DELETE),
                                 isShifted = false,
                                 onPress = { deletes++ },
-                                hapticsEnabled = false,
                                 modifier = Modifier.onGloballyPositioned { keyBounds = it.boundsInRoot() },
                             )
                         }
