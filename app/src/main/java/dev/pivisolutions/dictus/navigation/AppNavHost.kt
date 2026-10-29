@@ -247,6 +247,13 @@ private fun MainTabsScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: AppDestination.Home.route
 
+    ActiveDictationRedirect(
+        dictationController = dictationController,
+        onRecordingScreen = currentRoute == AppDestination.Recording.route,
+    ) {
+        navController.navigate(AppDestination.Recording.route) { launchSingleTop = true }
+    }
+
     // Hide the bottom nav bar when on the Recording screen so it gets full-screen immersion.
     // WHY conditional (not AnimatedVisibility): simple show/hide is sufficient here; there
     // is no animation spec for the nav bar in the design.

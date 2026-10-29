@@ -44,7 +44,7 @@ Implementation details stay out of the map: only user paths, stable handles, req
 | ID | Feature | Tier | Android status | Drivable on the Pixel |
 | --- | --- | --- | --- | --- |
 | [`dictation.keyboard`](dictation.keyboard.md) | Dictation from the keyboard | Free | present | Yes — start + cancel proven on the Pixel (2026-10-20); ✓ records the room |
-| [`dictation.in-app`](dictation.in-app.md) | Dictation inside the app | Free | present | Screens yes; opening the recorder records at once (and `Retour` does not stop it) |
+| [`dictation.in-app`](dictation.in-app.md) | Dictation inside the app | Free | present | Screens yes; opening the recorder records at once; its single ✕ cancels (#243) |
 | [`models.transcription`](models.transcription.md) | Transcription models | Free | present | Browsing yes; no download/delete on Pierre's phone |
 | [`typing.autocorrect`](typing.autocorrect.md) | Autocorrect and suggestions | Free | present | Yes, keys by coordinate in a scratch note; the ⌫ undo step on a test device only |
 | [`typing.learned-words`](typing.learned-words.md) | Learned words | Free | partial | No on Pierre's Pixel (learning is permanent, no reset): test device only |
@@ -322,4 +322,4 @@ Screen by screen, what looks different between the Android captures of `../scree
 
 ## Functional anomaly seen during the captures (not design)
 
-- **`app.recording` — `Retour` does not stop the recording** (Pixel 4, `develop` build `f2b15c5`, 2026-10-20 21:43). « Nouvelle dictée » starts recording at once; leaving the screen with `Retour` goes back to Home but `DictationService` stays in the foreground (`isForeground=true`), the mic indicator stays green, no `Recording cancelled` line. It took « Applis actives → Arrêter » to release the mic. Proof outside the repo: `/home/pierre/Dev/dictus-proofs/verify-dictus-android/20261020-214307-0f15824/90-bug-recording-continues-after-retour.png`. Proposal: cancel the recording (or ask for confirmation) when leaving the screen; to be opened as an issue with the `needs-physical-test` label.
+- **`app.recording` — `Retour` does not stop the recording** (fixed by #142, `Retour` removed by #243; Pixel 4, `develop` build `f2b15c5`, 2026-10-20 21:43). « Nouvelle dictée » starts recording at once; leaving the screen with `Retour` goes back to Home but `DictationService` stays in the foreground (`isForeground=true`), the mic indicator stays green, no `Recording cancelled` line. It took « Applis actives → Arrêter » to release the mic. Proof outside the repo: `/home/pierre/Dev/dictus-proofs/verify-dictus-android/20261020-214307-0f15824/90-bug-recording-continues-after-retour.png`. Proposal: cancel the recording (or ask for confirmation) when leaving the screen; to be opened as an issue with the `needs-physical-test` label.

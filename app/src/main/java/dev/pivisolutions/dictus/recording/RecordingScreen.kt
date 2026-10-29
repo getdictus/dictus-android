@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
@@ -53,6 +54,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
+import dev.pivisolutions.dictus.core.service.DictationStartGuard
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.ModelPreparationGate
@@ -83,13 +86,15 @@ import dev.pivisolutions.dictus.core.R as CoreR
  * (200dp from bottom) regardless of state:
  * 1. Upper content (idle text OR result card) — fills the area above the button
  * 2. Bottom block (waveform + timer + button) — anchored to BottomCenter
- * 3. Back button — top-left, always visible
+ * 3. Close button (✕) — top-left, always visible
  *
  * Recording auto-starts on first composition so the user lands directly in recording
  * state — matching iOS Dictus behavior where tapping "Nouvelle dictée" starts immediately.
+ * A dictation already running, from the keyboard for instance, is shown instead of starting
+ * a second one (#237): it offers only Stop and ✕.
  *
  * @param dictationController Controller for the DictationService (may be null if not yet bound).
- * @param onBack Called when the user taps the back arrow to return to Home.
+ * @param onBack Called once ✕ or system back has ended the dictation, to return to Home.
  */
 @Composable
 fun RecordingScreen(
@@ -120,16 +125,28 @@ fun RecordingScreen(
     fun runGateCommand(command: MicGateCommand) {
         when (command) {
             MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
-            MicGateCommand.START_RECORDING -> {
-                ownsRecording = true
-                dictationController?.startRecording()
-            }
+            // The service refuses a start that arrives while another dictation runs (#237).
+            MicGateCommand.START_RECORDING ->
+                ownsRecording = dictationController?.startRecording(DictationSource.APP) == true
             MicGateCommand.NONE -> Unit
         }
     }
 
-    // Leaving the screen releases the microphone (#142): the back arrow, the system back
-    // gesture, any other navigation and the app going to the background all end here. It is
+    // ✕ and system back (#243, iOS RecordingView close + resetStatus): end the running dictation,
+    // whoever started it, then leave. After a result there is nothing left to end.
+    fun close() {
+        micGate.cancel()
+        // ownsRecording also covers a start still queued in the service, where the state is Idle.
+        if (ownsRecording || dictationController?.state?.value is DictationState.Recording) {
+            dictationController?.cancelRecording()
+        }
+        ownsRecording = false
+        onBack()
+    }
+    BackHandler(onBack = ::close)
+
+    // Leaving the screen releases the microphone (#142): any navigation and the app going to
+    // the background end here. It is
     // the discard path, so nothing is transcribed. A stop already tapped is untouched: its
     // result only lives on this screen. A configuration change is not leaving: the activity
     // is recreated around the same recording, so it is skipped.
@@ -162,6 +179,17 @@ fun RecordingScreen(
     var noWordsDetected by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
 
+    // Asked before the gate, not only when it fires: a tap queued behind the engine would
+    // otherwise start a recording once the running dictation ends (#237).
+    fun requestStart() {
+        val state = dictationController?.state?.value ?: return
+        if (!DictationStartGuard.canStartNewDictation(state)) {
+            Timber.i("App start skipped: a dictation is running, state=%s", state::class.simpleName)
+            return
+        }
+        runGateCommand(micGate.request(engineState))
+    }
+
     // Auto-start recording on first composition — iOS parity: tapping "Nouvelle dictée"
     // brings the user directly into the recording state without a manual tap.
     // Key the effect to the controller so a screen composed before service binding
@@ -170,7 +198,7 @@ fun RecordingScreen(
     LaunchedEffect(dictationController) {
         if (dictationController != null && !autoStarted) {
             autoStarted = true
-            runGateCommand(micGate.request(engineState))
+            requestStart()
         }
     }
     LaunchedEffect(engineState) {
@@ -181,7 +209,7 @@ fun RecordingScreen(
         transcriptionResult = null
         noWordsDetected = false
         copied = false
-        runGateCommand(micGate.request(engineState))
+        requestStart()
     }
 
     // Processing animation driver for the transcribing state.
@@ -224,18 +252,18 @@ fun RecordingScreen(
                     if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
                 ),
         ) {
-        // ── Back button (top-left, always visible) ──
+        // ── Close (top-left, always visible): the screen's only way out ──
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(top = 16.dp)
                 .clip(CircleShape)
-                .clickable(onClick = onBack)
+                .clickable(onClick = ::close)
                 .padding(8.dp),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.recording_back_cd),
+                imageVector = Icons.Default.Close,
+                contentDescription = stringResource(R.string.recording_close_cd),
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(24.dp),
             )
@@ -412,15 +440,18 @@ fun RecordingScreen(
                             .background(DictusColors.Recording)
                             .clickable {
                                 ownsRecording = false
+                                // A keyboard dictation may come from a field that must not be kept
+                                // (password, incognito): the app cannot tell, so it keeps nothing.
+                                val fromApp = (dictationState as? DictationState.Recording)?.source == DictationSource.APP
                                 scope.launch {
                                     val outcome = dictationController?.confirmAndTranscribe(
-                                        TranscriptionRetention.PERSIST_HISTORY,
+                                        if (fromApp) TranscriptionRetention.PERSIST_HISTORY else TranscriptionRetention.EPHEMERAL,
                                     )
                                     when (outcome) {
                                         is TranscriptionOutcome.Transcribed -> {
                                             transcriptionResult = outcome.text
                                             // Keep the Home preview for a short, privacy-bounded period.
-                                            dataStore?.let { LastTranscriptionStore.save(it, outcome.text) }
+                                            if (fromApp) dataStore?.let { LastTranscriptionStore.save(it, outcome.text) }
                                         }
                                         TranscriptionOutcome.NoWordsDetected -> {
                                             // Like iOS, which drops its last result when a dictation

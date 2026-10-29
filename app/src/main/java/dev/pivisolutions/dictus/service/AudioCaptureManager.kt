@@ -28,7 +28,7 @@ import timber.log.Timber
  */
 class AudioCaptureManager(
     private val audioManager: AudioManager? = null,
-) {
+) : AudioCapture {
 
     companion object {
         private const val SAMPLE_RATE = RecordingDurationPolicy.SAMPLE_RATE_HZ
@@ -48,8 +48,7 @@ class AudioCaptureManager(
     private val samples = ArrayList<Float>()
     private val waveformEnergy = WaveformEnergy()
 
-    /** Called after each read chunk, once the waveform levels include it. */
-    var onEnergyUpdate: (() -> Unit)? = null
+    override var onEnergyUpdate: (() -> Unit)? = null
 
     /**
      * Start capturing audio.
@@ -62,7 +61,7 @@ class AudioCaptureManager(
      *              runs on Dispatchers.Default (background thread pool) so it
      *              doesn't block the main thread.
      */
-    fun start(scope: CoroutineScope) {
+    override fun start(scope: CoroutineScope) {
         val minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
         if (minBufferSize <= 0) {
             Timber.e("AudioRecord.getMinBufferSize returned $minBufferSize -- device may not support ENCODING_PCM_FLOAT")
@@ -120,7 +119,7 @@ class AudioCaptureManager(
      *
      * @return FloatArray of all captured samples at 16kHz mono.
      */
-    fun stop(): FloatArray {
+    override fun stop(): FloatArray {
         val job = captureJob
         val activeRecorder = recorder
         stopCaptureAndAwait(job) { activeRecorder?.stop() }
@@ -140,7 +139,7 @@ class AudioCaptureManager(
     /**
      * Cancel capturing and discard all audio data.
      */
-    fun cancel() {
+    override fun cancel() {
         val job = captureJob
         val activeRecorder = recorder
         job?.cancel()
@@ -156,7 +155,7 @@ class AudioCaptureManager(
     }
 
     /** The 30 waveform levels for the audio read so far (all zero before the first read). */
-    fun getEnergyHistory(): List<Float> = waveformEnergy.snapshot()
+    override fun getEnergyHistory(): List<Float> = waveformEnergy.snapshot()
 
     /**
      * Stop the recorder before waiting for the capture loop. AudioRecord.stop()

@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.ModelPreparationGate
@@ -99,7 +100,9 @@ fun OnboardingTestRecordingScreen(
     // « Passer » can leave the step mid-recording: stop it, or it goes on behind the next step.
     DisposableEffect(dictationController) {
         onDispose {
-            if (dictationController?.state?.value is DictationState.Recording) {
+            val state = dictationController?.state?.value
+            // Only its own: a keyboard dictation is not this step's to cancel (#237).
+            if (state is DictationState.Recording && state.source == DictationSource.APP) {
                 dictationController.cancelRecording()
             }
         }
@@ -108,7 +111,7 @@ fun OnboardingTestRecordingScreen(
     fun runGateCommand(command: MicGateCommand) {
         when (command) {
             MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
-            MicGateCommand.START_RECORDING -> dictationController?.startRecording()
+            MicGateCommand.START_RECORDING -> dictationController?.startRecording(DictationSource.APP)
             MicGateCommand.NONE -> Unit
         }
     }

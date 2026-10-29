@@ -25,6 +25,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
+import dev.pivisolutions.dictus.core.service.DictationStartGuard
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
 import dev.pivisolutions.dictus.core.service.ModelPreparationGate
@@ -755,7 +757,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     Timber.w("RECORD_AUDIO permission not granted")
                     return
                 }
-                controller.startRecording()
+                controller.startRecording(DictationSource.KEYBOARD)
                 Timber.d("Recording started via mic tap")
             }
             is DictationState.Recording -> {
@@ -808,7 +810,14 @@ class DictusImeService : LifecycleInputMethodService() {
             }
             when (command) {
                 MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
-                MicGateCommand.START_RECORDING -> dictationController?.startRecording()
+                // The engine may have taken a while: another dictation can have started since the tap.
+                MicGateCommand.START_RECORDING -> dictationController?.let { controller ->
+                    if (DictationStartGuard.canStartNewDictation(controller.state.value)) {
+                        controller.startRecording(DictationSource.KEYBOARD)
+                    } else {
+                        Timber.w("Mic gate start dropped: state=%s", stateName(controller.state.value))
+                    }
+                }
                 MicGateCommand.NONE -> Unit
             }
         }
@@ -839,7 +848,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 if (micGranted) "granted" else "denied",
                 engineState,
             )
-            if (dictationState is DictationState.Idle) {
+            if (DictationStartGuard.canStartNewDictation(dictationState)) {
                 if (micGranted) {
                     transcriptionRetentionSession.begin(
                         isCurrentEditorSuggestionEligible,

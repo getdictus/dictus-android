@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -113,9 +114,10 @@ class RecordingScreenModelSwitchTest {
             prewarmEngineCallCount++
         }
 
-        override fun startRecording() {
+        override fun startRecording(source: DictationSource): Boolean {
             startRecordingCallCount++
-            mutableState.value = DictationState.Recording()
+            mutableState.value = DictationState.Recording(source)
+            return true
         }
 
         override fun stopRecording(): FloatArray = FloatArray(0)
