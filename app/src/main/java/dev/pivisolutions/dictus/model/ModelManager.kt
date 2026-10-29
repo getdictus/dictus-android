@@ -1,7 +1,9 @@
 package dev.pivisolutions.dictus.model
 
 import android.content.Context
+import androidx.annotation.StringRes
 import dev.pivisolutions.dictus.BuildConfig
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.model.ModelCatalog.isDirectoryModel
 import java.io.File
 
@@ -19,7 +21,7 @@ enum class AiProvider { WHISPER, PARAKEET }
  *
  * WHY a separate data class from the old ModelInfo: The Phase 3 ModelInfo only
  * stored fileName and expectedSize. Phase 4 adds display metadata (displayName,
- * qualityLabel), provider routing, and deprecation signalling. The old nested
+ * qualityLabelRes), provider routing, and deprecation signalling. The old nested
  * class was removed; all consumers use ModelCatalog to look up models.
  *
  * @param key             Stable string identifier used in preferences and URLs.
@@ -28,8 +30,9 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param displayName     Human-readable name shown in the model list UI.
  * @param files           Every file the installed model is made of, with its exact size and
  *                        SHA-256 (#169). The install is verified against it.
- * @param qualityLabel    Short quality descriptor shown as a badge (e.g. "Rapide").
- * @param description     Short human-readable description shown on model card.
+ * @param qualityLabelRes Short quality descriptor (e.g. "Fast"), as a string resource.
+ * @param descriptionRes  Short description shown on the model card, as a string resource:
+ *                        the catalog has no Context, the UI resolves it in its locale (#236).
  * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
  * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
  * @param provider        Download source and inference engine.
@@ -43,8 +46,8 @@ data class ModelInfo(
     val fileName: String,
     val displayName: String,
     val files: List<ModelFile>,
-    val qualityLabel: String,
-    val description: String = "",
+    @StringRes val qualityLabelRes: Int,
+    @StringRes val descriptionRes: Int,
     val precision: Float = 0f,
     val speed: Float = 0f,
     val provider: AiProvider = AiProvider.WHISPER,
@@ -116,8 +119,8 @@ object ModelCatalog {
             fileName = "ggml-tiny.bin",
             displayName = "Tiny",
             files = listOf(ModelFile("ggml-tiny.bin", 77_691_713L, "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21")),
-            qualityLabel = "Rapide",
-            description = "Rapide et léger",
+            qualityLabelRes = R.string.model_quality_fast,
+            descriptionRes = R.string.model_description_tiny,
             precision = 0.4f,
             speed = 1.0f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
@@ -128,8 +131,8 @@ object ModelCatalog {
             fileName = "ggml-base.bin",
             displayName = "Base",
             files = listOf(ModelFile("ggml-base.bin", 147_951_465L, "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe")),
-            qualityLabel = "Équilibré",
-            description = "Précis et équilibré",
+            qualityLabelRes = R.string.model_quality_balanced,
+            descriptionRes = R.string.model_description_base,
             precision = 0.6f,
             speed = 0.7f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
@@ -140,8 +143,8 @@ object ModelCatalog {
             fileName = "ggml-small.bin",
             displayName = "Small",
             files = listOf(ModelFile("ggml-small.bin", 487_601_967L, "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b")),
-            qualityLabel = "Précis",
-            description = "Haute précision",
+            qualityLabelRes = R.string.model_quality_accurate,
+            descriptionRes = R.string.model_description_small,
             precision = 0.9f,
             speed = 0.35f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
@@ -152,8 +155,8 @@ object ModelCatalog {
             fileName = "ggml-small-q5_1.bin",
             displayName = "Small Q5",
             files = listOf(ModelFile("ggml-small-q5_1.bin", 190_085_487L, "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb")),
-            qualityLabel = "Précis",
-            description = "Meilleur compromis",
+            qualityLabelRes = R.string.model_quality_accurate,
+            descriptionRes = R.string.model_description_small_q5,
             precision = 0.85f,
             speed = 0.55f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
@@ -164,8 +167,8 @@ object ModelCatalog {
             fileName = "ggml-medium-q5_0.bin",
             displayName = "Medium",
             files = listOf(ModelFile("ggml-medium-q5_0.bin", 539_212_467L, "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f")),
-            qualityLabel = "Précis",
-            description = "Meilleure précision",
+            qualityLabelRes = R.string.model_quality_accurate,
+            descriptionRes = R.string.model_description_medium,
             precision = 0.9f,
             speed = 0.3f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
@@ -181,8 +184,8 @@ object ModelCatalog {
                 ModelFile("model.int8.onnx", 131_652_171L, "9177a9146cf32ee0cc8152276ef95116f312018d316be37ccf57f7efea81fc1a"),
                 ModelFile("tokens.txt", 9_953L, "450e56bd2f036fe5b6aa821865838cc5aa9d8b0106134ce9a9ba0664abe6cd10"),
             ),
-            qualityLabel = "Rapide",
-            description = "Rapide et précis",
+            qualityLabelRes = R.string.model_quality_fast,
+            descriptionRes = R.string.model_description_parakeet_110m,
             precision = 0.75f,
             speed = 0.85f,
             provider = AiProvider.PARAKEET,
@@ -200,8 +203,8 @@ object ModelCatalog {
                 ModelFile("joiner.int8.onnx", 6_355_277L, "3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3"),
                 ModelFile("tokens.txt", 93_939L, "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"),
             ),
-            qualityLabel = "Premium",
-            description = "Détection automatique de la langue",
+            qualityLabelRes = R.string.model_quality_premium,
+            descriptionRes = R.string.model_description_parakeet_v3,
             precision = 0.95f,
             speed = 0.40f,
             provider = AiProvider.PARAKEET,

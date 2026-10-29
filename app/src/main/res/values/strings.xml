@@ -190,6 +190,19 @@
     <string name="model_precision">Precision</string>
     <string name="model_speed">Speed</string>
     <string name="model_delete_cd">Delete</string>
+    <string name="model_recommended">Recommended</string>
+    <!-- Model catalog: descriptions and quality labels (#236) -->
+    <string name="model_description_tiny">Fast and light</string>
+    <string name="model_description_base">Accurate and balanced</string>
+    <string name="model_description_small">High accuracy</string>
+    <string name="model_description_small_q5">Best trade-off</string>
+    <string name="model_description_medium">Best accuracy</string>
+    <string name="model_description_parakeet_110m">Fast and accurate</string>
+    <string name="model_description_parakeet_v3">Automatic language detection</string>
+    <string name="model_quality_fast">Fast</string>
+    <string name="model_quality_balanced">Balanced</string>
+    <string name="model_quality_accurate">Accurate</string>
+    <string name="model_quality_premium">Premium</string>
 
     <!-- HomeScreen -->
     <string name="home_active_model">Active model</string>
