@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -67,6 +68,7 @@ import kotlinx.coroutines.flow.map
  * @param imeSelected Whether the Dictus keyboard is selected as the default input method.
  * @param onOpenKeyboardSettings Callback to open system keyboard settings.
  * @param onOpenAppSettings Callback to open app details settings.
+ * @param openModelsRequested Start on the Models tab: the keyboard's mic tap with no model (#247).
  */
 @Composable
 fun AppNavHost(
@@ -78,6 +80,7 @@ fun AppNavHost(
     onShowKeyboardPicker: () -> Unit,
     onOpenAppSettings: () -> Unit,
     openSettingsRequested: Boolean = false,
+    openModelsRequested: Boolean = false,
 ) {
     val hasCompletedOnboarding by dataStore.data
         .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
@@ -126,6 +129,11 @@ fun AppNavHost(
                 imeSelected = imeSelected,
                 onOpenKeyboardSettings = onOpenKeyboardSettings,
                 onOpenAppSettings = onOpenAppSettings,
+                startDestination = if (openModelsRequested) {
+                    AppDestination.Models.route
+                } else {
+                    AppDestination.Home.route
+                },
             )
         }
     }
@@ -273,7 +281,8 @@ private fun MainTabsScreen(
                     currentRoute = currentRoute,
                     onNavigate = { destination ->
                         navController.navigate(destination.route) {
-                            popUpTo(AppDestination.Home.route) {
+                            // The graph's start, not Home: the Models launch starts elsewhere.
+                            popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
                             launchSingleTop = true
