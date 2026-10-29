@@ -903,6 +903,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     onCycleLanguage = cycleKeyboardLanguage,
                     onOpenSettings = openDictusSettings,
                     onMicTap = gatedMicTap,
+                    isMicEnabled = !appDictationActive,
                     isEmojiPickerOpen = isEmojiPickerOpen,
                     onEmojiToggle = {
                         autocorrectCoordinator.onOtherInput()

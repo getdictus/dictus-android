@@ -66,6 +66,7 @@ fun MicButtonRow(
     onMicTap: () -> Unit = {},
     isRecording: Boolean = false,
     isTranscribing: Boolean = false,
+    isMicEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -83,11 +84,13 @@ fun MicButtonRow(
         }
     }
     // iOS fill and halo per status (AnimatedMicButton buttonFillColor / ringEffect).
-    val micColor = when {
+    val activeMicColor = when {
         isRecording -> DictusColors.Recording
         isTranscribing -> DictusColors.AccentHighlight.copy(alpha = 0.5f)
         else -> DictusColors.Accent
     }
+    // Greyed during an app dictation (#248).
+    val micColor = if (isMicEnabled) activeMicColor else activeMicColor.copy(alpha = 0.35f)
     val haloStroke = when {
         isRecording -> DictusColors.Recording.copy(alpha = 0.5f)
         isTranscribing -> DictusColors.Accent.copy(alpha = 0.4f)
@@ -178,6 +181,7 @@ fun MicButtonRow(
                     interactionSource = micInteraction,
                     // iOS GlassPressStyle replaces the Material ripple on this pill.
                     indication = null,
+                    enabled = isMicEnabled,
                 ) {
                     onMicTap()
                 },
