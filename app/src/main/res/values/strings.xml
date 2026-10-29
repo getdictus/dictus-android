@@ -105,12 +105,13 @@
     <!-- SoundSettingsScreen -->
     <string name="sound_settings_title">Sounds</string>
     <string name="sound_settings_section_general">GENERAL</string>
-    <string name="sound_settings_section_sounds">SOUNDS</string>
-    <string name="sound_settings_dictation_sound">Dictation sound</string>
+    <string name="sound_settings_section_sounds">SOUNDS BY EVENT</string>
+    <string name="sound_settings_dictation_sound">Enable sounds</string>
+    <string name="sound_settings_note">Sounds follow the phone\u2019s silent mode.</string>
     <string name="sound_settings_volume">Volume</string>
-    <string name="sound_settings_start_sound">Start sound</string>
-    <string name="sound_settings_stop_sound">Stop sound</string>
-    <string name="sound_settings_cancel_sound">Cancel sound</string>
+    <string name="sound_settings_start_sound">Start</string>
+    <string name="sound_settings_stop_sound">End</string>
+    <string name="sound_settings_cancel_sound">Cancel</string>
     <string name="sound_settings_back_cd">Back</string>
 
     <!-- DebugLogsScreen -->
@@ -131,6 +132,12 @@
     <string name="ime_status_not_enabled">Keyboard not enabled</string>
     <string name="ime_status_select_keyboard">Select Keyboard</string>
     <string name="ime_status_enable_keyboard">Enable Keyboard</string>
+
+    <!-- DictationService: recording notification -->
+    <string name="recording_notification_title">Dictus \u2013 Recording</string>
+    <string name="recording_notification_stop">Stop</string>
+    <string name="recording_notification_channel_name">Dictus Recording</string>
+    <string name="recording_notification_channel_description">Active recording notification</string>
 
     <!-- RecordingTestArea -->
     <string name="recording_test_title">Recording Test</string>
@@ -245,9 +252,9 @@
     <string name="nav_settings">Settings</string>
 
     <!-- Sound picker -->
-    <string name="sound_picker_title_start">Start sound</string>
-    <string name="sound_picker_title_stop">Stop sound</string>
-    <string name="sound_picker_title_cancel">Cancel sound</string>
+    <string name="sound_picker_title_start">Start</string>
+    <string name="sound_picker_title_stop">End</string>
+    <string name="sound_picker_title_cancel">Cancel</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">Back</string>

@@ -9,4 +9,9 @@
     <string name="ime_emoji_return_keyboard">ABC</string>
     <string name="ime_undo_dictation">Undo</string>
     <string name="ime_undo_dictation_description">Undo last dictation</string>
+    <!-- Language key: %1$s is the short code shown on the key (FR, EN, ES, DE) -->
+    <string name="ime_language_key_description">Keyboard language %1$s</string>
+    <string name="ime_language_key_cycle_action">Cycle keyboard language</string>
+    <string name="ime_language_key_settings_action">Open Dictus Settings</string>
+    <string name="ime_recording_settings_description">Settings</string>
 </resources>
