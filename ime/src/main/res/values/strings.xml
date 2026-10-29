@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="mic_button_description">Microphone</string>
-    <string name="mic_button_loading_description">Microphone unavailable while speech recognition loads</string>
     <string name="ime_recording_listening">Listening\u2026</string>
     <string name="ime_recording_cancel">Cancel dictation</string>
     <string name="ime_recording_confirm">Finish dictation</string>

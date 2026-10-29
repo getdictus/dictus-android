@@ -102,7 +102,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `models.delete` | Free | present | no |
 | `models.retry` | Free | partial — « Réessayer » resumes the download (#131); no explicit deletion of a partial download | no |
 | `models.languages` | Free | partial — no language sheet; only Parakeet 110M carries « Anglais uniquement » | no |
-| `models.preparation` | Free | present — full-screen preparation screen in Models (#181), overlay in the keyboard and the recorder | no |
+| `models.preparation` | Free | present — full-screen preparation screen in Models (#181), overlay in the recorder; the keyboard records during the load (#247) | no |
 | `models.device-gating` | Free | present — RAM threshold, card greyed out with the reason (#121) | no |
 | `polish.toggle` | N/A | iOS-only (N/A) | no |
 | `polish.clean-up` | N/A | iOS-only (N/A) | no |
@@ -212,7 +212,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.history.detail` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
 | `app.models` | Free | present | no |
 | `app.models.languages` | Free | absent | no |
-| `app.models.loading` | Free | partial — no full-screen overlay in Models; see kbd.model-loading | no |
+| `app.models.loading` | Free | present — full-screen preparation screen in Models (#181) | no |
 | `app.settings` | Free | present | no |
 | `app.settings.sounds` | Free | present | no |
 | `app.settings.diagnostic` | N/A | iOS-only (N/A) | no |
@@ -230,7 +230,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.voice-note.result` | Pro on iOS — absent | absent | no |
 | `kbd.keys` | Free | present | no |
 | `kbd.no-full-access` | N/A | iOS-only (N/A) | no |
-| `kbd.dictation-error` | Free | present — « Aucun modèle vocal » / « Impossible de démarrer la reconnaissance vocale » | no |
+| `kbd.dictation-error` | Free | present — « La dictée a échoué… » in the suggestion bar; no overlay (#247) | no |
 | `kbd.recording` | Free | present | no |
 | `kbd.panel` | Free | absent | no |
 | `kbd.emoji` | Free | present | no |
@@ -258,7 +258,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.onboarding.default-page` | Free | present | yes |
 | `app.settings.sound-picker` | Free | present | yes |
 | `app.settings.picker` | Free | present — Settings choice sheets | yes |
-| `kbd.model-loading` | Free | present | yes |
+| `kbd.model-loading` | Free | retired (#247) — the keyboard is never covered | yes |
 | `sys.ime-picker` | Free | present | yes |
 | `sys.settings.ime` | Free | present | yes |
 | `sys.notification.recording` | Free | present | yes |

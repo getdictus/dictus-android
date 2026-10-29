@@ -2,9 +2,15 @@ package dev.pivisolutions.dictus.core.navigation
 
 import java.util.UUID
 
-/** Cross-module contract used by the IME to open the app directly on Settings. */
+/** Cross-module contract used by the IME to open the app directly on Settings or Models. */
 object AppLaunchContract {
     const val ACTION_OPEN_SETTINGS = "dev.pivisolutions.dictus.action.OPEN_SETTINGS"
+
+    /**
+     * Opens the Models tab, from a mic tap with no model on disk (#247). It needs no
+     * authorization: it bypasses nothing, and onboarding still runs first when incomplete.
+     */
+    const val ACTION_OPEN_MODELS = "dev.pivisolutions.dictus.action.OPEN_MODELS"
     const val EXTRA_AUTHORIZATION = "dev.pivisolutions.dictus.extra.SETTINGS_AUTHORIZATION"
     const val MAIN_ACTIVITY_CLASS = "dev.pivisolutions.dictus.MainActivity"
 }

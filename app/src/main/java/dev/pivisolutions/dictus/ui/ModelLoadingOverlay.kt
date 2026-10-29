@@ -1,4 +1,4 @@
-package dev.pivisolutions.dictus.core.ui
+package dev.pivisolutions.dictus.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +23,12 @@ import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.R
 import dev.pivisolutions.dictus.core.service.SttEngineState
 
-/** Full-surface gate shared by the app, onboarding, and the complete IME input view. */
+/**
+ * Full-surface gate for the app's recorder and the onboarding test dictation.
+ *
+ * WHY in the app module: the keyboard must never be covered by it (#247), and the IME module
+ * cannot depend on the app module, so it cannot compose this overlay at all.
+ */
 @Composable
 fun ModelLoadingOverlay(
     engineState: SttEngineState,

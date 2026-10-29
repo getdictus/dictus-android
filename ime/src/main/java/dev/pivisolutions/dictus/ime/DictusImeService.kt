@@ -14,23 +14,17 @@ import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationStartGuard
 import dev.pivisolutions.dictus.core.service.DictationState
-import dev.pivisolutions.dictus.core.service.MicGateCommand
-import dev.pivisolutions.dictus.core.service.ModelPreparationGate
-import dev.pivisolutions.dictus.core.service.PendingMicGate
+import dev.pivisolutions.dictus.core.service.KeyboardMicTap
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.logging.DictationTrace
@@ -40,14 +34,12 @@ import dev.pivisolutions.dictus.core.navigation.AppLaunchContract
 import dev.pivisolutions.dictus.core.navigation.SettingsLaunchAuthorization
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
-import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.haptics.InsertHaptic
 import dev.pivisolutions.dictus.ime.suggestion.AndroidNativeTrieOpener
 import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
-import dev.pivisolutions.dictus.ime.ui.ImeOverlayHost
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
@@ -775,15 +767,6 @@ class DictusImeService : LifecycleInputMethodService() {
     override fun KeyboardContent() {
         val dictationState by _serviceState.collectAsState()
         val engineState by _engineState.collectAsState()
-        val micGate = remember { PendingMicGate() }
-        // A Ready engine on the previous model is not ready for this tap (#175).
-        LaunchedEffect(micGate) {
-            entryPoint.dataStore().data.collect { micGate.selectedModelKey = it[PreferenceKeys.ACTIVE_MODEL] }
-        }
-        var showFailureOverlay by remember { mutableStateOf(true) }
-        // Only a real mic tap may surface the "no model" panel. A background prewarm must
-        // never blanket the keyboard, which is what covered onboarding before the download step.
-        var showModelMissingOverlay by remember { mutableStateOf(false) }
         val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
@@ -800,38 +783,6 @@ class DictusImeService : LifecycleInputMethodService() {
             activeLanguage,
             activeLayout,
         )
-
-        fun runGateCommand(command: MicGateCommand) {
-            if (command != MicGateCommand.NONE && dictationController == null) {
-                // The safe call below used to swallow this silently: a dead mic button and an
-                // unused keyboard then left the same empty log (#112).
-                Timber.w("Mic gate %s dropped: DictationService not bound", command)
-                return
-            }
-            when (command) {
-                MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
-                // The engine may have taken a while: another dictation can have started since the tap.
-                MicGateCommand.START_RECORDING -> dictationController?.let { controller ->
-                    if (DictationStartGuard.canStartNewDictation(controller.state.value)) {
-                        controller.startRecording(DictationSource.KEYBOARD)
-                    } else {
-                        Timber.w("Mic gate start dropped: state=%s", stateName(controller.state.value))
-                    }
-                }
-                MicGateCommand.NONE -> Unit
-            }
-        }
-        LaunchedEffect(engineState) {
-            if (engineState !is SttEngineState.Failed) showFailureOverlay = true
-            if (engineState is SttEngineState.ModelMissing) {
-                // A tap made while the engine was still Cold or Loading deserves the answer it
-                // was waiting for, so read the pending flag before engineChanged clears it.
-                if (micGate.isPending) showModelMissingOverlay = true
-            } else {
-                showModelMissingOverlay = false
-            }
-            runGateCommand(micGate.engineChanged(engineState))
-        }
 
         val gatedMicTap = {
             autocorrectCoordinator.onOtherInput()
@@ -850,15 +801,7 @@ class DictusImeService : LifecycleInputMethodService() {
             )
             if (DictationStartGuard.canStartNewDictation(dictationState)) {
                 if (micGranted) {
-                    transcriptionRetentionSession.begin(
-                        isCurrentEditorSuggestionEligible,
-                        isPersonalizedLearningAllowed,
-                    )
-                    if (engineState is SttEngineState.Failed) showFailureOverlay = true
-                    if (engineState is SttEngineState.ModelMissing) showModelMissingOverlay = true
-                    val command = micGate.request(engineState)
-                    Timber.d("Mic gate: command=%s", command)
-                    runGateCommand(command)
+                    startKeyboardDictation(KeyboardMicTap.decide(engineState))
                 } else {
                     Timber.w("RECORD_AUDIO permission not granted")
                 }
@@ -929,22 +872,9 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         }
 
-        // A load that starts under a dictation never covers it (#175).
-        val overlayEngineState = ModelPreparationGate.overlayState(engineState, dictationState)
-        val isEngineOverlayVisible = overlayEngineState is SttEngineState.Loading ||
-            (overlayEngineState is SttEngineState.Failed && showFailureOverlay) ||
-            (overlayEngineState is SttEngineState.ModelMissing && showModelMissingOverlay)
-
-        ImeOverlayHost(
-            content = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
-                        ),
-                ) {
-                    when (dictationState) {
+        // Nothing covers the keyboard while the model loads, fails or is missing (#247).
+        Box(modifier = Modifier.fillMaxWidth()) {
+            when (dictationState) {
             is DictationState.Idle -> {
                 KeyboardScreen(
                     onCommitText = { text -> commitText(text) },
@@ -955,7 +885,6 @@ class DictusImeService : LifecycleInputMethodService() {
                     onCycleLanguage = cycleKeyboardLanguage,
                     onOpenSettings = openDictusSettings,
                     onMicTap = gatedMicTap,
-                    isMicEnabled = engineState !is SttEngineState.Loading,
                     isEmojiPickerOpen = isEmojiPickerOpen,
                     onEmojiToggle = {
                         autocorrectCoordinator.onOtherInput()
@@ -1140,28 +1069,53 @@ class DictusImeService : LifecycleInputMethodService() {
                     TranscribingScreen()
                 }
             }
-                    }
-                }
-            },
-            overlay = {
-                ModelLoadingOverlay(
-                    engineState = when {
-                        overlayEngineState is SttEngineState.Failed && !showFailureOverlay ->
-                            SttEngineState.Cold
-                        overlayEngineState is SttEngineState.ModelMissing && !showModelMissingOverlay ->
-                            SttEngineState.Cold
-                        else -> overlayEngineState
-                    },
-                    onRetry = { runGateCommand(micGate.retry()) },
-                    onCancel = {
-                        micGate.cancel()
-                        // Keep the service state authoritative while hiding these local surfaces.
-                        showFailureOverlay = false
-                        showModelMissingOverlay = false
-                    },
+            }
+        }
+    }
+
+    /**
+     * A mic tap from idle with the microphone granted (#247).
+     *
+     * The prewarm is a no-op when the selected model is loaded or loading, retries a failed load,
+     * loads a newly selected model, and re-checks the disk for a missing one. If the load fails
+     * again, the transcription retries it with the audio in hand, then the bar shows the failure
+     * notice.
+     */
+    private fun startKeyboardDictation(tap: KeyboardMicTap) {
+        val controller = dictationController
+        if (controller == null) {
+            // A dead mic button and an unused keyboard must not leave the same empty log (#112).
+            Timber.w("Mic tap dropped: DictationService not bound")
+            return
+        }
+        controller.prewarmEngine()
+        when (tap) {
+            KeyboardMicTap.RECORD -> {
+                transcriptionRetentionSession.begin(
+                    isCurrentEditorSuggestionEligible,
+                    isPersonalizedLearningAllowed,
                 )
-            },
-        )
+                controller.startRecording(DictationSource.KEYBOARD)
+            }
+            KeyboardMicTap.OPEN_MODELS -> {
+                DictationTrace.end()
+                openDictusModels()
+            }
+        }
+    }
+
+    /** Opens Dictus on the Models tab, where the user downloads a model (iOS `intent=prepare`). */
+    private fun openDictusModels() {
+        val intent = Intent(AppLaunchContract.ACTION_OPEN_MODELS).apply {
+            component = ComponentName(packageName, AppLaunchContract.MAIN_ACTIVITY_CLASS)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        try {
+            startActivity(intent)
+            Timber.i("Mic tap with no model: opened Dictus on Models")
+        } catch (error: RuntimeException) {
+            Timber.e(error, "Unable to open Dictus Models from IME")
+        }
     }
 
     /**

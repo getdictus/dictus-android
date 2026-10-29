@@ -56,11 +56,11 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
-import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
+import dev.pivisolutions.dictus.ui.ModelLoadingOverlay
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingBottomBlock
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 import kotlinx.coroutines.launch
