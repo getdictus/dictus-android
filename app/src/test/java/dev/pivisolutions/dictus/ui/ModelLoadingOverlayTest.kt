@@ -1,4 +1,4 @@
-package dev.pivisolutions.dictus.core.ui
+package dev.pivisolutions.dictus.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
