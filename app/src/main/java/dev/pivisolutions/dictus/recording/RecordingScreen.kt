@@ -125,8 +125,9 @@ fun RecordingScreen(
         when (command) {
             MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
             // The service refuses a start that arrives while another dictation runs (#237).
+            // A refused start leaves a start already pending as it is.
             MicGateCommand.START_RECORDING ->
-                startPending = dictationController?.startRecording(DictationSource.APP) == true
+                if (dictationController?.startRecording(DictationSource.APP) == true) startPending = true
             MicGateCommand.NONE -> Unit
         }
     }
@@ -163,13 +164,14 @@ fun RecordingScreen(
         fun leave(event: String) {
             if (activity?.isChangingConfigurations == true) return
             currentMicGate.cancel()
-            if (startPending) {
+            // Read the live state: the service may have opened the mic before the effect above ran.
+            if (currentController?.state?.value is DictationState.Recording) {
+                Timber.i("%s ignored, dictation continues", event)
+            } else if (startPending) {
                 Timber.i("%s: pending app start cancelled", event)
                 currentController?.cancelRecording()
-                startPending = false
-            } else if (currentController?.state?.value is DictationState.Recording) {
-                Timber.i("%s ignored, dictation continues", event)
             }
+            startPending = false
         }
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) leave("ON_STOP")
