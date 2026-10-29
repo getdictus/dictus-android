@@ -123,7 +123,7 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | Sons | `Retour`, `GÉNÉRAL`, `Activer les sons`, `Volume`, `Les sons respectent le mode silencieux du téléphone.`, `SONS PAR ÉVÉNEMENT`, `Début / Electronic 01F`, `Fin / …`, `Annuler / …` (`[disabled]` while « Activer les sons » is off); in a list `Electronic 01F / Sélectionné` |
 | Onboarding (code only, not seen) | `Commencer`, `Autoriser le micro`, `Continuer`, `Ouvrir les paramètres`, `Sélectionner Dictus`, `ABC` / `123`, `Télécharger`, `Réessayer` |
 
-**The Dictus keyboard is fully in Argent's tree** (its own `ComposeView` at the bottom of the screen, above the app's nodes): each key is a `StaticText` with its label (`a`…`m`, `⇧`, `'`, `⌫`, `?123`, `😊`, `espace`, `retour`; `Leertaste` / `Eingabe` when the keyboard language is DE), the language code is `Langue du clavier FR` (tap cycles FR→EN→ES→DE, long-press opens Dictus Réglages without tabs), the mic is `Microphone` (`Microphone indisponible pendant le chargement…` while the model loads), suggestions are three `View`s labelled with the words. While recording: `✕` (cancel), `✓` (insert), the timer `00:05`, `En écoute…`, `Réglages` (opens the system keyboard picker). The emoji page uses androidx resource-ids `dev.pivisolutions.dictus:id/emoji_picker_header` / `emoji_picker_body`, category names (`UTILISÉS RÉCEMMENT`…), then `ABC` and `⌫`. Tap the centre of a key's frame.
+**The Dictus keyboard is fully in Argent's tree** (its own `ComposeView` at the bottom of the screen, above the app's nodes): each key is a `StaticText` with its label (`a`…`m`, `⇧`, `'`, `⌫`, `?123`, `😊`, `espace`, `retour`; `Leertaste` / `Eingabe` when the keyboard language is DE), the language code is `Langue du clavier FR` (tap cycles FR→EN→ES→DE, long-press opens Dictus Réglages without tabs), the mic is `Microphone` (`Microphone indisponible pendant le chargement…` while the model loads), suggestions are three `View`s labelled with the words. While recording: `Annuler la dictée` (✕, cancel), `Terminer la dictée` (✓, insert), glass pills with icons (#239), the timer `00:05`, `En écoute…`, `Réglages` (opens the system keyboard picker). The emoji page uses androidx resource-ids `dev.pivisolutions.dictus:id/emoji_picker_header` / `emoji_picker_body`, category names (`UTILISÉS RÉCEMMENT`…), then `ABC` and `⌫`. Tap the centre of a key's frame.
 
 **The tree can lag.** `describe` returned with an action sometimes shows the screen *before* the action (seen after taps on Sons, after scrolling Modèles, after a sub-screen's back). Give the step `delayMs: 1000` in `run-sequence`, or call `describe` again, and compare with the screenshot before tapping. Returning from a sub-screen can restore Réglages at a different scroll offset: re-read the frames, never reuse old ones.
 
@@ -157,7 +157,7 @@ M=$($H/log.sh mark)
 # Argent: tap the centre of « Microphone »
 $H/log.sh wait 'ACTION_START' 15 "$M"
 $H/evidence.sh 02-dictation.cancel-recording "$M"
-# Argent: tap the centre of « ✕ »
+# Argent: tap the centre of « Annuler la dictée » (✕)
 $H/log.sh wait 'Recording cancelled, samples discarded' 10 "$M"
 $H/evidence.sh 03-dictation.cancel-after "$M"
 # Argent: describe → TextField "Titre" has no value; then delete the scratch note
