@@ -27,7 +27,7 @@ Preconditions: Launch and Doctor OK. Note the keyboard language, layout, default
 
 - **Réglages.** Tap `Réglages`. → `Langue` (value `Automatique`), `Langue du clavier`, `Disposition du clavier`, `Mode par défaut` (`screen.sh app.settings`).
 - **A picker without choosing.** Tap `Disposition du clavier / AZERTY`. → sheet `Disposition du clavier`, `AZERTY [checked]`, `QWERTY` (`screen.sh app.settings.picker`); tap `Fermer la feuille` (the dimmed area above).
-- **Cycle in the keyboard.** With a scratch note focused, tap `Keyboard language DE` four times (`delayMs: 700`). → `FR`→`EN`→`ES`→`DE`, back to Pierre's `DE`; space and return read `espace`/`retour` in FR, `Leertaste`/`Eingabe` in DE. Check the stored value: `adb -s 99071FFAZ00EBN exec-out run-as dev.pivisolutions.dictus cat files/datastore/dictus_prefs.preferences_pb | strings | grep -A1 keyboard_language`.
+- **Cycle in the keyboard.** With a scratch note focused, tap `Langue du clavier DE` four times (`delayMs: 700`). → `FR`→`EN`→`ES`→`DE`, back to Pierre's `DE`; space and return read `espace`/`retour` in FR, `Leertaste`/`Eingabe` in DE. Check the stored value: `adb -s 99071FFAZ00EBN exec-out run-as dev.pivisolutions.dictus cat files/datastore/dictus_prefs.preferences_pb | strings | grep -A1 keyboard_language`.
 - **Open the app.** Long-press the language code (`gesture-custom` Down, 900 ms, Up). → Dictus on `Réglages`, no bottom tabs (seen 2026-10-20); system back returns to the note.
 - **Proof.** The code label in the tree after each tap; the Réglages values identical before and after.
 
