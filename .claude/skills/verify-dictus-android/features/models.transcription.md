@@ -9,8 +9,8 @@ The Modèles tab lists the offline speech models (Whisper and Parakeet), downloa
 
 ## Sub-features
 
-- `models.catalogue`: Sections « Téléchargés » and « Disponibles »; each card shows name, engine badge (`WK` Whisper, `NV` Parakeet), a one-line description, « Précision » and « Vitesse » bars, size; Whisper Tiny/Base/Small/Small Q5/Medium, Parakeet 110M/0.6B. — présent
-- `models.recommended`: — partiel: the recommendation (by RAM) appears only in onboarding (« Recommandé pour votre appareil »); no badge in Modèles.
+- `models.catalogue`: Sections « Téléchargés » and « Disponibles »; each card shows name, engine badge (`WK` Whisper, `NV` Parakeet), a one-line description in the app's language (string resources since #236: « Rapide et léger » / « Fast and light »), « Précision » and « Vitesse » bars, size; Whisper Tiny/Base/Small/Small Q5/Medium, Parakeet 110M/0.6B. — présent
+- `models.recommended`: the model onboarding recommends (by RAM: Parakeet 0.6B v3 from 6 GB, Small Q5 below) carries a « Recommandé » / « Recommended » pill next to its engine badge in Modèles (#188), the same rule as onboarding. — présent (iOS also weighs the dictation language, #649; every Android dictation language is a Parakeet language, so the answer is the same)
 - `models.download`: « Télécharger » on an available card raises the full-screen preparation screen (`app.models.loading`, #181): ring around the Dictus mark, « On prépare votre modèle », a card « Téléchargement  N % » then « Préparation pour ce téléphone » (extraction and verification) then « Chargement du modèle », « X Mo sur Y Mo », « Restez sur cette page, ne quittez pas l'application. ». The downloaded model becomes the active one and loads (like iOS), except an English-only model while the language is not English; then « Votre modèle est prêt », green ring, and the screen closes after 1.5 s. The install runs in a WorkManager foreground worker with an « Installation de <modèle> » notification (#169): it survives leaving the tab, the screen off and the app in the background. A model counts as downloaded only when every file has its exact size; the SHA-256 is checked at the end of the install. — présent
 - `models.select`: Tap a downloaded card to make it « Actif ». — présent
 - `models.delete`: Trash icon (`Supprimer`) then « Supprimer <nom> ? ». — présent
@@ -30,7 +30,7 @@ The Modèles tab lists the offline speech models (Whisper and Parakeet), downloa
 
 Preconditions: Launch and Doctor OK. Note the active model Doctor printed; it must be the active one at the end.
 
-- **Open.** Tap `Modèles`. → `Téléchargés`, `Disponibles`, the active card shows `Actif` (`screen.sh app.models`).
+- **Open.** Tap `Modèles`. → `Téléchargés`, `Disponibles`, the active card shows `Actif`, the recommended card shows `Recommandé` (`screen.sh app.models`).
 - **Scroll.** `mcp__argent__gesture-swipe` from (0.5, 0.8) to (0.5, 0.1) twice. → `Parakeet 110M` (`Anglais uniquement`), `Parakeet 0.6B` with `Télécharger` (or in `Téléchargés` once downloaded), `Stockage utilisé : 190 Mo / 2196 Mo`, the Whisper / Parakeet lines. **Trust the screenshot here**: after this scroll, `describe` kept returning the pre-scroll tree.
 - **Delete dialog (no deletion).** Tap `Supprimer` on a downloaded non-active card, capture, tap `Annuler`. → card still in `Téléchargés`.
 - **Proof.** The tree before/after and the unchanged `Actif` card. A download is proved by the preparation screen (`Téléchargement`, `N %`, `X Mo sur Y Mo`, then `Votre modèle est prêt`) then the card moving to `Téléchargés` as `Actif` and the file in `adb shell run-as dev.pivisolutions.dictus ls files/models`.
