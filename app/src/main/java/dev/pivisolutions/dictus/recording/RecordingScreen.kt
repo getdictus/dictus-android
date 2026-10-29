@@ -456,17 +456,11 @@ fun RecordingScreen(
                                     val outcome = dictationController?.confirmAndTranscribe(
                                         if (fromApp) TranscriptionRetention.PERSIST_HISTORY else TranscriptionRetention.EPHEMERAL,
                                     )
+                                    dataStore?.let { writeLastTranscription(it, outcome, fromApp) }
                                     when (outcome) {
-                                        is TranscriptionOutcome.Transcribed -> {
-                                            transcriptionResult = outcome.text
-                                            // Keep the Home preview for a short, privacy-bounded period.
-                                            if (fromApp) dataStore?.let { LastTranscriptionStore.save(it, outcome.text) }
-                                        }
+                                        is TranscriptionOutcome.Transcribed -> transcriptionResult = outcome.text
                                         TranscriptionOutcome.NoWordsDetected -> {
-                                            // Like iOS, which drops its last result when a dictation
-                                            // starts: the older text must not pass for this one.
                                             noWordsDetected = true
-                                            dataStore?.let { LastTranscriptionStore.clear(it) }
                                             Timber.i("No words detected notice shown: surface=app")
                                         }
                                         TranscriptionOutcome.Failed, null -> transcriptionResult = noResultLabel

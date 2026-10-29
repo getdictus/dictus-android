@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
-import dev.pivisolutions.dictus.recording.LastTranscriptionStore
+import dev.pivisolutions.dictus.recording.writeLastTranscription
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +18,8 @@ import timber.log.Timber
  *
  * WHY: those stops used to discard the take, 15 s of speech on a screen lock among them. Like iOS,
  * where every stop but the cancel goes through `DictationCoordinator.stopDictation`, only ✕
- * discards now: the take is transcribed and its text kept for Home's "Last transcription" card.
+ * discards now: the take is transcribed, and its result is written for Home's "Last transcription"
+ * card through the same call as the app's ✓ (writeLastTranscription).
  * A keyboard dictation is left to its caller: the app cannot tell whether the keyboard's field may
  * keep text (password, incognito), the same reason the app screen keeps nothing from it.
  *
@@ -55,12 +56,8 @@ internal class UnconfirmedStop(
         return scope.launch {
             try {
                 val outcome = transcribe(samples)
-                when (outcome) {
-                    is TranscriptionOutcome.Transcribed -> LastTranscriptionStore.save(dataStore, outcome.text)
-                    // Like the ✓ path: an older text must not pass for this dictation.
-                    TranscriptionOutcome.NoWordsDetected -> LastTranscriptionStore.clear(dataStore)
-                    TranscriptionOutcome.Failed -> Unit
-                }
+                // The exact write of the app's ✓; the card's own rule is #245.
+                writeLastTranscription(dataStore, outcome, fromApp = true)
                 Timber.i(
                     "Stop without confirm done: reason=%s, outcome=%s, saved=%b",
                     reason.logName,
