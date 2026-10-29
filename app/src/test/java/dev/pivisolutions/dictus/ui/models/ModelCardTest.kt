@@ -8,6 +8,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.performClick
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -15,6 +18,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class ModelCardTest {
@@ -40,7 +44,8 @@ class ModelCardTest {
             }
         }
 
-        composeTestRule.onNodeWithText(model.description).assertIsDisplayed()
+        // English UI: the catalog description follows the locale (#236)
+        composeTestRule.onNodeWithText("Fast and light").assertIsDisplayed()
         composeTestRule.onNodeWithText("Precision").assertIsDisplayed()
         composeTestRule.onNodeWithText("Speed").assertIsDisplayed()
         composeTestRule.onAllNodesWithTag("model_precision_segment").assertCountEquals(5)
@@ -117,5 +122,54 @@ class ModelCardTest {
         }
 
         composeTestRule.onNodeWithText("English only").assertIsDisplayed()
+    }
+
+    @Test
+    fun `only the recommended card shows the Recommended badge`() {
+        val model = ModelCatalog.findByKey("small-q5_1")!!
+        var isRecommended by mutableStateOf(true)
+
+        composeTestRule.setContent {
+            DictusTheme {
+                ModelCard(
+                    model = model,
+                    isDownloaded = false,
+                    isActive = false,
+                    canDelete = false,
+                    onDownload = {},
+                    onDelete = {},
+                    onRetry = {},
+                    isRecommended = isRecommended,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Recommended").assertIsDisplayed()
+        isRecommended = false
+        composeTestRule.onNodeWithText("Recommended").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "fr")
+    fun `French UI shows the accented description and badge`() {
+        val model = ModelCatalog.findByKey("base")!!
+
+        composeTestRule.setContent {
+            DictusTheme {
+                ModelCard(
+                    model = model,
+                    isDownloaded = false,
+                    isActive = false,
+                    canDelete = false,
+                    onDownload = {},
+                    onDelete = {},
+                    onRetry = {},
+                    isRecommended = true,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Précis et équilibré").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Recommandé").assertIsDisplayed()
     }
 }

@@ -149,7 +149,7 @@ class ModelCatalogTest {
     @Test
     fun `all models have descriptions and bounded metric scores`() {
         ModelCatalog.ALL.forEach { model ->
-            assertTrue("${model.key} should have a description", model.description.isNotBlank())
+            assertTrue("${model.key} should have a description", model.descriptionRes != 0)
             assertTrue("${model.key} precision should be in 0 to 1", model.precision in 0f..1f)
             assertTrue("${model.key} speed should be in 0 to 1", model.speed in 0f..1f)
         }
