@@ -218,6 +218,22 @@ class NativeTrieSuggestionEngineTest {
         }
 
     @Test
+    fun `learned suggestion disappears after the dictionary is cleared`() = runTest(dispatcher) {
+        val handle = FakeHandle(prefix = listOf("bonjour"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+        engine.personalDictionary.recordWordTyped("bonzai")
+        engine.personalDictionary.recordWordTyped("bonzai")
+        advanceUntilIdle()
+        assertEquals(listOf("bonzai", "bonjour"), engine.getSuggestions("bon"))
+
+        PersonalDictionary.clear(dataStore)
+        advanceUntilIdle()
+
+        assertEquals(listOf("bonjour"), engine.getSuggestions("bon"))
+    }
+
+    @Test
     fun `canonical equivalent native exact result is filtered`() = runTest(dispatcher) {
         val handle = FakeHandle(prefix = listOf("CA\u0301FE"))
         val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
