@@ -5,7 +5,7 @@ The Modèles tab lists the offline speech models (Whisper and Parakeet), downloa
 - **ID:** `models.transcription`
 - **Tier:** Gratuit
 - **Statut Android:** présent
-- **Screens:** `app.models`, `app.models.loading`, `kbd.model-loading` — see [screens.md](screens.md)
+- **Screens:** `app.models`, `app.models.loading` — see [screens.md](screens.md)
 
 ## Sub-features
 
@@ -16,7 +16,7 @@ The Modèles tab lists the offline speech models (Whisper and Parakeet), downloa
 - `models.delete`: Trash icon (`Supprimer`) then « Supprimer <nom> ? ». — présent
 - `models.retry`: the preparation screen shows « Le modèle vocal n'a pas pu être préparé », the failed step in red and « Réessayer » / « Fermer »; after « Fermer » the card keeps « Échec du téléchargement. » + « Réessayer » (network error, HTTP error, no byte for 30 s, or a file failing its size/SHA-256 check). Retry resumes from the bytes already downloaded (`Range`, log line `range offset=<N> status=206`, #131); a file failing its size/SHA-256 check is not kept. — partiel: no explicit way to delete a partial download.
 - `models.languages`: — partiel: no per-model language sheet; only Parakeet 110M carries « Anglais uniquement » and activating it asks « Modèle anglais uniquement » (Parakeet 0.6B's description reads « 25 langues - Detection automatique »).
-- `models.preparation`: tapping a downloaded card raises the same preparation screen on « Chargement du modèle » (row 1 already « Téléchargé · N Mo »), until the dictation engine holds the model (#181). The keyboard and the recorder keep the « Préparation de la reconnaissance vocale » overlay. — présent (keyboard and recorder: different surface from iOS)
+- `models.preparation`: tapping a downloaded card raises the same preparation screen on « Chargement du modèle » (row 1 already « Téléchargé · N Mo »), until the dictation engine holds the model (#181). The recorder keeps the « Préparation de la reconnaissance vocale » overlay. The keyboard shows nothing: its mic records at once and the transcription waits for the load (#247). — présent (recorder: different surface from iOS; keyboard: records during a real load, where iOS opens its preparation screen)
 - `models.device-gating`: Models above the RAM threshold are greyed with « Nécessite N Go de RAM ou plus » (#121); « RAM insuffisante » dialog. — présent
 - `models.english-only-warning` *(Spécifique Android)*: Parakeet 110M is English-only: badge on the card and a confirmation dialog before activation.
 - `models.storage` *(Spécifique Android)*: « Stockage utilisé : X Mo / Y Mo » under the lists, plus a one-line explanation of Whisper and Parakeet.
@@ -40,6 +40,6 @@ Preconditions: Launch and Doctor OK. Note the active model Doctor printed; it mu
 - **Never download or delete a model** on Pierre's phone unless the task needs it (75 MB to over 600 MB, real traffic; deleting loses his setup).
 - The active card has no trash icon: delete needs another downloaded model.
 - Card descriptions are unaccented (« Rapide et leger », « Precis et equilibre », « Haute precision », « Detection automatique »).
-- Selecting a model starts loading it at once (log `Active model changed to <key>, prewarming`, #175). A mic tap while it still loads, or while the engine still holds the previous model, shows the loading overlay at the tap and records once the selected model is ready. The overlay never covers a recording or a transcription (iOS #458).
+- Selecting a model starts loading it at once (log `Active model changed to <key>, prewarming`, #175). A keyboard mic tap while it still loads, or while the engine still holds the previous model, records at once and the transcription waits for the selected model (#247). In the app's recorder the same tap shows the loading overlay and records once the model is ready; that overlay never covers a recording or a transcription (iOS #458).
 - RAM gating rounds `ActivityManager.totalMem` up to the marketed size (#121); Parakeet 0.6B needs 6 GB, like iOS (#148): the 6 GB Pixel 4 (5.34 GiB reported) can download it; a phone below 6 GB sees it greyed with « Nécessite 6 Go de RAM ou plus ». Before #148 the gate was 8 GB and the Pixel showed « Nécessite 8 Go de RAM ou plus » (2026-10-20).
 - Parakeet does not run on the x86_64 emulator (sherpa-onnx ships ARM libraries only): the engine fails cleanly, the app does not crash. Verify Parakeet on the Pixel only.

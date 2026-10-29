@@ -44,7 +44,7 @@ prefs_tmp="$(pull_prefs)"
 if [ -s "$prefs_tmp" ]; then ok "settings: $(prefs_tool show "$prefs_tmp")"; else warn "settings not readable (run-as)"; fi
 rm -f "$prefs_tmp"
 models="$(adbs shell run-as "$DICTUS_PKG" ls files/models 2>/dev/null | tr -d '\r' | xargs)"
-[ -n "$models" ] && ok "models on device: $models" || warn "no model downloaded: dictation ends on « Aucun modèle vocal »"
+[ -n "$models" ] && ok "models on device: $models" || warn "no model downloaded: the keyboard mic opens « Modèles », nothing records"
 
 # One driver at a time: anything else holding UiAutomation breaks Argent's describe.
 others="$(adbs shell ps -A -o NAME 2>/dev/null | grep -E 'uiautomator|appium|maestro|io.github.mobile' | grep -v grep | tr '\n' ' ')"
