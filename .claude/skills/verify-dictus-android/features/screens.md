@@ -43,10 +43,10 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `app.paywall` | — | — | pro.subscription | absent | — |
 | `app.pro.trial-announcement` | — | — | pro.subscription | absent | — |
 | `app.voice-note.result` | — | — | voice-notes | absent | — |
-| `kbd.keys` | Dictus keyboard: suggestion bar, language code + mic row, AZERTY keys | focus a text field in another app (scratch note) | dictation.keyboard, typing.*, keyboard.languages | letters / 123 / #+= / shift (manual or automatic at a sentence start) / accent strip / trackpad (key labels hidden) / FR EN ES DE | [yes](../screens/kbd.keys.png) |
+| `kbd.keys` | Dictus keyboard: suggestion bar, language code + mic row (56x36 blue capsule in a still glass halo, #239), AZERTY keys | focus a text field in another app (scratch note) | dictation.keyboard, typing.*, keyboard.languages | letters / 123 / #+= / shift (manual or automatic at a sentence start) / accent strip / trackpad (key labels hidden) / FR EN ES DE | [yes](../screens/kbd.keys.png) |
 | `kbd.no-full-access` | — | — | dictation.keyboard | iOS-only | — |
 | `kbd.dictation-error` | Keyboard overlay: « Aucun modèle vocal » or « Impossible de démarrer la reconnaissance vocale » + « Réessayer » / « Annuler »; after a failed transcription, the suggestion bar reads « La dictée a échoué. Touchez le micro pour réessayer. » in grey for 3 s (#182) | mic tap with no model / engine failure / a dictation ending in `Failed` (model file removed mid-recording, timeout) | dictation.keyboard | no model / loading failure / failed transcription | no — Pierre has a model: triggering the error would require deleting his model |
-| `kbd.recording` | Keyboard while dictating: ✕ / ✓, waveform, timer, « En écoute… », gear | mic tap | dictation.keyboard | recording / « Transcription… » | [yes](../screens/kbd.recording.png) |
+| `kbd.recording` | Keyboard while dictating: ✕ / ✓ glass pills (`Annuler la dictée` / `Terminer la dictée`, #239), waveform, timer, « En écoute… », gear | mic tap | dictation.keyboard | recording / « Transcription… » | [yes](../screens/kbd.recording.png) |
 | `kbd.panel` | — | — | keyboard.languages | absent (tap on the language code instead) | — |
 | `kbd.emoji` | Emoji picker, ABC and ⌫ at the bottom | tap 😊 | keyboard.emoji | categories / recents | [yes](../screens/kbd.emoji.png) |
 | `kbd.voice-note-reader` | — | — | voice-notes | absent | — |

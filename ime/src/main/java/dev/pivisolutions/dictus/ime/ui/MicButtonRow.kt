@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -38,7 +42,8 @@ import dev.pivisolutions.dictus.ime.haptics.HapticHelper
  * Top bar above the keyboard: active-language control on the left, mic pill on the right.
  *
  * A tap cycles Dictus's correction language; a hold opens Dictus Settings.
- * Mic pill matches the mockup: 56x40dp, cornerRadius 20, accent blue with glow shadow.
+ * Mic pill ported from iOS `AnimatedMicButton(isPill: true, animatesIdleGlow: false)` (#239):
+ * a 56x36 capsule inside the 66x46 `DictusHalo` glass ring, which stays still in the keyboard.
  */
 @Composable
 fun MicButtonRow(
@@ -47,12 +52,26 @@ fun MicButtonRow(
     onOpenSettings: () -> Unit,
     onMicTap: () -> Unit = {},
     isRecording: Boolean = false,
+    isTranscribing: Boolean = false,
     isMicEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
-    val activeMicColor = if (isRecording) DictusColors.Recording else DictusColors.Accent
+    // iOS fill and halo per status (AnimatedMicButton buttonFillColor / ringEffect).
+    val activeMicColor = when {
+        isRecording -> DictusColors.Recording
+        isTranscribing -> DictusColors.AccentHighlight.copy(alpha = 0.5f)
+        else -> DictusColors.Accent
+    }
     val micColor = if (isMicEnabled) activeMicColor else activeMicColor.copy(alpha = 0.35f)
+    val haloStroke = when {
+        isRecording -> DictusColors.Recording.copy(alpha = 0.5f)
+        isTranscribing -> DictusColors.Accent.copy(alpha = 0.4f)
+        // 0.45: the iOS keyboard's still glow, midpoint of the app's 0.3-0.6 breathing.
+        else -> DictusColors.Accent.copy(alpha = 0.45f)
+    }
+    val haloStrokeWidth = if (isRecording) 3.dp else 2.dp
+    val haloFill = keyboardGlass().fill
 
     Row(
         modifier = modifier
@@ -99,18 +118,26 @@ fun MicButtonRow(
             )
         }
 
-        // Mic pill button (right) — mockup spec: 56x40dp, corner 20, accent + glow
+        // Mic pill (right): the halo draws 5dp around it, inside the row's 46dp and 8dp end padding.
         Box(
             modifier = Modifier
                 .width(56.dp)
-                .height(40.dp)
-                .shadow(
-                    elevation = if (isMicEnabled) 12.dp else 0.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    ambientColor = activeMicColor.copy(alpha = 0.25f),
-                    spotColor = activeMicColor.copy(alpha = 0.4f),
-                )
-                .clip(RoundedCornerShape(20.dp))
+                .height(36.dp)
+                .drawBehind {
+                    // Stroke inside the 66x46 ring so it stays clear of the suggestion bar and keys.
+                    val stroke = haloStrokeWidth.toPx()
+                    val inset = 5.dp.toPx() - stroke / 2
+                    val halo = CircleShape.createOutline(
+                        Size(size.width + 2 * inset, size.height + 2 * inset),
+                        layoutDirection,
+                        this,
+                    )
+                    translate(-inset, -inset) {
+                        drawOutline(halo, haloFill)
+                        drawOutline(halo, haloStroke, style = Stroke(stroke))
+                    }
+                }
+                .clip(CircleShape)
                 .background(micColor)
                 .clickable(enabled = isMicEnabled) {
                     HapticHelper.performMicHaptic(view)
@@ -124,7 +151,8 @@ fun MicButtonRow(
                     if (isMicEnabled) R.string.mic_button_description else R.string.mic_button_loading_description,
                 ),
                 tint = Color.White,
-                modifier = Modifier.size(22.dp),
+                // 20dp draws the glyph 16dp tall, as SF mic.fill at 14 pt in the iOS pill.
+                modifier = Modifier.size(20.dp),
             )
         }
     }
