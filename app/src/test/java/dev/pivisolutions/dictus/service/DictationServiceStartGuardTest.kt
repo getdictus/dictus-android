@@ -9,10 +9,12 @@ import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,6 +56,7 @@ class DictationServiceStartGuardTest {
     fun tearDown() {
         controller.destroy()
         ShadowAudioRecord.clearSource()
+        LastTranscriptionStore.instance.clear()
     }
 
     /** Delivers the ACTION_START that startRecording() queued, as the system would. */
@@ -100,6 +103,25 @@ class DictationServiceStartGuardTest {
         assertEquals(DictationState.Idle, service.state.value)
         // The keyboard is free again.
         assertTrue(service.startRecording(DictationSource.KEYBOARD))
+    }
+
+    @Test
+    fun `a keyboard dictation that starts empties Home's card (#245)`() {
+        LastTranscriptionStore.instance.save("older dictation")
+
+        assertTrue(service.startRecording(DictationSource.KEYBOARD))
+
+        assertNull(LastTranscriptionStore.instance.text.value)
+    }
+
+    @Test
+    fun `a refused start keeps the card of the dictation still running`() {
+        startFromKeyboard()
+        LastTranscriptionStore.instance.save("older dictation")
+
+        assertFalse(service.startRecording(DictationSource.APP))
+
+        assertEquals("older dictation", LastTranscriptionStore.instance.text.value)
     }
 
     @Test

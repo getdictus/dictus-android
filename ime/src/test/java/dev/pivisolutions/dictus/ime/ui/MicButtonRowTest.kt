@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.down
@@ -15,6 +16,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class MicButtonRowTest {
@@ -36,6 +38,38 @@ class MicButtonRowTest {
 
         composeRule.onNodeWithContentDescription("Microphone").assertIsEnabled().performClick()
         composeRule.runOnIdle { assertEquals(1, taps) }
+    }
+
+    // TalkBack gives the reason the mic is greyed, not a model load (#252).
+    @Test fun `mic disabled during an app dictation announces it and ignores taps`() {
+        var taps = 0
+        setDisabledMic { taps++ }
+
+        composeRule.onNodeWithContentDescription("Microphone, dictation in progress in Dictus")
+            .assertIsNotEnabled()
+            .performClick()
+        composeRule.runOnIdle { assertEquals(0, taps) }
+    }
+
+    @Config(qualifiers = "fr")
+    @Test fun `mic disabled during an app dictation announces it in French`() {
+        setDisabledMic()
+
+        composeRule.onNodeWithContentDescription("Microphone, dictée en cours dans Dictus").assertIsNotEnabled()
+    }
+
+    private fun setDisabledMic(onMicTap: () -> Unit = {}) {
+        composeRule.setContent {
+            DictusTheme {
+                MicButtonRow(
+                    languageShortCode = "FR",
+                    onCycleLanguage = {},
+                    onOpenSettings = {},
+                    onMicTap = onMicTap,
+                    isMicEnabled = false,
+                )
+            }
+        }
     }
 
     @Test fun `tap cycles once while long press opens settings without cycling`() {

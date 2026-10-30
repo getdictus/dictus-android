@@ -85,7 +85,6 @@ class FrenchAdaptiveKeyUiTest {
                     onPress = {},
                     accentChars = state.variants,
                     onAccentSelected = {},
-                    hapticsEnabled = false,
                     modifier = Modifier.testTag("adaptive"),
                 )
             }

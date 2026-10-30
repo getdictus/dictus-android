@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.service
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.stt.SttTranscript
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.runTest
@@ -18,6 +19,7 @@ class DictationTranscriberTest {
 
     private val halfSecond = FloatArray(RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT)
     private val wakeLock = FakeWakeLock()
+    private val lastTranscription = LastTranscriptionStore()
 
     private fun transcriber(
         engine: suspend (FloatArray, String) -> String = { _, _ -> "Bonjour" },
@@ -29,7 +31,35 @@ class DictationTranscriberTest {
         ensureModel = { modelPath },
         withProvider = { _, _, use -> if (providerStarts) use(FakeProvider(engine, atTimeout)) else null },
         wakeLock = wakeLock,
+        lastTranscription = lastTranscription,
     )
+
+    // --- Home's last transcription card (#245) ---
+
+    @Test
+    fun `a take with words fills Home's card with the text the keyboard inserts`() = runTest {
+        // The service runs every dictation, keyboard ones included, through this transcriber.
+        val outcome = transcriber(engine = { _, _ -> " Bonjour à tous" }).transcribe(halfSecond, "tiny", "fr")
+
+        assertEquals(TranscriptionOutcome.Text("Bonjour à tous. "), outcome)
+        assertEquals("Bonjour à tous. ", lastTranscription.text.value)
+    }
+
+    @Test
+    fun `a partial take fills the card with its segments`() = runTest {
+        val partial = SttTranscript(" Bonjour à tous", segmentCount = 1, complete = false)
+        transcriber(engine = { _, _ -> awaitCancellation() }, atTimeout = partial).transcribe(halfSecond, "small", "fr")
+
+        assertEquals("Bonjour à tous. ", lastTranscription.text.value)
+    }
+
+    @Test
+    fun `no words or a failure leave the card as the start left it`() = runTest {
+        transcriber(engine = { _, _ -> " ..." }).transcribe(halfSecond, "tiny", "fr")
+        transcriber(modelPath = null).transcribe(halfSecond, "tiny", "fr")
+
+        assertNull(lastTranscription.text.value)
+    }
 
     // --- No words ---
 
@@ -153,6 +183,7 @@ class DictationTranscriberTest {
                 use(FakeProvider({ _, _ -> "Ok" }, null) { timeoutMs -> seenTimeoutMs = timeoutMs })
             },
             wakeLock = wakeLock,
+            lastTranscription = lastTranscription,
         ).transcribe(threeMinutes, "small", "fr")
 
         assertEquals(324_000L, seenTimeoutMs)

@@ -26,7 +26,6 @@ fun KeyRow(
     onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     accentMap: Map<Char, List<Char>> = emptyMap(),
-    hapticsEnabled: Boolean = true,
     onKeySound: (KeyType) -> Unit = {},
     labelsVisible: Boolean = true,
     onTrackpadActiveChange: (Boolean) -> Unit = {},
@@ -80,7 +79,6 @@ fun KeyRow(
                 } else {
                     onAccentSelected
                 },
-                hapticsEnabled = hapticsEnabled,
                 onSound = onKeySound,
                 labelsVisible = labelsVisible,
                 onTrackpadActiveChange = onTrackpadActiveChange,

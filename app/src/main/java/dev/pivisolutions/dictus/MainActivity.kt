@@ -14,7 +14,6 @@ import android.widget.EditText
 import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,11 +29,9 @@ import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.navigation.AppNavHost
-import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.service.DictationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -118,9 +115,6 @@ class MainActivity : AppCompatActivity() {
                     intent?.getStringExtra(AppLaunchContract.EXTRA_AUTHORIZATION),
                 )
             )
-        lifecycleScope.launch {
-            LastTranscriptionStore.enforceRetention(dataStore)
-        }
         setContent {
             // Read theme preference from DataStore and map to ThemeMode enum.
             // collectAsState with initial="dark" ensures the theme is applied immediately

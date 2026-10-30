@@ -189,7 +189,12 @@ fun MicButtonRow(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_mic),
-                contentDescription = stringResource(R.string.mic_button_description),
+                // The disabled mic says why, as the suggestion bar does (#252).
+                contentDescription = if (isMicEnabled) {
+                    stringResource(R.string.mic_button_description)
+                } else {
+                    stringResource(R.string.mic_button_app_dictation_description)
+                },
                 tint = Color.White,
                 // 20dp draws the glyph 16dp tall, as SF mic.fill at 14 pt in the iOS pill.
                 modifier = Modifier.size(20.dp),

@@ -37,12 +37,14 @@ import javax.inject.Inject
  * @param installState    State of the model's background install (progress, failure).
  * @param requiredRamGb   Non-null when the device has too little RAM for this model:
  *                        the card is greyed out and shows this requirement as the reason.
+ * @param isRecommended   True for the model onboarding recommends on this device (#188).
  */
 data class ModelUiState(
     val info: ModelInfo,
     val isDownloaded: Boolean,
     val installState: ModelInstallState = ModelInstallState.Idle,
     val requiredRamGb: Int? = null,
+    val isRecommended: Boolean = false,
 )
 
 /**
@@ -119,6 +121,9 @@ class ModelsViewModel @Inject constructor(
     // Read once: total RAM does not change while the app runs
     private val totalMemBytes: Long = DeviceRam.totalMemBytes(appContext)
 
+    // Onboarding's rule, so the badge marks the model onboarding installed (#188)
+    private val recommendedKey: String = ModelCatalog.recommendedModelKey(totalMemBytes)
+
     init {
         Timber.d("Device totalMem=%d bytes (%d GB marketed)", totalMemBytes, DeviceRam.marketedGb(totalMemBytes))
         refreshModels()
@@ -151,6 +156,7 @@ class ModelsViewModel @Inject constructor(
                     isDownloaded = modelManager.isDownloaded(info.key),
                     installState = installStates[info.key] ?: ModelInstallState.Idle,
                     requiredRamGb = info.minRamGb.takeUnless { DeviceRam.meetsRequirement(info, totalMemBytes) },
+                    isRecommended = info.key == recommendedKey,
                 )
             }
         _storageUsedBytes.value = modelManager.storageUsedBytes()

@@ -45,6 +45,7 @@ object PreferenceKeys {
     val THEME = stringPreferencesKey("theme")
 
     // --- Last transcription (Phase 4) ---
+    // Read by nothing since #245, which keeps Home's card in memory: only removed at app start.
     val LAST_TRANSCRIPTION = stringPreferencesKey("last_transcription")
     val LAST_TRANSCRIPTION_SAVED_AT = longPreferencesKey("last_transcription_saved_at")
 
