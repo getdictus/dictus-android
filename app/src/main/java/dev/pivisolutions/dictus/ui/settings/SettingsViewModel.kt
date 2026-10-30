@@ -12,6 +12,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
+import dev.pivisolutions.dictus.ime.suggestion.PersonalDictionary
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +92,11 @@ class SettingsViewModel @Inject constructor(
         .map { it[PreferenceKeys.KEY_SOUNDS_ENABLED] ?: true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** Number of words the keyboard has learned, shown in the reset confirmation. */
+    val learnedWordCount: StateFlow<Int> = dataStore.data
+        .map { it[PreferenceKeys.PERSONAL_DICTIONARY]?.size ?: 0 }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
     /** Whether the audio dictation start/stop sound is enabled. */
     val soundEnabled: StateFlow<Boolean> = dataStore.data
         .map { it[PreferenceKeys.SOUND_ENABLED] ?: false }
@@ -150,6 +156,11 @@ class SettingsViewModel @Inject constructor(
                 prefs[PreferenceKeys.SUGGESTIONS_ENABLED] = !(prefs[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true)
             }
         }
+    }
+
+    /** Forget every word the keyboard learned; autocorrect applies to them again. */
+    fun resetLearnedWords() {
+        viewModelScope.launch { PersonalDictionary.clear(dataStore) }
     }
 
     /** Toggle automatic correction without changing suggestion-bar visibility. */

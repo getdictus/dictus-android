@@ -39,6 +39,16 @@ class PersonalDictionary(
 
         private fun canonicalWord(word: String): String =
             Normalizer.normalize(word.trim(), Normalizer.Form.NFC).lowercase(Locale.ROOT)
+
+        /**
+         * Forgets every learned word (Settings → « Réinitialiser les mots appris »).
+         *
+         * A keyboard already loaded in the same process sees the emptied set through its
+         * DataStore collector, so its suggestions drop the learned words at once.
+         */
+        suspend fun clear(dataStore: DataStore<Preferences>) {
+            dataStore.edit { it.remove(PreferenceKeys.PERSONAL_DICTIONARY) }
+        }
     }
 
     // In-memory counter — reset on IME process restart (acceptable per spec).
@@ -51,6 +61,10 @@ class PersonalDictionary(
      * Updated reactively when DataStore emits new values.
      */
     private val _learnedWords = MutableStateFlow<Set<String>>(emptySet())
+
+    // Words learned in memory whose DataStore write has not completed yet. All callers and
+    // the collector run on the IME main scope, so a plain set is enough.
+    private val pendingWrites = mutableSetOf<String>()
 
     /** Thread-safe snapshot stream; StateFlow safely publishes collector updates to IO readers. */
     val learnedWords: StateFlow<Set<String>> = _learnedWords.asStateFlow()
@@ -65,9 +79,14 @@ class PersonalDictionary(
                 val persisted = prefs[PreferenceKeys.PERSONAL_DICTIONARY]
                     ?.mapTo(mutableSetOf(), ::canonicalWord)
                     ?: emptySet()
-                // Keep an explicit rejection visible while its asynchronous DataStore write is
-                // still pending. PersonalDictionary has no removal operation, so union is safe.
-                _learnedWords.value = _learnedWords.value + persisted
+                // DataStore is the source of truth, so a reset from Settings empties the set.
+                // A word whose write is still pending stays visible, so an explicit rejection
+                // is not corrected again before it reaches disk.
+                val next = persisted + pendingWrites
+                // A learned word that disappeared means the dictionary was reset: start the
+                // counts over too, or typing the word once more would learn it again.
+                if (!next.containsAll(_learnedWords.value)) typeCount.clear()
+                _learnedWords.value = next
             }
         }
     }
@@ -97,10 +116,15 @@ class PersonalDictionary(
         val canonical = canonicalWord(word)
         if (canonical.isEmpty() || canonical in _learnedWords.value) return
         _learnedWords.value = _learnedWords.value + canonical
+        pendingWrites += canonical
         scope.launch {
-            dataStore.edit { prefs ->
-                prefs[PreferenceKeys.PERSONAL_DICTIONARY] =
-                    (prefs[PreferenceKeys.PERSONAL_DICTIONARY] ?: emptySet()) + canonical
+            try {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.PERSONAL_DICTIONARY] =
+                        (prefs[PreferenceKeys.PERSONAL_DICTIONARY] ?: emptySet()) + canonical
+                }
+            } finally {
+                pendingWrites -= canonical
             }
         }
     }

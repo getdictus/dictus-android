@@ -64,6 +64,13 @@
     <string name="settings_suggestions">Suggestions</string>
     <string name="settings_autocorrect">Correction automatique</string>
     <string name="settings_sounds">Sons</string>
+    <string name="settings_reset_learned_words">R\u00e9initialiser les mots appris</string>
+    <string name="settings_reset_learned_words_title">R\u00e9initialiser les mots appris\u00a0?</string>
+    <string name="settings_reset_learned_words_message">Les mots que le clavier a appris de votre frappe seront oubli\u00e9s et la correction automatique s\u2019y appliquera de nouveau.</string>
+    <plurals name="settings_reset_learned_words_confirm">
+        <item quantity="one">Oublier %d mot appris</item>
+        <item quantity="other">Oublier %d mots appris</item>
+    </plurals>
     <string name="settings_theme">Th\u00e8me</string>
     <string name="settings_version">Version</string>
     <string name="settings_debug_logs">Debug Logs</string>
