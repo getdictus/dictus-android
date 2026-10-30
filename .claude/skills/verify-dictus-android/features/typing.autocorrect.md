@@ -41,7 +41,7 @@ Preconditions: Launch and Doctor OK, a scratch note focused, keyboard language F
 ## Gotchas
 
 - `mcp__argent__keyboard` types through adb (`input text`), not through the Dictus keys: it never exercises suggestions or autocorrect.
-- A word learned earlier (`typing.learned-words`) is no longer corrected, and the ⌫ undo step **teaches the misspelling permanently** (no reset exists): on Pierre's Pixel, stop at the correction on space and skip the ⌫ step; run the undo only on a test device.
+- A word learned earlier (`typing.learned-words`) is no longer corrected, and the ⌫ undo step **teaches the misspelling** (only « Réinitialiser les mots appris » removes it, and that forgets every learned word): on Pierre's Pixel, stop at the correction on space and skip the ⌫ step; run the undo only on a test device.
 - The bar is empty (hidden) when there is nothing to suggest; with « Suggestions » off it never appears, but the undo chip after a dictation still does.
 - Search, e-mail, URL and password fields hide the bar on purpose (`typing.private-fields`).
 - Auto-capitalization follows the field's cap flags: a plain text field that does not ask for capitals (some search boxes, some apps' custom fields) never lights shift, by design. The Pixel shows it as the key colour; the tree has no shift state.

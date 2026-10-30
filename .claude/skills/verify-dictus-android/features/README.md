@@ -47,7 +47,7 @@ Implementation details stay out of the map: only user paths, stable handles, req
 | [`dictation.in-app`](dictation.in-app.md) | Dictation inside the app | Free | present | Screens yes; opening the recorder records at once; its single ✕ cancels (#243) |
 | [`models.transcription`](models.transcription.md) | Transcription models | Free | present | Browsing yes; no download/delete on Pierre's phone |
 | [`typing.autocorrect`](typing.autocorrect.md) | Autocorrect and suggestions | Free | present | Yes, keys by coordinate in a scratch note; the ⌫ undo step on a test device only |
-| [`typing.learned-words`](typing.learned-words.md) | Learned words | Free | partial | No on Pierre's Pixel (learning is permanent, no reset): test device only |
+| [`typing.learned-words`](typing.learned-words.md) | Learned words | Free | present | No on Pierre's Pixel (learning and reset both change his dictionary): test device only |
 | [`keyboard.languages`](keyboard.languages.md) | Keyboard languages and layouts | Free | partial | Yes (cycle a full turn) |
 | [`keyboard.emoji`](keyboard.emoji.md) | Emoji | Free | partial | Yes |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Sounds and haptics | Free | present | Settings only; no sound or vibration captured |
@@ -73,7 +73,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `vocabulary` | Pro on iOS — absent | absent | no |
 | `voice-notes` | Pro on iOS — absent | absent | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
-| [`typing.learned-words`](typing.learned-words.md) | Free | partial — no reset | no |
+| [`typing.learned-words`](typing.learned-words.md) | Free | present | no |
 | [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no QWERTZ, no number row | no |
 | [`keyboard.emoji`](keyboard.emoji.md) | Free | partial — no search | no |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Free | present | no |
@@ -148,7 +148,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.autocorrect-toggle` | Free | present | no |
 | `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |
 | `learned-words.learn` | Free | present | no |
-| `learned-words.reset` | Free | absent — no button; only clearing the app's data | no |
+| `learned-words.reset` | Free | present — Réglages → CLAVIER, with confirmation (#194) | no |
 | `keyboard.language-switch` | Free | present — tap on the language code (FR→EN→ES→DE), no panel | no |
 | `keyboard.layout` | Free | partial — AZERTY / QWERTY, no QWERTZ | no |
 | `keyboard.number-row` | Free | absent | no |
