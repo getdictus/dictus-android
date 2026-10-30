@@ -12,21 +12,21 @@ The Dictus keyboard types and corrects in French, English, Spanish or German, in
 - `keyboard.language-switch`: Tap the language code at the top left of the keyboard (`FR`, `EN`, `ES`, `DE`) to cycle; also « Langue du clavier » in Réglages. — présent (a tap that cycles, not a panel)
 - `keyboard.layout`: « Disposition du clavier »: AZERTY or QWERTY. — partiel: no QWERTZ (German types on QWERTY).
 - `keyboard.number-row`: — absent.
-- `keyboard.default-page`: « Mode par défaut »: ABC or 123. — présent
-- `keyboard.transcription-language`: « Langue » under TRANSCRIPTION: Automatique, Français, English, Español, Deutsch. — partiel: no « Suivre la langue du clavier »; the two settings are independent.
+- `keyboard.default-page`: ABC / 123 segment under « Langue du clavier » (iOS `DefaultLayerPicker`, #189). — partiel: no keyboard preview under the segment.
+- `keyboard.transcription-language`: « Langue » under Transcription: Automatique, Français, English, Español, Deutsch. — partiel: no « Suivre la langue du clavier »; the two settings are independent.
 - `keyboard.open-app`: Long-press the language code: Dictus opens on Réglages (without the bottom tabs). — présent
 
 ## How to get to it (user POV)
 
 1. In the Dictus keyboard, tap `FR` at the top left to switch to `EN`, `ES`, `DE`.
-2. Dictus → Réglages → CLAVIER for the language, layout and default page; TRANSCRIPTION → Langue for dictation.
+2. Dictus → Réglages → Clavier for the language, layout and default page; Transcription → Langue for dictation.
 
 ## Driving it with Argent
 
 Preconditions: Launch and Doctor OK. Note the keyboard language, layout, default mode and transcription language shown in Réglages: they must read the same at the end.
 
-- **Réglages.** Tap `Réglages`. → `Langue` (value `Automatique`), `Langue du clavier`, `Disposition du clavier`, `Mode par défaut` (`screen.sh app.settings`).
-- **A picker without choosing.** Tap `Disposition du clavier / AZERTY`. → sheet `Disposition du clavier`, `AZERTY [checked]`, `QWERTY` (`screen.sh app.settings.picker`); tap `Fermer la feuille` (the dimmed area above).
+- **Réglages.** Tap `Réglages`. → `Langue` (value `Automatique`), `Langue du clavier`, the `ABC` / `123` segment, `Disposition du clavier` (`screen.sh app.settings`).
+- **A picker without choosing.** Tap `Disposition du clavier / AZERTY`. → a menu anchored to the row: `AZERTY` (with ✓), `QWERTY` (`screen.sh app.settings.picker`); system back closes it without choosing.
 - **Cycle in the keyboard.** With a scratch note focused, tap `Langue du clavier DE` four times (`delayMs: 700`). → `FR`→`EN`→`ES`→`DE`, back to Pierre's `DE`; space and return read `espace`/`retour` in FR, `Leertaste`/`Eingabe` in DE. Check the stored value: `adb -s 99071FFAZ00EBN exec-out run-as dev.pivisolutions.dictus cat files/datastore/dictus_prefs.preferences_pb | strings | grep -A1 keyboard_language`.
 - **Open the app.** Long-press the language code (`gesture-custom` Down, 900 ms, Up). → Dictus on `Réglages`, no bottom tabs (seen 2026-10-20); system back returns to the note.
 - **Proof.** The code label in the tree after each tap; the Réglages values identical before and after.

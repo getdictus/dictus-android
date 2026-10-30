@@ -12,7 +12,7 @@ Dictation start, stop and cancel can play a sound chosen per event at a set volu
 - `sounds.toggle`: « Activer les sons » in Réglages → Sons, with the note « Les sons respectent le mode silencieux du téléphone. » — présent
 - `sounds.volume`: « Volume » slider. — présent
 - `sounds.per-event`: under « SONS PAR ÉVÉNEMENT », « Début », « Fin », « Annuler », each a list of sounds played on tap. — présent
-- `haptics.toggle`: « Retour haptique » in Réglages → CLAVIER: every Dictus vibration (keys, mic, language tap and long press, ✕, ✓, keyboard switch on the recording screen, and one light tick when a keyboard dictation inserts its text, #238); off means none at all (#246). — présent
+- `haptics.toggle`: « Retour haptique » in Réglages → Clavier: every Dictus vibration (keys, mic, language tap and long press, ✕, ✓, keyboard switch on the recording screen, and one light tick when a keyboard dictation inserts its text, #238); off means none at all (#246). — présent
 - `sounds.key-clicks` *(Spécifique Android)*: « Sons du clavier »: a click on each key, distinct from the dictation sounds.
 
 ## How to get to it (user POV)

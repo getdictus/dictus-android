@@ -148,7 +148,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.autocorrect-toggle` | Free | present | no |
 | `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |
 | `learned-words.learn` | Free | present | no |
-| `learned-words.reset` | Free | present — Réglages → CLAVIER, with confirmation (#194) | no |
+| `learned-words.reset` | Free | present — Réglages → Clavier, with confirmation (#194) | no |
 | `keyboard.language-switch` | Free | present — tap on the language code (FR→EN→ES→DE), no panel | no |
 | `keyboard.layout` | Free | partial — AZERTY / QWERTY, no QWERTZ | no |
 | `keyboard.number-row` | Free | absent | no |
@@ -257,7 +257,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.onboarding.ime-setup` | Free | present | yes |
 | `app.onboarding.default-page` | Free | present | yes |
 | `app.settings.sound-picker` | Free | present | yes |
-| `app.settings.picker` | Free | present — Settings choice sheets | yes |
+| `app.settings.picker` | Free | present — inline choice menus (#189) | yes |
 | `kbd.model-loading` | Free | retired (#247) — the keyboard is never covered | yes |
 | `sys.ime-picker` | Free | present | yes |
 | `sys.settings.ime` | Free | present | yes |
@@ -293,8 +293,8 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: a language sheet per model.
 6. **Settings — `app.settings`**
    - iOS: section headers in normal case (« Transcription », « Clavier »), transcription language « Suivre la langue du clavier », ABC / 123 choice as a segment with a keyboard preview.
-   - Android: no page title (the screen starts straight with « TRANSCRIPTION », while Models has its large title); headers in capitals (« À PROPOS » accented since #185); every choice goes through sheets (`app.settings.picker`); an extra APPARENCE section; no « Suivre la langue du clavier » option.
-   - Proposal: a « Réglages » title like on Models; an inline ABC / 123 segment; add « Suivre la langue du clavier » to the transcription language.
+   - Android (since #189): large « Réglages » title, sentence-case headers in the iOS order, inline ABC / 123 segment, inline menus instead of sheets. Still different: no keyboard preview under the segment; an extra « Apparence » section; no « Suivre la langue du clavier » option (#186).
+   - Proposal: add « Suivre la langue du clavier » (#186).
 7. **Sounds — `app.settings.sounds`**
    - iOS: « Activer les sons » with an explanatory note, « Sons par événement »: « Début », « Fin », « Annuler » with the chosen sound shown on the right.
    - Android (since #185): the iOS labels « Activer les sons », « SONS PAR ÉVÉNEMENT », « Début », « Fin », « Annuler », and the note « Les sons respectent le mode silencieux du téléphone. » under the card; sections stay in capitals (« GÉNÉRAL ») and the volume shares the switch's card.

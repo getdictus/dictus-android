@@ -15,11 +15,11 @@ While typing with the Dictus keyboard, a three-slot bar above the keys offers co
 - `typing.auto-full-stop`: a second space after anything but a space or a `.` becomes `. ` and the next letter is capitalised (same rule as iOS `AutoFullStop.shouldSubstitute`: digits and other punctuation get it too). ⌫ right after turns `. ` back into one space; iOS has no such undo. Never in password fields; no setting, as on iOS. — présent
 - `typing.accents`: Long-press a letter to open its accent strip, slide to choose. — présent
 - `typing.dead-keys`: — absent.
-- `typing.autocorrect-toggle`: « Correction automatique » in Réglages → CLAVIER. — présent
+- `typing.autocorrect-toggle`: « Correction automatique » in Réglages → Clavier. — présent
 - `typing.auto-capitalization`: shift lights up on its own at the start of a field, after `.` `!` `?` and a space, and after a newline, then drops after one letter; tapping shift overrides it, caps lock is never touched; nothing in password, e-mail, URL, number fields or fields that do not ask for capitals. Same rules as iOS (`DictusKeyboardBridge.updateCapitalization`; the ID is not in the iOS map yet). — présent
 - `typing.trackpad` *(Spécifique Android)*: Hold the space bar and slide: the key labels disappear and the cursor moves character by character.
 - `typing.adaptive-accent-key` *(Spécifique Android)*: In French AZERTY, the `'` key next to N becomes é / à / ù / î / ô after the matching vowel (replaces it); long-press offers the other variants (è ê ë, â ä á…).
-- `typing.suggestions-toggle` *(Spécifique Android)*: « Suggestions » switch in Réglages → CLAVIER, independent of « Correction automatique ».
+- `typing.suggestions-toggle` *(Spécifique Android)*: « Suggestions » switch in Réglages → Clavier, independent of « Correction automatique ».
 - `typing.private-fields` *(Spécifique Android)*: no suggestion bar and no learning in password, e-mail, URL and search fields, or when the app asks for no personalised learning.
 
 ## How to get to it (user POV)
