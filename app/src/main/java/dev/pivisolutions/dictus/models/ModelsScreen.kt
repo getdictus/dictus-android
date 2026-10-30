@@ -172,6 +172,7 @@ fun ModelsScreen(
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
                         onSelect = { viewModel.requestSetActiveModel(modelState.info.key) },
                         requiredRamGb = modelState.requiredRamGb,
+                        isRecommended = modelState.isRecommended,
                         onShowLanguages = { languagesModel = modelState.info },
                     )
                     }
@@ -194,6 +195,7 @@ fun ModelsScreen(
                         onDelete = {},
                         onRetry = { viewModel.retryDownload(modelState.info.key) },
                         requiredRamGb = modelState.requiredRamGb,
+                        isRecommended = modelState.isRecommended,
                         onShowLanguages = { languagesModel = modelState.info },
                     )
                     }

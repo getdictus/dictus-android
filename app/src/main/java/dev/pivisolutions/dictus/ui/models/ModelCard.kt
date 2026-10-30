@@ -89,6 +89,7 @@ import kotlin.math.roundToInt
  * @param onSelect       Callback when a downloaded, non-active card is tapped to select it.
  * @param requiredRamGb  Non-null when the device lacks the RAM for this model: the card is
  *                       greyed out, cannot be downloaded or selected, and shows the reason.
+ * @param isRecommended  True for the model onboarding recommends: shows the "Recommandé" badge.
  * @param onShowLanguages Callback to open the supported-languages sheet; null keeps the
  *                       language summary as plain text.
  */
@@ -104,6 +105,7 @@ fun ModelCard(
     onRetry: () -> Unit,
     onSelect: () -> Unit = {},
     requiredRamGb: Int? = null,
+    isRecommended: Boolean = false,
     onShowLanguages: (() -> Unit)? = null,
 ) {
     // Issue #121: recess an unavailable card rather than hiding it (same 0.55 as iOS #369)
@@ -262,6 +264,22 @@ fun ModelCard(
                                     color = badgeColor,
                                 )
                             }
+                            // Same pill as iOS ModelCardView: accent text on 15% accent
+                            if (isRecommended) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(DictusColors.Accent.copy(alpha = 0.15f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.model_recommended),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = DictusColors.Accent,
+                                    )
+                                }
+                            }
                         }
                         if (isActive) {
                             // Active chip
@@ -287,14 +305,12 @@ fun ModelCard(
                 LanguageSummaryRow(model = model, onClick = onShowLanguages)
 
                 // Description below name (matches iOS vertical layout)
-                if (model.description.isNotBlank()) {
-                    Text(
-                        text = model.description,
-                        color = LocalDictusColors.current.textSecondary,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                    )
-                }
+                Text(
+                    text = stringResource(model.descriptionRes),
+                    color = LocalDictusColors.current.textSecondary,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
 
                 // Why the card is greyed out: names the phone's limit, not an app error
                 if (requiredRamGb != null) {

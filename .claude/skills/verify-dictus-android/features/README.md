@@ -289,8 +289,8 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: the same prompt card on Home when no model is downloaded.
 5. **Model cards — `app.models`**
    - iOS: engine badge (`WK`, `PK`), « Recommandé » badge on the model advised for the device, ⓘ « Langues prises en charge » on every card.
-   - Android: engine badges `WK` / `NV` present, but no Recommended badge (only in onboarding) and no ⓘ; only Parakeet 110M carries « Anglais uniquement »; descriptions accented since #185 (« Rapide et léger », « Précis et équilibré »…) but still French-only, hardcoded in `ModelManager.kt`; « Stockage utilisé » line at the bottom.
-   - Proposal: « Recommandé » badge and a language sheet per model; move the descriptions to strings.xml (FR/EN).
+   - Android: engine badges `WK` / `NV`, « Recommandé » badge on onboarding's model (#188), descriptions in strings.xml FR/EN (#236), but no ⓘ; only Parakeet 110M carries « Anglais uniquement »; « Stockage utilisé » line at the bottom.
+   - Proposal: a language sheet per model.
 6. **Settings — `app.settings`**
    - iOS: section headers in normal case (« Transcription », « Clavier »), transcription language « Suivre la langue du clavier », ABC / 123 choice as a segment with a keyboard preview.
    - Android: no page title (the screen starts straight with « TRANSCRIPTION », while Models has its large title); headers in capitals (« À PROPOS » accented since #185); every choice goes through sheets (`app.settings.picker`); an extra APPARENCE section; no « Suivre la langue du clavier » option.

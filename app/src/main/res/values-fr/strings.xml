@@ -199,6 +199,19 @@
     <string name="model_precision">Pr\u00e9cision</string>
     <string name="model_speed">Vitesse</string>
     <string name="model_delete_cd">Supprimer</string>
+    <string name="model_recommended">Recommand\u00e9</string>
+    <!-- Model catalog: descriptions and quality labels (#236) -->
+    <string name="model_description_tiny">Rapide et l\u00e9ger</string>
+    <string name="model_description_base">Pr\u00e9cis et \u00e9quilibr\u00e9</string>
+    <string name="model_description_small">Haute pr\u00e9cision</string>
+    <string name="model_description_small_q5">Meilleur compromis</string>
+    <string name="model_description_medium">Meilleure pr\u00e9cision</string>
+    <string name="model_description_parakeet_110m">Rapide et pr\u00e9cis</string>
+    <string name="model_description_parakeet_v3">D\u00e9tection automatique de la langue</string>
+    <string name="model_quality_fast">Rapide</string>
+    <string name="model_quality_balanced">\u00c9quilibr\u00e9</string>
+    <string name="model_quality_accurate">Pr\u00e9cis</string>
+    <string name="model_quality_premium">Premium</string>
 
     <!-- HomeScreen -->
     <string name="home_active_model">Mod\u00e8le actif</string>
