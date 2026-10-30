@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,7 @@ import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
+import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ui.ModelLoadingOverlay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -103,6 +105,7 @@ fun RecordingScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val scope = rememberCoroutineScope()
 
     val dictationState by dictationController?.state?.collectAsState()
@@ -126,8 +129,13 @@ fun RecordingScreen(
             MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
             // The service refuses a start that arrives while another dictation runs (#237).
             // A refused start leaves a start already pending as it is.
+            // The start haptic plays here, once the start is accepted, so the tap, the auto-start
+            // from Home and a tap queued behind the engine each vibrate once (#244).
             MicGateCommand.START_RECORDING ->
-                if (dictationController?.startRecording(DictationSource.APP) == true) startPending = true
+                if (dictationController?.startRecording(DictationSource.APP) == true) {
+                    startPending = true
+                    HapticHelper.performMicHaptic(view)
+                }
             MicGateCommand.NONE -> Unit
         }
     }
@@ -267,7 +275,11 @@ fun RecordingScreen(
                 .align(Alignment.TopStart)
                 .padding(top = 16.dp)
                 .clip(CircleShape)
-                .clickable(onClick = ::close)
+                .clickable {
+                    // iOS RecordingView ✕: HapticFeedback.recordingStopped() (#244).
+                    HapticHelper.performKeyHaptic(view)
+                    close()
+                }
                 .padding(8.dp),
         ) {
             Icon(
@@ -448,6 +460,7 @@ fun RecordingScreen(
                             .clip(CircleShape)
                             .background(DictusColors.Recording)
                             .clickable {
+                                HapticHelper.performKeyHaptic(view)
                                 startPending = false
                                 // A keyboard dictation may come from a field that must not be kept
                                 // (password, incognito): the app cannot tell, so its history keeps nothing.
@@ -457,7 +470,10 @@ fun RecordingScreen(
                                         if (fromApp) TranscriptionRetention.PERSIST_HISTORY else TranscriptionRetention.EPHEMERAL,
                                     )
                                     when (outcome) {
-                                        is TranscriptionOutcome.Transcribed -> transcriptionResult = outcome.text
+                                        is TranscriptionOutcome.Transcribed -> {
+                                            transcriptionResult = outcome.text
+                                            HapticHelper.performInsertHaptic(view)
+                                        }
                                         TranscriptionOutcome.NoWordsDetected -> {
                                             noWordsDetected = true
                                             Timber.i("No words detected notice shown: surface=app")

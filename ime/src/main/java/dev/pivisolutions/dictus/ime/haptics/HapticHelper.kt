@@ -4,7 +4,7 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 
 /**
- * Centralized haptic feedback utility for the Dictus keyboard.
+ * Centralized haptic feedback utility for the Dictus keyboard and the app's recording screen.
  *
  * Three intensity levels:
  * - performInsertHaptic: lightest tick when a dictation inserts its text (CONTEXT_CLICK)
@@ -17,7 +17,10 @@ import android.view.View
  */
 object HapticHelper {
 
-    /** Mirror of the `HAPTICS_ENABLED` preference, kept up to date by the IME service. */
+    /**
+     * Mirror of the `HAPTICS_ENABLED` preference, kept up to date by `DictusApplication` for the
+     * whole process, which the IME service shares with the app.
+     */
     @Volatile
     var isEnabled: Boolean = true
 

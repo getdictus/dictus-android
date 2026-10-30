@@ -286,12 +286,6 @@ class DictusImeService : LifecycleInputMethodService() {
         Timber.d("DictusImeService created")
         bindDictationService()
 
-        // Every Dictus vibration reads this mirror of the haptic setting (#246).
-        bindingScope.launch {
-            entryPoint.dataStore().data
-                .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
-                .collect { HapticHelper.isEnabled = it }
-        }
         // Suggestion display and automatic replacement are separate live preferences.
         bindingScope.launch {
             entryPoint.dataStore().data
