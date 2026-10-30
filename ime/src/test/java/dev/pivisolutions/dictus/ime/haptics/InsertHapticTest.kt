@@ -15,8 +15,8 @@ class InsertHapticTest {
     private var played = 0
     private val haptic = InsertHaptic { played++ }
 
-    private fun finish(outcome: TranscriptionOutcome, committed: Boolean = true, hapticsEnabled: Boolean = true) {
-        feedback.onOutcome(outcome) { haptic.onInserted(committed, hapticsEnabled) }
+    private fun finish(outcome: TranscriptionOutcome, committed: Boolean = true) {
+        feedback.onOutcome(outcome) { haptic.onInserted(committed) }
     }
 
     @Test
@@ -24,13 +24,6 @@ class InsertHapticTest {
         finish(TranscriptionOutcome.Text("Bonjour. "))
 
         assertEquals(1, played)
-    }
-
-    @Test
-    fun `setting off plays nothing`() {
-        finish(TranscriptionOutcome.Text("Bonjour. "), hapticsEnabled = false)
-
-        assertEquals(0, played)
     }
 
     @Test

@@ -286,6 +286,12 @@ class DictusImeService : LifecycleInputMethodService() {
         Timber.d("DictusImeService created")
         bindDictationService()
 
+        // Every Dictus vibration reads this mirror of the haptic setting (#246).
+        bindingScope.launch {
+            entryPoint.dataStore().data
+                .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
+                .collect { HapticHelper.isEnabled = it }
+        }
         // Suggestion display and automatic replacement are separate live preferences.
         bindingScope.launch {
             entryPoint.dataStore().data
@@ -845,11 +851,6 @@ class DictusImeService : LifecycleInputMethodService() {
             .collectAsState(initial = "abc")
         val initialLayer = if (keyboardModeKey == "123") KeyboardLayer.NUMBERS else KeyboardLayer.LETTERS
 
-        // Read haptics enabled preference to conditionally suppress key vibration.
-        val hapticsEnabled by entryPoint.dataStore().data
-            .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
-            .collectAsState(initial = true)
-
         // Distinct from the configurable recording start/stop/cancel sounds.
         val keySoundsFlow = remember {
             entryPoint.dataStore().data.map { it[PreferenceKeys.KEY_SOUNDS_ENABLED] ?: true }
@@ -995,7 +996,6 @@ class DictusImeService : LifecycleInputMethodService() {
                     },
                     themeMode = themeMode,
                     initialLayer = initialLayer,
-                    hapticsEnabled = hapticsEnabled,
                     onKeySound = { keyType ->
                         keyboardSoundPlayer.play(keyType, keySoundsEnabled)
                     },
@@ -1051,7 +1051,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                     val outcome = controller.confirmAndTranscribe(retention)
                                     dictationFeedback.onOutcome(outcome) { text ->
                                         val committed = insertDictation(text)
-                                        insertHaptic.onInserted(committed, hapticsEnabled)
+                                        insertHaptic.onInserted(committed)
                                         Timber.tag(LogCategory.INSERT.name).i(
                                             PrivacySafeLog.dictationInserted(
                                                 text,
