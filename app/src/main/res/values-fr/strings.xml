@@ -242,6 +242,13 @@
     <string name="history_copied">Transcription copi\u00e9e</string>
     <string name="history_clip_label">Transcription Dictus</string>
     <string name="history_share_title">Partager la transcription</string>
+    <string name="history_search_placeholder">Rechercher dans les transcriptions</string>
+    <string name="history_no_results_title">Aucun r\u00e9sultat</string>
+    <string name="history_no_results_body">Aucune transcription ne contient \u00ab\u00a0%1$s\u00a0\u00bb.</string>
+    <string name="history_clear">Effacer l\u2019historique</string>
+    <string name="history_clear_title">Effacer l\u2019historique\u00a0?</string>
+    <string name="history_clear_body">Toutes les transcriptions enregistr\u00e9es sur cet appareil seront supprim\u00e9es. Cette action est irr\u00e9versible.</string>
+    <string name="history_clear_confirm">Tout supprimer</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">R\u00e9sultat</string>

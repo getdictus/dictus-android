@@ -157,6 +157,50 @@ class HistoryViewModelTest {
         assertNull(viewModel.uiState.value.failure)
     }
 
+    @Test
+    fun `confirmed clear empties history and cancelled clear changes nothing`() = runTest(dispatcher) {
+        val repository = FakeRepository()
+        val viewModel = HistoryViewModel(repository)
+        repository.emit(listOf(entry(1, 100), entry(2, 200)))
+        advanceUntilIdle()
+
+        viewModel.requestClear()
+        assertTrue(viewModel.uiState.value.isClearPending)
+        viewModel.cancelClear()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isClearPending)
+        assertEquals(0, repository.clearCalls)
+        assertEquals(listOf(2L, 1L), viewModel.uiState.value.entries.map { it.id })
+
+        viewModel.requestClear()
+        viewModel.confirmClear()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isClearPending)
+        assertEquals(1, repository.clearCalls)
+        assertTrue(viewModel.uiState.value.entries.isEmpty())
+    }
+
+    @Test
+    fun `clear is not offered over an empty history and failure is generic`() = runTest(dispatcher) {
+        val repository = FakeRepository()
+        val viewModel = HistoryViewModel(repository)
+        repository.emit(emptyList())
+        advanceUntilIdle()
+        viewModel.requestClear()
+        assertFalse(viewModel.uiState.value.isClearPending)
+        viewModel.confirmClear()
+        advanceUntilIdle()
+        assertEquals(0, repository.clearCalls)
+
+        repository.emit(listOf(entry(1, 1)))
+        advanceUntilIdle()
+        repository.clearFailure = IllegalStateException("private detail")
+        viewModel.requestClear()
+        viewModel.confirmClear()
+        advanceUntilIdle()
+        assertEquals(HistoryFailure.DELETE, viewModel.uiState.value.failure)
+    }
+
     private class FakeRepository : TranscriptionHistoryRepository {
         private val history = MutableSharedFlow<List<TranscriptionHistoryEntry>>(replay = 1)
         val deletedIds = mutableListOf<Long>()
@@ -171,6 +215,13 @@ class HistoryViewModelTest {
             deleteFailure?.let { throw it }
             deletedIds += id
             return deleteResult
+        }
+        var clearCalls = 0
+        var clearFailure: Throwable? = null
+        override suspend fun clear() {
+            clearFailure?.let { throw it }
+            clearCalls++
+            history.emit(emptyList())
         }
         suspend fun emit(entries: List<TranscriptionHistoryEntry>) = history.emit(entries)
     }
