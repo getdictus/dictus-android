@@ -480,7 +480,7 @@ private fun KeyboardModeSegment(
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(if (isSelected) LocalDictusColors.current.keyBackground else Color.Transparent)
+                    .background(if (isSelected) LocalDictusColors.current.keySpecialBackground else Color.Transparent)
                     .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(value) }),
                 contentAlignment = Alignment.Center,
             ) {
