@@ -450,13 +450,12 @@ fun RecordingScreen(
                             .clickable {
                                 startPending = false
                                 // A keyboard dictation may come from a field that must not be kept
-                                // (password, incognito): the app cannot tell, so it keeps nothing.
+                                // (password, incognito): the app cannot tell, so its history keeps nothing.
                                 val fromApp = (dictationState as? DictationState.Recording)?.source == DictationSource.APP
                                 scope.launch {
                                     val outcome = dictationController?.confirmAndTranscribe(
                                         if (fromApp) TranscriptionRetention.PERSIST_HISTORY else TranscriptionRetention.EPHEMERAL,
                                     )
-                                    dataStore?.let { writeLastTranscription(it, outcome, fromApp) }
                                     when (outcome) {
                                         is TranscriptionOutcome.Transcribed -> transcriptionResult = outcome.text
                                         TranscriptionOutcome.NoWordsDetected -> {

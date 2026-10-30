@@ -7,6 +7,7 @@ import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.ui.settings.LogExporter
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -54,6 +55,7 @@ class DictationLogPrivacyTest {
             ensureModel = { "/models/tiny.bin" },
             withProvider = { _, _, use -> use(EchoProvider(transcript)) },
             wakeLock = FakeWakeLock(),
+            lastTranscription = LastTranscriptionStore(),
         )
 
         val outcome = transcriber.transcribe(FloatArray(16_000), "tiny", "fr")

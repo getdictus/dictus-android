@@ -5,7 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.HiltAndroidApp
 import dev.pivisolutions.dictus.core.logging.TimberSetup
-import dev.pivisolutions.dictus.recording.LastTranscriptionStore
+import androidx.datastore.preferences.core.edit
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.ui.settings.LogExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,10 +41,12 @@ class DictusApplication : Application() {
             LogExporter.revision(),
             android.os.Process.myPid(),
         )
-        // The Home preview is session-scoped: a process start is a new session, so the previous
-        // one's transcription is dropped before any screen can read it back.
+        // Home's card lives in memory since #245; this drops the text an older version left on disk.
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            LastTranscriptionStore.clear(dataStore)
+            dataStore.edit { preferences ->
+                preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION)
+                preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT)
+            }
         }
     }
 }

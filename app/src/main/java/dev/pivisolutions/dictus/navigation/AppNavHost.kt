@@ -28,6 +28,7 @@ import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
 import dev.pivisolutions.dictus.recording.RecordingScreen
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.onboarding.OnboardingMicPermissionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModeSelectionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModelDownloadScreen
@@ -221,7 +222,11 @@ private fun OnboardingScreen(
             )
             OnboardingStep.FirstDictation -> OnboardingTestRecordingScreen(
                 dictationController = dictationController,
-                onNext = onNext,
+                // Like iOS leaveFirstDictation: the test dictation must not greet the user on Home.
+                onNext = {
+                    LastTranscriptionStore.instance.clear()
+                    onNext()
+                },
             )
             OnboardingStep.Completion -> OnboardingSuccessScreen(
                 onComplete = onNext,

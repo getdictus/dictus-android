@@ -35,6 +35,7 @@ import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.TranscriptionHistoryMetadata
 import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -124,6 +125,7 @@ class DictationService : Service(), DictationController {
             ensureModel = { modelKey -> modelDownloader.ensureModelAvailable(modelKey) },
             withProvider = { modelKey, modelPath, use -> withProviderForModel(modelKey, modelPath, use) },
             wakeLock = transcriptionWakeLock,
+            lastTranscription = LastTranscriptionStore.instance,
         )
     }
     private val transcriptionWakeLock by lazy { PowerManagerTranscriptionWakeLock(applicationContext) }
@@ -177,7 +179,7 @@ class DictationService : Service(), DictationController {
     }
 
     private val unconfirmedStop by lazy {
-        UnconfirmedStop(recorder, _state, dataStore) { samples ->
+        UnconfirmedStop(recorder, _state) { samples ->
             transcriber.rejectBeforeEngine(samples) ?: transcribeTake(samples, TranscriptionRetention.PERSIST_HISTORY)
         }
     }
@@ -342,6 +344,8 @@ class DictationService : Service(), DictationController {
             )
             return false
         }
+        // Like iOS startDictation: the previous text must not pass for this dictation's (#245).
+        LastTranscriptionStore.instance.clear()
         val intent = Intent(this, DictationService::class.java).apply {
             action = ACTION_START
         }
