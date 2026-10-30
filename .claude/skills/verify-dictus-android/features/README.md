@@ -244,7 +244,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `appearance.theme` | Free | present | yes |
 | `appearance.ui-language` | Free | present | yes |
 | `dictation.notification` | Free | present — « Dictus – Enregistrement » notification + « Arrêter » (not visible on the Pixel: notifications denied) | yes |
-| `dictation.switch-keyboard` | Free | present — gear during a recording → keyboard picker | yes |
+| `dictation.switch-keyboard` | Free | present — globe « Changer de clavier » during a recording → keyboard picker (#190) | yes |
 | `typing.trackpad` | Free | present — long press on space + drag | yes |
 | `typing.adaptive-accent-key` | Free | present — AZERTY ' key → é à ù î ô | yes |
 | `typing.suggestions-toggle` | Free | present | yes |
@@ -277,8 +277,8 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: merge into a single bar following the #139 mockup.
 2. **Dictation in the keyboard — `kbd.recording`**
    - iOS: ✕ and ✓ in the keyboard bar, waveform above the keys.
-   - Android: a panel that replaces the whole keyboard: ✕ / ✓ at the top, waveform + timer + « En écoute… » in the middle, and at the bottom left a gear stuck to the system keyboard's navigation bar (next to ⌄), labelled `Réglages` (English until #185), which opens… the Android keyboard picker, not the settings.
-   - Proposal: align the recording bar with #139; replace the gear with a switch-keyboard icon labelled « Changer de clavier ».
+   - Android: a panel that replaces the whole keyboard: ✕ / ✓ glass capsules at the top (#239), waveform + timer (20 sp, medium, monospaced, like iOS since #190) + « En écoute… » in the middle, and at the bottom left a globe « Changer de clavier » stuck to the system keyboard's navigation bar (next to ⌄), which opens the Android keyboard picker (#190; a `Réglages` gear before).
+   - Proposal: align the recording bar with #139.
 3. **Keyboard languages — `kbd.panel`**
    - iOS: long press on ☰: a panel lists « Français » / « English » / « Español » / « Deutsch » and the layouts, closed with ✕.
    - Android: no panel; a tap on the `FR` code moves to the next language (FR→EN→ES→DE), a long press opens Settings. Nothing hints at these gestures.
