@@ -79,9 +79,7 @@ fun HomeScreen(
         .map { it[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY }
         .collectAsState(initial = ModelCatalog.DEFAULT_KEY)
 
-    val lastTranscription by dataStore.data
-        .map { LastTranscriptionStore.visibleText(it) }
-        .collectAsState(initial = null)
+    val lastTranscription by LastTranscriptionStore.instance.text.collectAsState()
 
     val activeModel = ModelCatalog.findByKey(activeModelKey)
     val context = LocalContext.current

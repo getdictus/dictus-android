@@ -6,6 +6,7 @@ import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.stt.SttTranscript
 import dev.pivisolutions.dictus.core.whisper.NonSpeechMarkers
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.whisper.WhisperContext
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
@@ -23,6 +24,8 @@ import timber.log.Timber
  *   provider cannot be initialized. Engine init is outside the timeout, as it always was.
  * @param wakeLock held while the engine transcribes, released however it ends (#225).
  * @param timeoutFactor the model's factor for [TranscriptionTimeout.timeoutMs].
+ * @param lastTranscription Home's card, filled by every take with words (#245). Every dictation,
+ *   from the app or the keyboard, comes through here, as every iOS one goes through its coordinator.
  */
 internal class DictationTranscriber(
     private val ensureModel: suspend (modelKey: String) -> String?,
@@ -32,6 +35,7 @@ internal class DictationTranscriber(
         use: suspend (SttProvider) -> SttTranscript?,
     ) -> SttTranscript?,
     private val wakeLock: TranscriptionWakeLock,
+    private val lastTranscription: LastTranscriptionStore,
     private val timeoutFactor: (modelKey: String) -> Double = TranscriptionTimeout::factorFor,
 ) {
 
@@ -111,6 +115,7 @@ internal class DictationTranscriber(
                 transcript.segmentCount ?: "-",
                 (outcome as? TranscriptionOutcome.Transcribed)?.text?.length ?: 0,
             )
+            if (outcome is TranscriptionOutcome.Transcribed) lastTranscription.save(outcome.text)
             if (outcome == TranscriptionOutcome.NoWordsDetected) {
                 Timber.i("confirmAndTranscribe: no words detected, nothing saved")
             }
