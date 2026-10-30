@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +40,7 @@ import dev.pivisolutions.dictus.ime.haptics.HapticHelper
  * Layout follows the mockup (Keyboard Recording frame):
  * - Top row (46.dp): Cancel (✕) left, Confirm (✓) right — glass pills
  * - Center (218.dp): Waveform + timer + "En écoute…"
- * - Bottom row (46.dp): Settings gear only (no mic pill during recording)
+ * - Bottom row (46.dp): switch-keyboard globe only (no mic pill during recording)
  *
  * The top row replaces the MicButtonRow's language code + mic with the iOS
  * RecordingOverlay `PillButton`s, keeping the same height for a seamless transition.
@@ -109,12 +110,14 @@ fun RecordingScreen(
                     .height(120.dp),
             )
 
-            // Timer MM:SS
+            // Timer MM:SS — iOS RecordingOverlay: `timerFontSize` 20 (@ScaledMetric, so sp),
+            // medium weight, monospaced design so the digits do not shift as they tick.
             Text(
                 text = String.format("%02d:%02d", elapsedMs / 60000, (elapsedMs % 60000) / 1000),
                 color = LocalDictusColors.current.keyText,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                fontFamily = FontFamily.Monospace,
                 modifier = Modifier.padding(top = 16.dp),
             )
 
@@ -127,7 +130,8 @@ fun RecordingScreen(
             )
         }
 
-        // Bottom row (46.dp) — settings gear only, no mic pill during recording
+        // Bottom row (46.dp) — the switch-keyboard globe only, no mic pill during recording.
+        // iOS draws no control here: its globe is the system's, below the keyboard.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -147,8 +151,8 @@ fun RecordingScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_settings),
-                    contentDescription = stringResource(R.string.ime_recording_settings_description),
+                    painter = painterResource(R.drawable.ic_globe),
+                    contentDescription = stringResource(R.string.ime_recording_switch_keyboard),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier
                         .width(20.dp)

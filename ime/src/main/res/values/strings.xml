@@ -16,5 +16,6 @@
     <string name="ime_language_key_description">Keyboard language %1$s</string>
     <string name="ime_language_key_cycle_action">Cycle keyboard language</string>
     <string name="ime_language_key_settings_action">Open Dictus Settings</string>
-    <string name="ime_recording_settings_description">Settings</string>
+    <!-- Recording panel globe: opens the system keyboard picker (#190). -->
+    <string name="ime_recording_switch_keyboard">Switch keyboard</string>
 </resources>

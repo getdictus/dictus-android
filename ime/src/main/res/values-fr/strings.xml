@@ -15,5 +15,5 @@
     <string name="ime_language_key_description">Langue du clavier %1$s</string>
     <string name="ime_language_key_cycle_action">Changer la langue du clavier</string>
     <string name="ime_language_key_settings_action">Ouvrir les r\u00e9glages Dictus</string>
-    <string name="ime_recording_settings_description">R\u00e9glages</string>
+    <string name="ime_recording_switch_keyboard">Changer de clavier</string>
 </resources>
