@@ -69,7 +69,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | [`models.transcription`](models.transcription.md) | Free | present | no |
 | `polish` | N/A | iOS-only (N/A) | no |
 | `smart-modes` | Pro on iOS — absent | absent | no |
-| `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete) but hidden | no |
+| `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete, search, clear, 200-entry cap; #202) but hidden | no |
 | `vocabulary` | Pro on iOS — absent | absent | no |
 | `voice-notes` | Pro on iOS — absent | absent | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
@@ -116,11 +116,11 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `smart-modes.translate` | Pro on iOS — absent | absent | no |
 | `smart-modes.pin` | Pro on iOS — absent | absent | no |
 | `smart-modes.toggle` | Pro on iOS — absent | absent | no |
-| `history.list` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
-| `history.search` | Pro on iOS — absent | absent — not in the code | no |
+| `history.list` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden; the oldest entries are dropped beyond 200 on insertion (#202) | no |
+| `history.search` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (« Rechercher dans les transcriptions », case- and accent-insensitive, « Aucun résultat »; #202), hidden | no |
 | `history.delete` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
 | `history.detail` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (copy, share), hidden | no |
-| `history.clear` | Pro on iOS — absent | absent — not in the code | no |
+| `history.clear` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (« Effacer l’historique » on the History screen, not in Réglages as on iOS; confirmation « Tout supprimer » / « Annuler »; #202), hidden | no |
 | `history.toggle` | Pro on iOS — absent | absent — not in the code | no |
 | `history.home-entry` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — swipe up on Home, hidden | no |
 | `vocabulary.add` | Pro on iOS — absent | absent | no |
