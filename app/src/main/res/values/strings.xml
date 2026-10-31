@@ -49,10 +49,10 @@
     <string name="onboarding_progress">Step %1$d of %2$d</string>
 
     <!-- Settings: Section headers -->
-    <string name="settings_section_transcription">TRANSCRIPTION</string>
-    <string name="settings_section_keyboard">KEYBOARD</string>
-    <string name="settings_section_appearance">APPEARANCE</string>
-    <string name="settings_section_about">ABOUT</string>
+    <string name="settings_section_transcription">Transcription</string>
+    <string name="settings_section_keyboard">Keyboard</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_about">About</string>
 
     <!-- Settings: Row labels -->
     <string name="settings_language">Language</string>
@@ -96,14 +96,6 @@
     <string name="settings_ui_language_system">System</string>
     <string name="settings_ui_language_french">Fran\u00e7ais</string>
     <string name="settings_ui_language_english">English</string>
-    <string name="picker_ui_language_title">Interface language</string>
-
-    <!-- Settings: Picker bottom sheet titles -->
-    <string name="picker_language_title">Choose language</string>
-    <string name="picker_keyboard_layout_title">Keyboard layout</string>
-    <string name="picker_keyboard_language_title">Keyboard language</string>
-    <string name="picker_default_mode_title">Default keyboard mode</string>
-    <string name="picker_theme_title">App theme</string>
 
     <!-- Settings: Toast messages -->
     <string name="settings_export_logs_error">Unable to export logs.</string>

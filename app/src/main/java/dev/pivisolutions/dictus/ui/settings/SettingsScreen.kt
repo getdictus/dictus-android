@@ -12,31 +12,30 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +48,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,19 +66,23 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 
 /**
- * Full settings screen with 4 sections: TRANSCRIPTION, CLAVIER, APPARENCE, A PROPOS.
+ * Settings tab, laid out like the iOS `SettingsView`: a large « Réglages » title, then the
+ * Transcription, Clavier, Apparence and À propos sections in sentence case.
  *
  * Uses [SettingsViewModel] (Hilt-injected) for all DataStore reads and writes.
  * Each section's rows are grouped inside a [SettingsCard] with rounded corners and
  * Surface background, matching the iOS design's grouped settings style.
  *
- * Pickers use ModalBottomSheet. Toggles use [DictusToggle].
+ * Choices are inline, as on iOS: toggles use [DictusToggle], pickers open a dropdown
+ * menu anchored to their row (iOS `.menu` pickers), the default keyboard mode is a
+ * segmented control (iOS `DefaultLayerPicker`). Only rows iOS pushes as a screen
+ * (Sounds, Licences, Debug Logs) navigate away. Apparence has no iOS equivalent
+ * (iOS follows the system) and sits between Clavier and À propos.
  *
  * WHY hiltViewModel() here (not parameter injection): The ViewModel is scoped to
  * this composable's lifecycle. Passing it as a parameter would require the caller
  * (AppNavHost) to know about settings internals — poor encapsulation.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -97,13 +105,6 @@ fun SettingsScreen(
 
     val context = LocalContext.current
 
-    // Bottom sheet visibility state
-    var showLanguagePicker by remember { mutableStateOf(false) }
-    var showKeyboardPicker by remember { mutableStateOf(false) }
-    var showKeyboardLanguagePicker by remember { mutableStateOf(false) }
-    var showKeyboardModePicker by remember { mutableStateOf(false) }
-    var showThemePicker by remember { mutableStateOf(false) }
-    var showUiLanguagePicker by remember { mutableStateOf(false) }
     var showResetLearnedWords by remember { mutableStateOf(false) }
 
     Column(
@@ -112,57 +113,59 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState()),
     ) {
-        // ---------- SECTION: TRANSCRIPTION ----------
+        // iOS `.navigationTitle("Settings")`, shown as a large title.
+        Text(
+            text = stringResource(R.string.nav_settings),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(start = 16.dp, top = 24.dp, end = 16.dp)
+                .semantics { heading() },
+        )
+
+        // ---------- SECTION: Transcription ----------
         SectionHeader(text = stringResource(R.string.settings_section_transcription))
         SettingsCard {
-            SettingPickerRow(
+            SettingMenuRow(
                 label = stringResource(R.string.settings_language),
-                value = when (language) {
-                    "fr" -> stringResource(R.string.settings_language_fr)
-                    "en" -> stringResource(R.string.settings_language_en)
-                    "es" -> stringResource(R.string.settings_language_es)
-                    "de" -> stringResource(R.string.settings_language_de)
-                    else -> stringResource(R.string.settings_language_auto)
-                },
-                onClick = { showLanguagePicker = true },
+                options = listOf(
+                    "auto" to stringResource(R.string.settings_language_auto),
+                    "fr" to stringResource(R.string.settings_language_fr),
+                    "en" to stringResource(R.string.settings_language_en),
+                    "es" to stringResource(R.string.settings_language_es),
+                    "de" to stringResource(R.string.settings_language_de),
+                ),
+                selected = language,
+                onSelect = { viewModel.setLanguage(it) },
             )
         }
 
-        // ---------- SECTION: CLAVIER ----------
+        // ---------- SECTION: Clavier ----------
+        // iOS order: keyboard language, ABC/123, layout, haptics, sounds, autocorrect, reset.
+        // Keyboard sounds and suggestions are Android-only, next to their closest iOS row.
         SectionHeader(text = stringResource(R.string.settings_section_keyboard))
         SettingsCard {
-            SettingPickerRow(
+            SettingMenuRow(
                 label = stringResource(R.string.settings_keyboard_language),
-                value = keyboardLanguageOptions()
-                    .first { it.first == keyboardLanguage }.second,
-                onClick = { showKeyboardLanguagePicker = true },
+                options = keyboardLanguageOptions(),
+                selected = keyboardLanguage,
+                onSelect = { viewModel.setKeyboardLanguage(it) },
             )
             SettingDivider()
-            SettingPickerRow(
+            KeyboardModeSegment(
+                selected = keyboardMode,
+                onSelect = { viewModel.setKeyboardMode(it) },
+            )
+            SettingDivider()
+            SettingMenuRow(
                 label = stringResource(R.string.settings_keyboard_layout),
-                value = keyboardLayout.uppercase(),
-                onClick = { showKeyboardPicker = true },
-            )
-            SettingDivider()
-            SettingPickerRow(
-                label = stringResource(R.string.settings_default_mode),
-                value = when (keyboardMode) {
-                    "123" -> "123"
-                    else -> "ABC"
-                },
-                onClick = { showKeyboardModePicker = true },
-            )
-            SettingDivider()
-            SettingToggleRow(
-                label = stringResource(R.string.settings_suggestions),
-                checked = suggestionsEnabled,
-                onToggle = { viewModel.toggleSuggestions() },
-            )
-            SettingDivider()
-            SettingToggleRow(
-                label = stringResource(R.string.settings_autocorrect),
-                checked = autocorrectEnabled,
-                onToggle = { viewModel.toggleAutocorrect() },
+                options = listOf(
+                    "azerty" to "AZERTY",
+                    "qwerty" to "QWERTY",
+                ),
+                selected = keyboardLayout,
+                onSelect = { viewModel.setKeyboardLayout(it) },
             )
             SettingDivider()
             SettingToggleRow(
@@ -182,6 +185,18 @@ fun SettingsScreen(
                 onClick = onNavigateToSoundSettings,
             )
             SettingDivider()
+            SettingToggleRow(
+                label = stringResource(R.string.settings_suggestions),
+                checked = suggestionsEnabled,
+                onToggle = { viewModel.toggleSuggestions() },
+            )
+            SettingDivider()
+            SettingToggleRow(
+                label = stringResource(R.string.settings_autocorrect),
+                checked = autocorrectEnabled,
+                onToggle = { viewModel.toggleAutocorrect() },
+            )
+            SettingDivider()
             SettingActionRow(
                 label = stringResource(R.string.settings_reset_learned_words),
                 onClick = { showResetLearnedWords = true },
@@ -189,37 +204,57 @@ fun SettingsScreen(
             )
         }
 
-        // ---------- SECTION: APPARENCE ----------
+        // ---------- SECTION: Apparence (Android-only) ----------
         SectionHeader(text = stringResource(R.string.settings_section_appearance))
         SettingsCard {
-            SettingPickerRow(
+            SettingMenuRow(
                 label = stringResource(R.string.settings_theme),
-                value = when (theme) {
-                    "dark" -> stringResource(R.string.settings_theme_dark)
-                    "light" -> stringResource(R.string.settings_theme_light)
-                    "auto" -> stringResource(R.string.settings_theme_auto)
-                    else -> stringResource(R.string.settings_theme_dark)
-                },
-                onClick = { showThemePicker = true },
+                options = listOf(
+                    "dark" to stringResource(R.string.settings_theme_dark),
+                    "light" to stringResource(R.string.settings_theme_light),
+                    "auto" to stringResource(R.string.settings_theme_auto),
+                ),
+                selected = theme,
+                onSelect = { viewModel.setTheme(it) },
             )
             SettingDivider()
-            SettingPickerRow(
+            SettingMenuRow(
                 label = stringResource(R.string.settings_ui_language_label),
-                value = when (uiLanguage) {
-                    "fr" -> stringResource(R.string.settings_ui_language_french)
-                    "en" -> stringResource(R.string.settings_ui_language_english)
-                    else -> stringResource(R.string.settings_ui_language_system)
-                },
-                onClick = { showUiLanguagePicker = true },
+                options = listOf(
+                    "system" to stringResource(R.string.settings_ui_language_system),
+                    "fr" to stringResource(R.string.settings_ui_language_french),
+                    "en" to stringResource(R.string.settings_ui_language_english),
+                ),
+                selected = uiLanguage,
+                onSelect = { viewModel.setUiLanguage(it) },
             )
         }
 
-        // ---------- SECTION: A PROPOS ----------
+        // ---------- SECTION: À propos ----------
+        // iOS order: version, GitHub, licences, debug logs, export logs.
+        // Legal notices is Android-only, next to the other web link.
         SectionHeader(text = stringResource(R.string.settings_section_about))
         SettingsCard {
             SettingInfoRow(
                 label = stringResource(R.string.settings_version),
                 value = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            )
+            SettingDivider()
+            SettingLinkRow(
+                label = stringResource(R.string.settings_github),
+                url = "https://github.com/Pivii/dictus",
+                context = context,
+            )
+            SettingDivider()
+            SettingLinkRow(
+                label = stringResource(R.string.settings_legal),
+                url = "https://pivisolutions.dev/legal",
+                context = context,
+            )
+            SettingDivider()
+            SettingNavRow(
+                label = stringResource(R.string.settings_licences),
+                onClick = onNavigateToLicences,
             )
             SettingDivider()
             SettingNavRow(
@@ -256,23 +291,6 @@ fun SettingsScreen(
                     }
                 },
             )
-            SettingDivider()
-            SettingNavRow(
-                label = stringResource(R.string.settings_licences),
-                onClick = onNavigateToLicences,
-            )
-            SettingDivider()
-            SettingLinkRow(
-                label = stringResource(R.string.settings_github),
-                url = "https://github.com/Pivii/dictus",
-                context = context,
-            )
-            SettingDivider()
-            SettingLinkRow(
-                label = stringResource(R.string.settings_legal),
-                url = "https://pivisolutions.dev/legal",
-                context = context,
-            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -307,88 +325,6 @@ fun SettingsScreen(
             },
         )
     }
-
-    // --- Bottom sheets ---
-
-    if (showUiLanguagePicker) {
-        PickerBottomSheet(
-            title = stringResource(R.string.picker_ui_language_title),
-            options = listOf(
-                "system" to stringResource(R.string.settings_ui_language_system),
-                "fr" to stringResource(R.string.settings_ui_language_french),
-                "en" to stringResource(R.string.settings_ui_language_english),
-            ),
-            selected = uiLanguage,
-            onSelect = { viewModel.setUiLanguage(it) },
-            onDismiss = { showUiLanguagePicker = false },
-        )
-    }
-
-    if (showLanguagePicker) {
-        PickerBottomSheet(
-            title = stringResource(R.string.picker_language_title),
-            options = listOf(
-                "auto" to stringResource(R.string.settings_language_auto),
-                "fr" to stringResource(R.string.settings_language_fr),
-                "en" to stringResource(R.string.settings_language_en),
-                "es" to stringResource(R.string.settings_language_es),
-                "de" to stringResource(R.string.settings_language_de),
-            ),
-            selected = language,
-            onSelect = { viewModel.setLanguage(it) },
-            onDismiss = { showLanguagePicker = false },
-        )
-    }
-
-    if (showKeyboardLanguagePicker) {
-        PickerBottomSheet(
-            title = stringResource(R.string.picker_keyboard_language_title),
-            options = keyboardLanguageOptions(),
-            selected = keyboardLanguage,
-            onSelect = { viewModel.setKeyboardLanguage(it) },
-            onDismiss = { showKeyboardLanguagePicker = false },
-        )
-    }
-
-    if (showKeyboardPicker) {
-        PickerBottomSheet(
-            title = stringResource(R.string.picker_keyboard_layout_title),
-            options = listOf(
-                "azerty" to "AZERTY",
-                "qwerty" to "QWERTY",
-            ),
-            selected = keyboardLayout,
-            onSelect = { viewModel.setKeyboardLayout(it) },
-            onDismiss = { showKeyboardPicker = false },
-        )
-    }
-
-    if (showKeyboardModePicker) {
-        PickerBottomSheet(
-            title = stringResource(R.string.picker_default_mode_title),
-            options = listOf(
-                "abc" to "ABC",
-                "123" to "123",
-            ),
-            selected = keyboardMode,
-            onSelect = { viewModel.setKeyboardMode(it) },
-            onDismiss = { showKeyboardModePicker = false },
-        )
-    }
-
-    if (showThemePicker) {
-        PickerBottomSheet(
-            title = stringResource(R.string.picker_theme_title),
-            options = listOf(
-                "dark" to stringResource(R.string.settings_theme_dark),
-                "light" to stringResource(R.string.settings_theme_light),
-                "auto" to stringResource(R.string.settings_theme_auto),
-            ),
-            selected = theme,
-            onSelect = { viewModel.setTheme(it) },
-            onDismiss = { showThemePicker = false },
-        )
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -396,16 +332,18 @@ fun SettingsScreen(
 // ---------------------------------------------------------------------------
 
 /**
- * Section header label: 14sp Medium, uppercase, muted color, with top padding.
+ * Section header label in sentence case (iOS grouped list header): 17sp SemiBold, muted color.
  */
 @Composable
 private fun SectionHeader(text: String) {
     Text(
         text = text,
         color = LocalDictusColors.current.textSecondary,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
+        fontSize = 17.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+            .semantics { heading() },
     )
 }
 
@@ -439,42 +377,121 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 // ---------------------------------------------------------------------------
 
 /**
- * Row with label + secondary value text + chevron. Tapping opens a picker.
+ * Row with label + current value; tapping opens a dropdown menu of choices anchored to
+ * the value, the Android counterpart of an iOS `.menu` picker. The pick is saved at once.
+ *
+ * @param options List of (value, displayLabel) pairs.
  */
 @Composable
-private fun SettingPickerRow(
+private fun SettingMenuRow(
     label: String,
-    value: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
+    options: List<Pair<String, String>>,
+    selected: String,
+    onSelect: (String) -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    // An unknown stored value shows the first option, the default each row falls back to.
+    val selectedLabel = options.firstOrNull { it.first == selected }?.second ?: options.first().second
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable { expanded = true }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
-            color = if (enabled) MaterialTheme.colorScheme.onBackground else LocalDictusColors.current.textSecondary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
             fontWeight = FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            text = value,
-            color = LocalDictusColors.current.textSecondary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal,
-        )
-        Spacer(Modifier.width(4.dp))
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalDictusColors.current.textSecondary,
-        )
+        Box {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = selectedLabel,
+                    color = DictusColors.Accent,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal,
+                )
+                Icon(
+                    imageVector = Icons.Default.UnfoldMore,
+                    contentDescription = null,
+                    tint = DictusColors.Accent,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
+                options.forEach { (value, optionLabel) ->
+                    DropdownMenuItem(
+                        text = { Text(optionLabel, color = MaterialTheme.colorScheme.onBackground) },
+                        onClick = {
+                            onSelect(value)
+                            expanded = false
+                        },
+                        leadingIcon = {
+                            if (value == selected) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = DictusColors.Accent)
+                            } else {
+                                Spacer(Modifier.size(24.dp))
+                            }
+                        },
+                        modifier = Modifier.semantics { this.selected = value == selected },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Inline ABC / 123 segmented control for the keyboard's default mode (iOS `DefaultLayerPicker`).
+ *
+ * Writes the same values as the former picker: "abc" or "123"; any other stored value reads as ABC.
+ */
+@Composable
+private fun KeyboardModeSegment(
+    selected: String,
+    onSelect: (String) -> Unit,
+) {
+    val description = stringResource(R.string.settings_default_mode)
+    val current = if (selected == "123") "123" else "abc"
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .height(36.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.background)
+            .padding(2.dp)
+            .semantics { contentDescription = description }
+            .selectableGroup(),
+    ) {
+        listOf("abc" to "ABC", "123" to "123").forEach { (value, text) ->
+            val isSelected = value == current
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isSelected) LocalDictusColors.current.keySpecialBackground else Color.Transparent)
+                    .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(value) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = text,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 15.sp,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                )
+            }
+        }
     }
 }
 
@@ -694,84 +711,5 @@ fun DictusToggle(
                 .clip(CircleShape)
                 .background(Color.White),
         )
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Picker bottom sheet
-// ---------------------------------------------------------------------------
-
-/**
- * Generic single-select bottom sheet with radio buttons.
- *
- * Used for language, active model, and keyboard layout pickers.
- *
- * @param title Sheet drag handle label.
- * @param options List of (value, displayLabel) pairs.
- * @param selected Currently selected value.
- * @param onSelect Callback invoked with the new value when the user taps an option.
- * @param onDismiss Called when the sheet is dismissed without a selection change.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PickerBottomSheet(
-    title: String,
-    options: List<Pair<String, String>>,
-    selected: String,
-    onSelect: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) {
-        Text(
-            text = title,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxWidth(),
-        )
-
-        options.forEach { (value, label) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = (value == selected),
-                        onClick = {
-                            onSelect(value)
-                            onDismiss()
-                        },
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(
-                    selected = (value == selected),
-                    onClick = {
-                        onSelect(value)
-                        onDismiss()
-                    },
-                    colors = RadioButtonDefaults.colors(
-                        selectedColor = DictusColors.Accent,
-                        unselectedColor = LocalDictusColors.current.textSecondary,
-                    ),
-                )
-                Text(
-                    text = label,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Normal,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }

@@ -10,7 +10,7 @@ Words the user types or picks repeatedly, and words whose correction was undone,
 ## Sub-features
 
 - `learned-words.learn`: A word typed (or picked in the bar) twice is learned; ⌫ right after an autocorrection learns the original at once. — présent
-- `learned-words.reset`: « Réinitialiser les mots appris » (red row) at the bottom of Réglages → CLAVIER asks « Réinitialiser les mots appris ? » with « Oublier N mots appris » / « Annuler » (texts of iOS `SettingsView.swift`). Confirming empties the personal dictionary, and an already loaded keyboard stops suggesting the learned words at once (#194). — présent
+- `learned-words.reset`: « Réinitialiser les mots appris » (red row) at the bottom of Réglages → Clavier asks « Réinitialiser les mots appris ? » with « Oublier N mots appris » / « Annuler » (texts of iOS `SettingsView.swift`). Confirming empties the personal dictionary, and an already loaded keyboard stops suggesting the learned words at once (#194). — présent
 
 ## How to get to it (user POV)
 
@@ -25,7 +25,7 @@ Words the user types or picks repeatedly, and words whose correction was undone,
 Preconditions: a test device, never Pierre's Pixel; Launch and Doctor OK on it; a scratch note focused; a nonsense word never typed before on that device.
 
 - **Learn (test device only).** Type the word through the keys, tap space, twice. → left as typed (`evidence.sh learned`); typing its first letters offers it in the suggestion bar.
-- **Reset (test device only).** Switch to Dictus (keyboard left loaded), Réglages, scroll to the bottom of CLAVIER, tap « Réinitialiser les mots appris ». → the dialog. « Annuler » closes it and changes nothing; « Oublier N mots appris » closes it and empties the dictionary.
+- **Reset (test device only).** Switch to Dictus (keyboard left loaded), Réglages, scroll to the bottom of Clavier, tap « Réinitialiser les mots appris ». → the dialog. « Annuler » closes it and changes nothing; « Oublier N mots appris » closes it and empties the dictionary.
 - **After reset.** Back in the note, type the same first letters. → the word is no longer suggested, without restarting the keyboard.
 - **Proof.** The field value and the suggestion bar in the tree at each step; screenshots of the row and the dialog.
 

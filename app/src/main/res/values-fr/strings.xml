@@ -49,10 +49,10 @@
     <string name="onboarding_progress">\u00c9tape %1$d sur %2$d</string>
 
     <!-- Settings: Section headers -->
-    <string name="settings_section_transcription">TRANSCRIPTION</string>
-    <string name="settings_section_keyboard">CLAVIER</string>
-    <string name="settings_section_appearance">APPARENCE</string>
-    <string name="settings_section_about">\u00c0 PROPOS</string>
+    <string name="settings_section_transcription">Transcription</string>
+    <string name="settings_section_keyboard">Clavier</string>
+    <string name="settings_section_appearance">Apparence</string>
+    <string name="settings_section_about">\u00c0 propos</string>
 
     <!-- Settings: Row labels -->
     <string name="settings_language">Langue</string>
@@ -96,14 +96,6 @@
     <string name="settings_ui_language_system">Automatique</string>
     <string name="settings_ui_language_french">Fran\u00e7ais</string>
     <string name="settings_ui_language_english">English</string>
-    <string name="picker_ui_language_title">Langue de l\u0027interface</string>
-
-    <!-- Settings: Picker bottom sheet titles -->
-    <string name="picker_language_title">Choisir la langue</string>
-    <string name="picker_keyboard_layout_title">Disposition du clavier</string>
-    <string name="picker_keyboard_language_title">Langue du clavier</string>
-    <string name="picker_default_mode_title">Mode par d\u00e9faut du clavier</string>
-    <string name="picker_theme_title">Th\u00e8me de l\'application</string>
 
     <!-- Settings: Toast messages -->
     <string name="settings_export_logs_error">Impossible d\'exporter les logs.</string>

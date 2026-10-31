@@ -14,15 +14,15 @@ The app and the keyboard follow a dark, light or automatic theme, and the interf
 
 ## How to get to it (user POV)
 
-1. Dictus → Réglages → APPARENCE.
-2. « Thème » or « Langue de l'interface », pick a value in the sheet.
+1. Dictus → Réglages → Apparence (between Clavier and À propos; no iOS equivalent).
+2. « Thème » or « Langue de l'interface », pick a value in the menu anchored to the row.
 
 ## Driving it with Argent
 
 Preconditions: Launch and Doctor OK. Note the current values.
 
-- **Open a picker.** Tap `Thème`. → sheet `Thème de l'application` with the current value ticked (`evidence.sh theme-picker`); system back.
-- **Proof.** The sheet in the tree; values unchanged at the end.
+- **Open a picker.** Tap `Thème`. → a menu `Sombre` / `Clair` / `Automatique`, the current value with ✓ (`evidence.sh theme-picker`); system back.
+- **Proof.** The menu in the tree; values unchanged at the end.
 
 ## Gotchas
 
