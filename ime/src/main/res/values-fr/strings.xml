@@ -9,6 +9,23 @@
     <string name="ime_transcribing">Transcription\u2026</string>
     <string name="ime_app_dictation_in_progress">Dictée en cours dans Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
+    <!-- Emoji picker (#192): labels and categories, after iOS EmojiPickerView. -->
+    <string name="ime_emoji_search_placeholder">Rechercher des Emoji</string>
+    <string name="ime_emoji_search_open">Rechercher un emoji</string>
+    <string name="ime_emoji_search_clear">Effacer la recherche</string>
+    <string name="ime_emoji_no_results">Aucun résultat</string>
+    <string name="ime_emoji_space">espace</string>
+    <string name="ime_emoji_delete">Effacer</string>
+    <string name="ime_emoji_category_recents">Récents</string>
+    <string name="ime_emoji_category_smileys">Smileys</string>
+    <string name="ime_emoji_category_people">Personnes</string>
+    <string name="ime_emoji_category_animals">Animaux et nature</string>
+    <string name="ime_emoji_category_food">Nourriture et boissons</string>
+    <string name="ime_emoji_category_activities">Activités</string>
+    <string name="ime_emoji_category_travel">Voyages</string>
+    <string name="ime_emoji_category_objects">Objets</string>
+    <string name="ime_emoji_category_symbols">Symboles</string>
+    <string name="ime_emoji_category_flags">Drapeaux</string>
     <string name="ime_undo_dictation">Annuler</string>
     <string name="ime_undo_dictation_description">Annuler la derni\u00e8re dict\u00e9e</string>
     <!-- Language key: %1$s is the short code shown on the key (FR, EN, ES, DE) -->
