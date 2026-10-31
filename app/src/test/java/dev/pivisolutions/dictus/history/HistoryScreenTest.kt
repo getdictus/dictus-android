@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
@@ -228,6 +229,69 @@ class HistoryScreenTest {
 
         composeRule.onNodeWithTag("history_detail").assertDoesNotExist()
         composeRule.onNodeWithTag("history_list").assertIsDisplayed()
+    }
+
+    @Test
+    fun `search filters ignoring accents and case and shows no results with the query`() {
+        val entries = listOf(entry(1, "Rendez-vous à l'École"), entry(2, "Liste de courses"))
+        composeRule.setContent {
+            DictusTheme { HistoryScreen(HistoryUiState(isLoading = false, entries = entries), {}, {}, {}, {}) }
+        }
+
+        composeRule.onNodeWithTag("history_search").performTextInput("ecole")
+        composeRule.onNodeWithTag("history_card_1").assertIsDisplayed()
+        composeRule.onNodeWithTag("history_card_2").assertDoesNotExist()
+
+        composeRule.onNodeWithTag("history_search").performTextInput("xyz")
+        composeRule.onNodeWithTag("history_no_results").assertIsDisplayed()
+        composeRule.onNodeWithText("No results").assertIsDisplayed()
+        composeRule.onNodeWithText("No transcription contains \u201cecolexyz\u201d.").assertIsDisplayed()
+        composeRule.onNodeWithTag("history_search").assertIsDisplayed()
+    }
+
+    @Test
+    fun `search and clear are absent over an empty history`() {
+        composeRule.setContent {
+            DictusTheme { HistoryScreen(HistoryUiState(isLoading = false), {}, {}, {}, {}) }
+        }
+        composeRule.onNodeWithTag("history_search").assertDoesNotExist()
+        composeRule.onNodeWithTag("history_clear").assertDoesNotExist()
+    }
+
+    @Test
+    fun `clear history asks for confirmation and only delete all confirms`() {
+        var requested = 0
+        var cancelled = 0
+        var confirmed = 0
+        var state by mutableStateOf(HistoryUiState(isLoading = false, entries = listOf(entry(1, "preview"))))
+        composeRule.setContent {
+            DictusTheme {
+                HistoryScreen(
+                    state = state,
+                    onBack = {},
+                    onRequestDelete = {},
+                    onCancelDelete = {},
+                    onConfirmDelete = {},
+                    onRequestClear = { requested++ },
+                    onCancelClear = { cancelled++ },
+                    onConfirmClear = { confirmed++ },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Clear history").performClick()
+        assertEquals(1, requested)
+        composeRule.runOnIdle { state = state.copy(isClearPending = true) }
+        composeRule.onNodeWithText("Clear history?").assertIsDisplayed()
+        composeRule.onNodeWithText(
+            "Every transcription saved on this device will be deleted. This cannot be undone.",
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").performClick()
+        assertEquals(1, cancelled)
+        assertEquals(0, confirmed)
+
+        composeRule.onNodeWithText("Delete all").performClick()
+        assertEquals(1, confirmed)
     }
 
     private fun entry(id: Long, text: String) = TranscriptionHistoryEntry(

@@ -55,16 +55,51 @@ class RoomTranscriptionHistoryRepositoryTest {
         }
     }
 
+    @Test
+    fun `the 201st insertion keeps 200 entries and drops the oldest`() = runBlocking {
+        val dao = database.transcriptionHistoryDao()
+        val ids = (0L..200L).map { repository.insert(entry(createdAt = 1_000 + it)) }
+
+        val rows = dao.getAll()
+
+        assertEquals(TranscriptionHistoryRepository.MAX_ENTRIES, rows.size)
+        assertFalse(rows.any { it.id == ids.first() })
+        assertEquals(ids.last(), rows.first().id)
+        assertEquals(ids[1], rows.last().id)
+    }
+
+    @Test
+    fun `the cap evicts by insertion order even when the clock went backwards`() = runBlocking {
+        val dao = database.transcriptionHistoryDao()
+        // The first insertion carries a late date; the last one the earliest date of all.
+        val firstId = repository.insert(entry(createdAt = 5_000))
+        repeat(199) { repository.insert(entry(createdAt = 2_000L + it)) }
+        val lastId = repository.insert(entry(createdAt = 1))
+
+        val ids = dao.getAll().map { it.id }
+
+        assertEquals(TranscriptionHistoryRepository.MAX_ENTRIES, ids.size)
+        assertTrue("the last insertion must be kept", lastId in ids)
+        assertFalse("the first insertion must be evicted", firstId in ids)
+    }
+
+    @Test
+    fun `clear deletes every entry`() = runBlocking {
+        repeat(3) { repository.insert(entry(createdAt = it.toLong())) }
+        repository.clear()
+        assertTrue(database.transcriptionHistoryDao().getAll().isEmpty())
+    }
+
     private suspend fun MutableStateFlow<List<TranscriptionHistoryEntry>?>.awaitList(
         predicate: (List<TranscriptionHistoryEntry>) -> Boolean,
     ): List<TranscriptionHistoryEntry> = withTimeout(5_000) { filterNotNull().first(predicate) }
 
-    private fun entry() = TranscriptionHistoryEntry(
+    private fun entry(createdAt: Long = 100) = TranscriptionHistoryEntry(
         text = "private",
         requestedLanguage = "auto",
         durationMillis = 500,
         modelKey = "model",
         provider = "provider",
-        createdAtEpochMillis = 100,
+        createdAtEpochMillis = createdAt,
     )
 }

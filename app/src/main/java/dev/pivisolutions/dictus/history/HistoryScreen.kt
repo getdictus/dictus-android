@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,12 +22,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -34,9 +38,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
@@ -45,10 +52,13 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +87,9 @@ fun HistoryRoute(
         onRequestDelete = viewModel::requestDelete,
         onCancelDelete = viewModel::cancelDelete,
         onConfirmDelete = viewModel::confirmDelete,
+        onRequestClear = viewModel::requestClear,
+        onCancelClear = viewModel::cancelClear,
+        onConfirmClear = viewModel::confirmClear,
         onOpenDetail = viewModel::openDetail,
         onCloseDetail = viewModel::closeDetail,
         onCopy = historyActions::copy,
@@ -92,6 +105,9 @@ fun HistoryScreen(
     onRequestDelete: (Long) -> Unit,
     onCancelDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
+    onRequestClear: () -> Unit = {},
+    onCancelClear: () -> Unit = {},
+    onConfirmClear: () -> Unit = {},
     onOpenDetail: (Long) -> Unit = {},
     onCloseDetail: () -> Unit = {},
     onCopy: (String) -> Unit = {},
@@ -99,6 +115,9 @@ fun HistoryScreen(
     onFailureShown: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    // Screen-local like iOS HistoryView's `@State query`; saveable so it survives the detail screen.
+    var query by rememberSaveable { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val currentOnBack by rememberUpdatedState(onBack)
@@ -175,6 +194,9 @@ fun HistoryScreen(
         }
     }
 
+    val hasEntries = !state.isLoading && state.failure != HistoryFailure.LOAD && state.entries.isNotEmpty()
+    val visibleEntries = remember(state.entries, query) { TranscriptionSearch.filter(state.entries, query) }
+
     val selectedEntry = state.selectedEntryId?.let { selectedId ->
         state.entries.firstOrNull { it.id == selectedId }
     }
@@ -208,8 +230,31 @@ fun HistoryScreen(
                 }
                 Text(
                     stringResource(R.string.history_title),
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
+                )
+                // Search and clear only make sense over a list that has something in it.
+                if (hasEntries) {
+                    TextButton(onClick = onRequestClear, modifier = Modifier.testTag("history_clear")) {
+                        Text(stringResource(R.string.history_clear), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+
+            if (hasEntries) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .testTag("history_search"),
+                    placeholder = { Text(stringResource(R.string.history_search_placeholder)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 )
             }
 
@@ -236,13 +281,30 @@ fun HistoryScreen(
                         color = LocalDictusColors.current.textSecondary,
                     )
                 }
+                visibleEntries.isEmpty() -> Column(
+                    Modifier.fillMaxSize().then(pullToBackGesture).padding(32.dp).testTag("history_no_results"),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        stringResource(R.string.history_no_results_title),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.history_no_results_body, query.trim()),
+                        color = LocalDictusColors.current.textSecondary,
+                        textAlign = TextAlign.Center,
+                    )
+                }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize().testTag("history_list"),
                     state = listState,
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(state.entries, key = { it.id }) { entry ->
+                    items(visibleEntries, key = { it.id }) { entry ->
                         HistoryCard(
                             entry = entry,
                             onOpen = { onOpenDetail(entry.id) },
@@ -264,6 +326,25 @@ fun HistoryScreen(
             },
             dismissButton = {
                 TextButton(onClick = onCancelDelete) { Text(stringResource(R.string.history_delete_cancel)) }
+            },
+        )
+    }
+
+    if (state.isClearPending) {
+        AlertDialog(
+            onDismissRequest = onCancelClear,
+            title = { Text(stringResource(R.string.history_clear_title)) },
+            text = { Text(stringResource(R.string.history_clear_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        query = ""
+                        onConfirmClear()
+                    },
+                ) { Text(stringResource(R.string.history_clear_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = onCancelClear) { Text(stringResource(R.string.history_delete_cancel)) }
             },
         )
     }

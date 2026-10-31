@@ -15,6 +15,7 @@ data class HistoryUiState(
     val isLoading: Boolean = true,
     val entries: List<TranscriptionHistoryEntry> = emptyList(),
     val pendingDeleteId: Long? = null,
+    val isClearPending: Boolean = false,
     val selectedEntryId: Long? = null,
     val failure: HistoryFailure? = null,
 )
@@ -35,10 +36,8 @@ class HistoryViewModel @Inject constructor(
                     val selectedEntryId = _uiState.value.selectedEntryId
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        entries = entries.sortedWith(
-                            compareByDescending<TranscriptionHistoryEntry> { it.createdAtEpochMillis }
-                                .thenByDescending { it.id },
-                        ),
+                        // Insertion order, newest first: the DAO's order and the cap's.
+                        entries = entries.sortedByDescending { it.id },
                         selectedEntryId = selectedEntryId?.takeIf { selectedId ->
                             entries.any { it.id == selectedId }
                         },
@@ -86,6 +85,32 @@ class HistoryViewModel @Inject constructor(
                 throw cancellation
             } catch (_: Exception) {
                 Timber.e("Transcription history deletion failed")
+                _uiState.value = _uiState.value.copy(failure = HistoryFailure.DELETE)
+            }
+        }
+    }
+
+    fun requestClear() {
+        if (_uiState.value.entries.isNotEmpty()) {
+            _uiState.value = _uiState.value.copy(isClearPending = true)
+        }
+    }
+
+    fun cancelClear() {
+        _uiState.value = _uiState.value.copy(isClearPending = false)
+    }
+
+    fun confirmClear() {
+        if (!_uiState.value.isClearPending) return
+        _uiState.value = _uiState.value.copy(isClearPending = false)
+        viewModelScope.launch {
+            try {
+                repository.clear()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                Timber.e("Transcription history clear failed")
+                // Same generic, dismissible message as a single deletion.
                 _uiState.value = _uiState.value.copy(failure = HistoryFailure.DELETE)
             }
         }

@@ -232,6 +232,13 @@
     <string name="history_copied">Transcription copied</string>
     <string name="history_clip_label">Dictus transcription</string>
     <string name="history_share_title">Share transcription</string>
+    <string name="history_search_placeholder">Search transcriptions</string>
+    <string name="history_no_results_title">No results</string>
+    <string name="history_no_results_body">No transcription contains \u201c%1$s\u201d.</string>
+    <string name="history_clear">Clear history</string>
+    <string name="history_clear_title">Clear history?</string>
+    <string name="history_clear_body">Every transcription saved on this device will be deleted. This cannot be undone.</string>
+    <string name="history_clear_confirm">Delete all</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">Result</string>
