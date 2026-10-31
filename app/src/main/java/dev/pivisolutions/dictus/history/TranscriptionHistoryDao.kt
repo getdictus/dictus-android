@@ -29,10 +29,12 @@ interface TranscriptionHistoryDao {
     )
     suspend fun deleteBeyond(maxEntries: Int): Int
 
-    @Query("SELECT * FROM transcription_history ORDER BY createdAtEpochMillis DESC, id DESC")
+    // Last insertion first, like iOS TranscriptionHistoryStore.append (`records.insert(record, at: 0)`),
+    // and the same order the cap evicts in: a clock moved backwards must not bury a new dictation.
+    @Query("SELECT * FROM transcription_history ORDER BY id DESC")
     fun observeAll(): Flow<List<TranscriptionHistoryEntry>>
 
-    @Query("SELECT * FROM transcription_history ORDER BY createdAtEpochMillis DESC, id DESC")
+    @Query("SELECT * FROM transcription_history ORDER BY id DESC")
     suspend fun getAll(): List<TranscriptionHistoryEntry>
 
     @Query("DELETE FROM transcription_history WHERE id = :id")

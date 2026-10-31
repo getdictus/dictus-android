@@ -36,10 +36,8 @@ class HistoryViewModel @Inject constructor(
                     val selectedEntryId = _uiState.value.selectedEntryId
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        entries = entries.sortedWith(
-                            compareByDescending<TranscriptionHistoryEntry> { it.createdAtEpochMillis }
-                                .thenByDescending { it.id },
-                        ),
+                        // Insertion order, newest first: the DAO's order and the cap's.
+                        entries = entries.sortedByDescending { it.id },
                         selectedEntryId = selectedEntryId?.takeIf { selectedId ->
                             entries.any { it.id == selectedId }
                         },

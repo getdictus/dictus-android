@@ -50,6 +50,15 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `entries follow insertion order even when the last one has an earlier date`() = runTest(dispatcher) {
+        val repository = FakeRepository()
+        val viewModel = HistoryViewModel(repository)
+        repository.emit(listOf(entry(2, 100), entry(1, 500)))
+        advanceUntilIdle()
+        assertEquals(listOf(2L, 1L), viewModel.uiState.value.entries.map { it.id })
+    }
+
+    @Test
     fun `load failure remains a generic error and cannot become false empty`() = runTest(dispatcher) {
         val repository = FakeRepository().apply {
             loadFailure = IllegalStateException("private detail")
