@@ -64,4 +64,8 @@ object PreferenceKeys {
     // --- Personal dictionary (Phase 8) ---
     /** Set of words the user has typed at least twice, persisted across restarts. */
     val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")
+
+    // --- Custom vocabulary (#203) ---
+    /** The user's vocabulary entries as one JSON array, written whole by `VocabularyStore`. */
+    val VOCABULARY_ENTRIES = stringPreferencesKey("vocabulary_entries")
 }
