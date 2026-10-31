@@ -29,4 +29,13 @@ object PrivacySafeLog {
     /** End of the mic-tap path (#112): the length handed to the editor and whether it took it. */
     fun dictationInserted(text: String, committed: Boolean, dictationId: String?, elapsedMs: Long): String =
         "Dictation inserted: d=${dictationId ?: "-"}, length=${text.length}, committed=$committed, t+=${elapsedMs}ms"
+
+    /**
+     * One line per vocabulary pass (#203), always written, including when the feature is off
+     * or nothing matched: a pass that writes nothing down cannot be told from one not wired in.
+     * The key names are iOS's `vocabularyApplied` event, so one grep reads both platforms.
+     */
+    fun vocabularyApplied(enabled: Boolean, entries: Int, replacements: Int, text: String): String =
+        "vocabularyApplied: enabled=${if (enabled) "yes" else "no"} entries=$entries " +
+            "replacements=$replacements chars=${text.length}"
 }
