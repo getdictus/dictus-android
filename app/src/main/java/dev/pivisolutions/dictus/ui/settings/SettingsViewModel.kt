@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.suggestion.PersonalDictionary
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -102,19 +103,6 @@ class SettingsViewModel @Inject constructor(
         .map { it[PreferenceKeys.SOUND_ENABLED] ?: false }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    /** Currently selected keyboard layout key ("azerty" or "qwerty"). */
-    val keyboardLayout: StateFlow<String> = dataStore.data
-        .map { preferences ->
-            val language = KeyboardPreferenceResolver.language(
-                preferences[PreferenceKeys.KEYBOARD_LANGUAGE],
-            )
-            KeyboardPreferenceResolver.layout(
-                preferences[PreferenceKeys.KEYBOARD_LAYOUT],
-                language,
-            ).persistedValue
-        }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, "azerty")
-
     /**
      * List of model keys currently downloaded on disk.
      *
@@ -134,11 +122,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** Persist keyboard language without changing ASR language or an explicit layout. */
+    /**
+     * Persist keyboard language without changing ASR language. The layout follows the
+     * language's own one (#134), as when the bar cycles it.
+     */
     fun setKeyboardLanguage(languageCode: String) {
         val resolved = KeyboardPreferenceResolver.language(languageCode)
         viewModelScope.launch {
-            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = resolved.code }
+            dataStore.edit { KeyboardLayoutPreference.activate(it, resolved) }
         }
     }
 
@@ -243,13 +234,6 @@ class SettingsViewModel @Inject constructor(
                     "cancel" -> prefs[PreferenceKeys.RECORD_CANCEL_SOUND] = soundName
                 }
             }
-        }
-    }
-
-    /** Persist the selected keyboard layout key to DataStore. */
-    fun setKeyboardLayout(layout: String) {
-        viewModelScope.launch {
-            dataStore.edit { it[PreferenceKeys.KEYBOARD_LAYOUT] = layout }
         }
     }
 

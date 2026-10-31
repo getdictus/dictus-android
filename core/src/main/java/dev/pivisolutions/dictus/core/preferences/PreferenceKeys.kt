@@ -18,7 +18,20 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
  */
 object PreferenceKeys {
     // --- Keyboard settings (Phase 1-2) ---
+    /**
+     * Legacy single layout ("azerty"/"qwerty"/"qwertz"). Since #134 the layout is per keyboard
+     * language ([KEYBOARD_LAYOUTS_BY_LANGUAGE]); this key is only read by the one-time migration
+     * and kept as a mirror of the active language's layout, so a rollback to an older build
+     * finds the shape the user is actually on.
+     */
     val KEYBOARD_LAYOUT = stringPreferencesKey("keyboard_layout")
+    /**
+     * Keyboard layout per keyboard language (#134), as "code=layout" entries ("de=qwertz").
+     * An entry is an explicit choice; a missing entry means the language follows its default
+     * layout. The key's presence, even as an empty set, marks the migration from
+     * [KEYBOARD_LAYOUT] as done. Read and written only through `KeyboardLayoutPreference`.
+     */
+    val KEYBOARD_LAYOUTS_BY_LANGUAGE = stringSetPreferencesKey("keyboard_layouts_by_language")
     /** Keyboard correction language. Deliberately independent from ASR language. */
     val KEYBOARD_LANGUAGE = stringPreferencesKey("keyboard_language")
 

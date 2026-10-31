@@ -272,7 +272,10 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Persist the selected layout, active model, and onboarding completion flag to DataStore.
+     * Persist the active model and onboarding completion flag to DataStore.
+     *
+     * No layout since #134: each keyboard language follows its own default until the user picks
+     * one, as on iOS. The ABC/123 choice of this flow is not persisted either (#270).
      *
      * Called when the user taps "Commencer" on the completion step. The DataStore write causes
      * AppNavHost to recompose and switch from the onboarding flow to the main tab layout.
@@ -283,7 +286,6 @@ class OnboardingViewModel @Inject constructor(
     private fun completeOnboarding() {
         viewModelScope.launch {
             dataStore.edit { prefs ->
-                prefs[PreferenceKeys.KEYBOARD_LAYOUT] = _selectedLayout.value
                 prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey
                 prefs[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Welcome.storedName
                 prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true

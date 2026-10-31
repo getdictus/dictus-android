@@ -13,6 +13,7 @@ import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import dev.pivisolutions.dictus.ime.language.cycleKeyboardLanguage
 import dev.pivisolutions.dictus.ime.model.ShiftState
 import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -87,6 +88,34 @@ class NativeTrieSuggestionEngineTest {
             )
         }
 
+    /** #134: the bar's language switch must bring that language's own layout, not the last one. */
+    @Test
+    fun `cycling from French to English opens English on its own layout`() = runTest(dispatcher) {
+        dataStore.edit {
+            it[PreferenceKeys.KEYBOARD_LANGUAGE] = "fr"
+            it[PreferenceKeys.KEYBOARD_LAYOUT] = "azerty"
+            it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true
+        }
+        val opener = FakeOpener(
+            mutableListOf(Result.success(FakeHandle()), Result.success(FakeHandle())),
+        )
+        val engine = createEngine(opener)
+        advanceUntilIdle()
+
+        cycleKeyboardLanguage(dataStore)
+        advanceUntilIdle()
+
+        assertEquals(SupportedLanguage.ENGLISH, engine.activation.value?.language)
+        assertEquals(KeyboardLayout.QWERTY, engine.activation.value?.layout)
+        assertEquals(
+            listOf(
+                OpenRequest("fr_spellcheck.dict", TrieKeyboardLayout.AZERTY),
+                OpenRequest("en_spellcheck.dict", TrieKeyboardLayout.QWERTY),
+            ),
+            opener.requests,
+        )
+    }
+
     @Test
     fun `Spanish activation publishes matching profile assets and QWERTY default atomically`() =
         runTest(dispatcher) {
@@ -107,7 +136,7 @@ class NativeTrieSuggestionEngineTest {
         }
 
     @Test
-    fun `German activation publishes matching profile assets and QWERTY default atomically`() =
+    fun `German activation publishes matching profile assets and QWERTZ default atomically`() =
         runTest(dispatcher) {
             dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "de" }
             val opener = FakeOpener(mutableListOf(Result.success(FakeHandle(hasNgram = true))))
@@ -116,11 +145,11 @@ class NativeTrieSuggestionEngineTest {
 
             val activation = requireNotNull(engine.activation.value)
             assertEquals(SupportedLanguage.GERMAN, activation.language)
-            assertEquals(KeyboardLayout.QWERTY, activation.layout)
+            assertEquals(KeyboardLayout.QWERTZ, activation.layout)
             assertEquals("de_spellcheck.dict", activation.profile.nativeDictionaryAssetName)
             assertTrue(activation.hasNgram)
             assertEquals(
-                OpenRequest("de_spellcheck.dict", TrieKeyboardLayout.QWERTY),
+                OpenRequest("de_spellcheck.dict", TrieKeyboardLayout.QWERTZ),
                 opener.requests.single(),
             )
         }

@@ -56,7 +56,6 @@
 
     <!-- Settings: Row labels -->
     <string name="settings_language">Langue</string>
-    <string name="settings_keyboard_layout">Disposition du clavier</string>
     <string name="settings_keyboard_language">Langue du clavier</string>
     <string name="settings_default_mode">Mode par d\u00e9faut</string>
     <string name="settings_haptic_feedback">Retour haptique</string>

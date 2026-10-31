@@ -11,7 +11,7 @@ class GermanLanguageProfileTest {
         assertEquals("de", germanLanguageProfile.code)
         assertEquals("Deutsch", germanLanguageProfile.displayName)
         assertEquals("DE", germanLanguageProfile.shortCode)
-        assertEquals(KeyboardLayout.QWERTY, germanLanguageProfile.defaultLayout)
+        assertEquals(KeyboardLayout.QWERTZ, germanLanguageProfile.defaultLayout)
         assertEquals("Leertaste", germanLanguageProfile.spaceLabel)
         assertEquals("Eingabe", germanLanguageProfile.returnLabel)
         assertEquals("dict_de.txt", germanLanguageProfile.dictionaryAssetName)

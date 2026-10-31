@@ -5,8 +5,8 @@ val germanLanguageProfile = LanguageProfile(
     code = "de",
     displayName = "Deutsch",
     shortCode = "DE",
-    // QWERTY is intentional for parity; QWERTZ remains a separately deferred feature.
-    defaultLayout = KeyboardLayout.QWERTY,
+    // QWERTZ like iOS (#151 there, #134 here). Only a default: see KeyboardLayoutPreference.
+    defaultLayout = KeyboardLayout.QWERTZ,
     spaceLabel = "Leertaste",
     returnLabel = "Eingabe",
     dictionaryAssetName = "dict_de.txt",

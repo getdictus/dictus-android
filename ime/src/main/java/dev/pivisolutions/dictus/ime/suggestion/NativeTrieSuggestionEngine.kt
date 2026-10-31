@@ -8,6 +8,7 @@ import dev.pivisolutions.dictus.ime.input.CorrectionContext
 import dev.pivisolutions.dictus.ime.input.CorrectionContextIdentity
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
@@ -203,13 +204,7 @@ class NativeTrieSuggestionEngine(
                     val language = KeyboardPreferenceResolver.language(
                         preferences[PreferenceKeys.KEYBOARD_LANGUAGE],
                     )
-                    RequestedActivation(
-                        language,
-                        KeyboardPreferenceResolver.layout(
-                            preferences[PreferenceKeys.KEYBOARD_LAYOUT],
-                            language,
-                        ),
-                    )
+                    RequestedActivation(language, KeyboardLayoutPreference.layout(preferences, language))
                 }
                 .distinctUntilChanged()
                 .collect(::requestActivation)
