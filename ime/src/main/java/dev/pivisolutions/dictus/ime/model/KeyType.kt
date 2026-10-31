@@ -12,7 +12,7 @@ enum class KeyType {
     DELETE,
     SPACE,
     RETURN,
-    LAYER_SWITCH,       // ?123 / ABC / #+= -- switches between letter/number/symbol layers
+    LAYER_SWITCH,       // 123 / ABC / #+= -- switches between letter/number/symbol layers
     EMOJI,
     MIC,                // Placeholder, non-functional in Phase 1
     ACCENT_ADAPTIVE,    // Apostrophe key that adapts to show accent popup

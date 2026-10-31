@@ -5,7 +5,7 @@ The Dictus keyboard types and corrects in French, English, Spanish or German, in
 - **ID:** `keyboard.languages`
 - **Tier:** Gratuit
 - **Statut Android:** partiel (no panel, no QWERTZ, no number row)
-- **Screens:** `kbd.keys`, `app.settings`, `app.settings.picker` — see [screens.md](screens.md)
+- **Screens:** `kbd.keys`, `kbd.numbers`, `kbd.symbols`, `app.settings`, `app.settings.picker` — see [screens.md](screens.md)
 
 ## Sub-features
 
@@ -29,6 +29,7 @@ Preconditions: Launch and Doctor OK. Note the keyboard language, layout, default
 - **A picker without choosing.** Tap `Disposition du clavier / AZERTY`. → a menu anchored to the row: `AZERTY` (with ✓), `QWERTY` (`screen.sh app.settings.picker`); system back closes it without choosing.
 - **Cycle in the keyboard.** With a scratch note focused, tap `Langue du clavier DE` four times (`delayMs: 700`). → `FR`→`EN`→`ES`→`DE`, back to Pierre's `DE`; space and return read `espace`/`retour` in FR, `Leertaste`/`Eingabe` in DE. Check the stored value: `adb -s 99071FFAZ00EBN exec-out run-as dev.pivisolutions.dictus cat files/datastore/dictus_prefs.preferences_pb | strings | grep -A1 keyboard_language`.
 - **Open the app.** Long-press the language code (`gesture-custom` Down, 900 ms, Up). → Dictus on `Réglages`, no bottom tabs (seen 2026-10-20); system back returns to the note.
+- **The 123 and #+= pages.** With a scratch note focused, tap `123` (bottom left). → row 2 reads `- / : ; ( ) € & @ "` (`kbd.numbers`). Tap `#+=` (row 3, left). → row 2 reads `_ \ | ~ < > $ £ ¥ ·`, the toggle reads `123` (`kbd.symbols`). `ABC` goes back to the letters. Same keys and order as iOS (`DictusKeyboard/KeyboardLayouts.swift:299, 323`, #264); row 3 punctuation is still narrower than on iOS (#266).
 - **Proof.** The code label in the tree after each tap; the Réglages values identical before and after.
 
 ## Gotchas

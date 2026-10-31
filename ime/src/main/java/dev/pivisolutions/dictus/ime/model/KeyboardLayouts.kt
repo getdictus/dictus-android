@@ -29,7 +29,7 @@ object KeyboardLayouts {
             KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
         ),
         listOf(
-            KeyDefinition("?123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
+            KeyDefinition("123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
             KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
             KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 4.5f),
             KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
@@ -53,7 +53,7 @@ object KeyboardLayouts {
             KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
         ),
         listOf(
-            KeyDefinition("?123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
+            KeyDefinition("123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
             KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
             KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 4.5f),
             KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
@@ -63,7 +63,7 @@ object KeyboardLayouts {
     val numbersRows: List<List<KeyDefinition>> = listOf(
         listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
             .map { KeyDefinition(label = it, output = it) },
-        listOf("-", "/", ":", ";", "(", ")", "&", "@")
+        listOf("-", "/", ":", ";", "(", ")", "\u20AC", "&", "@", "\"")
             .map { KeyDefinition(label = it, output = it) },
         listOf(
             KeyDefinition("#+=", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.5f),
@@ -85,7 +85,7 @@ object KeyboardLayouts {
     val symbolsRows: List<List<KeyDefinition>> = listOf(
         listOf("[", "]", "{", "}", "#", "%", "^", "*", "+", "=")
             .map { KeyDefinition(label = it, output = it) },
-        listOf("_", "\\", "|", "~", "<", ">", "$", "&", "@")
+        listOf("_", "\\", "|", "~", "<", ">", "$", "\u00A3", "\u00A5", "\u00B7")
             .map { KeyDefinition(label = it, output = it) },
         listOf(
             KeyDefinition("123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.5f),
