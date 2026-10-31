@@ -265,9 +265,9 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `sys.settings.ime` | Free | present | yes |
 | `sys.notification.recording` | Free | present | yes |
 
-**Count** (198 IDs: 176 iOS + 22 Android-only): present **59**, partial **13**, absent **75**, iOS-only (N/A) **29**, Android-only **22**.
+**Count** (200 IDs: 178 iOS + 22 Android-only): present **61**, partial **13**, absent **75**, iOS-only (N/A) **29**, Android-only **22**.
 
-Of the 147 iOS IDs that apply to Android: 59 present, 13 partial, 75 absent. 55 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
+Of the 149 iOS IDs that apply to Android: 61 present, 13 partial, 75 absent. 55 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
 
 ## Design gaps with iOS
 
