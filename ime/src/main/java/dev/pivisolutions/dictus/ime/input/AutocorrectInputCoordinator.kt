@@ -212,6 +212,20 @@ class AutocorrectInputCoordinator(
         }
     }
 
+    /**
+     * Commits the word before the cursor for Return, then sends Return through [sendReturn].
+     *
+     * Return is always sent, whatever the correction did, as iOS `handleReturn` always inserts its
+     * newline: the correction writes nothing after the word, so Return can never double anything.
+     * What Return does belongs to the host (a new line, or its action), so no Backspace undo is kept.
+     */
+    fun onReturn(editor: AutocorrectEditor, sendReturn: () -> Unit): AutocorrectSpaceResult {
+        val result = onWordEnd(editor, trailing = "") {}
+        pendingUndo = null
+        sendReturn()
+        return result
+    }
+
     fun onBackspace(editor: AutocorrectEditor, deletePlain: () -> Unit): AutocorrectBackspaceResult {
         val pending = pendingUndo
         pendingUndo = null

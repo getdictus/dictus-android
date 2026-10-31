@@ -43,6 +43,34 @@ class AutocorrectOnPunctuationTest {
     }
 
     @Test
+    fun `return is sent even when the correction ends indeterminate`() {
+        // An editor that applies a batch only when it ends reports the correction as indeterminate
+        // (#193). iOS `handleReturn` inserts its newline whatever the correction did.
+        val editor = FakeEditor("helo", outcome = AutocorrectReplacementOutcome.IndeterminateMutation)
+        val coordinator = eligibleCoordinator()
+        var returns = 0
+
+        val result = coordinator.onReturn(editor) { returns++ }
+
+        assertEquals(AutocorrectSpaceResult.INDETERMINATE, result)
+        assertEquals("Return must reach the editor", 1, returns)
+    }
+
+    @Test
+    fun `return is sent once after a correction, with no backspace undo`() {
+        val editor = FakeEditor("helo")
+        val coordinator = eligibleCoordinator()
+        var returns = 0
+
+        assertEquals(AutocorrectSpaceResult.CORRECTED, coordinator.onReturn(editor) { returns++ })
+        assertEquals("hello", editor.text)
+        assertEquals(1, returns)
+        var deletes = 0
+        assertEquals(AutocorrectBackspaceResult.PLAIN_DELETE, coordinator.onBackspace(editor) { deletes++ })
+        assertEquals(1, deletes)
+    }
+
+    @Test
     fun `a known word before a comma is left as typed`() {
         val editor = FakeEditor("word")
         val coordinator = AutocorrectInputCoordinator {}
@@ -107,7 +135,10 @@ class AutocorrectOnPunctuationTest {
     }
 
     /** A whole-document editor whose caret is always at the end of [text]. */
-    private class FakeEditor(var text: String) : AutocorrectEditor {
+    private class FakeEditor(
+        var text: String,
+        private val outcome: AutocorrectReplacementOutcome = AutocorrectReplacementOutcome.Applied,
+    ) : AutocorrectEditor {
         var replacementAttempts = 0
 
         override fun snapshot() = AutocorrectEditorSnapshot(
@@ -124,6 +155,7 @@ class AutocorrectOnPunctuationTest {
 
         override fun attemptVerifiedReplacement(request: AutocorrectReplacement): AutocorrectReplacementOutcome {
             replacementAttempts++
+            if (outcome != AutocorrectReplacementOutcome.Applied) return outcome
             if (snapshot() != request.expectedSnapshot) return AutocorrectReplacementOutcome.RejectedUnchanged
             text = text.replaceRange(request.absoluteStart, request.absoluteEnd, request.replacement)
             return AutocorrectReplacementOutcome.Applied

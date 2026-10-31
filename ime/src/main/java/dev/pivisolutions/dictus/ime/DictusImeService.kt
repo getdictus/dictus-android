@@ -1276,32 +1276,30 @@ class DictusImeService : LifecycleInputMethodService() {
     fun sendReturnKey() {
         autoFullStop.clear()
         dictationFeedback.withdraw()
-        // Return ends the word before it, like a punctuation mark (#268, iOS #872). The editor may
-        // be in an unknown state after an indeterminate correction, so Return is not sent then.
-        val inputConnection = currentInputConnection
-        val result = inputConnection?.let {
-            autocorrectCoordinator.onWordEnd(InputConnectionAutocorrectEditor(it), trailing = "") {}
+        // Return ends the word before it, like a punctuation mark (#268, iOS #872).
+        val sendEnter = {
+            currentInputConnection?.sendKeyEvent(
+                android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER),
+            )
+            currentInputConnection?.sendKeyEvent(
+                android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER),
+            )
         }
-        if (result != null) {
+        val inputConnection = currentInputConnection
+        if (inputConnection == null) {
+            autocorrectCoordinator.onOtherInput()
+            clearSuggestionState()
+            sendEnter()
+        } else {
+            autocorrectCoordinator.onReturn(InputConnectionAutocorrectEditor(inputConnection)) {
+                clearSuggestionState()
+                sendEnter()
+            }
             recordAutocorrectOutcome(
                 autocorrectCoordinator.lastSpaceDiagnosis,
                 autocorrectCoordinator.lastSpaceDetail,
             )
         }
-        // What Return does is the host's (a new line, or its action), so there is no Backspace undo.
-        autocorrectCoordinator.onOtherInput()
-        clearSuggestionState()
-        if (result == AutocorrectSpaceResult.INDETERMINATE) {
-            refreshFrenchAdaptiveKeyState()
-            refreshAutoCapitalization()
-            return
-        }
-        currentInputConnection?.sendKeyEvent(
-            android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER),
-        )
-        currentInputConnection?.sendKeyEvent(
-            android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER),
-        )
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
     }
