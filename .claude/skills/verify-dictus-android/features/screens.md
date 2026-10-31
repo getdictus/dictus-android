@@ -50,7 +50,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `kbd.numbers` | Keyboard 123 page: digits, `- / : ; ( ) € & @ "`, `#+=`, `. , ? ! '`, `ABC` (iOS order, #264) | on `kbd.keys`, tap `123` (bottom left) | keyboard.languages | light / dark | no — emulator captures only (`dictus-proofs/264/`); take on the Pixel |
 | `kbd.symbols` | Keyboard `#+=` page: brackets, maths, `_ \ \| ~ < > $ £ ¥ ·`, `123`, `ABC` (iOS order, #264) | on `kbd.numbers`, tap `#+=` (row 3, left) | keyboard.languages | light / dark | no — emulator captures only (`dictus-proofs/264/`); take on the Pixel |
 | `kbd.panel` | — | — | keyboard.languages | absent (tap on the language code instead) | — |
-| `kbd.emoji` | Emoji picker, ABC and ⌫ at the bottom | tap 😊 | keyboard.emoji | categories / recents | [yes](../screens/kbd.emoji.png) |
+| `kbd.emoji` | Emoji picker (#192): category name, 8-column grid, bar at the bottom: ABC, 🔍, one emoji per category, ⌫ | tap 😊 | keyboard.emoji | categories / recents / search (field, result row, mini keyboard) / « Aucun résultat » | [stale](../screens/kbd.emoji.png) — still the androidx picker from before #192; re-take on the Pixel |
 | `kbd.voice-note-reader` | — | — | voice-notes | absent | — |
 | `kbd.smart-mode-fan` | — | — | smart-modes | absent | — |
 | `kbd.suggestions` | Suggestion bar (3 slots); « Annuler » chip after a dictation | type in a scratch note | typing.autocorrect, dictation.keyboard | completions / predictions / dictation undo chip / « Aucun mot détecté » or « La dictée a échoué… » notice (3 s) | [yes](../screens/kbd.suggestions.png) |
