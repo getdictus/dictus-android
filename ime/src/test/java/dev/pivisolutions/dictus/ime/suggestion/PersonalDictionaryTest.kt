@@ -170,6 +170,44 @@ class PersonalDictionaryTest {
     }
 
     @Test
+    fun `clear forgets learned words in an already loaded dictionary`() = runTest(testDispatcher) {
+        val dict = PersonalDictionary(dataStore, testScope)
+        advanceUntilIdle()
+        dict.learnWord("dictus")
+        dict.recordWordTyped("bonzai")
+        dict.recordWordTyped("bonzai")
+        advanceUntilIdle()
+        assertTrue(dict.isLearned("bonzai"))
+
+        PersonalDictionary.clear(dataStore)
+        advanceUntilIdle()
+
+        assertTrue(dict.learnedWords.value.isEmpty())
+        assertFalse(dict.isLearned("dictus"))
+        assertTrue(dataStore.data.first()[PreferenceKeys.PERSONAL_DICTIONARY] == null)
+        // The counts start over: one more use after the reset does not learn the word back.
+        dict.recordWordTyped("bonzai")
+        advanceUntilIdle()
+        assertFalse(dict.isLearned("bonzai"))
+    }
+
+    @Test
+    fun `learning after clear works again`() = runTest(testDispatcher) {
+        val dict = PersonalDictionary(dataStore, testScope)
+        advanceUntilIdle()
+        dict.learnWord("dictus")
+        advanceUntilIdle()
+        PersonalDictionary.clear(dataStore)
+        advanceUntilIdle()
+
+        dict.learnWord("dictus")
+        advanceUntilIdle()
+
+        assertTrue(dict.isLearned("dictus"))
+        assertTrue(dataStore.data.first()[PreferenceKeys.PERSONAL_DICTIONARY] == setOf("dictus"))
+    }
+
+    @Test
     fun `learnWord ignores blank input`() = runTest(testDispatcher) {
         val dict = PersonalDictionary(dataStore, testScope)
         advanceUntilIdle()

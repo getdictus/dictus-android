@@ -5,10 +5,11 @@ plugins {
 
 android {
     namespace = "dev.pivisolutions.dictus.whisper"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
@@ -25,10 +26,14 @@ android {
 
     // Force Release build for native libs even in debug APK.
     // whisper.cpp without -O3 is ~70x slower (34s vs <1s for tiny model).
+    // ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES makes the NDK r27 toolchain link every 64-bit
+    // library (whisper and the ggml libs it pulls in) with 16 KB LOAD segments, which
+    // Android 15+ devices with 16 KB pages and Google Play require (#218). NDK r28+ does
+    // this by default.
     defaultConfig {
         externalNativeBuild {
             cmake {
-                arguments("-DCMAKE_BUILD_TYPE=Release")
+                arguments("-DCMAKE_BUILD_TYPE=Release", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
             }
         }
     }
@@ -65,4 +70,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }

@@ -66,8 +66,10 @@ class InputConnectionAutocorrectEditor(
         return when {
             after == null -> AutocorrectReplacementOutcome.IndeterminateMutation
             matchingTailLength(after, replacement) != null -> AutocorrectReplacementOutcome.Applied
-            !deleted || !committed -> restoredOrIndeterminate(after, original)
-            else -> restoredOrIndeterminate(after, original)
+            !deleted -> restoredOrIndeterminate(after, original)
+            // Once the editor took the delete, the old text read back proves nothing: an editor that
+            // applies a batch only when it ends still reports it here, then applies the edits (#193).
+            else -> AutocorrectReplacementOutcome.IndeterminateMutation
         }
     }
 
@@ -152,7 +154,14 @@ class InputConnectionAutocorrectEditor(
             if (composingAttempted && !clearComposingState()) {
                 return AutocorrectReplacementOutcome.IndeterminateMutation
             }
-            return AutocorrectReplacementOutcome.FailedUnchanged
+            // The old text read back proves nothing once the editor took the commit: an editor that
+            // applies a batch only when it ends (a Compose text field) still reports it here, then
+            // writes the correction and its space anyway (#193).
+            return if (mutationCallFailed) {
+                AutocorrectReplacementOutcome.FailedUnchanged
+            } else {
+                AutocorrectReplacementOutcome.IndeterminateMutation
+            }
         }
 
         // Roll back only the exact requested text mutation. Any other observed change may belong to

@@ -58,28 +58,28 @@ class WaveformBarTest {
     // --- barColor tests (distance-from-center, matching iOS BrandWaveform) ---
 
     @Test
-    fun `barColor returns accent for center bar index 14`() {
+    fun `barColor returns accent highlight for center bar index 14`() {
         val color = barColor(14, 30)
         // Index 14 is near center (14.5), distance < 0.4 → brand accent
-        assertEquals(DictusColors.Accent.red, color.red, 0.01f)
-        assertEquals(DictusColors.Accent.green, color.green, 0.01f)
-        assertEquals(DictusColors.Accent.blue, color.blue, 0.01f)
+        assertEquals(DictusColors.AccentHighlight.red, color.red, 0.01f)
+        assertEquals(DictusColors.AccentHighlight.green, color.green, 0.01f)
+        assertEquals(DictusColors.AccentHighlight.blue, color.blue, 0.01f)
     }
 
     @Test
-    fun `barColor returns accent for index 15`() {
+    fun `barColor returns accent highlight for index 15`() {
         val color = barColor(15, 30)
         // Index 15: distance = |15 - 14.5| / 14.5 = 0.034 < 0.4 → accent
-        assertEquals(DictusColors.Accent.red, color.red, 0.01f)
-        assertEquals(DictusColors.Accent.blue, color.blue, 0.01f)
+        assertEquals(DictusColors.AccentHighlight.red, color.red, 0.01f)
+        assertEquals(DictusColors.AccentHighlight.blue, color.blue, 0.01f)
     }
 
     @Test
-    fun `barColor returns accent for index 9`() {
+    fun `barColor returns accent highlight for index 9`() {
         val color = barColor(9, 30)
         // Index 9: distance = |9 - 14.5| / 14.5 = 0.379 < 0.4 → accent
-        assertEquals(DictusColors.Accent.red, color.red, 0.01f)
-        assertEquals(DictusColors.Accent.blue, color.blue, 0.01f)
+        assertEquals(DictusColors.AccentHighlight.red, color.red, 0.01f)
+        assertEquals(DictusColors.AccentHighlight.blue, color.blue, 0.01f)
     }
 
     @Test

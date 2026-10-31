@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,7 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -58,6 +56,7 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelInfo
+import dev.pivisolutions.dictus.service.ModelInstallState
 import kotlin.math.roundToInt
 
 /**
@@ -66,7 +65,7 @@ import kotlin.math.roundToInt
  * Displays model info (name, provider badge, description, precision/speed bars) and
  * adapts to the download state:
  * - Not downloaded: shows "Télécharger" accent button
- * - Downloading: shows linear progress bar + percentage label
+ * - Installing: nothing more, the full-screen preparation screen covers the tab (#181)
  * - Downloaded: swipe left to reveal red delete button (iOS-style)
  *
  * WHY swipe-to-delete: Matches iOS Dictus behavior — cards stay compact without a
@@ -81,15 +80,16 @@ import kotlin.math.roundToInt
  * @param model          ModelInfo descriptor from the catalog.
  * @param isDownloaded   True if the model file exists on disk with correct size.
  * @param isActive       True if this is the currently selected model.
- * @param downloadProgress Active download progress 0–100, or null if not downloading.
  * @param canDelete      True if this model can be deleted (not the last one).
- * @param hasDownloadError True if the last download attempt failed.
+ * @param installState   State of this model's background install: error + Retry when the
+ *                       last one failed. Its progress is the preparation screen's (#181).
  * @param onDownload     Callback to start downloading this model.
  * @param onDelete       Callback to request deletion (shows confirmation sheet).
  * @param onRetry        Callback to retry after a download failure.
  * @param onSelect       Callback when a downloaded, non-active card is tapped to select it.
  * @param requiredRamGb  Non-null when the device lacks the RAM for this model: the card is
  *                       greyed out, cannot be downloaded or selected, and shows the reason.
+ * @param isRecommended  True for the model onboarding recommends: shows the "Recommandé" badge.
  * @param onShowLanguages Callback to open the supported-languages sheet; null keeps the
  *                       language summary as plain text.
  */
@@ -98,15 +98,14 @@ fun ModelCard(
     model: ModelInfo,
     isDownloaded: Boolean,
     isActive: Boolean,
-    downloadProgress: Int?,
     canDelete: Boolean,
-    hasDownloadError: Boolean = false,
-    isExtracting: Boolean = false,
+    installState: ModelInstallState = ModelInstallState.Idle,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onRetry: () -> Unit,
     onSelect: () -> Unit = {},
     requiredRamGb: Int? = null,
+    isRecommended: Boolean = false,
     onShowLanguages: (() -> Unit)? = null,
 ) {
     // Issue #121: recess an unavailable card rather than hiding it (same 0.55 as iOS #369)
@@ -122,8 +121,6 @@ fun ModelCard(
         ),
         label = "card_scale",
     )
-
-    val isDownloading = downloadProgress != null
 
     // Active cards get an accent border; others get the default glass border
     val borderColor = if (isActive) DictusColors.Accent else DictusColors.GlassBorder
@@ -267,6 +264,22 @@ fun ModelCard(
                                     color = badgeColor,
                                 )
                             }
+                            // Same pill as iOS ModelCardView: accent text on 15% accent
+                            if (isRecommended) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(DictusColors.Accent.copy(alpha = 0.15f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.model_recommended),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = DictusColors.Accent,
+                                    )
+                                }
+                            }
                         }
                         if (isActive) {
                             // Active chip
@@ -292,14 +305,12 @@ fun ModelCard(
                 LanguageSummaryRow(model = model, onClick = onShowLanguages)
 
                 // Description below name (matches iOS vertical layout)
-                if (model.description.isNotBlank()) {
-                    Text(
-                        text = model.description,
-                        color = LocalDictusColors.current.textSecondary,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                    )
-                }
+                Text(
+                    text = stringResource(model.descriptionRes),
+                    color = LocalDictusColors.current.textSecondary,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
 
                 // Why the card is greyed out: names the phone's limit, not an app error
                 if (requiredRamGb != null) {
@@ -342,47 +353,10 @@ fun ModelCard(
 
                 // Download progress or action buttons
                 when {
-                    isExtracting -> {
-                        // Indeterminate progress bar during archive extraction
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = DictusColors.Accent,
-                            trackColor = MaterialTheme.colorScheme.background,
-                            strokeCap = StrokeCap.Round,
-                        )
-                        Text(
-                            text = stringResource(R.string.model_extracting),
-                            color = DictusColors.AccentHighlight,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                        )
+                    installState.isInProgress -> {
+                        // The preparation screen shows the progress (#181)
                     }
-                    isDownloading -> {
-                        // Progress bar + percentage
-                        val percent = downloadProgress ?: 0
-                        LinearProgressIndicator(
-                            progress = { percent / 100f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = DictusColors.Accent,
-                            trackColor = MaterialTheme.colorScheme.background,
-                            strokeCap = StrokeCap.Round,
-                        )
-                        Text(
-                            text = stringResource(R.string.model_download_progress, percent),
-                            color = DictusColors.AccentHighlight,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                        )
-                    }
-                    hasDownloadError -> {
+                    installState is ModelInstallState.Failed -> {
                         // Error state with retry
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),

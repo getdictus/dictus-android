@@ -1,10 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="mic_button_description">Microphone</string>
-    <string name="mic_button_loading_description">Microphone unavailable while speech recognition loads</string>
+    <!-- The disabled mic during an app dictation (#252). -->
+    <string name="mic_button_app_dictation_description">Microphone, dictation in progress in Dictus</string>
     <string name="ime_recording_listening">Listening\u2026</string>
+    <string name="ime_recording_cancel">Cancel dictation</string>
+    <string name="ime_recording_confirm">Finish dictation</string>
     <string name="ime_transcribing">Transcribing\u2026</string>
+    <!-- Over the disabled mic while a dictation started in the app runs (#248). -->
+    <string name="ime_app_dictation_in_progress">Dictation in progress in Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
     <string name="ime_undo_dictation">Undo</string>
     <string name="ime_undo_dictation_description">Undo last dictation</string>
+    <!-- Language key: %1$s is the short code shown on the key (FR, EN, ES, DE) -->
+    <string name="ime_language_key_description">Keyboard language %1$s</string>
+    <string name="ime_language_key_cycle_action">Cycle keyboard language</string>
+    <string name="ime_language_key_settings_action">Open Dictus Settings</string>
+    <!-- Recording panel globe: opens the system keyboard picker (#190). -->
+    <string name="ime_recording_switch_keyboard">Switch keyboard</string>
 </resources>

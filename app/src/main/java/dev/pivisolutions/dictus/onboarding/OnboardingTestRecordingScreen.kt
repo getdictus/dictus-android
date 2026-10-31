@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -42,8 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.MicGateCommand
+import dev.pivisolutions.dictus.core.service.ModelPreparationGate
 import dev.pivisolutions.dictus.core.service.PendingMicGate
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -52,24 +56,25 @@ import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
-import dev.pivisolutions.dictus.core.ui.ModelLoadingOverlay
+import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingCTAButton
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingProgressDots
-import dev.pivisolutions.dictus.ui.onboarding.accentGradient
+import dev.pivisolutions.dictus.ui.ModelLoadingOverlay
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingBottomBlock
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 import kotlinx.coroutines.launch
 import dev.pivisolutions.dictus.core.R as CoreR
 
 /**
- * Onboarding Step 6 — Test recording screen.
+ * Onboarding first dictation step — test recording screen.
  *
  * Uses a layered Box layout so the mic/stop button stays at a fixed position
  * (200dp from bottom) regardless of state. Three layers:
  * 1. Upper content (text, waveform, timer) — centered above the button
  * 2. Button layer — fixed 200dp from bottom, stable across all states
- * 3. Bottom bar (Passer/Continuer + progress dots) — pinned to bottom
+ * 3. The shell's bottom block — « Continuer » once there is a result, and the shell's
+ *    « Passer » under it ([OnboardingStep.isSkippable])
  *
  * @param dictationController Controller for the DictationService (may be null if not yet bound).
  * @param onNext Called when the user taps "Continuer" after seeing the result, or "Passer" to skip.
@@ -92,10 +97,21 @@ fun OnboardingTestRecordingScreen(
         dictationController?.prewarmEngine()
     }
 
+    // « Passer » can leave the step mid-recording: stop it, or it goes on behind the next step.
+    DisposableEffect(dictationController) {
+        onDispose {
+            val state = dictationController?.state?.value
+            // Only its own: a keyboard dictation is not this step's to cancel (#237).
+            if (state is DictationState.Recording && state.source == DictationSource.APP) {
+                dictationController.cancelRecording()
+            }
+        }
+    }
+
     fun runGateCommand(command: MicGateCommand) {
         when (command) {
             MicGateCommand.PREWARM -> dictationController?.prewarmEngine()
-            MicGateCommand.START_RECORDING -> dictationController?.startRecording()
+            MicGateCommand.START_RECORDING -> dictationController?.startRecording(DictationSource.APP)
             MicGateCommand.NONE -> Unit
         }
     }
@@ -109,7 +125,7 @@ fun OnboardingTestRecordingScreen(
     // Processing animation driver for the transcribing state.
     // Uses WaveformDriver.processingEnergy() — same formula as iOS BrandWaveformDriver.
     val processingDriver = remember {
-        WaveformDriver().apply { isProcessing = true }
+        WaveformDriver(logLabel = "onboarding").apply { isProcessing = true }
     }
     val processingPhase by processingDriver.processingPhase.collectAsState()
     val syntheticMotionEnabled by rememberSyntheticMotionEnabled()
@@ -126,8 +142,10 @@ fun OnboardingTestRecordingScreen(
     val hasResult = transcriptionResult != null
     val isRecording = dictationState is DictationState.Recording
     val isTranscribing = dictationState is DictationState.Transcribing
-    val isEngineOverlayVisible = engineState is SttEngineState.Loading ||
-        engineState is SttEngineState.Failed
+    // A load that starts under a dictation never covers it (#175).
+    val overlayEngineState = ModelPreparationGate.overlayState(engineState, dictationState)
+    val isEngineOverlayVisible = overlayEngineState is SttEngineState.Loading ||
+        overlayEngineState is SttEngineState.Failed
 
     Box(
         modifier = Modifier
@@ -250,11 +268,14 @@ fun OnboardingTestRecordingScreen(
                     isRecording -> {
                         val recording = dictationState as DictationState.Recording
 
-                        WaveformBars(
+                        // iOS RecordingView: BrandWaveform 120 pt at opacity 0.5 while recording.
+                        LiveWaveform(
                             energyLevels = recording.energy,
+                            logLabel = "onboarding",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp),
+                                .height(120.dp)
+                                .alpha(0.5f),
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -281,11 +302,13 @@ fun OnboardingTestRecordingScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // iOS RecordingView: opacity 0.3 once recording has stopped.
                         WaveformBars(
                             energyLevels = emptyList(),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp),
+                                .height(120.dp)
+                                .alpha(0.3f),
                             isProcessing = true,
                             processingPhase = processingPhase,
                         )
@@ -308,7 +331,7 @@ fun OnboardingTestRecordingScreen(
                                             TranscriptionRetention.EPHEMERAL,
                                         )
                                         transcriptionResult = when (outcome) {
-                                            is TranscriptionOutcome.Text -> outcome.text
+                                            is TranscriptionOutcome.Transcribed -> outcome.text
                                             TranscriptionOutcome.NoWordsDetected ->
                                                 context.getString(CoreR.string.dictation_no_words_detected)
                                             TranscriptionOutcome.Failed, null ->
@@ -375,33 +398,28 @@ fun OnboardingTestRecordingScreen(
             }
         }
 
-        // ── Layer 3: Bottom bar (Passer/Continuer + dots) ──
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 60.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (hasResult) {
-                OnboardingCTAButton(
-                    text = stringResource(R.string.onboarding_test_recording_cta_continue),
-                    onClick = onNext,
-                    gradient = accentGradient,
-                )
-            } else {
-                Spacer(modifier = Modifier.height(56.dp))
-            }
-
-            Spacer(modifier = Modifier.padding(top = 24.dp))
-
-            OnboardingProgressDots(currentStep = 6)
         }
 
+        // ── Layer 3: the shell's bottom block (Continuer once there is a result + Passer) ──
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .then(
+                    if (isEngineOverlayVisible) Modifier.clearAndSetSemantics { } else Modifier,
+                ),
+        ) {
+            OnboardingBottomBlock {
+                if (hasResult) {
+                    OnboardingPrimaryButton(
+                        text = stringResource(R.string.onboarding_test_recording_cta_continue),
+                        onClick = onNext,
+                    )
+                }
+            }
         }
 
         ModelLoadingOverlay(
-            engineState = engineState,
+            engineState = overlayEngineState,
             onRetry = { runGateCommand(micGate.retry()) },
             onCancel = {
                 micGate.cancel()

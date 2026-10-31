@@ -25,16 +25,6 @@
     <string name="onboarding_mode_selection_cta">Continuer</string>
 
     <!-- Onboarding: Model download screen (Step 5) -->
-    <string name="onboarding_model_download_title">Mod\u00e8le vocal</string>
-    <string name="onboarding_model_download_body">T\u00e9l\u00e9chargez le mod\u00e8le de reconnaissance vocale recommand\u00e9 pour votre appareil.</string>
-    <string name="onboarding_model_download_cta_download">T\u00e9l\u00e9charger</string>
-    <string name="onboarding_model_download_cta_downloading">T\u00e9l\u00e9chargement en cours\u2026</string>
-    <string name="onboarding_model_download_cta_continue">Continuer</string>
-    <string name="onboarding_model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
-    <string name="onboarding_model_download_retry">R\u00e9essayer</string>
-    <string name="onboarding_model_download_recommended">Recommand\u00e9 pour votre appareil</string>
-    <string name="onboarding_model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
-    <string name="onboarding_model_download_extracting">Extraction des fichiers\u2026</string>
 
     <!-- Onboarding: Test recording screen (Step 6) -->
     <string name="onboarding_test_recording_title">Testez la dict\u00e9e</string>
@@ -53,11 +43,16 @@
     <string name="onboarding_success_body">Dictus est configur\u00e9 et pr\u00eat \u00e0 l\u2019emploi.</string>
     <string name="onboarding_success_cta">Commencer</string>
 
+    <!-- Onboarding: shell around every step (#196) -->
+    <string name="onboarding_back">Retour</string>
+    <string name="onboarding_skip">Passer</string>
+    <string name="onboarding_progress">\u00c9tape %1$d sur %2$d</string>
+
     <!-- Settings: Section headers -->
-    <string name="settings_section_transcription">TRANSCRIPTION</string>
-    <string name="settings_section_keyboard">CLAVIER</string>
-    <string name="settings_section_appearance">APPARENCE</string>
-    <string name="settings_section_about">A PROPOS</string>
+    <string name="settings_section_transcription">Transcription</string>
+    <string name="settings_section_keyboard">Clavier</string>
+    <string name="settings_section_appearance">Apparence</string>
+    <string name="settings_section_about">\u00c0 propos</string>
 
     <!-- Settings: Row labels -->
     <string name="settings_language">Langue</string>
@@ -69,6 +64,13 @@
     <string name="settings_suggestions">Suggestions</string>
     <string name="settings_autocorrect">Correction automatique</string>
     <string name="settings_sounds">Sons</string>
+    <string name="settings_reset_learned_words">R\u00e9initialiser les mots appris</string>
+    <string name="settings_reset_learned_words_title">R\u00e9initialiser les mots appris\u00a0?</string>
+    <string name="settings_reset_learned_words_message">Les mots que le clavier a appris de votre frappe seront oubli\u00e9s et la correction automatique s\u2019y appliquera de nouveau.</string>
+    <plurals name="settings_reset_learned_words_confirm">
+        <item quantity="one">Oublier %d mot appris</item>
+        <item quantity="other">Oublier %d mots appris</item>
+    </plurals>
     <string name="settings_theme">Th\u00e8me</string>
     <string name="settings_version">Version</string>
     <string name="settings_debug_logs">Debug Logs</string>
@@ -94,14 +96,6 @@
     <string name="settings_ui_language_system">Automatique</string>
     <string name="settings_ui_language_french">Fran\u00e7ais</string>
     <string name="settings_ui_language_english">English</string>
-    <string name="picker_ui_language_title">Langue de l\u0027interface</string>
-
-    <!-- Settings: Picker bottom sheet titles -->
-    <string name="picker_language_title">Choisir la langue</string>
-    <string name="picker_keyboard_layout_title">Disposition du clavier</string>
-    <string name="picker_keyboard_language_title">Langue du clavier</string>
-    <string name="picker_default_mode_title">Mode par d\u00e9faut du clavier</string>
-    <string name="picker_theme_title">Th\u00e8me de l\'application</string>
 
     <!-- Settings: Toast messages -->
     <string name="settings_export_logs_error">Impossible d\'exporter les logs.</string>
@@ -109,13 +103,14 @@
 
     <!-- SoundSettingsScreen -->
     <string name="sound_settings_title">Sons</string>
-    <string name="sound_settings_section_general">GENERAL</string>
-    <string name="sound_settings_section_sounds">SONS</string>
-    <string name="sound_settings_dictation_sound">Son de dict\u00e9e</string>
+    <string name="sound_settings_section_general">G\u00c9N\u00c9RAL</string>
+    <string name="sound_settings_section_sounds">SONS PAR \u00c9V\u00c9NEMENT</string>
+    <string name="sound_settings_dictation_sound">Activer les sons</string>
+    <string name="sound_settings_note">Les sons respectent le mode silencieux du t\u00e9l\u00e9phone.</string>
     <string name="sound_settings_volume">Volume</string>
-    <string name="sound_settings_start_sound">Son de d\u00e9but</string>
-    <string name="sound_settings_stop_sound">Son de fin</string>
-    <string name="sound_settings_cancel_sound">Son d\'annulation</string>
+    <string name="sound_settings_start_sound">D\u00e9but</string>
+    <string name="sound_settings_stop_sound">Fin</string>
+    <string name="sound_settings_cancel_sound">Annuler</string>
     <string name="sound_settings_back_cd">Retour</string>
 
     <!-- DebugLogsScreen -->
@@ -136,6 +131,12 @@
     <string name="ime_status_not_enabled">Clavier non activ\u00e9</string>
     <string name="ime_status_select_keyboard">S\u00e9lectionner le clavier</string>
     <string name="ime_status_enable_keyboard">Activer le clavier</string>
+
+    <!-- DictationService: recording notification -->
+    <string name="recording_notification_title">Dictus \u2013 Enregistrement</string>
+    <string name="recording_notification_stop">Arr\u00eater</string>
+    <string name="recording_notification_channel_name">Enregistrement Dictus</string>
+    <string name="recording_notification_channel_description">Notification d\u2019enregistrement en cours</string>
 
     <!-- RecordingTestArea -->
     <string name="recording_test_title">Test enregistrement</string>
@@ -172,7 +173,6 @@
     <string name="parakeet_lang_dialog_message">Ce mod\u00e8le ne supporte que l\u2019anglais. Continuer\u00a0?</string>
     <string name="ram_warning_dialog_title">RAM insuffisante</string>
     <string name="ram_warning_dialog_message">Ce mod\u00e8le n\u00e9cessite 8\u00a0Go de RAM ou plus. Votre appareil n\u2019a pas assez de m\u00e9moire.</string>
-    <string name="model_loading_snackbar">Chargement du mod\u00e8le\u2026</string>
     <string name="dialog_continue">Continuer</string>
     <string name="dialog_cancel">Annuler</string>
     <string name="dialog_ok">OK</string>
@@ -182,12 +182,28 @@
     <string name="model_download">T\u00e9l\u00e9charger</string>
     <string name="model_retry">R\u00e9essayer</string>
     <string name="model_download_progress">T\u00e9l\u00e9chargement \u2014 %1$d%%</string>
-    <string name="model_extracting">Extraction\u2026</string>
+    <string name="model_extracting">Extraction \u2014 %1$d%%</string>
+    <string name="model_verifying">V\u00e9rification des fichiers\u2026</string>
+    <string name="model_install_notification_title">Installation de %1$s</string>
+    <string name="model_install_channel_name">Installation des mod\u00e8les</string>
     <string name="model_download_error">\u00c9chec du t\u00e9l\u00e9chargement.</string>
     <string name="model_requires_ram">N\u00e9cessite %1$d Go de RAM ou plus</string>
     <string name="model_precision">Pr\u00e9cision</string>
     <string name="model_speed">Vitesse</string>
     <string name="model_delete_cd">Supprimer</string>
+    <string name="model_recommended">Recommand\u00e9</string>
+    <!-- Model catalog: descriptions and quality labels (#236) -->
+    <string name="model_description_tiny">Rapide et l\u00e9ger</string>
+    <string name="model_description_base">Pr\u00e9cis et \u00e9quilibr\u00e9</string>
+    <string name="model_description_small">Haute pr\u00e9cision</string>
+    <string name="model_description_small_q5">Meilleur compromis</string>
+    <string name="model_description_medium">Meilleure pr\u00e9cision</string>
+    <string name="model_description_parakeet_110m">Rapide et pr\u00e9cis</string>
+    <string name="model_description_parakeet_v3">D\u00e9tection automatique de la langue</string>
+    <string name="model_quality_fast">Rapide</string>
+    <string name="model_quality_balanced">\u00c9quilibr\u00e9</string>
+    <string name="model_quality_accurate">Pr\u00e9cis</string>
+    <string name="model_quality_premium">Premium</string>
 
     <!-- HomeScreen -->
     <string name="home_active_model">Mod\u00e8le actif</string>
@@ -218,11 +234,18 @@
     <string name="history_copied">Transcription copi\u00e9e</string>
     <string name="history_clip_label">Transcription Dictus</string>
     <string name="history_share_title">Partager la transcription</string>
+    <string name="history_search_placeholder">Rechercher dans les transcriptions</string>
+    <string name="history_no_results_title">Aucun r\u00e9sultat</string>
+    <string name="history_no_results_body">Aucune transcription ne contient \u00ab\u00a0%1$s\u00a0\u00bb.</string>
+    <string name="history_clear">Effacer l\u2019historique</string>
+    <string name="history_clear_title">Effacer l\u2019historique\u00a0?</string>
+    <string name="history_clear_body">Toutes les transcriptions enregistr\u00e9es sur cet appareil seront supprim\u00e9es. Cette action est irr\u00e9versible.</string>
+    <string name="history_clear_confirm">Tout supprimer</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">R\u00e9sultat</string>
     <string name="recording_copy_cd">Copier</string>
-    <string name="recording_back_cd">Retour</string>
+    <string name="recording_close_cd">Fermer</string>
     <string name="recording_stop_cd">Arr\u00eater</string>
     <string name="recording_record_cd">Enregistrer</string>
     <string name="recording_new_dictation_cd">Nouvelle dict\u00e9e</string>
@@ -250,12 +273,30 @@
     <string name="nav_settings">R\u00e9glages</string>
 
     <!-- Sound picker -->
-    <string name="sound_picker_title_start">Son de d\u00e9but</string>
-    <string name="sound_picker_title_stop">Son de fin</string>
-    <string name="sound_picker_title_cancel">Son d\'annulation</string>
+    <string name="sound_picker_title_start">D\u00e9but</string>
+    <string name="sound_picker_title_stop">Fin</string>
+    <string name="sound_picker_title_cancel">Annuler</string>
 
     <!-- Shared content descriptions -->
     <string name="cd_back">Retour</string>
     <string name="cd_selected">S\u00e9lectionn\u00e9</string>
+
+    <!-- Model preparation screen (#181), copy from iOS ModelLoadingOverlay.swift -->
+    <string name="model_preparation_title">On pr\u00e9pare votre mod\u00e8le</string>
+    <string name="model_preparation_title_ready">Votre mod\u00e8le est pr\u00eat</string>
+    <string name="model_preparation_title_failed">Le mod\u00e8le vocal n\u2019a pas pu \u00eatre pr\u00e9par\u00e9</string>
+    <string name="model_preparation_subtitle">%1$s. Une fois pr\u00eat, tout se passe hors ligne.</string>
+    <string name="model_preparation_subtitle_onboarding">%1$s, choisi pour ce t\u00e9l\u00e9phone. Ensuite, tout se passe hors ligne.</string>
+    <string name="model_preparation_subtitle_ready">%1$s tourne sur votre t\u00e9l\u00e9phone. La dict\u00e9e marche m\u00eame sans r\u00e9seau.</string>
+    <string name="model_preparation_step_downloading">T\u00e9l\u00e9chargement</string>
+    <string name="model_preparation_step_downloaded">T\u00e9l\u00e9charg\u00e9 \u00b7 %1$d\u202fMo</string>
+    <string name="model_preparation_step_preparing">Pr\u00e9paration pour ce t\u00e9l\u00e9phone</string>
+    <string name="model_preparation_step_loading">Chargement du mod\u00e8le</string>
+    <string name="model_preparation_step_prepared">Pr\u00e9par\u00e9 pour ce t\u00e9l\u00e9phone</string>
+    <string name="model_preparation_percent">%1$d\u202f%%</string>
+    <string name="model_preparation_bytes">%1$d Mo sur %2$d Mo</string>
+    <string name="model_preparation_stay">Restez sur cette page, ne quittez pas l\u2019application.</string>
+    <string name="model_preparation_download_continues">Le t\u00e9l\u00e9chargement continue si vous quittez l\u2019app.</string>
+    <string name="model_preparation_close">Fermer</string>
 
 </resources>

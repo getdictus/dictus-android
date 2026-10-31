@@ -2,12 +2,16 @@ package dev.pivisolutions.dictus.service
 
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
+import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import dev.pivisolutions.dictus.core.stt.SttTranscript
 import dev.pivisolutions.dictus.core.whisper.NonSpeechMarkers
 import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
+import dev.pivisolutions.dictus.whisper.WhisperContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 /**
  * Turns a finished take into a [TranscriptionOutcome] for [DictationService].
@@ -19,16 +23,25 @@ import timber.log.Timber
  *
  * @param ensureModel the model path, downloading it on first use; null when it stays unavailable.
  * @param withProvider runs a block on the initialized provider for a model; null when the
- *   provider cannot be initialized. Engine init is outside [timeoutMs], as it always was.
+ *   provider cannot be initialized. Engine init is outside the timeout, as it always was.
+ * @param wakeLock held while the engine transcribes, released however it ends (#225).
+ * @param timeoutFactor the model's factor for [TranscriptionTimeout.timeoutMs].
+ * @param lastTranscription Home's card, filled by every take with words (#245). Every dictation,
+ *   from the app or the keyboard, comes through here, as every iOS one goes through its coordinator.
+ * @param recordTally [DictationTally.record], words and audio seconds per day (#201), counted here
+ *   for the same reason.
  */
 internal class DictationTranscriber(
-    private val timeoutMs: Long,
     private val ensureModel: suspend (modelKey: String) -> String?,
     private val withProvider: suspend (
         modelKey: String,
         modelPath: String,
-        use: suspend (SttProvider) -> String?,
-    ) -> String?,
+        use: suspend (SttProvider) -> SttTranscript?,
+    ) -> SttTranscript?,
+    private val wakeLock: TranscriptionWakeLock,
+    private val lastTranscription: LastTranscriptionStore,
+    private val recordTally: suspend (text: String, audioSeconds: Int) -> DictationTally.Totals?,
+    private val timeoutFactor: (modelKey: String) -> Double = TranscriptionTimeout::factorFor,
 ) {
 
     /**
@@ -53,9 +66,10 @@ internal class DictationTranscriber(
 
     /**
      * Transcribes a take that passed [rejectBeforeEngine]. A missing model, a provider that
-     * cannot start, a timeout or an exception is [TranscriptionOutcome.Failed]; text with no
-     * words once non-speech tags are removed is [TranscriptionOutcome.NoWordsDetected].
-     * Cancellation is rethrown.
+     * cannot start, a timeout before any segment or an exception is
+     * [TranscriptionOutcome.Failed]; a timeout after some segments is
+     * [TranscriptionOutcome.Partial]; text with no words once non-speech tags are removed is
+     * [TranscriptionOutcome.NoWordsDetected]. Cancellation is rethrown.
      */
     suspend fun transcribe(samples: FloatArray, modelKey: String, language: String): TranscriptionOutcome {
         return try {
@@ -65,28 +79,81 @@ internal class DictationTranscriber(
                 return TranscriptionOutcome.Failed
             }
 
-            val rawText = withProvider(modelKey, modelPath) { provider ->
-                withTimeoutOrNull(timeoutMs) { provider.transcribe(samples, language) }
+            val transcript = withProvider(modelKey, modelPath) { provider ->
+                val audioMs = TranscriptionTimeout.audioMs(samples.size)
+                val factor = timeoutFactor(modelKey)
+                val timeoutMs = TranscriptionTimeout.timeoutMs(audioMs, factor)
+                val startedAt = System.nanoTime()
+                Timber.i(
+                    "Transcription started: engine=%s, model=%s, samples=%d, audioMs=%d, factor=%s, timeoutMs=%d",
+                    provider.providerId, modelKey, samples.size, audioMs, factor, timeoutMs,
+                )
+                // The lock's own timeout is a backstop: the latest the engine can return, the
+                // timeout plus the time an aborted Whisper decode gets to hand back its segments.
+                wakeLock.acquire(timeoutMs + WhisperContext.ABORT_GRACE_MS)
+                try {
+                    provider.transcribe(samples, language, timeoutMs).also { transcript ->
+                        val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+                        Timber.i(PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, transcript))
+                    }
+                } finally {
+                    wakeLock.release()
+                }
             }
-            if (rawText == null) {
-                Timber.e("Provider initialization failed or transcription timed out")
+            if (transcript == null) {
+                Timber.e("Provider initialization failed or transcription timed out before any segment")
                 return TranscriptionOutcome.Failed
             }
 
             // Drop non-speech tags (#161), then post-process (trim + punctuation)
-            val processedText = TextPostProcessor.process(NonSpeechMarkers.spokenText(rawText))
-            Timber.d(PrivacySafeLog.transcriptionProcessed(rawText, processedText))
+            val processedText = TextPostProcessor.process(NonSpeechMarkers.spokenText(transcript.text))
+            Timber.d(PrivacySafeLog.transcriptionProcessed(transcript.text, processedText))
 
-            TranscriptionOutcome.fromProcessedText(processedText).also { outcome ->
-                if (outcome == TranscriptionOutcome.NoWordsDetected) {
-                    Timber.i("confirmAndTranscribe: no words detected, nothing saved")
-                }
+            val outcome = if (transcript.complete) {
+                TranscriptionOutcome.fromProcessedText(processedText)
+            } else {
+                TranscriptionOutcome.fromPartialText(processedText)
             }
+            Timber.i(
+                "Transcription outcome: state=%s, segments=%s, length=%d",
+                outcome.javaClass.simpleName,
+                transcript.segmentCount ?: "-",
+                (outcome as? TranscriptionOutcome.Transcribed)?.text?.length ?: 0,
+            )
+            if (outcome is TranscriptionOutcome.Transcribed) {
+                lastTranscription.save(outcome.text)
+                recordInTally(outcome.text, samples.size)
+            }
+            if (outcome == TranscriptionOutcome.NoWordsDetected) {
+                Timber.i("confirmAndTranscribe: no words detected, nothing saved")
+            }
+            outcome
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (e: Exception) {
             Timber.e(e, "Transcription failed")
             TranscriptionOutcome.Failed
+        }
+    }
+
+    /**
+     * Counts a take with words in the tally (#201), partial ones included since their text is
+     * inserted too. The log line is the debug readout: numbers only, never the text.
+     *
+     * WHY its own catch: a tally that cannot be written must not turn a dictation into a failure.
+     */
+    private suspend fun recordInTally(text: String, sampleCount: Int) {
+        val audioSeconds = (sampleCount.toDouble() / RecordingDurationPolicy.SAMPLE_RATE_HZ).roundToInt()
+        try {
+            val today = recordTally(text, audioSeconds) ?: return
+            Timber.i(
+                "Dictation tally: added audioSeconds=%d; today words=%d, audioSeconds=%d, timeSavedSeconds=%d",
+                audioSeconds, today.words, today.audioSeconds, today.timeSavedSeconds,
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (e: Exception) {
+            Timber.e(e, "Dictation tally not written")
         }
     }
 }

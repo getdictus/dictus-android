@@ -5,12 +5,15 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.input.AutoCapMode
+import dev.pivisolutions.dictus.ime.input.AutoCapitalization
 import dev.pivisolutions.dictus.ime.input.AutocorrectEditorSnapshot
 import dev.pivisolutions.dictus.ime.input.CorrectionContext
 import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import dev.pivisolutions.dictus.ime.model.ShiftState
 import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -215,6 +218,22 @@ class NativeTrieSuggestionEngineTest {
         }
 
     @Test
+    fun `learned suggestion disappears after the dictionary is cleared`() = runTest(dispatcher) {
+        val handle = FakeHandle(prefix = listOf("bonjour"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+        engine.personalDictionary.recordWordTyped("bonzai")
+        engine.personalDictionary.recordWordTyped("bonzai")
+        advanceUntilIdle()
+        assertEquals(listOf("bonzai", "bonjour"), engine.getSuggestions("bon"))
+
+        PersonalDictionary.clear(dataStore)
+        advanceUntilIdle()
+
+        assertEquals(listOf("bonjour"), engine.getSuggestions("bon"))
+    }
+
+    @Test
     fun `canonical equivalent native exact result is filtered`() = runTest(dispatcher) {
         val handle = FakeHandle(prefix = listOf("CA\u0301FE"))
         val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
@@ -274,6 +293,63 @@ class NativeTrieSuggestionEngineTest {
         assertTrue(!engine.suggestionResults.value.isKnownWord)
         assertEquals(null, engine.suggestionResults.value.primaryCorrection)
         assertEquals(listOf("hello", "help"), engine.suggestionResults.value.suggestions)
+    }
+
+    @Test
+    fun `correction and suggestions follow the typed word's case`() = runTest(dispatcher) {
+        // The dictionary stores lowercase words; the correction must not drop the typed capital.
+        val handle = FakeHandle(prefix = listOf("bonjoru"), fuzzy = listOf("bonjour", "bonsoir"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val cases = mapOf(
+            "Bonjoru" to listOf("Bonjour", "Bonsoir"),
+            "BONJORU" to listOf("BONJOUR", "BONSOIR"),
+            "bonjoru" to listOf("bonjour", "bonsoir"),
+        )
+        cases.forEach { (typed, expected) ->
+            requireNotNull(engine.requestSuggestions(typed))
+            advanceUntilIdle()
+            val result = engine.suggestionResults.value
+            assertEquals(typed, expected.first(), result.primaryCorrection)
+            assertEquals(typed, expected, result.suggestions.filter { it.lowercase() != "bonjoru" })
+        }
+    }
+
+    @Test
+    fun `autocap and manual shift type the same word and get the same capitalized correction`() =
+        runTest(dispatcher) {
+            val handle = FakeHandle(fuzzy = listOf("bonjour"))
+            val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+            advanceUntilIdle()
+
+            // Autocap: shift armed at the start of the field, as the service decides it.
+            val autoShift = ShiftState().afterAutoCapCheck(
+                AutoCapitalization.shouldCapitalize(AutoCapMode.SENTENCES, ""),
+            )
+            // Manual: the user taps shift mid-sentence.
+            val manualShift = ShiftState().afterShiftTap(isDoubleTap = false)
+
+            listOf(autoShift, manualShift).forEach { start ->
+                val typed = typeLetters(start, "bonjoru")
+                assertEquals("Bonjoru", typed)
+                requireNotNull(engine.requestSuggestions(typed))
+                advanceUntilIdle()
+                assertEquals("Bonjour", engine.suggestionResults.value.primaryCorrection)
+            }
+        }
+
+    /** Types [letters] through the shift logic of KeyboardScreen (one-shot shift, no autocap mid-word). */
+    private fun typeLetters(start: ShiftState, letters: String): String {
+        var state = start
+        return buildString {
+            letters.forEach { letter ->
+                append(if (state.isShifted) letter.uppercaseChar() else letter)
+                state = state.afterLetterTyped().afterAutoCapCheck(
+                    AutoCapitalization.shouldCapitalize(AutoCapMode.SENTENCES, this),
+                )
+            }
+        }
     }
 
     @Test

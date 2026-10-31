@@ -59,6 +59,20 @@ class InputConnectionAutocorrectEditorTest {
     }
 
     @Test
+    fun `accepted commit that still reads back the old text is indeterminate, not unchanged`() {
+        // An editor that applies a batch only when it ends (Compose) answers this way (#193).
+        val connection = StatefulConnection("teh", behavior = Behavior.ACCEPT_LATER)
+        val editor = connection.editor()
+        val expected = editor.snapshot()!!
+
+        assertEquals(
+            AutocorrectReplacementOutcome.IndeterminateMutation,
+            editor.attemptVerifiedReplacement(request(expected)),
+        )
+        assertEquals("finishComposingText", connection.calls.last())
+    }
+
+    @Test
     fun `mutate then false or throw is classified from exact observed post state`() {
         listOf(Behavior.MUTATE_THEN_FALSE, Behavior.MUTATE_THEN_THROW).forEach { behavior ->
             val connection = StatefulConnection("teh", behavior = behavior)
@@ -236,6 +250,7 @@ class InputConnectionAutocorrectEditorTest {
     private enum class Behavior {
         NORMAL,
         IGNORE,
+        ACCEPT_LATER,
         MUTATE_THEN_FALSE,
         MUTATE_THEN_THROW,
         WRONG_SELECTION,
@@ -337,6 +352,7 @@ class InputConnectionAutocorrectEditorTest {
             commitCount++
             calls += "commitText($replacement,$newCursorPosition)"
             if (behavior == Behavior.IGNORE || behavior == Behavior.CLEANUP_FALSE || behavior == Behavior.CLEANUP_THROW) return false
+            if (behavior == Behavior.ACCEPT_LATER) return true
             if (behavior == Behavior.COMPENSATION_IGNORED && commitCount == 2) return false
 
             val start = if (behavior == Behavior.CLAMPED && commitCount == 1) {

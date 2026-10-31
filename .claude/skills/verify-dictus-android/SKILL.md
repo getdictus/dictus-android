@@ -26,9 +26,9 @@ Pick the lowest tier that can prove the change. Each tier proves what the one ab
 
 **2. Pixel 4, driven by Andy.** Use the steps below: Launch, Doctor, Drive, Evidence, Cleanup. This tier proves what needs the real hardware:
 
-- the microphone opens and closes: `DictationService started foreground with ACTION_START`, then `Recording cancelled, samples discarded` or `Transcribed text inserted: length=…` (see Drive);
+- the microphone opens and closes: `DictationService started foreground with ACTION_START`, then `Recording cancelled, samples discarded` or `Dictation inserted: d=…, length=…, committed=true` (see Drive);
 - `RECORD_AUDIO` is granted (Doctor) and the service runs in the foreground; notifications are denied for Dictus on this Pixel, so the proof is « 1 appli est active » in Quick Settings, not the notification;
-- transcription time with Tiny, Base, Small Q5 and Parakeet 0.6B v3, measured as the gap between the logcat timestamps of `confirmAndTranscribe: … samples captured` and `Transcribed text inserted`. The app logs no duration of its own. The Pixel 4 is the performance floor: a model too slow on it is too slow for Dictus.
+- transcription time with Tiny, Base, Small Q5 and Parakeet 0.6B v3: `Transcription finished: engine=…, durationMs=N` is the engine call alone, and the `t+=` of `Dictation inserted` is the whole path from the mic tap (#112). The Pixel 4 is the performance floor: a model too slow on it is too slow for Dictus.
 
 Andy's voice is not a test input. The room noise proves that the chain runs, not that the text is right.
 
@@ -91,7 +91,7 @@ Read-only: installs, taps and changes nothing. One `OK` / `WARN` / `FAIL` line p
 - The `.pixel-lock` is held **by this session** (FAIL if free or held by another session's token).
 - `settings:` the harmless ones only (`active_model`, `transcription_language`, `keyboard_language`, `keyboard_layout`, `keyboard_mode`, `theme`): what the run must leave as it found them. Never the last transcription.
 - Dictus installed (`versionName`, `lastUpdateTime`) and **the installed APK is this run's build** (sha256 of the on-device `base.apk` against `apk_sha` in `run.env`; reading 170 MB takes ~20 s).
-- Dictus is the default IME; `RECORD_AUDIO` granted; the process runs; `files/dictus.log` readable with `run-as` (debug build only); which models are in `files/models` (none = every dictation ends on « Aucun modèle vocal »).
+- Dictus is the default IME; `RECORD_AUDIO` granted; the process runs; `files/dictus.log` readable with `run-as` (debug build only); which models are in `files/models` (none = the keyboard mic opens « Modèles », the app's recorder answers « Aucun modèle vocal »).
 - No other UI driver: no long-lived `uiautomator`/Appium/Maestro on the phone, no `mobile-mcp`/Maestro/Appium on the host.
 
 Run it after Launch and again before Evidence. A `FAIL` stops the run: fix it or report it, never drive past it.
@@ -118,12 +118,12 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | Accueil | `Modèle actif`, the model name (`Small Q5`), `Nouvelle dictée`; `Dernière transcription` + `Copier` only after a dictation |
 | In-app recording | `Retour`, the timer `0:06`, `Arrêter`, `Toucher pour arrêter`; then `Transcription en cours…`, `Résultat` + `Copier` |
 | Modèles | `Téléchargés`, `Disponibles`, card names `Tiny` `Base` `Small` `Small Q5` `Medium` `Parakeet 110M` `Parakeet 0.6B`, badges `WK` / `NV`, `Actif`, `Télécharger`, `Anglais uniquement`, `Nécessite 6 Go de RAM ou plus` (below 6 GB only), `Stockage utilisé : …` |
-| Réglages | `TRANSCRIPTION`, `Langue / Automatique`, `CLAVIER`, `Langue du clavier / …`, `Disposition du clavier / AZERTY`, `Mode par défaut / ABC`, `Suggestions`, `Correction automatique`, `Retour haptique`, `Sons du clavier`, `Sons`, `APPARENCE`, `Thème / Sombre`, `Langue de l'interface / Automatique`, `A PROPOS`, `Version`, `Debug Logs`, `Exporter les logs de débogage`, `Licences`, `GitHub`, `Mentions légales` |
-| Picker sheets | title (`Disposition du clavier`…), options with `[checked]`, `Fermer la feuille` (tap it to dismiss without choosing) |
-| Sons | `Retour`, `GENERAL`, `Son de dictée`, `Volume`, `SONS`, `Son de début / Electronic 01F`, `Son de fin / …`, `Son d'annulation / …` (`[disabled]` while « Son de dictée » is off); in a list `Electronic 01F / Sélectionné` |
+| Réglages | `Réglages` (title), `Transcription`, `Langue / Automatique`, `Clavier`, `Langue du clavier / …`, `ABC` / `123` (segment), `Disposition du clavier / AZERTY`, `Retour haptique`, `Sons du clavier`, `Sons`, `Suggestions`, `Correction automatique`, `Réinitialiser les mots appris`, `Apparence`, `Thème / Sombre`, `Langue de l'interface / Automatique`, `À propos`, `Version`, `GitHub`, `Mentions légales`, `Licences`, `Debug Logs`, `Exporter les logs de débogage` |
+| Picker menus | options anchored to the row, the current one with ✓; system back dismisses without choosing |
+| Sons | `Retour`, `GÉNÉRAL`, `Activer les sons`, `Volume`, `Les sons respectent le mode silencieux du téléphone.`, `SONS PAR ÉVÉNEMENT`, `Début / Electronic 01F`, `Fin / …`, `Annuler / …` (`[disabled]` while « Activer les sons » is off); in a list `Electronic 01F / Sélectionné` |
 | Onboarding (code only, not seen) | `Commencer`, `Autoriser le micro`, `Continuer`, `Ouvrir les paramètres`, `Sélectionner Dictus`, `ABC` / `123`, `Télécharger`, `Réessayer` |
 
-**The Dictus keyboard is fully in Argent's tree** (its own `ComposeView` at the bottom of the screen, above the app's nodes): each key is a `StaticText` with its label (`a`…`m`, `⇧`, `'`, `⌫`, `?123`, `😊`, `espace`, `retour`; `Leertaste` / `Eingabe` when the keyboard language is DE), the language code is `Keyboard language FR` (tap cycles FR→EN→ES→DE, long-press opens Dictus Réglages without tabs), the mic is `Microphone` (`Microphone indisponible pendant le chargement…` while the model loads), suggestions are three `View`s labelled with the words. While recording: `✕` (cancel), `✓` (insert), the timer `00:05`, `En écoute…`, `Settings` (opens the system keyboard picker). The emoji page uses androidx resource-ids `dev.pivisolutions.dictus:id/emoji_picker_header` / `emoji_picker_body`, category names (`UTILISÉS RÉCEMMENT`…), then `ABC` and `⌫`. Tap the centre of a key's frame.
+**The Dictus keyboard is fully in Argent's tree** (its own `ComposeView` at the bottom of the screen, above the app's nodes): each key is a `StaticText` with its label (`a`…`m`, `⇧`, `'`, `⌫`, `?123`, `😊`, `espace`, `retour`; `Leertaste` / `Eingabe` when the keyboard language is DE), the language code is `Langue du clavier FR` (tap cycles FR→EN→ES→DE, long-press opens Dictus Réglages without tabs), the mic is `Microphone` (always enabled, #247), suggestions are three `View`s labelled with the words. While recording: `Annuler la dictée` (✕, cancel), `Terminer la dictée` (✓, insert), glass pills with icons (#239), the timer `00:05`, `En écoute…`, `Réglages` (opens the system keyboard picker). The emoji page uses androidx resource-ids `dev.pivisolutions.dictus:id/emoji_picker_header` / `emoji_picker_body`, category names (`UTILISÉS RÉCEMMENT`…), then `ABC` and `⌫`. Tap the centre of a key's frame.
 
 **The tree can lag.** `describe` returned with an action sometimes shows the screen *before* the action (seen after taps on Sons, after scrolling Modèles, after a sub-screen's back). Give the step `delayMs: 1000` in `run-sequence`, or call `describe` again, and compare with the screenshot before tapping. Returning from a sub-screen can restore Réglages at a different scroll offset: re-read the frames, never reuse old ones.
 
@@ -135,7 +135,7 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | --- | --- |
 | Recording started (keyboard mic or Nouvelle dictée) | `DictationService started foreground with ACTION_START` |
 | ✕ in the keyboard | `Recording cancelled, samples discarded` (service), between `AudioRecord cancelled, samples discarded` and the IME's `Recording cancelled` |
-| ✓ in the keyboard | `confirmAndTranscribe: \d+ samples captured`, then `Transcribed text inserted: length=\d+` (never the text) |
+| ✓ in the keyboard | `Recording stopped: samples=\d+`, then `Transcription finished: engine=`, then `Dictation inserted: d=\w+, length=\d+, committed=true` (never the text) |
 | Undo chip | `Dictation undone: length=\d+` or `Dictation undo refused` |
 | Model warm-up | `Engine prewarm complete for model=…` / `Engine prewarm skipped` |
 
@@ -157,7 +157,7 @@ M=$($H/log.sh mark)
 # Argent: tap the centre of « Microphone »
 $H/log.sh wait 'ACTION_START' 15 "$M"
 $H/evidence.sh 02-dictation.cancel-recording "$M"
-# Argent: tap the centre of « ✕ »
+# Argent: tap the centre of « Annuler la dictée » (✕)
 $H/log.sh wait 'Recording cancelled, samples discarded' 10 "$M"
 $H/evidence.sh 03-dictation.cancel-after "$M"
 # Argent: describe → TextField "Titre" has no value; then delete the scratch note

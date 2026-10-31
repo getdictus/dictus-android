@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import org.junit.Assert.assertTrue
@@ -63,6 +64,7 @@ class RecordingTestAreaTest {
             DictusTheme {
                 RecordingTestArea(
                     dictationState = DictationState.Recording(
+                        source = DictationSource.APP,
                         elapsedMs = 5000L,
                         energy = listOf(0.3f, 0.5f),
                     ),
@@ -83,6 +85,7 @@ class RecordingTestAreaTest {
             DictusTheme {
                 RecordingTestArea(
                     dictationState = DictationState.Recording(
+                        source = DictationSource.APP,
                         elapsedMs = 1000L,
                         energy = emptyList(),
                     ),
@@ -105,6 +108,7 @@ class RecordingTestAreaTest {
             DictusTheme {
                 RecordingTestArea(
                     dictationState = DictationState.Recording(
+                        source = DictationSource.APP,
                         elapsedMs = 1000L,
                         energy = emptyList(),
                     ),
@@ -126,6 +130,7 @@ class RecordingTestAreaTest {
             DictusTheme {
                 RecordingTestArea(
                     dictationState = DictationState.Recording(
+                        source = DictationSource.APP,
                         elapsedMs = 1000L,
                         energy = emptyList(),
                     ),

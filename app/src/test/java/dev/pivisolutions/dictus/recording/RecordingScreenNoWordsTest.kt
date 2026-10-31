@@ -11,8 +11,8 @@ import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.R
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
-import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -21,17 +21,14 @@ import dev.pivisolutions.dictus.core.theme.DictusTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A dictation that produces no text says so and never passes older text off as its result (#153). */
+/** A dictation that produces no text says so (#153). */
 @RunWith(RobolectricTestRunner::class)
 class RecordingScreenNoWordsTest {
 
@@ -53,16 +50,13 @@ class RecordingScreenNoWordsTest {
     }
 
     @Test
-    fun `no words shows the notice and drops the previous preview`() {
-        runBlocking { LastTranscriptionStore.save(dataStore, "older dictation. ") }
+    fun `no words shows the notice, not an older text or the no result card`() {
         val controller = FakeDictationController(TranscriptionOutcome.NoWordsDetected)
 
         stopDictation(controller)
 
         composeTestRule.onNodeWithText("No words detected").assertIsDisplayed()
-        composeTestRule.onNodeWithText("older dictation. ").assertDoesNotExist()
         composeTestRule.onNodeWithText("(No result)").assertDoesNotExist()
-        assertNull(runBlocking { dataStore.data.first()[PreferenceKeys.LAST_TRANSCRIPTION] })
         assertEquals(DictationState.Idle, controller.state.value)
     }
 
@@ -87,12 +81,11 @@ class RecordingScreenNoWordsTest {
     }
 
     @Test
-    fun `text result is shown and saved as the preview, without the notice`() {
+    fun `text result is shown without the notice`() {
         stopDictation(FakeDictationController(TranscriptionOutcome.Text("Bonjour. ")))
 
         composeTestRule.onNodeWithText("Bonjour. ").assertExists()
         composeTestRule.onNodeWithText("No words detected").assertDoesNotExist()
-        assertEquals("Bonjour. ", runBlocking { dataStore.data.first()[PreferenceKeys.LAST_TRANSCRIPTION] })
     }
 
     @Test
@@ -115,9 +108,10 @@ class RecordingScreenNoWordsTest {
 
         override fun prewarmEngine() = Unit
 
-        override fun startRecording() {
+        override fun startRecording(source: DictationSource): Boolean {
             startRecordingCallCount++
-            mutableState.value = DictationState.Recording()
+            mutableState.value = DictationState.Recording(source)
+            return true
         }
 
         override fun stopRecording(): FloatArray = FloatArray(0)

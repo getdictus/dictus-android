@@ -32,6 +32,15 @@ object PremiumFlags {
     const val HISTORY_VISIBLE = false
 
     /**
+     * Controls whether custom vocabulary (#203) rewrites transcripts.
+     *
+     * `false` = `CustomVocabulary` returns every transcript unchanged without reading the
+     * store, and `VocabularyStore.add` refuses. Removal stays possible either way. Whether
+     * vocabulary ends up free or behind the Pro tier is decided when it ships.
+     */
+    const val VOCABULARY = false
+
+    /**
      * Downgrades a caller's requested retention to what the current tier permits.
      *
      * Callers keep expressing the retention their context deserves (the IME still

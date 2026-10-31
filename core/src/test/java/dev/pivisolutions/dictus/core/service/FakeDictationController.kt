@@ -29,9 +29,10 @@ class FakeDictationController : DictationController {
         prewarmEngineCallCount++
     }
 
-    override fun startRecording() {
+    override fun startRecording(source: DictationSource): Boolean {
         startRecordingCallCount++
-        _state.value = DictationState.Recording(elapsedMs = 0L, energy = emptyList())
+        _state.value = DictationState.Recording(source, elapsedMs = 0L, energy = emptyList())
+        return true
     }
 
     override fun stopRecording(): FloatArray {

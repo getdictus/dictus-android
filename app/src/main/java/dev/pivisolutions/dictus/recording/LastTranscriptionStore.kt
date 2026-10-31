@@ -1,95 +1,31 @@
 package dev.pivisolutions.dictus.recording
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
-/** Retains the Home preview briefly, then removes user text from persistent storage. */
-object LastTranscriptionStore {
-    const val RETENTION_MS = 5 * 60 * 1_000L
+/**
+ * Home's "Last transcription" card (#245): the last dictation with words, from the app or the
+ * keyboard, until a new dictation starts.
+ *
+ * WHY in memory only: like iOS, which keeps it in `DictationCoordinator.lastResult`, the card
+ * belongs to the process. Nothing reaches the disk, and a relaunch starts with an empty card.
+ * There is no expiry either.
+ */
+class LastTranscriptionStore {
+    private val mutableText = MutableStateFlow<String?>(null)
+    val text: StateFlow<String?> = mutableText.asStateFlow()
 
-    suspend fun save(
-        dataStore: DataStore<Preferences>,
-        text: String,
-        nowMillis: Long = System.currentTimeMillis(),
-    ) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.LAST_TRANSCRIPTION] = text
-            preferences[PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT] = nowMillis
-        }
+    fun save(text: String) {
+        mutableText.value = text
     }
 
-    /**
-     * Drops the preview unconditionally.
-     *
-     * Called once per process start so the Home preview never survives an app restart, matching
-     * iOS: force-quitting the app is expected to take the last transcription with it. The
-     * five-minute window in [RETENTION_MS] still bounds a preview inside a single session.
-     */
-    suspend fun clear(dataStore: DataStore<Preferences>) {
-        dataStore.edit { preferences ->
-            preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION)
-            preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT)
-        }
+    fun clear() {
+        mutableText.value = null
     }
 
-    /**
-     * Clears expired text on app launch. Legacy entries without a timestamp and
-     * impossible future timestamps are removed conservatively.
-     */
-    suspend fun purgeStale(
-        dataStore: DataStore<Preferences>,
-        nowMillis: Long = System.currentTimeMillis(),
-    ) {
-        dataStore.edit { preferences ->
-            val text = preferences[PreferenceKeys.LAST_TRANSCRIPTION]
-            val savedAt = preferences[PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT]
-            val stale = text != null && (
-                savedAt == null ||
-                    savedAt > nowMillis ||
-                    nowMillis - savedAt >= RETENTION_MS
-                )
-
-            if (stale || (text == null && savedAt != null)) {
-                preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION)
-                preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT)
-            }
-        }
-    }
-
-    /** Returns text only while its timestamp is valid and inside the retention window. */
-    fun visibleText(preferences: Preferences, nowMillis: Long = System.currentTimeMillis()): String? {
-        val text = preferences[PreferenceKeys.LAST_TRANSCRIPTION] ?: return null
-        val savedAt = preferences[PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT] ?: return null
-        return if (savedAt <= nowMillis && nowMillis - savedAt < RETENTION_MS) text else null
-    }
-
-    /**
-     * Enforces expiry even while one Activity instance remains alive. `collectLatest`
-     * cancels the previous timer when a newer transcription replaces the preview.
-     */
-    suspend fun enforceRetention(
-        dataStore: DataStore<Preferences>,
-        nowMillis: () -> Long = System::currentTimeMillis,
-        wait: suspend (Long) -> Unit = { delay(it) },
-    ) {
-        dataStore.data
-            .map { it[PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT] }
-            .distinctUntilChanged()
-            .collectLatest { savedAt ->
-                val now = nowMillis()
-                if (savedAt == null || savedAt > now || now - savedAt >= RETENTION_MS) {
-                    purgeStale(dataStore, now)
-                    return@collectLatest
-                }
-
-                wait(RETENTION_MS - (now - savedAt))
-                purgeStale(dataStore, nowMillis())
-            }
+    companion object {
+        /** The app, the keyboard and the dictation service share one process, so one store. */
+        val instance = LastTranscriptionStore()
     }
 }

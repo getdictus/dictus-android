@@ -30,8 +30,11 @@ interface DictationController {
     /** Warm the downloaded active model without starting audio or downloading data. */
     fun prewarmEngine()
 
-    /** Start recording via foreground service. */
-    fun startRecording()
+    /**
+     * Start recording via foreground service, for the surface [source].
+     * Returns false, and changes nothing, when [DictationStartGuard] refuses the start.
+     */
+    fun startRecording(source: DictationSource): Boolean
 
     /** Stop recording and return captured audio buffer. */
     fun stopRecording(): FloatArray

@@ -44,10 +44,10 @@ Implementation details stay out of the map: only user paths, stable handles, req
 | ID | Feature | Tier | Android status | Drivable on the Pixel |
 | --- | --- | --- | --- | --- |
 | [`dictation.keyboard`](dictation.keyboard.md) | Dictation from the keyboard | Free | present | Yes — start + cancel proven on the Pixel (2026-10-20); ✓ records the room |
-| [`dictation.in-app`](dictation.in-app.md) | Dictation inside the app | Free | present | Screens yes; opening the recorder records at once (and `Retour` does not stop it) |
+| [`dictation.in-app`](dictation.in-app.md) | Dictation inside the app | Free | present | Screens yes; opening the recorder records at once; its single ✕ cancels (#243) |
 | [`models.transcription`](models.transcription.md) | Transcription models | Free | present | Browsing yes; no download/delete on Pierre's phone |
 | [`typing.autocorrect`](typing.autocorrect.md) | Autocorrect and suggestions | Free | present | Yes, keys by coordinate in a scratch note; the ⌫ undo step on a test device only |
-| [`typing.learned-words`](typing.learned-words.md) | Learned words | Free | partial | No on Pierre's Pixel (learning is permanent, no reset): test device only |
+| [`typing.learned-words`](typing.learned-words.md) | Learned words | Free | present | No on Pierre's Pixel (learning and reset both change his dictionary): test device only |
 | [`keyboard.languages`](keyboard.languages.md) | Keyboard languages and layouts | Free | partial | Yes (cycle a full turn) |
 | [`keyboard.emoji`](keyboard.emoji.md) | Emoji | Free | partial | Yes |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Sounds and haptics | Free | present | Settings only; no sound or vibration captured |
@@ -69,11 +69,11 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | [`models.transcription`](models.transcription.md) | Free | present | no |
 | `polish` | N/A | iOS-only (N/A) | no |
 | `smart-modes` | Pro on iOS — absent | absent | no |
-| `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete) but hidden | no |
+| `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete, search, clear, 200-entry cap; #202) but hidden | no |
 | `vocabulary` | Pro on iOS — absent | absent | no |
 | `voice-notes` | Pro on iOS — absent | absent | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
-| [`typing.learned-words`](typing.learned-words.md) | Free | partial — no reset | no |
+| [`typing.learned-words`](typing.learned-words.md) | Free | present | no |
 | [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no QWERTZ, no number row | no |
 | [`keyboard.emoji`](keyboard.emoji.md) | Free | partial — no search | no |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Free | present | no |
@@ -100,9 +100,9 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `models.download` | Free | present | no |
 | `models.select` | Free | present | no |
 | `models.delete` | Free | present | no |
-| `models.retry` | Free | partial — « Réessayer » yes; no explicit deletion of a partial download | no |
+| `models.retry` | Free | partial — « Réessayer » resumes the download (#131); no explicit deletion of a partial download | no |
 | `models.languages` | Free | partial — no language sheet; only Parakeet 110M carries « Anglais uniquement » | no |
-| `models.preparation` | Free | present — overlay in the keyboard and the recorder, snackbar in Models | no |
+| `models.preparation` | Free | present — full-screen preparation screen in Models (#181), overlay in the recorder; the keyboard records during the load (#247) | no |
 | `models.device-gating` | Free | present — RAM threshold, card greyed out with the reason (#121) | no |
 | `polish.toggle` | N/A | iOS-only (N/A) | no |
 | `polish.clean-up` | N/A | iOS-only (N/A) | no |
@@ -116,11 +116,11 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `smart-modes.translate` | Pro on iOS — absent | absent | no |
 | `smart-modes.pin` | Pro on iOS — absent | absent | no |
 | `smart-modes.toggle` | Pro on iOS — absent | absent | no |
-| `history.list` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
-| `history.search` | Pro on iOS — absent | absent — not in the code | no |
+| `history.list` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden; the oldest entries are dropped beyond 200 on insertion (#202) | no |
+| `history.search` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (« Rechercher dans les transcriptions », case- and accent-insensitive, « Aucun résultat »; #202), hidden | no |
 | `history.delete` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
 | `history.detail` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (copy, share), hidden | no |
-| `history.clear` | Pro on iOS — absent | absent — not in the code | no |
+| `history.clear` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (« Effacer l’historique » on the History screen, not in Réglages as on iOS; confirmation « Tout supprimer » / « Annuler »; #202), hidden | no |
 | `history.toggle` | Pro on iOS — absent | absent — not in the code | no |
 | `history.home-entry` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — swipe up on Home, hidden | no |
 | `vocabulary.add` | Pro on iOS — absent | absent | no |
@@ -142,12 +142,13 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.suggestions` | Free | present | no |
 | `typing.autocorrect-on-space` | Free | present | no |
 | `typing.undo-correction` | Free | partial — ⌫ right after the correction; no chip in the bar | no |
-| `typing.auto-full-stop` | Free | absent | no |
+| `typing.auto-full-stop` | Free | present — same rule as iOS `AutoFullStop`; ⌫ right after turns it back into one space (Android only); never in password fields | no |
 | `typing.accents` | Free | present — long press, accent strip | no |
 | `typing.dead-keys` | Free | absent | no |
 | `typing.autocorrect-toggle` | Free | present | no |
+| `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |
 | `learned-words.learn` | Free | present | no |
-| `learned-words.reset` | Free | absent — no button; only clearing the app's data | no |
+| `learned-words.reset` | Free | present — Réglages → Clavier, with confirmation (#194) | no |
 | `keyboard.language-switch` | Free | present — tap on the language code (FR→EN→ES→DE), no panel | no |
 | `keyboard.layout` | Free | partial — AZERTY / QWERTY, no QWERTZ | no |
 | `keyboard.number-row` | Free | absent | no |
@@ -211,7 +212,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.history.detail` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
 | `app.models` | Free | present | no |
 | `app.models.languages` | Free | absent | no |
-| `app.models.loading` | Free | partial — no full-screen overlay in Models; see kbd.model-loading | no |
+| `app.models.loading` | Free | present — full-screen preparation screen in Models (#181) | no |
 | `app.settings` | Free | present | no |
 | `app.settings.sounds` | Free | present | no |
 | `app.settings.diagnostic` | N/A | iOS-only (N/A) | no |
@@ -229,7 +230,7 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.voice-note.result` | Pro on iOS — absent | absent | no |
 | `kbd.keys` | Free | present | no |
 | `kbd.no-full-access` | N/A | iOS-only (N/A) | no |
-| `kbd.dictation-error` | Free | present — « Aucun modèle vocal » / « Impossible de démarrer la reconnaissance vocale » | no |
+| `kbd.dictation-error` | Free | present — « La dictée a échoué… » in the suggestion bar; no overlay (#247) | no |
 | `kbd.recording` | Free | present | no |
 | `kbd.panel` | Free | absent | no |
 | `kbd.emoji` | Free | present | no |
@@ -242,8 +243,8 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | [`appearance`](appearance.md) | Free | present — theme and interface language | yes |
 | `appearance.theme` | Free | present | yes |
 | `appearance.ui-language` | Free | present | yes |
-| `dictation.notification` | Free | present — « Dictus - Recording » notification + Stop (not visible on the Pixel: notifications denied) | yes |
-| `dictation.switch-keyboard` | Free | present — gear during a recording → keyboard picker | yes |
+| `dictation.notification` | Free | present — « Dictus – Enregistrement » notification + « Arrêter » (not visible on the Pixel: notifications denied) | yes |
+| `dictation.switch-keyboard` | Free | present — globe « Changer de clavier » during a recording → keyboard picker (#190) | yes |
 | `typing.trackpad` | Free | present — long press on space + drag | yes |
 | `typing.adaptive-accent-key` | Free | present — AZERTY ' key → é à ù î ô | yes |
 | `typing.suggestions-toggle` | Free | present | yes |
@@ -256,8 +257,8 @@ Every iOS ID (the 176 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.onboarding.ime-setup` | Free | present | yes |
 | `app.onboarding.default-page` | Free | present | yes |
 | `app.settings.sound-picker` | Free | present | yes |
-| `app.settings.picker` | Free | present — Settings choice sheets | yes |
-| `kbd.model-loading` | Free | present | yes |
+| `app.settings.picker` | Free | present — inline choice menus (#189) | yes |
+| `kbd.model-loading` | Free | retired (#247) — the keyboard is never covered | yes |
 | `sys.ime-picker` | Free | present | yes |
 | `sys.settings.ime` | Free | present | yes |
 | `sys.notification.recording` | Free | present | yes |
@@ -276,8 +277,8 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: merge into a single bar following the #139 mockup.
 2. **Dictation in the keyboard — `kbd.recording`**
    - iOS: ✕ and ✓ in the keyboard bar, waveform above the keys.
-   - Android: a panel that replaces the whole keyboard: ✕ / ✓ at the top, waveform + timer + « En écoute… » in the middle, and at the bottom left a gear stuck to the system keyboard's navigation bar (next to ⌄), whose accessibility label is in English (`Settings`) and which opens… the Android keyboard picker, not the settings.
-   - Proposal: align the recording bar with #139; replace the gear with a switch-keyboard icon labelled « Changer de clavier ».
+   - Android: a panel that replaces the whole keyboard: ✕ / ✓ glass capsules at the top (#239), waveform + timer (20 sp, medium, monospaced, like iOS since #190) + « En écoute… » in the middle, and at the bottom left a globe « Changer de clavier » stuck to the system keyboard's navigation bar (next to ⌄), which opens the Android keyboard picker (#190; a `Réglages` gear before).
+   - Proposal: align the recording bar with #139.
 3. **Keyboard languages — `kbd.panel`**
    - iOS: long press on ☰: a panel lists « Français » / « English » / « Español » / « Deutsch » and the layouts, closed with ✕.
    - Android: no panel; a tap on the `FR` code moves to the next language (FR→EN→ES→DE), a long press opens Settings. Nothing hints at these gestures.
@@ -288,20 +289,20 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: the same prompt card on Home when no model is downloaded.
 5. **Model cards — `app.models`**
    - iOS: engine badge (`WK`, `PK`), « Recommandé » badge on the model advised for the device, ⓘ « Langues prises en charge » on every card.
-   - Android: engine badges `WK` / `NV` present, but no Recommended badge (only in onboarding) and no ⓘ; only Parakeet 110M carries « Anglais uniquement »; descriptions without accents (« Rapide et leger », « Precis et equilibre », « Haute precision », « Detection automatique »); « Stockage utilisé » line at the bottom.
-   - Proposal: « Recommandé » badge and a language sheet per model; add the accents to the descriptions.
+   - Android: engine badges `WK` / `NV`, « Recommandé » badge on onboarding's model (#188), descriptions in strings.xml FR/EN (#236), but no ⓘ; only Parakeet 110M carries « Anglais uniquement »; « Stockage utilisé » line at the bottom.
+   - Proposal: a language sheet per model.
 6. **Settings — `app.settings`**
    - iOS: section headers in normal case (« Transcription », « Clavier »), transcription language « Suivre la langue du clavier », ABC / 123 choice as a segment with a keyboard preview.
-   - Android: no page title (the screen starts straight with « TRANSCRIPTION », while Models has its large title); headers in capitals, including « A PROPOS » without its accent; every choice goes through sheets (`app.settings.picker`); an extra APPARENCE section; no « Suivre la langue du clavier » option.
-   - Proposal: a « Réglages » title like on Models; fix « À PROPOS »; an inline ABC / 123 segment; add « Suivre la langue du clavier » to the transcription language.
+   - Android (since #189): large « Réglages » title, sentence-case headers in the iOS order, inline ABC / 123 segment, inline menus instead of sheets. Still different: no keyboard preview under the segment; an extra « Apparence » section; no « Suivre la langue du clavier » option (#186).
+   - Proposal: add « Suivre la langue du clavier » (#186).
 7. **Sounds — `app.settings.sounds`**
    - iOS: « Activer les sons » with an explanatory note, « Sons par événement »: « Début », « Fin », « Annuler » with the chosen sound shown on the right.
-   - Android: « Son de dictée » without an explanatory note, sections « GENERAL » (without its accent) and « SONS », rows « Son de début / de fin / d'annulation » with the sound on the right (greyed out while sound is off).
-   - Proposal: « GÉNÉRAL »; the short iOS labels (« Début », « Fin », « Annuler ») and a note under the switch.
+   - Android (since #185): the iOS labels « Activer les sons », « SONS PAR ÉVÉNEMENT », « Début », « Fin », « Annuler », and the note « Les sons respectent le mode silencieux du téléphone. » under the card; sections stay in capitals (« GÉNÉRAL ») and the volume shares the switch's card.
+   - Proposal: done in #185.
 8. **Recording notification — `sys.notification.recording`**
    - iOS: no notification (Dynamic Island, iOS-only).
-   - Android: notification in English « Dictus - Recording » with the « Stop » action, on a French device.
-   - Proposal: translate it (« Dictus — Enregistrement », « Arrêter »).
+   - Android (since #185): « Dictus – Enregistrement » with the « Arrêter » action in French, « Dictus – Recording » / « Stop » in English.
+   - Proposal: done in #185.
 9. **Onboarding — `app.onboarding.*`**
    - iOS: dashed progress bar at the top, illustrations, tagline « Parlez. Dictus écrit. », language + layout step.
    - Android: progress dots, tagline « Dictation vocale, 100 % offline » (« Dictation » is English; in French: « Dictée vocale »), no language step but an ABC / 123 step.
@@ -316,9 +317,9 @@ Screen by screen, what looks different between the Android captures of `../scree
     - Proposal: a single « Dictus » subtype (or one per language actually supported).
 12. **Keyboard accessibility labels — `kbd.keys`, `kbd.recording`**
     - iOS: labels in French on a French device.
-    - Android: `Keyboard language DE`, `Settings` in English (the rest is in French: `Microphone`, `Annuler la dernière dictée`).
-    - Proposal: translate these content descriptions (strings.xml FR/EN).
+    - Android (since #185): `Langue du clavier DE`, `Réglages`, and the actions « Changer la langue du clavier » / « Ouvrir les réglages Dictus », from strings.xml FR/EN.
+    - Proposal: done in #185.
 
 ## Functional anomaly seen during the captures (not design)
 
-- **`app.recording` — `Retour` does not stop the recording** (Pixel 4, `develop` build `f2b15c5`, 2026-10-20 21:43). « Nouvelle dictée » starts recording at once; leaving the screen with `Retour` goes back to Home but `DictationService` stays in the foreground (`isForeground=true`), the mic indicator stays green, no `Recording cancelled` line. It took « Applis actives → Arrêter » to release the mic. Proof outside the repo: `/home/pierre/Dev/dictus-proofs/verify-dictus-android/20261020-214307-0f15824/90-bug-recording-continues-after-retour.png`. Proposal: cancel the recording (or ask for confirmation) when leaving the screen; to be opened as an issue with the `needs-physical-test` label.
+- **`app.recording` — `Retour` does not stop the recording** (fixed by #142, `Retour` removed by #243; Pixel 4, `develop` build `f2b15c5`, 2026-10-20 21:43). « Nouvelle dictée » starts recording at once; leaving the screen with `Retour` goes back to Home but `DictationService` stays in the foreground (`isForeground=true`), the mic indicator stays green, no `Recording cancelled` line. It took « Applis actives → Arrêter » to release the mic. Proof outside the repo: `/home/pierre/Dev/dictus-proofs/verify-dictus-android/20261020-214307-0f15824/90-bug-recording-continues-after-retour.png`. Proposal: cancel the recording (or ask for confirmation) when leaving the screen; to be opened as an issue with the `needs-physical-test` label.

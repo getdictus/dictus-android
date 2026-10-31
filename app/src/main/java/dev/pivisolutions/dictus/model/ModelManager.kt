@@ -1,7 +1,9 @@
 package dev.pivisolutions.dictus.model
 
 import android.content.Context
+import androidx.annotation.StringRes
 import dev.pivisolutions.dictus.BuildConfig
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.model.ModelCatalog.isDirectoryModel
 import java.io.File
 
@@ -19,28 +21,33 @@ enum class AiProvider { WHISPER, PARAKEET }
  *
  * WHY a separate data class from the old ModelInfo: The Phase 3 ModelInfo only
  * stored fileName and expectedSize. Phase 4 adds display metadata (displayName,
- * qualityLabel), provider routing, and deprecation signalling. The old nested
+ * qualityLabelRes), provider routing, and deprecation signalling. The old nested
  * class was removed; all consumers use ModelCatalog to look up models.
  *
  * @param key             Stable string identifier used in preferences and URLs.
- * @param fileName        File name on disk and in the HuggingFace repo.
+ * @param fileName        Main file on disk: the one the engine loads, and the one whose path
+ *                        [ModelManager.getModelPath] returns.
  * @param displayName     Human-readable name shown in the model list UI.
- * @param expectedSizeBytes Expected byte size used to detect complete downloads.
- * @param qualityLabel    Short quality descriptor shown as a badge (e.g. "Rapide").
- * @param description     Short human-readable description shown on model card.
+ * @param files           Every file the installed model is made of, with its exact size and
+ *                        SHA-256 (#169). The install is verified against it.
+ * @param qualityLabelRes Short quality descriptor (e.g. "Fast"), as a string resource.
+ * @param descriptionRes  Short description shown on the model card, as a string resource:
+ *                        the catalog has no Context, the UI resolves it in its locale (#236).
  * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
  * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
  * @param provider        Download source and inference engine.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
  * @param languages       Spoken languages the model transcribes (issue #133).
+ * @param timeoutFactor   Seconds of transcription allowed per second of audio, above the
+ *                        120 s floor (#179): see TranscriptionTimeout.
  */
 data class ModelInfo(
     val key: String,
     val fileName: String,
     val displayName: String,
-    val expectedSizeBytes: Long,
-    val qualityLabel: String,
-    val description: String = "",
+    val files: List<ModelFile>,
+    @StringRes val qualityLabelRes: Int,
+    @StringRes val descriptionRes: Int,
     val precision: Float = 0f,
     val speed: Float = 0f,
     val provider: AiProvider = AiProvider.WHISPER,
@@ -48,10 +55,24 @@ data class ModelInfo(
     val isTransducer: Boolean = false,
     val minRamGb: Int = 0,
     val languages: ModelLanguages,
+    val timeoutFactor: Double,
 ) {
+    /** Bytes on disk once installed, shown as the model size. */
+    val expectedSizeBytes: Long get() = files.sumOf { it.sizeBytes }
+
     /** True when the model only transcribes English (derived from [languages]). */
     val isEnglishOnly: Boolean get() = languages.coverage == LanguageCoverage.ENGLISH_ONLY
 }
+
+/**
+ * One file of an installed model, as published upstream.
+ *
+ * WHY exact size and SHA-256, not a size threshold: a 95% size gate let a Parakeet encoder
+ * truncated by 60 MB pass as installed, and never looked at the other files (#169). The size
+ * is cheap enough to check on every read of the model list; the hash is checked once, when
+ * the install finishes.
+ */
+data class ModelFile(val name: String, val sizeBytes: Long, val sha256: String)
 
 /**
  * Static catalog of all supported ASR models (Whisper GGML and Parakeet ONNX).
@@ -66,7 +87,10 @@ data class ModelInfo(
  */
 object ModelCatalog {
     const val DEFAULT_KEY = "tiny"
-    private const val WHISPER_BASE_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
+    // Pinned revision: the SHA-256 below are the LFS object ids of the files at this commit, so a
+    // later upstream change can never make a valid install fail its check.
+    private const val WHISPER_BASE_URL =
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1"
     private const val SHERPA_ONNX_RELEASES_URL =
         "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models"
 
@@ -84,66 +108,71 @@ object ModelCatalog {
      *   parakeet-ctc-110m-int8 — 126 MB — fast quantised, English-only (CTC)
      *   parakeet-tdt-0.6b-v3  — 640 MB — 25 languages, requires 6+ GB RAM (transducer)
      *
-     * WHY corrected sizes: The exact byte sizes were confirmed via UAT debug session
-     * (Whisper) or from official sherpa-onnx release metadata (Parakeet).
-     * expectedSizeBytes is used for the 95% minimum-size threshold check in getModelPath()
-     * which tolerates minor CDN mirror variations while still rejecting partial downloads.
+     * Where the sizes and hashes come from (#169): Whisper, the HuggingFace API (size and LFS
+     * oid of each file at the pinned revision); Parakeet, the members of the release archives,
+     * measured on 2026-10-23. The 0.6B v3 encoder, decoder and joiner hashes match the LFS oids
+     * of csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8 on HuggingFace.
      */
     val ALL = listOf(
         ModelInfo(
             key = "tiny",
             fileName = "ggml-tiny.bin",
             displayName = "Tiny",
-            expectedSizeBytes = 77_691_713L,
-            qualityLabel = "Rapide",
-            description = "Rapide et leger",
+            files = listOf(ModelFile("ggml-tiny.bin", 77_691_713L, "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21")),
+            qualityLabelRes = R.string.model_quality_fast,
+            descriptionRes = R.string.model_description_tiny,
             precision = 0.4f,
             speed = 1.0f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "base",
             fileName = "ggml-base.bin",
             displayName = "Base",
-            expectedSizeBytes = 147_951_465L,
-            qualityLabel = "Equilibre",
-            description = "Precis et equilibre",
+            files = listOf(ModelFile("ggml-base.bin", 147_951_465L, "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe")),
+            qualityLabelRes = R.string.model_quality_balanced,
+            descriptionRes = R.string.model_description_base,
             precision = 0.6f,
             speed = 0.7f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "small",
             fileName = "ggml-small.bin",
             displayName = "Small",
-            expectedSizeBytes = 487_601_967L,
-            qualityLabel = "Precis",
-            description = "Haute precision",
+            files = listOf(ModelFile("ggml-small.bin", 487_601_967L, "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b")),
+            qualityLabelRes = R.string.model_quality_accurate,
+            descriptionRes = R.string.model_description_small,
             precision = 0.9f,
             speed = 0.35f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.8,
         ),
         ModelInfo(
             key = "small-q5_1",
             fileName = "ggml-small-q5_1.bin",
             displayName = "Small Q5",
-            expectedSizeBytes = 190_085_487L,
-            qualityLabel = "Precis",
-            description = "Meilleur compromis",
+            files = listOf(ModelFile("ggml-small-q5_1.bin", 190_085_487L, "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb")),
+            qualityLabelRes = R.string.model_quality_accurate,
+            descriptionRes = R.string.model_description_small_q5,
             precision = 0.85f,
             speed = 0.55f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.0,
         ),
         ModelInfo(
             key = "medium-q5_0",
             fileName = "ggml-medium-q5_0.bin",
             displayName = "Medium",
-            expectedSizeBytes = 539_212_467L,
-            qualityLabel = "Precis",
-            description = "Meilleure precision",
+            files = listOf(ModelFile("ggml-medium-q5_0.bin", 539_212_467L, "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f")),
+            qualityLabelRes = R.string.model_quality_accurate,
+            descriptionRes = R.string.model_description_medium,
             precision = 0.9f,
             speed = 0.3f,
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
+            timeoutFactor = 1.0,
         ),
         // --- Parakeet models (sherpa-onnx) ---
         // Downloaded as tar.bz2 archives, stored in models/{key}/ directory on device.
@@ -151,28 +180,38 @@ object ModelCatalog {
             key = "parakeet-ctc-110m-int8",
             fileName = "model.int8.onnx",
             displayName = "Parakeet 110M",
-            expectedSizeBytes = 131_628_000L,
-            qualityLabel = "Rapide",
-            description = "Rapide et precis",
+            files = listOf(
+                ModelFile("model.int8.onnx", 131_652_171L, "9177a9146cf32ee0cc8152276ef95116f312018d316be37ccf57f7efea81fc1a"),
+                ModelFile("tokens.txt", 9_953L, "450e56bd2f036fe5b6aa821865838cc5aa9d8b0106134ce9a9ba0664abe6cd10"),
+            ),
+            qualityLabelRes = R.string.model_quality_fast,
+            descriptionRes = R.string.model_description_parakeet_110m,
             precision = 0.75f,
             speed = 0.85f,
             provider = AiProvider.PARAKEET,
             languages = ModelLanguages.ENGLISH,
+            timeoutFactor = 0.6,
         ),
         ModelInfo(
             key = "parakeet-tdt-0.6b-v3",
             fileName = "encoder.int8.onnx",
             // "v3" is the multilingual release (v2 was English only): the name says it
             displayName = "Parakeet 0.6B v3",
-            expectedSizeBytes = 622_000_000L,
-            qualityLabel = "Premium",
-            description = "Detection automatique de la langue",
+            files = listOf(
+                ModelFile("encoder.int8.onnx", 652_184_281L, "acfc2b4456377e15d04f0243af540b7fe7c992f8d898d751cf134c3a55fd2247"),
+                ModelFile("decoder.int8.onnx", 11_845_275L, "179e50c43d1a9de79c8a24149a2f9bac6eb5981823f2a2ed88d655b24248db4e"),
+                ModelFile("joiner.int8.onnx", 6_355_277L, "3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3"),
+                ModelFile("tokens.txt", 93_939L, "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"),
+            ),
+            qualityLabelRes = R.string.model_quality_premium,
+            descriptionRes = R.string.model_description_parakeet_v3,
             precision = 0.95f,
             speed = 0.40f,
             provider = AiProvider.PARAKEET,
             isTransducer = true,
             minRamGb = BuildConfig.PARAKEET_MIN_RAM_GB,
             languages = ModelLanguages.PARAKEET_V3,
+            timeoutFactor = 0.6,
         ),
     )
 
@@ -260,10 +299,10 @@ class ModelManager(context: Context) {
     /**
      * Get the absolute path to a downloaded model, or null if not available.
      *
-     * Checks both file existence and a minimum-size threshold to detect
-     * corrupt/partial downloads. Using >= 95% of expectedSizeBytes (instead of
-     * exact equality) tolerates minor size variations across HuggingFace CDN
-     * mirrors while still rejecting clearly partial downloads.
+     * Every file of [ModelInfo.files] must exist with its exact size (#169): a truncated or
+     * missing companion file (decoder, joiner, tokens) makes the whole model unavailable. The
+     * SHA-256 is not read here, this runs on every model list refresh; ModelDownloader checks
+     * it before an install lands in this directory.
      *
      * For Parakeet models (directory-based), the path points to the ONNX model file
      * inside models/{key}/{fileName} — e.g. models/parakeet-ctc-110m-int8/model.int8.onnx.
@@ -271,16 +310,8 @@ class ModelManager(context: Context) {
      */
     fun getModelPath(modelKey: String): String? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
-        val file = if (info.isDirectoryModel()) {
-            File(File(modelsDir, info.key), info.fileName)
-        } else {
-            File(modelsDir, info.fileName)
-        }
-        return if (file.exists() && file.length() >= info.expectedSizeBytes * 95 / 100) {
-            file.absolutePath
-        } else {
-            null
-        }
+        val dir = if (info.isDirectoryModel()) File(modelsDir, info.key) else modelsDir
+        return if (ModelIntegrity.sizesMatch(dir, info.files)) File(dir, info.fileName).absolutePath else null
     }
 
     /**
@@ -311,7 +342,16 @@ class ModelManager(context: Context) {
     }
 
     /**
-     * Return true if the model file exists on disk with the correct size.
+     * Directory an archive is extracted into before it is verified and renamed to the model
+     * directory, so the engine never sees a half-written model (#169).
+     */
+    fun getStagingDir(modelKey: String): File? {
+        val info = ModelCatalog.findByKey(modelKey) ?: return null
+        return File(modelsDir, "${info.key}.part")
+    }
+
+    /**
+     * Return true if every model file exists on disk with its exact size.
      */
     fun isDownloaded(modelKey: String): Boolean = getModelPath(modelKey) != null
 

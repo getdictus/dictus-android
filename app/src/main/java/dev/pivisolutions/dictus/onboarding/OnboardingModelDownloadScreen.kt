@@ -1,275 +1,47 @@
 package dev.pivisolutions.dictus.onboarding
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import dev.pivisolutions.dictus.R
-import dev.pivisolutions.dictus.core.theme.DictusColors
-import dev.pivisolutions.dictus.core.theme.LocalDictusColors
-import androidx.compose.material3.MaterialTheme
-import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
+import androidx.compose.runtime.LaunchedEffect
+import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.models.ModelPreparationTarget
+import dev.pivisolutions.dictus.ui.models.ModelPreparationContext
+import dev.pivisolutions.dictus.ui.models.ModelPreparationScreen
 
 /**
- * Onboarding Step 5 — Model download.
+ * Onboarding Step 5 — the recommended model's preparation (#181), in the shell's page (#196).
  *
- * Shows the default Whisper model info card with download state:
- * - Before download: "Telecharger" CTA → calls [onStartDownload]
- * - In progress: disabled "Telechargement en cours..." + progress bar in card
- * - Error: re-enabled "Telecharger" CTA + inline error + "Reessayer" text button
- * - Complete: "Continuer" CTA → calls [onNext]
+ * The step is the preparation screen, as on iOS (`ModelDownloadPage` showing
+ * `ModelLoadingOverlay` in its onboarding context): the install starts when the step opens
+ * ([onStart]), the screen follows the download, the preparation and the engine load, and the
+ * step moves on by itself once the model is ready ([onNext]). No « Continuer » stop: the step
+ * only waits. A failure stays here, on « Réessayer ».
  *
- * Advancement to step 6 is gated on [downloadComplete] — the CTA remains disabled
- * until download finishes. This guard is enforced in OnboardingViewModel.advanceStep().
+ * The shell draws the top row and the dashed progress bar above it, as on every other step.
  *
- * @param downloadProgress  -1 = not started, 0-99 = in progress, 100 = complete (or after complete)
- * @param downloadComplete  True when the download finished successfully.
- * @param downloadError     Non-null string if the last download attempt failed.
- * @param onStartDownload   Called to start downloading the default model.
- * @param onRetry           Called to retry after a failure.
- * @param onNext            Called when the user taps "Continuer" after completion.
+ * @param preparation     what the screen draws, from [OnboardingViewModel.preparation].
+ * @param engine          the dictation engine's state, null when the service is not bound.
+ * @param onStart         starts the install unless one runs or failed.
+ * @param onRetryInstall  retries a failed install.
+ * @param onLoadEngine    asks the engine to load the selected model.
+ * @param onNext          moves to step 6.
  */
 @Composable
 fun OnboardingModelDownloadScreen(
-    modelName: String,
-    modelSize: String,
-    modelQualityLabel: String,
-    isExtracting: Boolean,
-    downloadProgress: Int,
-    downloadComplete: Boolean,
-    downloadError: String?,
-    onStartDownload: () -> Unit,
-    onRetry: () -> Unit,
+    preparation: ModelPreparationTarget,
+    engine: SttEngineState?,
+    onStart: () -> Unit,
+    onRetryInstall: () -> Unit,
+    onLoadEngine: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val isDownloading = (downloadProgress in 0..99 || isExtracting) && !downloadComplete && downloadError == null
-    val hasError = downloadError != null && !downloadComplete
+    LaunchedEffect(Unit) { onStart() }
 
-    val ctaText = when {
-        downloadComplete -> stringResource(R.string.onboarding_model_download_cta_continue)
-        isDownloading -> stringResource(R.string.onboarding_model_download_cta_downloading)
-        hasError -> stringResource(R.string.onboarding_model_download_cta_download)
-        else -> stringResource(R.string.onboarding_model_download_cta_download)
-    }
-
-    val ctaEnabled = !isDownloading
-
-    val ctaAction: () -> Unit = when {
-        downloadComplete -> onNext
-        hasError -> onRetry
-        else -> onStartDownload
-    }
-
-    OnboardingStepScaffold(
-        currentStep = 5,
-        ctaText = ctaText,
-        ctaEnabled = ctaEnabled,
-        ctaIcon = if (!downloadComplete && !isDownloading) Icons.Default.Download else null,
-        onCtaClick = ctaAction,
-    ) {
-        Icon(
-            imageVector = Icons.Default.Download,
-            contentDescription = null,
-            tint = DictusColors.Accent,
-            modifier = Modifier.size(64.dp),
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = stringResource(R.string.onboarding_model_download_title),
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = (-0.5).sp,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = stringResource(R.string.onboarding_model_download_body),
-            color = LocalDictusColors.current.textSecondary,
-            fontSize = 15.sp,
-            lineHeight = (15 * 1.5).sp,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Model card
-        ModelInfoCard(
-            modelName = modelName,
-            modelSize = modelSize,
-            modelQualityLabel = modelQualityLabel,
-            isExtracting = isExtracting,
-            downloadProgress = if (isDownloading) downloadProgress else null,
-        )
-
-        // Error state
-        if (hasError) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.onboarding_model_download_error),
-                    color = DictusColors.Recording,
-                    fontSize = 13.sp,
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                TextButton(onClick = onRetry) {
-                    Text(
-                        text = stringResource(R.string.onboarding_model_download_retry),
-                        color = DictusColors.Recording,
-                        fontSize = 13.sp,
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Card showing the recommended model info with optional progress bar.
- *
- * All display values (name, size, quality) come from the caller — no hardcoded model data.
- */
-@Composable
-private fun ModelInfoCard(
-    modelName: String,
-    modelSize: String,
-    modelQualityLabel: String,
-    isExtracting: Boolean,
-    downloadProgress: Int?,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, DictusColors.GlassBorder, RoundedCornerShape(16.dp))
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        // Model name — dynamic from ModelInfo
-        Text(
-            text = modelName,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        // Subtitle: recommended badge
-        Text(
-            text = stringResource(R.string.onboarding_model_download_recommended),
-            color = DictusColors.Accent,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-        )
-
-        // Details row: size + speed
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Storage,
-                    contentDescription = null,
-                    tint = LocalDictusColors.current.textSecondary,
-                    modifier = Modifier.size(14.dp),
-                )
-                Text(
-                    text = modelSize,
-                    color = LocalDictusColors.current.textSecondary,
-                    fontSize = 13.sp,
-                )
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Bolt,
-                    contentDescription = null,
-                    tint = LocalDictusColors.current.textSecondary,
-                    modifier = Modifier.size(14.dp),
-                )
-                Text(
-                    text = modelQualityLabel,
-                    color = LocalDictusColors.current.textSecondary,
-                    fontSize = 13.sp,
-                )
-            }
-        }
-
-        // Progress bar (shown during download or extraction)
-        if (downloadProgress != null) {
-            val barFraction = if (isExtracting) 1f else downloadProgress / 100f
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                // Track background + fill
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(MaterialTheme.colorScheme.background),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(fraction = barFraction)
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(DictusColors.Accent),
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = if (isExtracting) {
-                        stringResource(R.string.onboarding_model_download_extracting)
-                    } else {
-                        stringResource(R.string.onboarding_model_download_progress, downloadProgress)
-                    },
-                    color = DictusColors.AccentHighlight,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-    }
+    ModelPreparationScreen(
+        target = preparation,
+        engine = engine,
+        context = ModelPreparationContext.Onboarding,
+        onRetryInstall = onRetryInstall,
+        onLoadEngine = onLoadEngine,
+        onFinished = onNext,
+    )
 }

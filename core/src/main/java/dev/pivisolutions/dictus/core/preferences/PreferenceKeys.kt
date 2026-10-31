@@ -29,6 +29,9 @@ object PreferenceKeys {
     // --- Onboarding (Phase 4) ---
     val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
 
+    /** The onboarding step to resume at, by its stable name (`OnboardingStep.storedName`, #196). */
+    val ONBOARDING_STEP = stringPreferencesKey("onboarding_step")
+
     // --- Audio feedback settings (Phase 4 + Phase 5) ---
     val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
     val KEY_SOUNDS_ENABLED = booleanPreferencesKey("key_sounds_enabled")
@@ -42,6 +45,7 @@ object PreferenceKeys {
     val THEME = stringPreferencesKey("theme")
 
     // --- Last transcription (Phase 4) ---
+    // Read by nothing since #245, which keeps Home's card in memory: only removed at app start.
     val LAST_TRANSCRIPTION = stringPreferencesKey("last_transcription")
     val LAST_TRANSCRIPTION_SAVED_AT = longPreferencesKey("last_transcription_saved_at")
 
@@ -60,4 +64,8 @@ object PreferenceKeys {
     // --- Personal dictionary (Phase 8) ---
     /** Set of words the user has typed at least twice, persisted across restarts. */
     val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")
+
+    // --- Custom vocabulary (#203) ---
+    /** The user's vocabulary entries as one JSON array, written whole by `VocabularyStore`. */
+    val VOCABULARY_ENTRIES = stringPreferencesKey("vocabulary_entries")
 }
