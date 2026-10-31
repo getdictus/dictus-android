@@ -63,11 +63,6 @@ class OnboardingViewModelTest {
         assertFalse(viewModel.micPermissionGranted.value)
     }
 
-    @Test
-    fun `initial state - selectedLayout is azerty`() = runTest(testDispatcher) {
-        assertEquals("azerty", viewModel.selectedLayout.value)
-    }
-
 
     @Test
     fun `initial state - install is Idle`() = runTest(testDispatcher) {
@@ -191,7 +186,7 @@ class OnboardingViewModelTest {
     fun `advanceStep from step 5 is blocked when download not complete`() =
         runTest(testDispatcher) {
             // Move to step 5
-            repeat(4) { viewModel.advanceStep() }
+            repeat(3) { viewModel.advanceStep() }
             assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
 
             // Attempt advance — blocked since download not complete
@@ -203,7 +198,7 @@ class OnboardingViewModelTest {
     fun `advanceStep from step 5 advances when download is complete`() =
         runTest(testDispatcher) {
             // Move to step 5
-            repeat(4) { viewModel.advanceStep() }
+            repeat(3) { viewModel.advanceStep() }
 
             viewModel.startModelDownload()
             fakeInstaller.state.value = ModelInstallState.Downloading(50)
@@ -221,7 +216,7 @@ class OnboardingViewModelTest {
     fun `advanceStep from step 6 writes HAS_COMPLETED_ONBOARDING to DataStore`() =
         runTest(testDispatcher) {
             // Move to step 5, complete download, advance to 6
-            repeat(4) { viewModel.advanceStep() }
+            repeat(3) { viewModel.advanceStep() }
             viewModel.startModelDownload()
             fakeInstaller.state.value = ModelInstallState.Done
             advanceUntilIdle()
@@ -254,9 +249,9 @@ class OnboardingViewModelTest {
 
     @Test
     fun `goBack does nothing on a step without a way back`() = runTest(testDispatcher) {
-        repeat(3) { viewModel.advanceStep() } // -> KeyboardLayout
+        repeat(2) { viewModel.advanceStep() } // -> KeyboardSetup
         viewModel.goBack()
-        assertEquals(OnboardingStep.KeyboardLayout, viewModel.currentStep.value)
+        assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
     }
 
     @Test
@@ -285,7 +280,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `skip does nothing on a step that does not offer it`() = runTest(testDispatcher) {
-        repeat(4) { viewModel.advanceStep() } // -> ModelPreparation, install not done
+        repeat(3) { viewModel.advanceStep() } // -> ModelPreparation, install not done
         viewModel.skipStep()
         assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
@@ -293,10 +288,29 @@ class OnboardingViewModelTest {
     // --- State mutations ---
 
     @Test
-    fun `setLayout changes selectedLayout to qwerty`() = runTest(testDispatcher) {
-        viewModel.setLayout("qwerty")
-        assertEquals("qwerty", viewModel.selectedLayout.value)
+    fun `the keyboard setup leads straight to the model preparation`() = runTest(testDispatcher) {
+        // #270: no ABC/123 step in between, as on iOS (#213).
+        repeat(2) { viewModel.advanceStep() } // -> KeyboardSetup
+        viewModel.advanceStep()
+        assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
+
+    @Test
+    fun `completing the onboarding leaves the keyboard preferences to Settings`() =
+        runTest(testDispatcher) {
+            // #270: the default page is chosen in Settings only; the onboarding writes
+            // neither it nor a layout.
+            fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Completion.storedName }
+            val vm = relaunch()
+
+            vm.advanceStep()
+            advanceUntilIdle()
+
+            val prefs = fakeDataStore.data.first()
+            assertEquals(true, prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING])
+            assertEquals(null, prefs[PreferenceKeys.KEYBOARD_MODE])
+            assertEquals(null, prefs[PreferenceKeys.KEYBOARD_LAYOUT])
+        }
 
     @Test
     fun `setMicPermissionGranted true sets micPermissionGranted to true`() =
@@ -325,7 +339,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `step 5 stays blocked while the install runs`() = runTest(testDispatcher) {
-        repeat(4) { viewModel.advanceStep() }
+        repeat(3) { viewModel.advanceStep() }
         fakeInstaller.state.value = ModelInstallState.Verifying
         advanceUntilIdle()
 

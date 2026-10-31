@@ -253,11 +253,11 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.private-fields` | Free | present — no suggestions or learning in sensitive fields | yes |
 | `sounds.key-clicks` | Free | present — « Sons du clavier » | yes |
 | `onboarding.ime-setup` | Free | present | yes |
-| `onboarding.default-page` | Free | present — ABC / 123 | yes |
+| `onboarding.default-page` | Free | retired (#270) — ABC / 123 in Réglages only, as on iOS | yes |
 | `models.english-only-warning` | Free | present — Parakeet 110M | yes |
 | `models.storage` | Free | present — « Stockage utilisé » | yes |
 | `app.onboarding.ime-setup` | Free | present | yes |
-| `app.onboarding.default-page` | Free | present | yes |
+| `app.onboarding.default-page` | Free | retired (#270) — as on iOS (#213) | yes |
 | `app.settings.sound-picker` | Free | present | yes |
 | `app.settings.picker` | Free | present — inline choice menus (#189) | yes |
 | `kbd.model-loading` | Free | retired (#247) — the keyboard is never covered | yes |

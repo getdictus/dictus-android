@@ -19,14 +19,9 @@
     <string name="onboarding_keyboard_setup_cta_select">Select Dictus</string>
     <string name="onboarding_keyboard_setup_cta_continue">Continue</string>
 
-    <!-- Onboarding: Mode selection screen (Step 4) -->
-    <string name="onboarding_mode_selection_title">Choose your keyboard</string>
-    <string name="onboarding_mode_selection_body">ABC is selected by default. Switch if you prefer to open on numbers.</string>
-    <string name="onboarding_mode_selection_cta">Continue</string>
+    <!-- Onboarding: Model download screen (Step 4) -->
 
-    <!-- Onboarding: Model download screen (Step 5) -->
-
-    <!-- Onboarding: Test recording screen (Step 6) -->
+    <!-- Onboarding: Test recording screen (Step 5) -->
     <string name="onboarding_test_recording_title">Test dictation</string>
     <string name="onboarding_test_recording_body">Tap the mic and speak.\nDictus will transcribe your voice.</string>
     <string name="onboarding_test_recording_result">Result</string>
@@ -38,7 +33,7 @@
     <string name="onboarding_test_recording_cd_stop">Stop</string>
     <string name="onboarding_test_recording_cd_record">Record</string>
 
-    <!-- Onboarding: Success screen (Step 7) -->
+    <!-- Onboarding: Success screen (Step 6) -->
     <string name="onboarding_success_title">All set!</string>
     <string name="onboarding_success_body">Dictus is configured and ready to use.</string>
     <string name="onboarding_success_cta">Start</string>
