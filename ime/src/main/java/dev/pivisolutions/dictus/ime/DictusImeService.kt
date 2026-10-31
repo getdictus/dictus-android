@@ -52,6 +52,7 @@ import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
+import dev.pivisolutions.dictus.ime.input.AutocorrectTrigger
 import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.input.DictationFeedback
@@ -1162,6 +1163,27 @@ class DictusImeService : LifecycleInputMethodService() {
                 clearSuggestionState()
             }
             result != AutocorrectSpaceResult.INDETERMINATE
+        } else if (AutocorrectTrigger.commitsWord(text)) {
+            // A comma, a full stop and the like end the word before them, as on iOS (#268): it is
+            // corrected there, and the mark follows it with no space.
+            autoFullStop.clear()
+            var plainCommitted = true
+            val result = autocorrectCoordinator.onWordEnd(
+                InputConnectionAutocorrectEditor(inputConnection),
+                trailing = text,
+            ) {
+                plainCommitted = inputConnection.commitText(text, 1)
+            }
+            recordAutocorrectOutcome(
+                autocorrectCoordinator.lastSpaceDiagnosis,
+                autocorrectCoordinator.lastSpaceDetail,
+            )
+            clearSuggestionState()
+            when (result) {
+                AutocorrectSpaceResult.CORRECTED -> true
+                AutocorrectSpaceResult.PLAIN_SPACE -> plainCommitted
+                AutocorrectSpaceResult.INDETERMINATE -> false
+            }
         } else {
             autoFullStop.clear()
             autocorrectCoordinator.onOtherInput()
@@ -1253,9 +1275,27 @@ class DictusImeService : LifecycleInputMethodService() {
      */
     fun sendReturnKey() {
         autoFullStop.clear()
-        autocorrectCoordinator.onOtherInput()
         dictationFeedback.withdraw()
+        // Return ends the word before it, like a punctuation mark (#268, iOS #872). The editor may
+        // be in an unknown state after an indeterminate correction, so Return is not sent then.
+        val inputConnection = currentInputConnection
+        val result = inputConnection?.let {
+            autocorrectCoordinator.onWordEnd(InputConnectionAutocorrectEditor(it), trailing = "") {}
+        }
+        if (result != null) {
+            recordAutocorrectOutcome(
+                autocorrectCoordinator.lastSpaceDiagnosis,
+                autocorrectCoordinator.lastSpaceDetail,
+            )
+        }
+        // What Return does is the host's (a new line, or its action), so there is no Backspace undo.
+        autocorrectCoordinator.onOtherInput()
         clearSuggestionState()
+        if (result == AutocorrectSpaceResult.INDETERMINATE) {
+            refreshFrenchAdaptiveKeyState()
+            refreshAutoCapitalization()
+            return
+        }
         currentInputConnection?.sendKeyEvent(
             android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER),
         )

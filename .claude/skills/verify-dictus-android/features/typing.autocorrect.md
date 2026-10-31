@@ -1,6 +1,6 @@
 # Autocorrect and suggestions
 
-While typing with the Dictus keyboard, a three-slot bar above the keys offers completions and next-word predictions, a mistyped word is corrected when space is pressed, and Backspace right after a correction restores what was typed.
+While typing with the Dictus keyboard, a three-slot bar above the keys offers completions and next-word predictions, a mistyped word is corrected when space, a punctuation mark or Return is pressed, and Backspace right after a correction restores what was typed.
 
 - **ID:** `typing.autocorrect`
 - **Tier:** Gratuit
@@ -11,6 +11,7 @@ While typing with the Dictus keyboard, a three-slot bar above the keys offers co
 
 - `typing.suggestions`: Suggestion bar (three slots) with completions of the current word and next-word predictions after a space. — présent
 - `typing.autocorrect-on-space`: A misspelt word is replaced on space (FR, EN, ES, DE dictionaries). — présent
+- `typing.autocorrect-on-punctuation`: A misspelt word is also corrected by `, . ; : ! ?` (the mark follows it with no space) and by Return, never by `'` or `-`; ⌫ right after a punctuation correction restores the typed word and removes the mark, as after space. Same marks as iOS `AutocorrectTrigger` (#872). — présent (#268)
 - `typing.undo-correction`: — partiel: Backspace immediately after a correction restores the original word (and learns it); there is no undo chip in the bar as on iOS.
 - `typing.auto-full-stop`: a second space after anything but a space or a `.` becomes `. ` and the next letter is capitalised (same rule as iOS `AutoFullStop.shouldSubstitute`: digits and other punctuation get it too). ⌫ right after turns `. ` back into one space; iOS has no such undo. Never in password fields; no setting, as on iOS. — présent
 - `typing.accents`: Long-press a letter to open its accent strip, slide to choose. — présent
@@ -33,6 +34,7 @@ Preconditions: Launch and Doctor OK, a scratch note focused, keyboard language F
 
 - **Type through the keys.** Tap the letter keys `b o n j o u r` by coordinate (AZERTY, from the `kbd.keys` capture); `mcp__argent__keyboard` would bypass the Dictus keys and prove nothing. → the bar proposes completions (`evidence.sh 01-typing`).
 - **Misspell, then space.** Type `b o n j o r u`, tap space. → the field reads `bonjour ` in the tree (`evidence.sh 02-after-space`).
+- **Punctuation and Return.** Type `b o n j o r u`, then `,` from the 123 page. → the field reads `bonjour,`. Same with `.`; with Return (`retour`) the field reads `bonjour` and a new line.
 - **Undo the correction (test device only, see Gotchas).** Tap ⌫ once. → the field reads `bonjoru` again.
 - **Auto-capitalization.** Focus an empty scratch note. → the shift key is lit (accent background) and the letter keys show capitals (`evidence.sh 04-autocap-start`). Type `o k . ` with the keys (`.` from the 123 page, back with `ABC`). → shift is lit again after the space (`evidence.sh 05-autocap-after-stop`). Focus an e-mail or password field (a login screen). → shift stays off.
 - **Double-space full stop.** In a scratch note, type `o k` with the keys, then tap space twice. → the field reads `ok. ` and shift is lit (`evidence.sh 06-full-stop`). Tap ⌫ once. → the field reads `ok ` and shift is off (`evidence.sh 07-full-stop-undo`).
