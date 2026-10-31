@@ -315,8 +315,8 @@ Screen by screen, what looks different between the Android captures of `../scree
     - Proposal: add emoji search (French keywords) and keep the keyboard bar visible (with #139).
 11. **System keyboard picker — `sys.ime-picker`**
     - iOS: the keyboard shows up once, « Dictus », in the globe list.
-    - Android: Dictus declares two subtypes there, « AZERTY (Français) » and « QWERTY (Anglais) », unrelated to the four real languages (FR, EN, ES, DE) and to the layout chosen in Settings.
-    - Proposal: a single « Dictus » subtype (or one per language actually supported).
+    - Android (since #195): one entry, « Dictus », no subtype; the layout is a per-language preference inside Dictus (#134).
+    - Proposal: done in #195.
 12. **Keyboard accessibility labels — `kbd.keys`, `kbd.recording`**
     - iOS: labels in French on a French device.
     - Android (since #185): `Langue du clavier DE`, `Réglages`, and the actions « Changer la langue du clavier » / « Ouvrir les réglages Dictus », from strings.xml FR/EN.

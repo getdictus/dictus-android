@@ -23,7 +23,7 @@ In any app, the Dictus keyboard's blue mic pill records the voice on the phone, 
 
 ## How to get to it (user POV)
 
-1. Dictus → onboarding, or Android Paramètres → Système → Langues et saisie → Clavier à l'écran: enable « Clavier Dictus » and select it.
+1. Dictus → onboarding, or Android Paramètres → Système → Langues et saisie → Clavier à l'écran: enable « Dictus » and select it.
 2. In any text field (Notes, Messages…), the Dictus keyboard opens with the mic pill at the top right.
 3. Tap the mic, speak, tap ✓ to insert or ✕ to cancel. Tap « Annuler » in the bar right after to remove the insertion.
 
