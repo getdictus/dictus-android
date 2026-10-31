@@ -30,6 +30,7 @@ import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
+import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
@@ -126,6 +127,7 @@ class DictationService : Service(), DictationController {
             withProvider = { modelKey, modelPath, use -> withProviderForModel(modelKey, modelPath, use) },
             wakeLock = transcriptionWakeLock,
             lastTranscription = LastTranscriptionStore.instance,
+            recordTally = DictationTally(dataStore)::record,
         )
     }
     private val transcriptionWakeLock by lazy { PowerManagerTranscriptionWakeLock(applicationContext) }

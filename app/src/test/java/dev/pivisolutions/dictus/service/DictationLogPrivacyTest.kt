@@ -1,11 +1,13 @@
 package dev.pivisolutions.dictus.service
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.core.logging.DictationTrace
 import dev.pivisolutions.dictus.core.logging.LogCategory
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
+import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.ui.settings.LogExporter
@@ -14,7 +16,9 @@ import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -29,6 +33,9 @@ import java.util.zip.ZipFile
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class DictationLogPrivacyTest {
+
+    @get:Rule
+    val folder = TemporaryFolder()
 
     private val context: android.app.Application = ApplicationProvider.getApplicationContext()
     private val transcript = "Zephyrine quokka marmelade"
@@ -56,6 +63,9 @@ class DictationLogPrivacyTest {
             withProvider = { _, _, use -> use(EchoProvider(transcript)) },
             wakeLock = FakeWakeLock(),
             lastTranscription = LastTranscriptionStore(),
+            recordTally = DictationTally(
+                PreferenceDataStoreFactory.create(produceFile = { folder.newFile("tally.preferences_pb") }),
+            )::record,
         )
 
         val outcome = transcriber.transcribe(FloatArray(16_000), "tiny", "fr")
@@ -76,6 +86,11 @@ class DictationLogPrivacyTest {
         assertTrue(exported, exported.contains("rawLength=${transcript.length}"))
         assertTrue(exported, exported.contains("[INSERT] DictationLogPrivacyTest: Dictation inserted: d=$id, length=${inserted.length}"))
         assertTrue(exported, exported.contains("[STT] DictationTranscriber d=$id: Transcription finished: engine=echo"))
+        // The debug readout of the tally (#201): numbers only.
+        assertTrue(
+            exported,
+            exported.contains("Dictation tally: added audioSeconds=1; today words=3, audioSeconds=1, timeSavedSeconds=2"),
+        )
     }
 
     private fun export(): String {

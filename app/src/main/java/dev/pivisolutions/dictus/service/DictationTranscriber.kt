@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.service
 
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
+import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.stt.SttTranscript
 import dev.pivisolutions.dictus.core.whisper.NonSpeechMarkers
@@ -10,6 +11,7 @@ import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.whisper.WhisperContext
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 /**
  * Turns a finished take into a [TranscriptionOutcome] for [DictationService].
@@ -26,6 +28,8 @@ import timber.log.Timber
  * @param timeoutFactor the model's factor for [TranscriptionTimeout.timeoutMs].
  * @param lastTranscription Home's card, filled by every take with words (#245). Every dictation,
  *   from the app or the keyboard, comes through here, as every iOS one goes through its coordinator.
+ * @param recordTally [DictationTally.record], words and audio seconds per day (#201), counted here
+ *   for the same reason.
  */
 internal class DictationTranscriber(
     private val ensureModel: suspend (modelKey: String) -> String?,
@@ -36,6 +40,7 @@ internal class DictationTranscriber(
     ) -> SttTranscript?,
     private val wakeLock: TranscriptionWakeLock,
     private val lastTranscription: LastTranscriptionStore,
+    private val recordTally: suspend (text: String, audioSeconds: Int) -> DictationTally.Totals?,
     private val timeoutFactor: (modelKey: String) -> Double = TranscriptionTimeout::factorFor,
 ) {
 
@@ -115,7 +120,10 @@ internal class DictationTranscriber(
                 transcript.segmentCount ?: "-",
                 (outcome as? TranscriptionOutcome.Transcribed)?.text?.length ?: 0,
             )
-            if (outcome is TranscriptionOutcome.Transcribed) lastTranscription.save(outcome.text)
+            if (outcome is TranscriptionOutcome.Transcribed) {
+                lastTranscription.save(outcome.text)
+                recordInTally(outcome.text, samples.size)
+            }
             if (outcome == TranscriptionOutcome.NoWordsDetected) {
                 Timber.i("confirmAndTranscribe: no words detected, nothing saved")
             }
@@ -125,6 +133,27 @@ internal class DictationTranscriber(
         } catch (e: Exception) {
             Timber.e(e, "Transcription failed")
             TranscriptionOutcome.Failed
+        }
+    }
+
+    /**
+     * Counts a take with words in the tally (#201), partial ones included since their text is
+     * inserted too. The log line is the debug readout: numbers only, never the text.
+     *
+     * WHY its own catch: a tally that cannot be written must not turn a dictation into a failure.
+     */
+    private suspend fun recordInTally(text: String, sampleCount: Int) {
+        val audioSeconds = (sampleCount.toDouble() / RecordingDurationPolicy.SAMPLE_RATE_HZ).roundToInt()
+        try {
+            val today = recordTally(text, audioSeconds) ?: return
+            Timber.i(
+                "Dictation tally: added audioSeconds=%d; today words=%d, audioSeconds=%d, timeSavedSeconds=%d",
+                audioSeconds, today.words, today.audioSeconds, today.timeSavedSeconds,
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (e: Exception) {
+            Timber.e(e, "Dictation tally not written")
         }
     }
 }

@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.service
 
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
+import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.core.stt.SttTranscript
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
@@ -13,6 +14,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 /** How DictationService maps a take to "no words", "failed", partial or whole text (#153, #179). */
 class DictationTranscriberTest {
@@ -20,6 +22,9 @@ class DictationTranscriberTest {
     private val halfSecond = FloatArray(RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT)
     private val wakeLock = FakeWakeLock()
     private val lastTranscription = LastTranscriptionStore()
+    // What reached the tally, as (text, audio seconds).
+    private val tallied = mutableListOf<Pair<String, Int>>()
+    private var tallyFails = false
 
     private fun transcriber(
         engine: suspend (FloatArray, String) -> String = { _, _ -> "Bonjour" },
@@ -32,6 +37,11 @@ class DictationTranscriberTest {
         withProvider = { _, _, use -> if (providerStarts) use(FakeProvider(engine, atTimeout)) else null },
         wakeLock = wakeLock,
         lastTranscription = lastTranscription,
+        recordTally = { text, audioSeconds ->
+            if (tallyFails) throw IOException("disk full")
+            tallied += text to audioSeconds
+            DictationTally.Totals(words = 1, audioSeconds = audioSeconds)
+        },
     )
 
     // --- Home's last transcription card (#245) ---
@@ -59,6 +69,42 @@ class DictationTranscriberTest {
         transcriber(modelPath = null).transcribe(halfSecond, "tiny", "fr")
 
         assertNull(lastTranscription.text.value)
+    }
+
+    // --- Dictation tally (#201) ---
+
+    @Test
+    fun `a take with words reaches the tally with its text and rounded audio seconds`() = runTest {
+        // 2.5 s of audio rounds to 3, as iOS rounds audioDuration.
+        transcriber(engine = { _, _ -> " Bonjour à tous" }).transcribe(FloatArray(40_000), "tiny", "fr")
+
+        assertEquals(listOf("Bonjour à tous. " to 3), tallied)
+    }
+
+    @Test
+    fun `a partial take reaches the tally, since its text is inserted`() = runTest {
+        val partial = SttTranscript(" Bonjour à tous", segmentCount = 1, complete = false)
+        transcriber(engine = { _, _ -> awaitCancellation() }, atTimeout = partial).transcribe(halfSecond, "small", "fr")
+
+        assertEquals(listOf("Bonjour à tous. " to 1), tallied)
+    }
+
+    @Test
+    fun `no words or a failure leave the tally untouched`() = runTest {
+        transcriber(engine = { _, _ -> " ..." }).transcribe(halfSecond, "tiny", "fr")
+        transcriber(modelPath = null).transcribe(halfSecond, "tiny", "fr")
+        transcriber(engine = { _, _ -> throw IllegalStateException("boom") }).transcribe(halfSecond, "tiny", "fr")
+
+        assertTrue(tallied.isEmpty())
+    }
+
+    @Test
+    fun `a tally that cannot be written does not fail the dictation`() = runTest {
+        tallyFails = true
+
+        val outcome = transcriber(engine = { _, _ -> " Bonjour" }).transcribe(halfSecond, "tiny", "fr")
+
+        assertEquals(TranscriptionOutcome.Text("Bonjour. "), outcome)
     }
 
     // --- No words ---
@@ -184,6 +230,7 @@ class DictationTranscriberTest {
             },
             wakeLock = wakeLock,
             lastTranscription = lastTranscription,
+            recordTally = { _, _ -> null },
         ).transcribe(threeMinutes, "small", "fr")
 
         assertEquals(324_000L, seenTimeoutMs)
