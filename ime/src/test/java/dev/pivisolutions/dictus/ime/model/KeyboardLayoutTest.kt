@@ -137,4 +137,29 @@ class KeyboardLayoutTest {
         val switchKey = row3.first { it.type == KeyType.LAYER_SWITCH }
         assertEquals("123", switchKey.label)
     }
+
+    // iOS reference: DictusKeyboard/KeyboardLayouts.swift:299 (getdictus/dictus-ios develop @ 61adacf).
+    @Test
+    fun `numbers row 2 matches iOS order`() {
+        val labels = KeyboardLayouts.numbersRows[1].map { it.label }
+        assertEquals(listOf("-", "/", ":", ";", "(", ")", "\u20AC", "&", "@", "\""), labels)
+        assertEquals(labels, KeyboardLayouts.numbersRows[1].map { it.output })
+    }
+
+    // iOS reference: DictusKeyboard/KeyboardLayouts.swift:323.
+    @Test
+    fun `symbols row 2 matches iOS order`() {
+        val labels = KeyboardLayouts.symbolsRows[1].map { it.label }
+        assertEquals(listOf("_", "\\", "|", "~", "<", ">", "$", "\u00A3", "\u00A5", "\u00B7"), labels)
+        assertEquals(labels, KeyboardLayouts.symbolsRows[1].map { it.output })
+    }
+
+    // iOS reference: DictusKeyboard/Vendored/Views/KeyView.swift:362 ("123" on iPhone).
+    @Test
+    fun `letters pages open the numbers page with a 123 key`() {
+        for (letters in listOf(KeyboardLayouts.azertyLetters, KeyboardLayouts.qwertyLetters)) {
+            val switchKey = letters[3].first { it.type == KeyType.LAYER_SWITCH }
+            assertEquals("123", switchKey.label)
+        }
+    }
 }

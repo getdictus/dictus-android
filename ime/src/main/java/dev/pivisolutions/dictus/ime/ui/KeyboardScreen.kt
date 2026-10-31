@@ -235,7 +235,6 @@ private fun handleKeyPress(
         KeyType.LAYER_SWITCH -> {
             val newLayer = when (key.label) {
                 "ABC" -> KeyboardLayer.LETTERS
-                "?123" -> KeyboardLayer.NUMBERS
                 "123" -> KeyboardLayer.NUMBERS
                 "#+=" -> KeyboardLayer.SYMBOLS
                 else -> KeyboardLayer.LETTERS
