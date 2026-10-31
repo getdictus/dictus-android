@@ -7,10 +7,12 @@ import dagger.hilt.android.HiltAndroidApp
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ui.settings.LogExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -41,8 +43,16 @@ class DictusApplication : Application() {
             LogExporter.revision(),
             android.os.Process.myPid(),
         )
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        // Every Dictus vibration, keyboard and app, reads this mirror of the haptic setting
+        // (#246, #244). The IME runs in this process, so one collector serves both.
+        scope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
+                .collect { HapticHelper.isEnabled = it }
+        }
         // Home's card lives in memory since #245; this drops the text an older version left on disk.
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+        scope.launch {
             dataStore.edit { preferences ->
                 preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION)
                 preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT)
