@@ -11,7 +11,11 @@ interface TranscriptionHistoryDao {
     @Insert
     suspend fun insert(entry: TranscriptionHistoryEntry): Long
 
-    /** Inserts [entry], then drops the oldest rows beyond [maxEntries], in one transaction. */
+    /**
+     * Inserts [entry], then drops the earliest-inserted rows beyond [maxEntries], in one
+     * transaction. Eviction follows the auto-increment id, not the date, like iOS: a clock moved
+     * backwards must not evict the dictation just made.
+     */
     @Transaction
     suspend fun insertCapped(entry: TranscriptionHistoryEntry, maxEntries: Int): Long {
         val id = insert(entry)
@@ -21,8 +25,7 @@ interface TranscriptionHistoryDao {
 
     @Query(
         "DELETE FROM transcription_history WHERE id NOT IN (" +
-            "SELECT id FROM transcription_history " +
-            "ORDER BY createdAtEpochMillis DESC, id DESC LIMIT :maxEntries)",
+            "SELECT id FROM transcription_history ORDER BY id DESC LIMIT :maxEntries)",
     )
     suspend fun deleteBeyond(maxEntries: Int): Int
 

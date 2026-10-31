@@ -69,6 +69,21 @@ class RoomTranscriptionHistoryRepositoryTest {
     }
 
     @Test
+    fun `the cap evicts by insertion order even when the clock went backwards`() = runBlocking {
+        val dao = database.transcriptionHistoryDao()
+        // The first insertion carries a late date; the last one the earliest date of all.
+        val firstId = repository.insert(entry(createdAt = 5_000))
+        repeat(199) { repository.insert(entry(createdAt = 2_000L + it)) }
+        val lastId = repository.insert(entry(createdAt = 1))
+
+        val ids = dao.getAll().map { it.id }
+
+        assertEquals(TranscriptionHistoryRepository.MAX_ENTRIES, ids.size)
+        assertTrue("the last insertion must be kept", lastId in ids)
+        assertFalse("the first insertion must be evicted", firstId in ids)
+    }
+
+    @Test
     fun `clear deletes every entry`() = runBlocking {
         repeat(3) { repository.insert(entry(createdAt = it.toLong())) }
         repository.clear()
