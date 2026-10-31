@@ -150,7 +150,7 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `learned-words.learn` | Free | present | no |
 | `learned-words.reset` | Free | present — Réglages → Clavier, with confirmation (#194) | no |
 | `keyboard.language-switch` | Free | present — tap on the language code (FR→EN→ES→DE), no panel | no |
-| `keyboard.layout` | Free | partial — AZERTY / QWERTY, no QWERTZ | no |
+| `keyboard.layout` | Free | partial — one layout per language, QWERTZ for German (#134); no picker until #191 | no |
 | `keyboard.number-row` | Free | absent | no |
 | `keyboard.default-page` | Free | present | no |
 | `keyboard.transcription-language` | Free | partial — `Automatique` or a fixed language; no « Suivre la langue du clavier » | no |

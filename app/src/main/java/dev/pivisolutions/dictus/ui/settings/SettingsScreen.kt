@@ -98,7 +98,6 @@ fun SettingsScreen(
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
     val learnedWordCount by viewModel.learnedWordCount.collectAsState()
-    val keyboardLayout by viewModel.keyboardLayout.collectAsState()
     val keyboardMode by viewModel.keyboardMode.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
@@ -143,6 +142,7 @@ fun SettingsScreen(
 
         // ---------- SECTION: Clavier ----------
         // iOS order: keyboard language, ABC/123, layout, haptics, sounds, autocorrect, reset.
+        // No layout row since #134: each language has its own, chosen from the keyboard (#191).
         // Keyboard sounds and suggestions are Android-only, next to their closest iOS row.
         SectionHeader(text = stringResource(R.string.settings_section_keyboard))
         SettingsCard {
@@ -156,16 +156,6 @@ fun SettingsScreen(
             KeyboardModeSegment(
                 selected = keyboardMode,
                 onSelect = { viewModel.setKeyboardMode(it) },
-            )
-            SettingDivider()
-            SettingMenuRow(
-                label = stringResource(R.string.settings_keyboard_layout),
-                options = listOf(
-                    "azerty" to "AZERTY",
-                    "qwerty" to "QWERTY",
-                ),
-                selected = keyboardLayout,
-                onSelect = { viewModel.setKeyboardLayout(it) },
             )
             SettingDivider()
             SettingToggleRow(

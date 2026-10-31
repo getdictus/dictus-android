@@ -237,6 +237,8 @@ class OnboardingViewModelTest {
                 "HAS_COMPLETED_ONBOARDING should be true",
                 fakeDataStore.editedPrefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] == true
             )
+            // #134: a fresh install follows each language's default layout, as on iOS.
+            assertEquals(null, fakeDataStore.editedPrefs[PreferenceKeys.KEYBOARD_LAYOUT])
         }
 
     @Test
