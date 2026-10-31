@@ -35,6 +35,6 @@ Preconditions: Launch and Doctor OK. Note the keyboard language, layout, default
 ## Gotchas
 
 - Every change here is Pierre's setting; his keyboard language is DE. Cycle a full turn (4 taps) so it ends where it started — the screen can lag behind the stored value, so check the DataStore.
-- The system keyboard picker still lists Dictus's subtypes as « AZERTY (Français) » and « QWERTY (Anglais) », unrelated to the four languages.
+- The system keyboard picker lists Dictus once, « Dictus », with no subtype (#195): the language and the layout are only chosen inside Dictus.
 - The transcription language must stay `Automatique` (#130 maps unknown languages to auto).
 - The IME settings in Android (`ime enable/set`) are not this feature: those are `onboarding.ime-setup`.
