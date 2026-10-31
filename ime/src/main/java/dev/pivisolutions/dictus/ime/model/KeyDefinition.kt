@@ -3,7 +3,7 @@ package dev.pivisolutions.dictus.ime.model
 /**
  * Defines a single key on the keyboard.
  *
- * @param label The text displayed on the key cap (e.g., "A", "?123", "space").
+ * @param label The text displayed on the key cap (e.g., "A", "123", "space").
  * @param output The character(s) inserted when the key is tapped. Defaults to
  *   lowercase of the label for letter keys.
  * @param type The key type, which determines tap/long-press behavior and rendering.
