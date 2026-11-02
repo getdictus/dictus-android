@@ -71,8 +71,21 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `language defaults to auto`() = testScope.runTest {
+    fun `language defaults to follow keyboard`() = testScope.runTest {
+        assertEquals("follow", viewModel.language.value)
+    }
+
+    @Test
+    fun `setLanguage persists follow keyboard and auto apart`() = testScope.runTest {
+        viewModel.setLanguage("auto")
+        advanceUntilIdle()
         assertEquals("auto", viewModel.language.value)
+        assertEquals("auto", fakeDataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE])
+
+        viewModel.setLanguage("follow")
+        advanceUntilIdle()
+        assertEquals("follow", viewModel.language.value)
+        assertEquals("follow", fakeDataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE])
     }
 
     @Test
@@ -94,10 +107,10 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `unknown stored language is shown as auto`() = testScope.runTest {
+    fun `unknown stored language is shown as follow keyboard`() = testScope.runTest {
         viewModel.setLanguage("zz")
         advanceUntilIdle()
-        assertEquals("auto", viewModel.language.value)
+        assertEquals("follow", viewModel.language.value)
     }
 
     @Test

@@ -129,6 +129,7 @@ fun SettingsScreen(
             SettingMenuRow(
                 label = stringResource(R.string.settings_language),
                 options = listOf(
+                    "follow" to stringResource(R.string.settings_language_follow_keyboard),
                     "auto" to stringResource(R.string.settings_language_auto),
                     "fr" to stringResource(R.string.settings_language_fr),
                     "en" to stringResource(R.string.settings_language_en),
