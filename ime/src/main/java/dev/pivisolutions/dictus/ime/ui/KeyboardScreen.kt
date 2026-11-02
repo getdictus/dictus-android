@@ -32,8 +32,7 @@ import timber.log.Timber
  * routes key press events to the appropriate InputConnection callbacks
  * provided by DictusImeService.
  *
- * Total height: 36.dp (suggestion bar, when visible) + 46.dp (mic row) + 264.dp (keyboard) = 346.dp max.
- * When no suggestions are available, the suggestion bar is hidden: 310.dp total.
+ * Total height: 52.dp (toolbar) + 264.dp (keyboard) = 316.dp.
  *
  * The emoji picker state is hoisted to DictusImeService so that back key
  * dismissal can be handled via onKeyDown override (BackHandler does not work
@@ -111,27 +110,22 @@ fun KeyboardScreen(
             Column(
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                // Suggestion bar (36.dp) — always visible with 3 slots and separators
-                SuggestionBar(
-                    currentWord = currentWord,
-                    suggestions = suggestions,
-                    mode = suggestionMode,
-                    onSuggestionSelected = onSuggestionSelected,
-                    predictionToken = predictionToken,
-                    onCurrentWordSelected = onCurrentWordSelected,
-                    isDictationUndoAvailable = isDictationUndoAvailable,
-                    onUndoDictation = onUndoDictation,
-                    dictationNotice = dictationNotice,
-                )
-
-                // Mic button row above keyboard (46.dp)
-                MicButtonRow(
-                    languageShortCode = languageProfile.shortCode,
+                // Single toolbar (52.dp, #139): ☰, centre slot, mic.
+                KeyboardToolbar(
                     onCycleLanguage = onCycleLanguage,
                     onOpenSettings = onOpenSettings,
                     onMicTap = onMicTap,
                     isRecording = false,
                     isMicEnabled = isMicEnabled,
+                    currentWord = currentWord,
+                    suggestions = suggestions,
+                    suggestionMode = suggestionMode,
+                    onSuggestionSelected = onSuggestionSelected,
+                    onCurrentWordSelected = onCurrentWordSelected,
+                    predictionToken = predictionToken,
+                    isDictationUndoAvailable = isDictationUndoAvailable,
+                    onUndoDictation = onUndoDictation,
+                    dictationNotice = dictationNotice,
                 )
 
                 // Keyboard area (264.dp) for 48.dp keys with existing row spacing.

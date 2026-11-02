@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.ime.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.ime.input.DictationNotice
@@ -12,17 +13,18 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-class SuggestionBarNoticeUiTest {
+class KeyboardToolbarNoticeUiTest {
     @get:Rule val composeRule = createComposeRule()
 
-    private fun setBar(notice: DictationNotice.Message?) {
+    private fun setBar(notice: DictationNotice.Message?, isDictationUndoAvailable: Boolean = false) {
         composeRule.setContent {
             DictusTheme {
-                SuggestionBar(
+                KeyboardToolbar(
+                    onCycleLanguage = {},
+                    onOpenSettings = {},
                     currentWord = "bonj",
                     suggestions = listOf("bonjour"),
-                    onSuggestionSelected = { _, _ -> },
-                    onCurrentWordSelected = {},
+                    isDictationUndoAvailable = isDictationUndoAvailable,
                     dictationNotice = notice,
                 )
             }
@@ -69,6 +71,17 @@ class SuggestionBarNoticeUiTest {
 
         composeRule.onNodeWithText("Dictée en cours dans Dictus").assertIsDisplayed()
         composeRule.onNodeWithText("bonjour").assertDoesNotExist()
+    }
+
+    // #139, iOS ToolbarCentreSlot.resolve: the error outranks the undo, and takes ☰'s place.
+    @Test
+    fun `an error outranks the undo and takes the menu's place`() {
+        setBar(DictationNotice.Message.Failed, isDictationUndoAvailable = true)
+
+        composeRule.onNodeWithText("The dictation failed. Tap the microphone to try again.").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Undo dictation insertion").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Keyboard menu").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Microphone").assertIsDisplayed()
     }
 
     @Test

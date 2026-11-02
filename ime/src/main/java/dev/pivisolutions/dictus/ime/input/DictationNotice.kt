@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * The line the suggestion bar shows after a dictation that inserted nothing: "No words
+ * The line the keyboard toolbar shows after a dictation that inserted nothing: "No words
  * detected" (#153) or "The dictation failed" (#182). Without it the user cannot tell either
  * from a dictation that never ran.
  *
