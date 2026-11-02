@@ -35,8 +35,8 @@ import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
  * The WaveformDriver advances processingPhase each frame using the same
  * formula as iOS (link.duration / 2.0), producing smooth lateral wave motion.
  *
- * Total height: 310.dp (matching RecordingScreen and KeyboardScreen)
- * Layout: empty top row (46.dp) + center with waveform + label (218.dp) + empty bottom row (46.dp)
+ * Total height: 316.dp (matching RecordingScreen and KeyboardScreen, #139)
+ * Layout: empty top row (52.dp) + center with waveform + label (218.dp) + empty bottom row (46.dp)
  */
 @Composable
 fun TranscribingScreen(
@@ -59,11 +59,12 @@ fun TranscribingScreen(
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
-        // Top spacer (46.dp) — no buttons during transcription
+        // Top spacer (52.dp) — no buttons during transcription; same height as the recording's
+        // top row, as iOS RecordingOverlay reserves it in every state.
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(RECORDING_TOP_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background),
         )
 

@@ -57,17 +57,18 @@ class AutocorrectOnPunctuationTest {
     }
 
     @Test
-    fun `return is sent once after a correction, with no backspace undo`() {
+    fun `return is sent once after a correction, which offers its undo chip`() {
         val editor = FakeEditor("helo")
         val coordinator = eligibleCoordinator()
         var returns = 0
 
-        assertEquals(AutocorrectSpaceResult.CORRECTED, coordinator.onReturn(editor) { returns++ })
-        assertEquals("hello", editor.text)
+        assertEquals(AutocorrectSpaceResult.CORRECTED, coordinator.onReturn(editor) { returns++; editor.text += "\n" })
+        assertEquals("hello\n", editor.text)
         assertEquals(1, returns)
-        var deletes = 0
-        assertEquals(AutocorrectBackspaceResult.PLAIN_DELETE, coordinator.onBackspace(editor) { deletes++ })
-        assertEquals(1, deletes)
+        assertEquals("helo", coordinator.undoOffer?.original)
+
+        assertEquals(AutocorrectUndoResult.RESTORED, coordinator.onUndoTapped(editor))
+        assertEquals("helo\n", editor.text)
     }
 
     @Test
@@ -88,16 +89,14 @@ class AutocorrectOnPunctuationTest {
     }
 
     @Test
-    fun `backspace right after a comma correction restores the typed word`() {
+    fun `the chip after a comma correction restores the typed word and keeps the comma`() {
         val learned = mutableListOf<String>()
         val editor = FakeEditor("helo")
         val coordinator = eligibleCoordinator(learned::add)
         coordinator.onWordEnd(editor, trailing = ",") { error("corrected, nothing else to insert") }
 
-        val result = coordinator.onBackspace(editor) { error("the undo is the whole Backspace") }
-
-        assertEquals(AutocorrectBackspaceResult.UNDONE, result)
-        assertEquals("helo", editor.text)
+        assertEquals(AutocorrectUndoResult.RESTORED, coordinator.onUndoTapped(editor))
+        assertEquals("helo,", editor.text)
         assertEquals(listOf("helo"), learned)
     }
 

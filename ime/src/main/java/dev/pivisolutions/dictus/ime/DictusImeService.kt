@@ -53,6 +53,7 @@ import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
 import dev.pivisolutions.dictus.ime.input.AutocorrectTrigger
+import dev.pivisolutions.dictus.ime.input.AutocorrectUndoOffer
 import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.input.DictationFeedback
@@ -165,10 +166,10 @@ class DictusImeService : LifecycleInputMethodService() {
     private val autoFullStop = AutoFullStopInput()
     private var isAutoFullStopAllowed = false
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
-    // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
-    private val dictationUndo = DictationUndo()
+    // Last dictation insertion, offered for undo in the keyboard toolbar (#132, #139).
+    private val dictationUndo = DictationUndo(bindingScope)
     // "No words detected" or "The dictation failed" after a dictation that inserted nothing,
-    // in the suggestion bar (#153, #182).
+    // in the keyboard toolbar (#153, #182).
     private val dictationNotice = DictationNotice(bindingScope)
     // Withdraws both offers together wherever the field changes.
     private val dictationFeedback = DictationFeedback(dictationUndo, dictationNotice)
@@ -221,12 +222,14 @@ class DictusImeService : LifecycleInputMethodService() {
 
     private val _predictionToken = MutableStateFlow<NextWordPredictionToken?>(null)
     private val predictionCoordinator = NextWordPredictionCoordinator()
+    // The autocorrect undo chip of the suggestion bar (#276).
+    private val _autocorrectUndo = MutableStateFlow<AutocorrectUndoOffer?>(null)
     private val autocorrectCoordinator: AutocorrectInputCoordinator by lazy {
         AutocorrectInputCoordinator { word ->
             runPersonalizedLearning(PersonalizedLearningEntryPoint.AUTOCORRECT_UNDO) {
                 dictionaryEngine.personalDictionary.learnWord(word)
             }
-        }
+        }.apply { onUndoOfferChanged = { _autocorrectUndo.value = it } }
     }
 
 
@@ -433,7 +436,9 @@ class DictusImeService : LifecycleInputMethodService() {
             newSelStart, newSelEnd,
             candidatesStart, candidatesEnd,
         )
-        autocorrectCoordinator.onEditorSelectionChanged(newSelStart, newSelEnd)
+        autocorrectCoordinator.onEditorSelectionChanged(newSelStart, newSelEnd) { length ->
+            currentInputConnection?.getTextBeforeCursor(length, 0)
+        }
         editorSelStart = newSelStart
         editorSelEnd = newSelEnd
         dictationUndo.onSelectionChanged(newSelStart, newSelEnd)
@@ -677,6 +682,7 @@ class DictusImeService : LifecycleInputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
         cancelActiveTouch()
+        dictationFeedback.onKeyboardHidden()
         super.onFinishInputView(finishingInput)
     }
 
@@ -782,6 +788,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val isEmojiPickerOpen by _isEmojiPickerOpen.collectAsState()
         val currentWord by _currentWord.collectAsState()
         val suggestions by _suggestions.collectAsState()
+        val autocorrectUndo by _autocorrectUndo.collectAsState()
         val isDictationUndoAvailable by dictationUndo.isAvailable.collectAsState()
         val dictationNoticeMessage by dictationNotice.message.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
@@ -912,7 +919,10 @@ class DictusImeService : LifecycleInputMethodService() {
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
-                    dictationNotice = if (appDictationActive) DictationNotice.Message.AppDictationInProgress else dictationNoticeMessage,
+                    dictationNotice = dictationNoticeMessage,
+                    isAppDictationInProgress = appDictationActive,
+                    autocorrectUndo = autocorrectUndo,
+                    onUndoAutocorrect = { undoAutocorrect() },
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
                         dictationFeedback.withdraw()
@@ -1186,9 +1196,10 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         } else {
             autoFullStop.clear()
-            autocorrectCoordinator.onOtherInput()
             clearSuggestionState()
-            inputConnection.commitText(text, 1)
+            val typed = inputConnection.commitText(text, 1)
+            if (typed) autocorrectCoordinator.onTextTyped(text) else autocorrectCoordinator.onOtherInput()
+            typed
         }
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
@@ -1206,6 +1217,9 @@ class DictusImeService : LifecycleInputMethodService() {
         if (currentInputConnection == null) return false
         val selectionStart = minOf(editorSelStart, editorSelEnd)
         val cursorAfter = if (selectionStart >= 0) selectionStart + text.length else null
+        // A dictation is not typing: like iOS, an insertion the keyboard did not type closes the
+        // autocorrect undo.
+        autocorrectCoordinator.onOtherInput()
         val committed = commitText(text)
         dictationUndo.recordInsertion(text, cursorAfter)
         return committed
@@ -1241,7 +1255,8 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     /**
-     * Deletes one character before the cursor.
+     * Deletes one character before the cursor. It never reverts an autocorrection (#276, iOS
+     * `handleBackspace`): the undo chip of the suggestion bar does.
      */
     fun deleteBackward() {
         val inputConnection = currentInputConnection ?: return
@@ -1250,10 +1265,28 @@ class DictusImeService : LifecycleInputMethodService() {
         if (autoFullStop.onBackspace(inputConnection, isEditorSelectionCollapsed)) {
             autocorrectCoordinator.onOtherInput()
         } else {
-            autocorrectCoordinator.onBackspace(InputConnectionAutocorrectEditor(inputConnection)) {
-                deletePrecedingCodePoint(inputConnection)
-            }
+            autocorrectCoordinator.onBackspace { deletePrecedingCodePoint(inputConnection) }
         }
+        refreshFrenchAdaptiveKeyState()
+        refreshAutoCapitalization()
+    }
+
+    /**
+     * Puts back the word the user typed in place of its autocorrection, from the undo chip (#276,
+     * iOS `performUndo`). Never logs either word.
+     */
+    private fun undoAutocorrect() {
+        dictationFeedback.withdraw()
+        autoFullStop.clear()
+        val inputConnection = currentInputConnection
+        if (inputConnection == null) {
+            autocorrectCoordinator.onOtherInput()
+            return
+        }
+        val result = autocorrectCoordinator.onUndoTapped(InputConnectionAutocorrectEditor(inputConnection))
+        Timber.d("Autocorrect undo from the chip: %s", result)
+        clearSuggestionState()
+        _currentWord.value = ""
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
     }
@@ -1351,31 +1384,44 @@ class DictusImeService : LifecycleInputMethodService() {
 
     private fun handleFrenchAdaptiveKey() {
         val inputConnection = currentInputConnection ?: return
-        autocorrectCoordinator.onOtherInput()
         dictationFeedback.withdraw()
         if (!isCurrentEditorSuggestionEligible) {
+            autocorrectCoordinator.onOtherInput()
             inputConnection.commitText(FrenchAdaptiveKey.DEFAULT.label, 1)
             return
         }
         val state = readFrenchAdaptiveContext()
         _frenchAdaptiveKeyState.value = state
-        applyFrenchAdaptiveKey(inputConnection, state, isEditorSelectionCollapsed)
+        val applied = applyFrenchAdaptiveKey(inputConnection, state, isEditorSelectionCollapsed)
+        onFrenchAdaptiveText(applied, state, state.label)
         refreshFrenchAdaptiveKeyState()
+    }
+
+    /** Typing, as far as the autocorrect undo chip goes, as on iOS `handleAdaptiveAccentKey`. */
+    private fun onFrenchAdaptiveText(applied: Boolean, state: FrenchAdaptiveKey.State, text: String) {
+        if (applied) {
+            autocorrectCoordinator.onTextTyped(text, replacingCodePoints = if (state.replacesPrevious) 1 else 0)
+        } else {
+            autocorrectCoordinator.onOtherInput()
+        }
     }
 
     private fun handleFrenchAdaptiveVariant(variant: String) {
         val inputConnection = currentInputConnection ?: return
-        autocorrectCoordinator.onOtherInput()
         dictationFeedback.withdraw()
-        if (!isCurrentEditorSuggestionEligible) return
+        if (!isCurrentEditorSuggestionEligible) {
+            autocorrectCoordinator.onOtherInput()
+            return
+        }
         // Context may change while the popup is open; never replace from stale display state.
         val currentState = readFrenchAdaptiveContext()
-        applyFrenchAdaptiveVariant(
+        val applied = applyFrenchAdaptiveVariant(
             inputConnection,
             currentState,
             variant,
             isEditorSelectionCollapsed,
         )
+        onFrenchAdaptiveText(applied, currentState, variant)
         refreshFrenchAdaptiveKeyState()
     }
 

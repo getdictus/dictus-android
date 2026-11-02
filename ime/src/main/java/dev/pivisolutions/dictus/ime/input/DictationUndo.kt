@@ -1,8 +1,12 @@
 package dev.pivisolutions.dictus.ime.input
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Remembers the last dictation insertion so the keyboard can offer to undo it (issue #132).
@@ -12,13 +16,14 @@ import kotlinx.coroutines.flow.asStateFlow
  * caret still ends with it. Any doubt fails closed: nothing is deleted and the offer disappears.
  *
  * The offer is withdrawn as soon as the field stops being in the state the insertion left it
- * in: a keystroke, a caret move, a new dictation or the end of the input session. Callers
- * report those through [clear] and [onSelectionChanged].
+ * in: a keystroke, a caret move, a new dictation, the keyboard closing or the end of the input
+ * session. Callers report those through [clear] and [onSelectionChanged]. Otherwise it expires
+ * after [TIMEOUT_MS] (#139).
  *
  * This class never logs and never exposes the inserted text, so transcription content cannot
  * leak into logs through it (see PrivacySafeLog).
  */
-class DictationUndo {
+class DictationUndo(private val scope: CoroutineScope) {
 
     sealed interface Decision {
         /** Safe: delete exactly [length] UTF-16 units before the caret. */
@@ -44,6 +49,8 @@ class DictationUndo {
     // Caret position the insertion left behind; null until learned from the editor's echo.
     private var expectedCursor: Int? = null
 
+    private var timeoutJob: Job? = null
+
     private val _isAvailable = MutableStateFlow(false)
 
     /** Whether the undo control should be shown. */
@@ -65,6 +72,11 @@ class DictationUndo {
         insertedText = text
         expectedCursor = cursorAfter
         _isAvailable.value = true
+        timeoutJob?.cancel()
+        timeoutJob = scope.launch {
+            delay(TIMEOUT_MS)
+            clear()
+        }
     }
 
     /**
@@ -86,8 +98,10 @@ class DictationUndo {
         }
     }
 
-    /** Withdraws the offer: keystroke, new dictation, end of input session. */
+    /** Withdraws the offer: keystroke, new dictation, keyboard closed, end of input session. */
     fun clear() {
+        timeoutJob?.cancel()
+        timeoutJob = null
         insertedText = null
         expectedCursor = null
         _isAvailable.value = false
@@ -107,6 +121,13 @@ class DictationUndo {
     }
 
     companion object {
+        /**
+         * How long the offer stands, iOS `KeyboardState.dictationUndoTimeout`: long enough to
+         * read a sentence and decide it is wrong, short enough to be gone before the user has
+         * moved on and forgotten what it refers to.
+         */
+        const val TIMEOUT_MS = 8_000L
+
         /**
          * Pure safety rule: [insertedText] may be deleted only if [textBeforeCursor] ends with it.
          *
