@@ -41,6 +41,14 @@ interface AutocorrectEditor {
         original: String,
         replacement: String,
     ): AutocorrectReplacementOutcome = AutocorrectReplacementOutcome.FailedUnchanged
+
+    /**
+     * Whether the text before the cursor ends with [expected], read now, or null when it cannot be
+     * read. Called once after [endBatchEdit] to settle a relative replacement the batch left
+     * indeterminate: an editor that applies a batch only when it ends (Compose, #193) still shows
+     * the old text inside it.
+     */
+    fun tailMatches(expected: String): Boolean? = null
 }
 
 /**
@@ -176,7 +184,9 @@ object AutocorrectEditorTransaction {
         correction: String,
         trailing: String,
     ): AutocorrectTransactionResult {
-        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(original, correction + trailing) }
+        val outcome = withBatch(editor, correction + trailing) {
+            editor.attemptRelativeReplacement(original, correction + trailing)
+        }
         return when (outcome.result) {
             AutocorrectReplacementOutcome.Applied -> AutocorrectTransactionResult.Applied(
                 AutocorrectUndo(original, correction, trailing),
@@ -202,8 +212,13 @@ object AutocorrectEditorTransaction {
         val cleanup: AutocorrectBatchCleanup,
     )
 
+    /**
+     * Runs [body] inside a batch edit. An indeterminate result is read once more after the batch
+     * ends: if the text before the cursor then ends with [expected], the replacement is proven.
+     */
     private fun withBatch(
         editor: AutocorrectEditor,
+        expected: String,
         body: () -> AutocorrectReplacementOutcome,
     ): BatchOutcome {
         val began = try {
@@ -225,7 +240,18 @@ object AutocorrectEditorTransaction {
         } catch (_: Exception) {
             AutocorrectBatchCleanup.FAILED
         }
-        return BatchOutcome(result, cleanup)
+        val settled = if (result == AutocorrectReplacementOutcome.IndeterminateMutation && tailMatches(editor, expected)) {
+            AutocorrectReplacementOutcome.Applied
+        } else {
+            result
+        }
+        return BatchOutcome(settled, cleanup)
+    }
+
+    private fun tailMatches(editor: AutocorrectEditor, expected: String): Boolean = try {
+        editor.tailMatches(expected) == true
+    } catch (_: Exception) {
+        false
     }
 
     fun undo(
@@ -264,7 +290,7 @@ object AutocorrectEditorTransaction {
         written: String,
         restored: String,
     ): AutocorrectTransactionResult {
-        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(written, restored) }
+        val outcome = withBatch(editor, restored) { editor.attemptRelativeReplacement(written, restored) }
         return when (outcome.result) {
             AutocorrectReplacementOutcome.Applied ->
                 AutocorrectTransactionResult.Restored(outcome.cleanup)
