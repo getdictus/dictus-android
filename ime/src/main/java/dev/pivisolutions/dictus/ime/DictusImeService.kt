@@ -89,7 +89,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 
 /**
  * Main IME service for Dictus keyboard.
@@ -846,13 +845,6 @@ class DictusImeService : LifecycleInputMethodService() {
             else -> ThemeMode.DARK
         }
 
-        // Read keyboard mode preference to set the initial layer when the keyboard opens.
-        // "123" starts in the NUMBERS layer; everything else defaults to LETTERS.
-        val keyboardModeKey by entryPoint.dataStore().data
-            .map { it[PreferenceKeys.KEYBOARD_MODE] ?: "abc" }
-            .collectAsState(initial = "abc")
-        val initialLayer = if (keyboardModeKey == "123") KeyboardLayer.NUMBERS else KeyboardLayer.LETTERS
-
         // Distinct from the configurable recording start/stop/cancel sounds.
         val keySoundsFlow = remember {
             entryPoint.dataStore().data.map { it[PreferenceKeys.KEY_SOUNDS_ENABLED] ?: true }
@@ -1000,7 +992,6 @@ class DictusImeService : LifecycleInputMethodService() {
                         }
                     },
                     themeMode = themeMode,
-                    initialLayer = initialLayer,
                     onKeySound = { keyType ->
                         keyboardSoundPlayer.play(keyType, keySoundsEnabled)
                     },

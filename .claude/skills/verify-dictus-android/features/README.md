@@ -153,7 +153,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `keyboard.language-switch` | Free | present — tap on ☰ (FR→EN→ES→DE), no panel | no |
 | `keyboard.layout` | Free | partial — one layout per language, QWERTZ for German (#134); no picker until #191 | no |
 | `keyboard.number-row` | Free | absent | no |
-| `keyboard.default-page` | Free | present | no |
+| `keyboard.default-page` | Free | retired (#288) — the keyboard always opens on letters; iOS removes it in getdictus/dictus-ios#888, not shipped yet | no |
 | `keyboard.transcription-language` | Free | partial — `Automatique` or a fixed language; no « Suivre la langue du clavier » | no |
 | `keyboard.open-app` | Free | present — long press on ☰ → Settings | no |
 | `emoji.picker` | Free | present — iOS categories, bar at the bottom (#192); no skin tones | no |
@@ -254,7 +254,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.private-fields` | Free | present — no suggestions or learning in sensitive fields | yes |
 | `sounds.key-clicks` | Free | present — « Sons du clavier » | yes |
 | `onboarding.ime-setup` | Free | present | yes |
-| `onboarding.default-page` | Free | retired (#270) — ABC / 123 in Réglages only, as on iOS | yes |
+| `onboarding.default-page` | Free | retired (#270), as on iOS; the Réglages choice is retired too (#288) | yes |
 | `models.english-only-warning` | Free | present — Parakeet 110M | yes |
 | `models.storage` | Free | present — « Stockage utilisé » | yes |
 | `app.onboarding.ime-setup` | Free | present | yes |

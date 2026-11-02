@@ -300,8 +300,7 @@ class OnboardingViewModelTest {
     @Test
     fun `completing the onboarding leaves the keyboard preferences to Settings`() =
         runTest(testDispatcher) {
-            // #270: the default page is chosen in Settings only; the onboarding writes
-            // neither it nor a layout.
+            // #270: the onboarding writes no layout (and no default page, a setting removed by #288).
             fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Completion.storedName }
             val vm = relaunch()
 
@@ -310,7 +309,6 @@ class OnboardingViewModelTest {
 
             val prefs = fakeDataStore.data.first()
             assertEquals(true, prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING])
-            assertEquals(null, prefs[PreferenceKeys.KEYBOARD_MODE])
             assertEquals(null, prefs[PreferenceKeys.KEYBOARD_LAYOUT])
         }
 

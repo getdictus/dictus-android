@@ -23,7 +23,7 @@ A first launch walks through six steps inside the onboarding shell (#196, iOS `O
 - `onboarding.resume`: the step is written to DataStore by its stable name (`onboarding_step`, #196) on every change and restored on a cold start, after a force-stop or a reboot too; an unknown name starts at the welcome screen, the name of the removed ABC / 123 step (`keyboardLayout`) resumes at the model preparation (#270), and finishing the onboarding writes `welcome` back. — présent
 - `onboarding.whats-new`: — absent.
 - `onboarding.ime-setup` *(Spécifique Android)*: « Ajouter le clavier »: « Ouvrir les paramètres » (system on-screen keyboards) then « Sélectionner Dictus » (system picker); « Continuer » only once Dictus is enabled and selected.
-- `onboarding.default-page` *(Spécifique Android)*: — retired by #270, as iOS removed its layer-choice step (#213). The ABC / 123 choice is in Réglages only (`keyboard.default-page`); the keyboard opens on ABC until it is changed there.
+- `onboarding.default-page` *(Spécifique Android)*: — retired by #270, as iOS removed its layer-choice step (#213). The Réglages choice is retired too (`keyboard.default-page`, #288): the keyboard always opens on letters.
 
 - `onboarding.back` *(shell)*: the chevron at the top left, and the system back, return from the microphone step to the welcome screen. No step from the keyboard setup on goes back, as on iOS; there the system back leaves the app, and the next launch resumes on the same step.
 
