@@ -154,7 +154,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `keyboard.layout` | Free | partial — one layout per language, QWERTZ for German (#134); no picker until #191 | no |
 | `keyboard.number-row` | Free | absent | no |
 | `keyboard.default-page` | Free | present | no |
-| `keyboard.transcription-language` | Free | partial — `Automatique` or a fixed language; no « Suivre la langue du clavier » | no |
+| `keyboard.transcription-language` | Free | present — « Suivre la langue du clavier » (default, #186), `Automatique` or a fixed language | no |
 | `keyboard.open-app` | Free | present — long press on ☰ → Settings | no |
 | `emoji.picker` | Free | present — iOS categories, bar at the bottom (#192); no skin tones | no |
 | `emoji.recents` | Free | present — « Récents » (#192) | no |
@@ -295,8 +295,8 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: a language sheet per model.
 6. **Settings — `app.settings`**
    - iOS: section headers in normal case (« Transcription », « Clavier »), transcription language « Suivre la langue du clavier », ABC / 123 choice as a segment with a keyboard preview.
-   - Android (since #189): large « Réglages » title, sentence-case headers in the iOS order, inline ABC / 123 segment, inline menus instead of sheets. Still different: no keyboard preview under the segment; an extra « Apparence » section; no « Suivre la langue du clavier » option (#186).
-   - Proposal: add « Suivre la langue du clavier » (#186).
+   - Android (since #189): large « Réglages » title, sentence-case headers in the iOS order, inline ABC / 123 segment, inline menus instead of sheets, « Suivre la langue du clavier » first in « Langue » (#186). Still different: no keyboard preview under the segment; an extra « Apparence » section.
+   - Proposal: none for the dictation language, closed by #186.
 7. **Sounds — `app.settings.sounds`**
    - iOS: « Activer les sons » with an explanatory note, « Sons par événement »: « Début », « Fin », « Annuler » with the chosen sound shown on the right.
    - Android (since #185): the iOS labels « Activer les sons », « SONS PAR ÉVÉNEMENT », « Début », « Fin », « Annuler », and the note « Les sons respectent le mode silencieux du téléphone. » under the card; sections stay in capitals (« GÉNÉRAL ») and the volume shares the switch's card.
