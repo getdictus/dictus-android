@@ -215,11 +215,45 @@ class KeyboardLayoutTest {
         assertEquals("ABC", KeyboardLayouts.symbolsRows[3][0].label)
     }
 
+    // iOS reference: DictusKeyboard/KeyboardLayouts.swift:219-223 (qwertyNormal) and 240-242
+    // (qwertyShifted); AZERTY and QWERTZ have no spacer, 265-273 (getdictus/dictus-ios develop
+    // @ 4fe6549). One Android definition covers both cases: shift only changes the output.
+    @Test
+    fun `QWERTY row 2 is centred with half-key spacers as on iOS`() {
+        val row2 = KeyboardLayouts.qwertyLetters[1]
+        assertEquals(
+            listOf(KeyType.SPACER) + List(9) { KeyType.CHARACTER } + KeyType.SPACER,
+            row2.map { it.type },
+        )
+        assertEquals(
+            listOf("a", "s", "d", "f", "g", "h", "j", "k", "l"),
+            row2.filter { it.type == KeyType.CHARACTER }.map { it.output },
+        )
+        assertEquals(listOf(0.5f) + List(9) { 1f } + 0.5f, row2.map { it.widthMultiplier })
+        assertEquals(10f, row2.sumOf { it.widthMultiplier.toDouble() }.toFloat(), 0.001f)
+    }
+
+    @Test
+    fun `AZERTY and QWERTZ row 2 have no spacer`() {
+        assertEquals(
+            listOf("Q", "S", "D", "F", "G", "H", "J", "K", "L", "M"),
+            KeyboardLayouts.azertyLetters[1].map { it.label },
+        )
+        assertEquals(
+            listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "\u00D6", "\u00C4"),
+            KeyboardLayouts.qwertzLetters[1].map { it.label },
+        )
+        for (row2 in listOf(KeyboardLayouts.azertyLetters[1], KeyboardLayouts.qwertzLetters[1])) {
+            assertTrue(row2.all { it.type == KeyType.CHARACTER && it.widthMultiplier == 1f })
+        }
+    }
+
     @Test
     fun `spacers carry no output`() {
-        val spacers = (KeyboardLayouts.numbersRows + KeyboardLayouts.symbolsRows).flatten()
+        val spacers = (KeyboardLayouts.qwertyLetters + KeyboardLayouts.numbersRows + KeyboardLayouts.symbolsRows)
+            .flatten()
             .filter { it.type == KeyType.SPACER }
-        assertEquals(4, spacers.size)
+        assertEquals(6, spacers.size)
         assertTrue(spacers.all { it.label.isEmpty() && it.output.isEmpty() })
     }
 }

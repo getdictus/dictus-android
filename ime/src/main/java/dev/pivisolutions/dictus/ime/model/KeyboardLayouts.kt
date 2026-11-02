@@ -32,11 +32,17 @@ object KeyboardLayouts {
         bottomRow(layerSwitchLabel = "123"),
     )
 
+    /**
+     * QWERTY, as iOS draws it (`qwertyNormal` / `qwertyShifted`): row 2 has a 0.5 spacer at each
+     * end, so it totals 10 units and its nine keys sit under the gaps of row 1.
+     */
     val qwertyLetters: List<List<KeyDefinition>> = listOf(
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P")
             .map { KeyDefinition(label = it, output = it.lowercase()) },
-        listOf("A", "S", "D", "F", "G", "H", "J", "K", "L")
-            .map { KeyDefinition(label = it, output = it.lowercase()) },
+        listOf(spacer(0.5f)) +
+            listOf("A", "S", "D", "F", "G", "H", "J", "K", "L")
+                .map { KeyDefinition(label = it, output = it.lowercase()) } +
+            spacer(0.5f),
         listOf(
             KeyDefinition("\u21E7", type = KeyType.SHIFT, widthMultiplier = 1.5f),
             KeyDefinition("Z", output = "z"),
