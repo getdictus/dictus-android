@@ -10,6 +10,23 @@
     <!-- Over the disabled mic while a dictation started in the app runs (#248). -->
     <string name="ime_app_dictation_in_progress">Dictation in progress in Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
+    <!-- Emoji picker (#192): labels and categories, after iOS EmojiPickerView. -->
+    <string name="ime_emoji_search_placeholder">Search Emoji</string>
+    <string name="ime_emoji_search_open">Search emoji</string>
+    <string name="ime_emoji_search_clear">Clear search</string>
+    <string name="ime_emoji_no_results">No results</string>
+    <string name="ime_emoji_space">space</string>
+    <string name="ime_emoji_delete">Delete</string>
+    <string name="ime_emoji_category_recents">Recents</string>
+    <string name="ime_emoji_category_smileys">Smileys</string>
+    <string name="ime_emoji_category_people">People</string>
+    <string name="ime_emoji_category_animals">Animals &amp; Nature</string>
+    <string name="ime_emoji_category_food">Food &amp; Drink</string>
+    <string name="ime_emoji_category_activities">Activities</string>
+    <string name="ime_emoji_category_travel">Travel</string>
+    <string name="ime_emoji_category_objects">Objects</string>
+    <string name="ime_emoji_category_symbols">Symbols</string>
+    <string name="ime_emoji_category_flags">Flags</string>
     <string name="ime_undo_dictation">Undo</string>
     <string name="ime_undo_dictation_description">Undo last dictation</string>
     <!-- Language key: %1$s is the short code shown on the key (FR, EN, ES, DE) -->
