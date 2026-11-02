@@ -133,7 +133,8 @@ fun EmojiPickerScreen(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(346.dp)
+            // The key area under the toolbar, as iOS KeyboardRootView (#139).
+            .height(KEY_AREA_HEIGHT)
             .background(MaterialTheme.colorScheme.surface)
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(bottom = 8.dp),

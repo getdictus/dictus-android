@@ -41,6 +41,14 @@ interface AutocorrectEditor {
         original: String,
         replacement: String,
     ): AutocorrectReplacementOutcome = AutocorrectReplacementOutcome.FailedUnchanged
+
+    /**
+     * Whether the text before the cursor ends with [expected], read now, or null when it cannot be
+     * read. Called once after [endBatchEdit] to settle a relative replacement the batch left
+     * indeterminate: an editor that applies a batch only when it ends (Compose, #193) still shows
+     * the old text inside it.
+     */
+    fun tailMatches(expected: String): Boolean? = null
 }
 
 /**
@@ -83,9 +91,11 @@ data class AutocorrectUndo(
     val original: String,
     /** Exact correction inserted in the editor, without its trailing text. */
     val correction: String,
-    /** Absolute collapsed selection after inserting the correction and its owned trailing text. */
-    val correctedSelection: Int,
-    /** What the correction wrote after the word: a space, a punctuation mark, or nothing (#268). */
+    /**
+     * What follows the correction before the cursor: what the correction wrote after the word (a
+     * space, a punctuation mark, or nothing, #268), then anything typed since (#276). An undo
+     * keeps it in place.
+     */
     val trailing: String = " ",
 )
 
@@ -132,17 +142,8 @@ enum class AutocorrectEditorOperation {
     VERIFIED_REPLACEMENT,
 }
 
-/** Coordinates fail-closed autocorrect and its immediate undo without issuing deletion calls. */
+/** Coordinates fail-closed autocorrect and its undo without issuing deletion calls. */
 object AutocorrectEditorTransaction {
-
-    /**
-     * Selection marker for a correction applied without absolute offsets.
-     *
-     * The coordinator compares this against the selection reported by onUpdateSelection to keep an
-     * undo alive; a value no real selection can take retires the undo on the first movement, which
-     * is the safe direction when offsets could not be verified in the first place.
-     */
-    const val UNKNOWN_SELECTION = -1
 
     fun apply(
         editor: AutocorrectEditor,
@@ -159,10 +160,6 @@ object AutocorrectEditorTransaction {
         val match = matchTokenAtCursor(snapshot, normalizedOriginal) ?: return snapshotValidationFailure(snapshot, normalizedOriginal)
 
         val insertedCorrection = normalizedCorrection
-        val correctedSelection = match.absoluteStart.toLong() + insertedCorrection.length + trailing.length
-        if (correctedSelection > Int.MAX_VALUE) {
-            return rejected(AutocorrectRejection.CONTEXT_UNAVAILABLE)
-        }
         return replace(
             editor,
             AutocorrectReplacement(
@@ -174,28 +171,25 @@ object AutocorrectEditorTransaction {
             ),
         ) { cleanup ->
             AutocorrectTransactionResult.Applied(
-                AutocorrectUndo(match.editorText, insertedCorrection, correctedSelection.toInt(), trailing),
+                AutocorrectUndo(match.editorText, insertedCorrection, trailing),
                 cleanup,
             )
         }
     }
 
-    /**
-     * Applies a correction through the cursor-relative path, for editors with no extracted text.
-     *
-     * The undo it hands back carries no absolute selection, so the caller must not use one: an
-     * editor that cannot report offsets cannot have them checked either.
-     */
+    /** Applies a correction through the cursor-relative path, for editors with no extracted text. */
     private fun applyRelative(
         editor: AutocorrectEditor,
         original: String,
         correction: String,
         trailing: String,
     ): AutocorrectTransactionResult {
-        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(original, correction + trailing) }
+        val outcome = withBatch(editor, correction + trailing) {
+            editor.attemptRelativeReplacement(original, correction + trailing)
+        }
         return when (outcome.result) {
             AutocorrectReplacementOutcome.Applied -> AutocorrectTransactionResult.Applied(
-                AutocorrectUndo(original, correction, UNKNOWN_SELECTION, trailing),
+                AutocorrectUndo(original, correction, trailing),
                 outcome.cleanup,
             )
             AutocorrectReplacementOutcome.RejectedUnchanged ->
@@ -218,8 +212,13 @@ object AutocorrectEditorTransaction {
         val cleanup: AutocorrectBatchCleanup,
     )
 
+    /**
+     * Runs [body] inside a batch edit. An indeterminate result is read once more after the batch
+     * ends: if the text before the cursor then ends with [expected], the replacement is proven.
+     */
     private fun withBatch(
         editor: AutocorrectEditor,
+        expected: String,
         body: () -> AutocorrectReplacementOutcome,
     ): BatchOutcome {
         val began = try {
@@ -241,7 +240,18 @@ object AutocorrectEditorTransaction {
         } catch (_: Exception) {
             AutocorrectBatchCleanup.FAILED
         }
-        return BatchOutcome(result, cleanup)
+        val settled = if (result == AutocorrectReplacementOutcome.IndeterminateMutation && tailMatches(editor, expected)) {
+            AutocorrectReplacementOutcome.Applied
+        } else {
+            result
+        }
+        return BatchOutcome(settled, cleanup)
+    }
+
+    private fun tailMatches(editor: AutocorrectEditor, expected: String): Boolean = try {
+        editor.tailMatches(expected) == true
+    } catch (_: Exception) {
+        false
     }
 
     fun undo(
@@ -253,7 +263,7 @@ object AutocorrectEditorTransaction {
         val normalizedCorrection = undo.correction.nfc()
         validateRequest(normalizedOriginal, normalizedCorrection, identityEligible)?.let { return it }
         val snapshot = readSnapshot(editor)
-            ?: return undoRelative(editor, normalizedCorrection + undo.trailing, normalizedOriginal)
+            ?: return undoRelative(editor, normalizedCorrection + undo.trailing, normalizedOriginal + undo.trailing)
         val match = matchCorrectionAndTrailingAtCursor(snapshot, normalizedCorrection, undo.trailing)
             ?: return snapshotValidationFailure(snapshot, normalizedCorrection, undo.trailing)
 
@@ -264,22 +274,23 @@ object AutocorrectEditorTransaction {
                 absoluteStart = match.absoluteStart,
                 absoluteEnd = match.absoluteEnd,
                 expectedText = match.editorText,
-                replacement = undo.original,
+                replacement = undo.original + undo.trailing,
             ),
         ) { cleanup -> AutocorrectTransactionResult.Restored(cleanup) }
     }
 
     /**
-     * Reverses a relative correction, restoring the original token and dropping its trailing text.
+     * Reverses a relative correction, restoring the original token before its trailing text.
      *
-     * @param written the correction followed by the trailing text it wrote.
+     * @param written the correction followed by its trailing text.
+     * @param restored the original token followed by the same trailing text.
      */
     private fun undoRelative(
         editor: AutocorrectEditor,
         written: String,
-        original: String,
+        restored: String,
     ): AutocorrectTransactionResult {
-        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(written, original) }
+        val outcome = withBatch(editor, restored) { editor.attemptRelativeReplacement(written, restored) }
         return when (outcome.result) {
             AutocorrectReplacementOutcome.Applied ->
                 AutocorrectTransactionResult.Restored(outcome.cleanup)

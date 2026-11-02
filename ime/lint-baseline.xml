@@ -101,17 +101,6 @@
     </issue>
 
     <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/dev/pivisolutions/dictus/ime/ui/MicButtonRow.kt"
-            line="40"
-            column="5"/>
-    </issue>
-
-    <issue
         id="MultipleAwaitPointerEventScopes"
         message="Suspicious use of multiple awaitPointerEventScope blocks. Using multiple awaitPointerEventScope blocks may cause some input events to be dropped."
         errorLine1="                    awaitPointerEventScope {"

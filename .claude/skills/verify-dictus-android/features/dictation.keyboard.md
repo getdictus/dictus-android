@@ -1,6 +1,6 @@
 # Dictation from the keyboard
 
-In any app, the Dictus keyboard's blue mic pill records the voice on the phone, transcribes it offline with the active model and inserts the text at the cursor. ✕ cancels without inserting anything; after an insertion, the « Annuler » chip removes what was just inserted.
+In any app, the Dictus keyboard's blue mic pill records the voice on the phone, transcribes it offline with the active model and inserts the text at the cursor. ✕ cancels without inserting anything; after an insertion, the « Annuler » pill removes what was just inserted.
 
 - **ID:** `dictation.keyboard`
 - **Tier:** Gratuit (nothing is gated on Android)
@@ -10,22 +10,22 @@ In any app, the Dictus keyboard's blue mic pill records the voice on the phone, 
 ## Sub-features
 
 - `dictation.start`: Tap the mic pill (top right of the keyboard) to start recording. With a model on disk the recording starts at once, even while the model loads or after a failed load, which the tap retries; the transcription waits for the load (#247). With no model downloaded, the tap opens Dictus on « Modèles » and nothing records. Deliberate deviation from iOS, which opens its preparation screen during a real load. — présent
-- `dictation.stop`: ✓ stops, transcribes (« Transcription… ») and inserts the text at the cursor. When the dictation produces no text (including only non-speech tags or punctuation, #161), nothing is inserted and the suggestion bar reads « Aucun mot détecté » in grey for 3 s, like the iOS toolbar (#153). When the transcription fails (`Failed`: model missing, engine failure, a timeout before any segment), nothing is inserted and the bar reads « La dictée a échoué. Touchez le micro pour réessayer. » in grey, on up to two lines, for 3 s, like the iOS toolbar (`kbd.dictation-error`, #182). A timeout after some segments is `Partial`: those words are inserted and no failure line shows. The inserted text also becomes Accueil's « Dernière transcription » (#245). — présent
+- `dictation.stop`: ✓ stops, transcribes (« Transcription… ») and inserts the text at the cursor. When the dictation produces no text (including only non-speech tags or punctuation, #161), nothing is inserted and the keyboard bar reads « Aucun mot détecté » in grey for 3 s, like the iOS toolbar (#153). When the transcription fails (`Failed`: model missing, engine failure, a timeout before any segment), nothing is inserted and the bar reads « La dictée a échoué. Touchez le micro pour réessayer. » in grey, on up to two lines, for 3 s, like the iOS toolbar (`kbd.dictation-error`, #182). A timeout after some segments is `Partial`: those words are inserted and no failure line shows. The inserted text also becomes Accueil's « Dernière transcription » (#245). — présent
 - `dictation.cancel`: ✕ stops and discards the audio; nothing is inserted. — présent
 - `dictation.status`: Recording panel with a 30-bar waveform that follows the voice (iOS pipeline and smoothing, #184; flat thin bars in silence), MM:SS timer and « En écoute… », then « Transcription… » with a travelling sine. Nothing ever covers the keys: the keyboard types while the model loads, has failed or is missing (#247). The mic pill shrinks and dims under the finger (iOS `GlassPressStyle`: scale 0.88, opacity 0.85). Its glow stays still and it never flashes green after a dictation, like the iOS keyboard pill (#24). — présent
-- `dictation.undo-insert`: After an insertion, the suggestion bar shows « Annuler » (`Annuler la dernière dictée`): it deletes the inserted text if it is still right before the cursor. — présent (#137)
+- `dictation.undo-insert`: After an insertion, the keyboard bar shows the « Annuler » pill (accent tint, ↶; `Annuler l’insertion de la dictée`) in place of ☰ and the suggestions; only a notice outranks it (#139). It deletes the inserted text if it is still right before the cursor, and goes away after 8 s, at the first keystroke (held ⌫ included), when the cursor moves or when the keyboard closes. — présent (#137, #139)
 - `dictation.handoff`: — Spécifique iOS (Android's IME binds to the app's `DictationService` directly; no app switch).
 - `dictation.requires-full-access`: — Spécifique iOS (no Full Access on Android; only the `RECORD_AUDIO` permission).
 - `dictation.device-gating`: — absent: no device is refused as a whole; only heavy models are refused per RAM (`models.device-gating`).
 - `dictation.notification` *(Spécifique Android)*: while recording, a foreground-service notification « Dictus – Enregistrement » with an « Arrêter » action (EN: « Dictus – Recording », « Stop ») (required by Android for microphone use in the background).
-- App dictation running *(Spécifique Android, #248)*: while a dictation started in the app records or transcribes, the keyboard keeps typing, its mic is greyed out and the suggestion bar reads « Dictée en cours dans Dictus » (EN « Dictation in progress in Dictus »); TalkBack reads the mic as « Microphone, dictée en cours dans Dictus » (EN « Microphone, dictation in progress in Dictus »), disabled (#252); no recording overlay, no ✓. Log `Keyboard mic refused: dictation in progress in the app`. — présent
+- App dictation running *(Spécifique Android, #248)*: while a dictation started in the app records or transcribes, the keyboard keeps typing, its mic is greyed out and the keyboard bar reads « Dictée en cours dans Dictus » in place of ☰ (EN « Dictation in progress in Dictus »), above the « Annuler » pill and the suggestions, below a failure notice (rank of iOS `recoveredTranscription`, #139); TalkBack reads the mic as « Microphone, dictée en cours dans Dictus » (EN « Microphone, dictation in progress in Dictus »), disabled (#252); no recording overlay, no ✓. Log `Keyboard mic refused: dictation in progress in the app`. — présent
 - `dictation.switch-keyboard` *(Spécifique Android)*: during a recording the globe « Changer de clavier » (EN « Switch keyboard ») under the waveform opens the system keyboard picker; a `Réglages` gear before #190. iOS draws no such control: its globe is the system's, below the keyboard.
 
 ## How to get to it (user POV)
 
 1. Dictus → onboarding, or Android Paramètres → Système → Langues et saisie → Clavier à l'écran: enable « Dictus » and select it.
 2. In any text field (Notes, Messages…), the Dictus keyboard opens with the mic pill at the top right.
-3. Tap the mic, speak, tap ✓ to insert or ✕ to cancel. Tap « Annuler » in the bar right after to remove the insertion.
+3. Tap the mic, speak, tap ✓ to insert or ✕ to cancel. Tap « Annuler » in the bar within 8 s to remove the insertion.
 
 ## Driving it with Argent
 
@@ -39,7 +39,7 @@ Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the 
 - **Cancel.** Tap the centre of `Annuler la dictée` (✕). → `helpers/log.sh wait 'Recording cancelled' 10 "$M"` prints `DictationService: Recording cancelled, samples discarded` (preceded by `AudioCaptureManager: AudioRecord cancelled, samples discarded`, followed by the IME's `Recording cancelled`); the keys are back.
 - **Check nothing was inserted.** `mcp__argent__describe`: `TextField "Titre"` still has no value, the app shows `0 character`; `helpers/log.sh since "$M" | grep -cE 'confirmAndTranscribe|Transcribed text inserted'` prints `0`; `dumpsys activity services dev.pivisolutions.dictus` lists `DictationService` without `isForeground=true` (`helpers/evidence.sh 03-dictation.cancel-after "$M"`).
 - **Delete the scratch note.** `Plus d'options` → `Supprimer`; if it reached the bin, `Paramètres` → `Corbeille` → `Supprimer la note définitivement` on it. An empty note is not kept at all.
-- **Stop instead (records the room, only if the task needs a transcript).** Tap `Terminer la dictée` (✓). → `Recording stopped: samples=N`, then `Dictation inserted: d=…, length=N, committed=true`; `Titre` holds the text and the bar shows `Annuler la dernière dictée`; tap it → `Dictation undone: length=N` and the field is back as before (`dictation.undo-insert`).
+- **Stop instead (records the room, only if the task needs a transcript).** Tap `Terminer la dictée` (✓). → `Recording stopped: samples=N`, then `Dictation inserted: d=…, length=N, committed=true`; `Titre` holds the text and the bar shows `Annuler l’insertion de la dictée` (within 8 s); tap it → `Dictation undone: length=N` and the field is back as before (`dictation.undo-insert`).
 - **Proof.** Before / during / after screenshots, the `ACTION_START` and `Recording cancelled, samples discarded` lines after the mark, zero transcription lines, and the empty field in the tree.
 
 ## Gotchas
@@ -50,7 +50,7 @@ Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the 
 - Never tap the nav bar's keyboard switcher (`Changer le mode de saisie`): a tap switches to the AOSP keyboard at once.
 - With no model downloaded, a mic tap opens Dictus on the « Modèles » tab (log `Mic tap with no model: opened Dictus on Models`) and nothing records: that is the expected end state, not a failure of the recipe.
 - The first tap after the app process was killed can land while the model loads: the recording starts at once and `Engine prewarm complete` can come after `ACTION_START`. After ✓, « Transcription… » lasts until the load ends (Parakeet: seconds on the Pixel).
-- Clips under 0.5 s are dropped before transcription: no insertion, a warning in the log and « Aucun mot détecté » in the suggestion bar (log `No words detected notice shown: surface=keyboard`), the same notice as a blank transcription.
+- Clips under 0.5 s are dropped before transcription: no insertion, a warning in the log and « Aucun mot détecté » in the keyboard bar (log `No words detected notice shown: surface=keyboard`), the same notice as a blank transcription.
 - To force a failed transcription on the emulator (debug build): start a dictation, remove the active model file with `run-as dev.pivisolutions.dictus` while it records, then ✓. → log `Model not available, cannot transcribe` then `Transcription failed, nothing inserted`; the bar shows the failure line for 3 s. Reinstall the model afterwards.
 - Fields marked password, e-mail, URL or search still accept dictation, but nothing is kept for learning (`typing.private-fields`).
 - The waveform logs `waveformHeartbeat surface=keyboard` every 2 s (`avgLevel`, `maxGapMs` = worst frame gap) and `waveformStall` above 500 ms. `avgLevel=0.0` on every heartbeat of a take while a clip plays means the guest recorded silence: the take is lost (#156).

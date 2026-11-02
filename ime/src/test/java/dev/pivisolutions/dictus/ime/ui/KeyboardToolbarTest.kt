@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.ime.ui
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performClick
@@ -19,7 +20,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-class MicButtonRowTest {
+class KeyboardToolbarTest {
     @get:Rule val composeRule = createComposeRule()
 
     // The mic has no loading state: a tap while the model loads starts the recording (#247).
@@ -27,8 +28,7 @@ class MicButtonRowTest {
         var taps = 0
         composeRule.setContent {
             DictusTheme {
-                MicButtonRow(
-                    languageShortCode = "FR",
+                KeyboardToolbar(
                     onCycleLanguage = {},
                     onOpenSettings = {},
                     onMicTap = { taps++ },
@@ -61,8 +61,7 @@ class MicButtonRowTest {
     private fun setDisabledMic(onMicTap: () -> Unit = {}) {
         composeRule.setContent {
             DictusTheme {
-                MicButtonRow(
-                    languageShortCode = "FR",
+                KeyboardToolbar(
                     onCycleLanguage = {},
                     onOpenSettings = {},
                     onMicTap = onMicTap,
@@ -72,26 +71,26 @@ class MicButtonRowTest {
         }
     }
 
-    @Test fun `tap cycles once while long press opens settings without cycling`() {
+    // #139: ☰ keeps the old language control's Android actions until #209 and #191.
+    @Test fun `menu tap cycles once while long press opens settings without cycling`() {
         var cycles = 0
         var settingsOpens = 0
         composeRule.setContent {
             DictusTheme {
-                MicButtonRow(
-                    languageShortCode = "FR",
+                KeyboardToolbar(
                     onCycleLanguage = { cycles++ },
                     onOpenSettings = { settingsOpens++ },
                 )
             }
         }
 
-        composeRule.onNodeWithText("FR").performClick()
+        composeRule.onNodeWithContentDescription("Keyboard menu").performClick()
         composeRule.runOnIdle {
             assertEquals(1, cycles)
             assertEquals(0, settingsOpens)
         }
 
-        composeRule.onNodeWithText("FR").performTouchInput {
+        composeRule.onNodeWithContentDescription("Keyboard menu").performTouchInput {
             down(center)
             advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
             up()
@@ -99,6 +98,52 @@ class MicButtonRowTest {
         composeRule.runOnIdle {
             assertEquals(1, cycles)
             assertEquals(1, settingsOpens)
+        }
+    }
+
+    @Config(qualifiers = "fr")
+    @Test fun `menu is labelled in French, as iOS`() {
+        setBar()
+
+        composeRule.onNodeWithContentDescription("Menu du clavier").assertIsDisplayed()
+    }
+
+    // #139: one bar, ☰ left, mic right, no language code.
+    @Test fun `idle bar shows the menu and the mic, without the language code`() {
+        setBar()
+
+        composeRule.onNodeWithContentDescription("Keyboard menu").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Microphone").assertIsDisplayed()
+        composeRule.onNodeWithText("FR").assertDoesNotExist()
+    }
+
+    @Test fun `suggestions take the menu's place in the same bar`() {
+        setBar(currentWord = "bonj", suggestions = listOf("bonjour", "bonne"))
+
+        composeRule.onNodeWithText("bonjour").assertIsDisplayed()
+        composeRule.onNodeWithText("bonj").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Keyboard menu").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Microphone").assertIsDisplayed()
+    }
+
+    // iOS SuggestionState: a word with no completion empties the row, so ☰ comes back.
+    @Test fun `a typed word alone does not take the menu's place`() {
+        setBar(currentWord = "xyzw", suggestions = emptyList())
+
+        composeRule.onNodeWithContentDescription("Keyboard menu").assertIsDisplayed()
+        composeRule.onNodeWithText("xyzw").assertDoesNotExist()
+    }
+
+    private fun setBar(currentWord: String = "", suggestions: List<String> = emptyList()) {
+        composeRule.setContent {
+            DictusTheme {
+                KeyboardToolbar(
+                    onCycleLanguage = {},
+                    onOpenSettings = {},
+                    currentWord = currentWord,
+                    suggestions = suggestions,
+                )
+            }
         }
     }
 }

@@ -23,7 +23,7 @@ The emoji key opens a picker in place of the letters: one category at a time, th
 
 Preconditions: Launch and Doctor OK, a scratch note focused.
 
-- **Open.** Tap `😊` (bottom row, second from left). → the picker replaces the keys *and the mic row*: a capitalized category name, emoji cells (`View "😀"`), the bar `ABC`, `Rechercher un emoji`, category buttons by name (`Smileys`, `Personnes`…), `Effacer` (`screen.sh kbd.emoji`).
+- **Open.** Tap `😊` (bottom row, second from left). → the picker replaces the keys, under the keyboard bar (☰ and the mic stay; same keyboard height, #139): a capitalized category name, emoji cells (`View "😀"`), the bar `ABC`, `Rechercher un emoji`, category buttons by name (`Smileys`, `Personnes`…), `Effacer` (`screen.sh kbd.emoji`).
 - **Category.** Tap `Animaux et nature`. → the label reads « ANIMAUX ET NATURE ».
 - **Search.** Tap `Rechercher un emoji`, then the mini keys (`c`, `h`, `a`, `t`). → the field shows the text and the row starts with 🐱 (French keyboard). `Effacer la recherche` clears, a second tap closes.
 - **Back.** Tap `ABC`. → the letters are back.

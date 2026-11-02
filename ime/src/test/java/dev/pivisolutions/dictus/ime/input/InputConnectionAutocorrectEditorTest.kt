@@ -20,7 +20,7 @@ class InputConnectionAutocorrectEditorTest {
         val connection = StatefulConnection("say teh")
         val result = AutocorrectEditorTransaction.apply(connection.editor(), "teh", "the", true)
 
-        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 8)), result)
+        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), result)
         assertEquals("say the ", connection.text)
         assertTrue(connection.calls.contains("setComposingRegion(4,7)"))
         assertTrue(connection.calls.contains("commitText(the ,1)"))
@@ -163,7 +163,7 @@ class InputConnectionAutocorrectEditorTest {
 
         val result = AutocorrectEditorTransaction.apply(connection.editor(), "teh", "the", true)
 
-        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 5)), result)
+        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), result)
         assertEquals(" the ", connection.text)
     }
 
@@ -211,7 +211,7 @@ class InputConnectionAutocorrectEditorTest {
 
         val result = AutocorrectEditorTransaction.apply(connection.editor(), "teh", "the", true)
 
-        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 13)), result)
+        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), result)
         assertEquals("xxxx say the ", connection.text)
         assertTrue(connection.calls.contains("setComposingRegion(9,12)"))
     }
