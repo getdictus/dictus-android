@@ -19,8 +19,7 @@ import kotlinx.coroutines.launch
  */
 class DictationNotice(private val scope: CoroutineScope) {
 
-    /** [AppDictationInProgress] is not shown through [show]: it stays while the app dictates (#248). */
-    enum class Message { NoWordsDetected, Failed, AppDictationInProgress }
+    enum class Message { NoWordsDetected, Failed }
 
     private val _message = MutableStateFlow<Message?>(null)
 

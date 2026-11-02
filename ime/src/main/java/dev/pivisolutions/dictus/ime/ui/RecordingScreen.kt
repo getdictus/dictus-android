@@ -36,14 +36,16 @@ import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 /**
  * Recording overlay that replaces the keyboard during active dictation.
  *
- * Total height matches KeyboardScreen (310.dp = 46.dp top + 264.dp content).
+ * Total height matches KeyboardScreen (316.dp = 52.dp top + 218.dp + 46.dp), so starting a
+ * recording never changes the keyboard's height (#139).
  * Layout follows the mockup (Keyboard Recording frame):
- * - Top row (46.dp): Cancel (✕) left, Confirm (✓) right — glass pills
+ * - Top row (52.dp): Cancel (✕) left, Confirm (✓) right — glass pills
  * - Center (218.dp): Waveform + timer + "En écoute…"
  * - Bottom row (46.dp): switch-keyboard globe only (no mic pill during recording)
  *
- * The top row replaces the MicButtonRow's language code + mic with the iOS
- * RecordingOverlay `PillButton`s, keeping the same height for a seamless transition.
+ * The top row replaces the keyboard toolbar with the iOS RecordingOverlay `PillButton`s. Like
+ * iOS `RecordingOverlay.topBar` (10 + 36 + 6), its pills sit exactly where the toolbar's ☰ and
+ * mic pill sit, so neither moves when the recording starts.
  */
 @Composable
 fun RecordingScreen(
@@ -60,13 +62,13 @@ fun RecordingScreen(
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
-        // Top row (46.dp) — Cancel (✕) left, Confirm (✓) right
+        // Top row (52.dp) — Cancel (✕) left, Confirm (✓) right
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(RECORDING_TOP_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 8.dp, vertical = 3.dp),
+                .padding(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -162,6 +164,9 @@ fun RecordingScreen(
         }
     }
 }
+
+/** iOS `RecordingOverlay.topBar`: the keyboard toolbar's height, pills 10dp from the top. */
+internal val RECORDING_TOP_ROW_HEIGHT = 52.dp
 
 /** iOS RecordingOverlay `PillButton`: a 56x36 glass capsule around an 18 pt semibold glyph. */
 @Composable

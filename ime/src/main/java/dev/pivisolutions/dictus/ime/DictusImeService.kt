@@ -913,7 +913,8 @@ class DictusImeService : LifecycleInputMethodService() {
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
-                    dictationNotice = if (appDictationActive) DictationNotice.Message.AppDictationInProgress else dictationNoticeMessage,
+                    dictationNotice = dictationNoticeMessage,
+                    isAppDictationInProgress = appDictationActive,
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
                         dictationFeedback.withdraw()

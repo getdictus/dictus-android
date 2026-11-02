@@ -16,7 +16,11 @@ import org.robolectric.annotation.Config
 class KeyboardToolbarNoticeUiTest {
     @get:Rule val composeRule = createComposeRule()
 
-    private fun setBar(notice: DictationNotice.Message?, isDictationUndoAvailable: Boolean = false) {
+    private fun setBar(
+        notice: DictationNotice.Message?,
+        isDictationUndoAvailable: Boolean = false,
+        isAppDictationInProgress: Boolean = false,
+    ) {
         composeRule.setContent {
             DictusTheme {
                 KeyboardToolbar(
@@ -26,6 +30,7 @@ class KeyboardToolbarNoticeUiTest {
                     suggestions = listOf("bonjour"),
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     dictationNotice = notice,
+                    isAppDictationInProgress = isAppDictationInProgress,
                 )
             }
         }
@@ -67,10 +72,28 @@ class KeyboardToolbarNoticeUiTest {
     @Test
     @Config(qualifiers = "fr")
     fun `an app dictation says why the mic is off`() {
-        setBar(DictationNotice.Message.AppDictationInProgress)
+        setBar(notice = null, isAppDictationInProgress = true)
 
         composeRule.onNodeWithText("Dictée en cours dans Dictus").assertIsDisplayed()
         composeRule.onNodeWithText("bonjour").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Menu du clavier").assertDoesNotExist()
+    }
+
+    // D2: the #248 notice ranks as iOS recoveredTranscription, between the error and the undo.
+    @Test
+    fun `an app dictation outranks the undo`() {
+        setBar(notice = null, isDictationUndoAvailable = true, isAppDictationInProgress = true)
+
+        composeRule.onNodeWithText("Dictation in progress in Dictus").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Undo dictation insertion").assertDoesNotExist()
+    }
+
+    @Test
+    fun `an error outranks the app dictation notice`() {
+        setBar(DictationNotice.Message.Failed, isAppDictationInProgress = true)
+
+        composeRule.onNodeWithText("The dictation failed. Tap the microphone to try again.").assertIsDisplayed()
+        composeRule.onNodeWithText("Dictation in progress in Dictus").assertDoesNotExist()
     }
 
     // #139, iOS ToolbarCentreSlot.resolve: the error outranks the undo, and takes ☰'s place.

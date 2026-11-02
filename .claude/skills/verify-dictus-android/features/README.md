@@ -311,8 +311,8 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: fix the tagline; replace the ABC / 123 step with the iOS language + layout step (the default mode stays in Settings).
 10. **Emoji — `kbd.emoji`**
     - iOS: categories at the bottom with 🔍 « Rechercher des Emoji » and ABC.
-    - Android (since #192): the iOS picker ported to Compose: categories at the bottom, 🔍 « Rechercher des Emoji », ABC and ⌫; the mic row still disappears while picking an emoji (on iOS, ☰ and the mic stay visible).
-    - Proposal: search and categories done in #192; keep the keyboard bar visible with #139.
+    - Android (since #192): the iOS picker ported to Compose: categories at the bottom, 🔍 « Rechercher des Emoji », ABC and ⌫; since #139 the picker sits under the keyboard bar, which stays visible as on iOS, and the keyboard keeps its height.
+    - Proposal: search and categories done in #192; the bar stays visible since #139.
 11. **System keyboard picker — `sys.ime-picker`**
     - iOS: the keyboard shows up once, « Dictus », in the globe list.
     - Android (since #195): one entry, « Dictus », no subtype; the layout is a per-language preference inside Dictus (#134).

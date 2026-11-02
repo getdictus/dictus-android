@@ -10,37 +10,61 @@ import org.junit.Test
 class ToolbarCentreSlotTest {
 
     private val notices = listOf(null) + DictationNotice.Message.entries
+    private val flags = listOf(false, true)
 
-    @Test
-    fun `every combination resolves by the iOS order, error then undo then suggestions`() {
-        for (notice in notices) {
-            for (undo in listOf(false, true)) {
-                for (suggestions in listOf(false, true)) {
-                    val expected = when {
-                        notice != null -> ToolbarCentreSlot.Error(notice)
-                        undo -> ToolbarCentreSlot.DictationUndo
-                        suggestions -> ToolbarCentreSlot.Suggestions
-                        else -> ToolbarCentreSlot.Empty
-                    }
-                    assertEquals(
-                        "notice=$notice undo=$undo suggestions=$suggestions",
-                        expected,
-                        ToolbarCentreSlot.resolve(
-                            notice = notice,
-                            offersDictationUndo = undo,
-                            hasSuggestions = suggestions,
-                        ),
-                    )
-                }
-            }
+    private fun forEveryCombination(check: (DictationNotice.Message?, Boolean, Boolean, Boolean) -> Unit) {
+        for (notice in notices) for (app in flags) for (undo in flags) for (suggestions in flags) {
+            check(notice, app, undo, suggestions)
         }
     }
 
     @Test
-    fun `an error hides the undo and the suggestions`() {
+    fun `every combination resolves by the iOS order, error then app dictation then undo then suggestions`() {
+        forEveryCombination { notice, app, undo, suggestions ->
+            val expected = when {
+                notice != null -> ToolbarCentreSlot.Error(notice)
+                app -> ToolbarCentreSlot.AppDictationInProgress
+                undo -> ToolbarCentreSlot.DictationUndo
+                suggestions -> ToolbarCentreSlot.Suggestions
+                else -> ToolbarCentreSlot.Empty
+            }
+            assertEquals(
+                "notice=$notice app=$app undo=$undo suggestions=$suggestions",
+                expected,
+                ToolbarCentreSlot.resolve(
+                    notice = notice,
+                    appDictationInProgress = app,
+                    offersDictationUndo = undo,
+                    hasSuggestions = suggestions,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `an error hides the app dictation notice, the undo and the suggestions`() {
         assertEquals(
             ToolbarCentreSlot.Error(DictationNotice.Message.Failed),
-            ToolbarCentreSlot.resolve(DictationNotice.Message.Failed, offersDictationUndo = true, hasSuggestions = true),
+            ToolbarCentreSlot.resolve(
+                DictationNotice.Message.Failed,
+                appDictationInProgress = true,
+                offersDictationUndo = true,
+                hasSuggestions = true,
+            ),
+        )
+    }
+
+    // D2 (iOS dev): the #248 notice takes iOS recoveredTranscription's rung, below the error.
+    @Test
+    fun `the app dictation notice hides the undo and the suggestions`() {
+        assertEquals(
+            ToolbarCentreSlot.AppDictationInProgress,
+            ToolbarCentreSlot.resolve(
+                notice = null,
+                appDictationInProgress = true,
+                offersDictationUndo = true,
+                hasSuggestions = true,
+            ),
         )
     }
 
@@ -48,15 +72,21 @@ class ToolbarCentreSlotTest {
     fun `undo hides the suggestions`() {
         assertEquals(
             ToolbarCentreSlot.DictationUndo,
-            ToolbarCentreSlot.resolve(notice = null, offersDictationUndo = true, hasSuggestions = true),
+            ToolbarCentreSlot.resolve(
+                notice = null,
+                appDictationInProgress = false,
+                offersDictationUndo = true,
+                hasSuggestions = true,
+            ),
         )
     }
 
     @Test
-    fun `the menu yields to the error, the undo and the suggestions, and only to them`() {
+    fun `the menu yields to every occupant but the empty slot`() {
         DictationNotice.Message.entries.forEach {
             assertTrue(ToolbarCentreSlot.Error(it).evictsHamburger)
         }
+        assertTrue(ToolbarCentreSlot.AppDictationInProgress.evictsHamburger)
         assertTrue(ToolbarCentreSlot.DictationUndo.evictsHamburger)
         assertTrue(ToolbarCentreSlot.Suggestions.evictsHamburger)
         assertFalse(ToolbarCentreSlot.Empty.evictsHamburger)
@@ -64,17 +94,13 @@ class ToolbarCentreSlotTest {
 
     @Test
     fun `the menu shows only on an empty bar, for every combination`() {
-        for (notice in notices) {
-            for (undo in listOf(false, true)) {
-                for (suggestions in listOf(false, true)) {
-                    val slot = ToolbarCentreSlot.resolve(notice, undo, suggestions)
-                    assertEquals(
-                        "notice=$notice undo=$undo suggestions=$suggestions",
-                        notice == null && !undo && !suggestions,
-                        !slot.evictsHamburger,
-                    )
-                }
-            }
+        forEveryCombination { notice, app, undo, suggestions ->
+            val slot = ToolbarCentreSlot.resolve(notice, app, undo, suggestions)
+            assertEquals(
+                "notice=$notice app=$app undo=$undo suggestions=$suggestions",
+                notice == null && !app && !undo && !suggestions,
+                !slot.evictsHamburger,
+            )
         }
     }
 

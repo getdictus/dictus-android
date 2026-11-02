@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.ime.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -95,6 +96,7 @@ fun KeyboardToolbar(
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
     dictationNotice: DictationNotice.Message? = null,
+    isAppDictationInProgress: Boolean = false,
 ) {
     val view = LocalView.current
     val micInteraction = remember { MutableInteractionSource() }
@@ -133,6 +135,7 @@ fun KeyboardToolbar(
 
     val centreSlot = ToolbarCentreSlot.resolve(
         notice = dictationNotice,
+        appDictationInProgress = isAppDictationInProgress,
         offersDictationUndo = isDictationUndoAvailable,
         hasSuggestions = ToolbarCentreSlot.hasSuggestions(suggestions),
     )
@@ -199,7 +202,13 @@ fun KeyboardToolbar(
         }
 
         when (centreSlot) {
-            is ToolbarCentreSlot.Error -> DictationNoticeText(centreSlot.notice)
+            is ToolbarCentreSlot.Error -> DictationNoticeText(
+                when (centreSlot.notice) {
+                    DictationNotice.Message.NoWordsDetected -> CoreR.string.dictation_no_words_detected
+                    DictationNotice.Message.Failed -> CoreR.string.dictation_failed
+                },
+            )
+            ToolbarCentreSlot.AppDictationInProgress -> DictationNoticeText(R.string.ime_app_dictation_in_progress)
             ToolbarCentreSlot.DictationUndo -> {
                 DictationUndoPill(onUndoDictation)
                 Spacer(modifier = Modifier.weight(1f))
@@ -326,12 +335,7 @@ private fun DictationUndoPill(onUndoDictation: () -> Unit) {
  * instruction that one line would cut. A polite live region so TalkBack users hear it too.
  */
 @Composable
-private fun RowScope.DictationNoticeText(message: DictationNotice.Message) {
-    val text = when (message) {
-        DictationNotice.Message.NoWordsDetected -> CoreR.string.dictation_no_words_detected
-        DictationNotice.Message.Failed -> CoreR.string.dictation_failed
-        DictationNotice.Message.AppDictationInProgress -> R.string.ime_app_dictation_in_progress
-    }
+private fun RowScope.DictationNoticeText(@StringRes text: Int) {
     Text(
         text = stringResource(text),
         color = LocalDictusColors.current.textSecondary,

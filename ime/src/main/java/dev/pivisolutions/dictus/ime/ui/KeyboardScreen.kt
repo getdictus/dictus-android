@@ -32,7 +32,8 @@ import timber.log.Timber
  * routes key press events to the appropriate InputConnection callbacks
  * provided by DictusImeService.
  *
- * Total height: 52.dp (toolbar) + 264.dp (keyboard) = 316.dp.
+ * Total height: 52.dp (toolbar) + [KEY_AREA_HEIGHT] (keys or emoji picker) = 316.dp, in every state
+ * (#139): like iOS, no state changes the keyboard's height.
  *
  * The emoji picker state is hoisted to DictusImeService so that back key
  * dismissal can be handled via onKeyDown override (BackHandler does not work
@@ -61,6 +62,7 @@ fun KeyboardScreen(
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
     dictationNotice: DictationNotice.Message? = null,
+    isAppDictationInProgress: Boolean = false,
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
@@ -94,41 +96,44 @@ fun KeyboardScreen(
     }
 
     DictusTheme(themeMode = themeMode) {
-        if (isEmojiPickerOpen) {
-            EmojiPickerScreen(
-                onEmojiSelected = { emoji ->
-                    onEmojiSelected(emoji)
-                    // Stay in emoji picker for rapid emoji entry (don't auto-dismiss)
-                },
-                onReturnToKeyboard = onEmojiToggle,
-                onDeleteBackward = onDeleteBackward,
-                keyboardLayout = currentLayout,
-                languageCode = languageProfile.code,
-                onKeySound = onKeySound,
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // Single toolbar (52.dp, #139): ☰, centre slot, mic.
+            KeyboardToolbar(
+                onCycleLanguage = onCycleLanguage,
+                onOpenSettings = onOpenSettings,
+                onMicTap = onMicTap,
+                isRecording = false,
+                isMicEnabled = isMicEnabled,
+                currentWord = currentWord,
+                suggestions = suggestions,
+                suggestionMode = suggestionMode,
+                onSuggestionSelected = onSuggestionSelected,
+                onCurrentWordSelected = onCurrentWordSelected,
+                predictionToken = predictionToken,
+                isDictationUndoAvailable = isDictationUndoAvailable,
+                onUndoDictation = onUndoDictation,
+                dictationNotice = dictationNotice,
+                isAppDictationInProgress = isAppDictationInProgress,
             )
-        } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                // Single toolbar (52.dp, #139): ☰, centre slot, mic.
-                KeyboardToolbar(
-                    onCycleLanguage = onCycleLanguage,
-                    onOpenSettings = onOpenSettings,
-                    onMicTap = onMicTap,
-                    isRecording = false,
-                    isMicEnabled = isMicEnabled,
-                    currentWord = currentWord,
-                    suggestions = suggestions,
-                    suggestionMode = suggestionMode,
-                    onSuggestionSelected = onSuggestionSelected,
-                    onCurrentWordSelected = onCurrentWordSelected,
-                    predictionToken = predictionToken,
-                    isDictationUndoAvailable = isDictationUndoAvailable,
-                    onUndoDictation = onUndoDictation,
-                    dictationNotice = dictationNotice,
-                )
 
-                // Keyboard area (264.dp) for 48.dp keys with existing row spacing.
+            // Emoji picker in the key area, under the toolbar, as iOS KeyboardRootView
+            // (#139): the keyboard's height never changes.
+            if (isEmojiPickerOpen) {
+                EmojiPickerScreen(
+                    onEmojiSelected = { emoji ->
+                        onEmojiSelected(emoji)
+                        // Stay in emoji picker for rapid emoji entry (don't auto-dismiss)
+                    },
+                    onReturnToKeyboard = onEmojiToggle,
+                    onDeleteBackward = onDeleteBackward,
+                    keyboardLayout = currentLayout,
+                    languageCode = languageProfile.code,
+                    onKeySound = onKeySound,
+                )
+            } else {
+                // Keyboard area for 48.dp keys with existing row spacing.
                 KeyboardView(
                     layer = currentLayer,
                     isShifted = isShifted,
@@ -179,12 +184,15 @@ fun KeyboardScreen(
                         onFrenchAdaptiveVariant(accent)
                         shiftState = shiftState.afterLetterTyped()
                     },
-                    modifier = Modifier.height(264.dp),
+                    modifier = Modifier.height(KEY_AREA_HEIGHT),
                 )
             }
         }
     }
 }
+
+/** Height of the key grid, and of the emoji picker that takes its place under the toolbar. */
+internal val KEY_AREA_HEIGHT = 264.dp
 
 /**
  * Handles a key press based on its type.

@@ -11,6 +11,9 @@ import dev.pivisolutions.dictus.ime.input.DictationNotice
  *
  * 1. **Error**: the dictation failed. Nothing below it is worth saying, and undo in particular is
  *    meaningless because nothing was inserted.
+ * 1b. **App dictation in progress** (#248, Android-only): explains the greyed mic for as long as
+ *    the app records. It takes the rung of iOS `recoveredTranscription` (decided with the iOS dev):
+ *    below the error, which is the newer and more urgent fact, above the undo and the suggestions.
  * 2. **Undo**: expires in seconds and on the first keystroke, and it is the only alternative to
  *    holding backspace on a long dictation. Right after an insertion the user has typed nothing,
  *    so the suggestions were predicted from dictated text and are worth less.
@@ -18,8 +21,11 @@ import dev.pivisolutions.dictus.ime.input.DictationNotice
  */
 sealed interface ToolbarCentreSlot {
 
-    /** A dictation notice, in grey (#153, #182, #248). */
+    /** A dictation that inserted nothing, in grey (#153, #182). */
     data class Error(val notice: DictationNotice.Message) : ToolbarCentreSlot
+
+    /** "Dictation in progress in Dictus" while the app records (#248). */
+    data object AppDictationInProgress : ToolbarCentreSlot
 
     /** The undo-insertion pill (#132). */
     data object DictationUndo : ToolbarCentreSlot
@@ -32,7 +38,8 @@ sealed interface ToolbarCentreSlot {
 
     /**
      * Whether this occupant needs the full width, taking ☰'s place with it. iOS: the error, the
-     * undo and the suggestions do, because they arrive mid-task and are read at a glance.
+     * recovered transcription (here the app dictation notice), the undo and the suggestions do,
+     * because they arrive mid-task and are read at a glance.
      */
     val evictsHamburger: Boolean
         get() = this != Empty
@@ -40,10 +47,12 @@ sealed interface ToolbarCentreSlot {
     companion object {
         fun resolve(
             notice: DictationNotice.Message?,
+            appDictationInProgress: Boolean,
             offersDictationUndo: Boolean,
             hasSuggestions: Boolean,
         ): ToolbarCentreSlot = when {
             notice != null -> Error(notice)
+            appDictationInProgress -> AppDictationInProgress
             offersDictationUndo -> DictationUndo
             hasSuggestions -> Suggestions
             else -> Empty
