@@ -256,5 +256,8 @@ private fun handleKeyPress(
             // Handled by the service directly
             Timber.d("Keyboard switch requested")
         }
+        KeyType.SPACER -> {
+            // A layout gap: KeyRow draws no key for it, so it is never pressed.
+        }
     }
 }
