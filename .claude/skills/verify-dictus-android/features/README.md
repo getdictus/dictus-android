@@ -233,8 +233,8 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `kbd.no-full-access` | N/A | iOS-only (N/A) | no |
 | `kbd.dictation-error` | Free | present — « La dictée a échoué… » in the suggestion bar; no overlay (#247) | no |
 | `kbd.recording` | Free | present | no |
-| `kbd.numbers` | Free | present — same keys and order as iOS (#264); row 3 punctuation narrower (#266) | no |
-| `kbd.symbols` | Free | present — same keys and order as iOS (#264); row 3 punctuation narrower (#266) | no |
+| `kbd.numbers` | Free | present — same keys, order (#264) and row 3 widths (#266) as iOS | no |
+| `kbd.symbols` | Free | present — same keys, order (#264) and row 3 widths (#266) as iOS | no |
 | `kbd.panel` | Free | absent | no |
 | `kbd.emoji` | Free | present | no |
 | `kbd.voice-note-reader` | Pro on iOS — absent | absent | no |

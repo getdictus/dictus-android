@@ -157,7 +157,7 @@ fun KeyButton(
     val fontSize = when (key.type) {
         KeyType.CHARACTER, KeyType.SHIFT, KeyType.DELETE, KeyType.RETURN,
         KeyType.EMOJI, KeyType.ACCENT_ADAPTIVE -> 20.sp
-        KeyType.SPACE, KeyType.LAYER_SWITCH, KeyType.KEYBOARD_SWITCH -> 14.sp
+        KeyType.SPACE, KeyType.LAYER_SWITCH, KeyType.KEYBOARD_SWITCH, KeyType.SPACER -> 14.sp
         KeyType.MIC -> 20.sp
     }
 

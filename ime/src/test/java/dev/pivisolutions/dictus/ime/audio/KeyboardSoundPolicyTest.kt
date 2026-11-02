@@ -47,6 +47,12 @@ class KeyboardSoundPolicyTest {
         }
     }
 
+    // iOS reference: DictusKeyboard/KeySoundPolicy.swift:40 (a spacer never plays a sound).
+    @Test
+    fun `spacer plays no sound`() {
+        assertNull(KeyboardSoundPolicy.effectFor(KeyType.SPACER, enabled = true, AudioManager.RINGER_MODE_NORMAL))
+    }
+
     @Test
     fun `suppresses feedback when preference is disabled`() {
         assertNull(

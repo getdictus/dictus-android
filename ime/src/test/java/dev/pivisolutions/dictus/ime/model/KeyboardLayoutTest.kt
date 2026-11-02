@@ -162,4 +162,36 @@ class KeyboardLayoutTest {
             assertEquals("123", switchKey.label)
         }
     }
+
+    // iOS reference: DictusKeyboard/KeyboardLayouts.swift:301-309 (numbers) and 325-333
+    // (symbols), punct(_:) at 392 (getdictus/dictus-ios develop @ 4fe6549).
+    @Test
+    fun `numbers and symbols row 3 match iOS widths`() {
+        for ((rows, toggle) in listOf(KeyboardLayouts.numbersRows to "#+=", KeyboardLayouts.symbolsRows to "123")) {
+            val row3 = rows[2]
+            assertEquals(
+                listOf(
+                    KeyType.LAYER_SWITCH, KeyType.SPACER,
+                    KeyType.CHARACTER, KeyType.CHARACTER, KeyType.CHARACTER, KeyType.CHARACTER, KeyType.CHARACTER,
+                    KeyType.SPACER, KeyType.DELETE,
+                ),
+                row3.map { it.type },
+            )
+            assertEquals(toggle, row3.first().label)
+            assertEquals(listOf(".", ",", "?", "!", "'"), row3.filter { it.type == KeyType.CHARACTER }.map { it.output })
+            assertEquals(
+                listOf(1.5f, 0.5f, 1.2f, 1.2f, 1.2f, 1.2f, 1.2f, 0.5f, 1.5f),
+                row3.map { it.widthMultiplier },
+            )
+            assertEquals(10f, row3.sumOf { it.widthMultiplier.toDouble() }.toFloat(), 0.001f)
+        }
+    }
+
+    @Test
+    fun `spacers carry no output`() {
+        val spacers = (KeyboardLayouts.numbersRows + KeyboardLayouts.symbolsRows).flatten()
+            .filter { it.type == KeyType.SPACER }
+        assertEquals(4, spacers.size)
+        assertTrue(spacers.all { it.label.isEmpty() && it.output.isEmpty() })
+    }
 }

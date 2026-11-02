@@ -17,4 +17,5 @@ enum class KeyType {
     MIC,                // Placeholder, non-functional in Phase 1
     ACCENT_ADAPTIVE,    // Apostrophe key that adapts to show accent popup
     KEYBOARD_SWITCH,    // Globe/language icon to trigger system InputMethodPicker
+    SPACER,             // Empty gap (iOS `.spacer`): draws nothing, takes no touch
 }

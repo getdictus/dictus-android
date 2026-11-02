@@ -90,15 +90,7 @@ object KeyboardLayouts {
             .map { KeyDefinition(label = it, output = it) },
         listOf("-", "/", ":", ";", "(", ")", "\u20AC", "&", "@", "\"")
             .map { KeyDefinition(label = it, output = it) },
-        listOf(
-            KeyDefinition("#+=", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.5f),
-            KeyDefinition(".", output = "."),
-            KeyDefinition(",", output = ","),
-            KeyDefinition("?", output = "?"),
-            KeyDefinition("!", output = "!"),
-            KeyDefinition("'", output = "'"),
-            KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
-        ),
+        punctuationRow(pageToggleLabel = "#+="),
         listOf(
             KeyDefinition("ABC", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
             KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
@@ -112,15 +104,7 @@ object KeyboardLayouts {
             .map { KeyDefinition(label = it, output = it) },
         listOf("_", "\\", "|", "~", "<", ">", "$", "\u00A3", "\u00A5", "\u00B7")
             .map { KeyDefinition(label = it, output = it) },
-        listOf(
-            KeyDefinition("123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.5f),
-            KeyDefinition(".", output = "."),
-            KeyDefinition(",", output = ","),
-            KeyDefinition("?", output = "?"),
-            KeyDefinition("!", output = "!"),
-            KeyDefinition("'", output = "'"),
-            KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
-        ),
+        punctuationRow(pageToggleLabel = "123"),
         listOf(
             KeyDefinition("ABC", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
             KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
@@ -128,6 +112,26 @@ object KeyboardLayouts {
             KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
         ),
     )
+
+    /**
+     * Row 3 of the numbers and symbols pages, as iOS draws it (`numbersPage` / `symbolsPage`):
+     * the page toggle and delete keep 1.5, the five punctuation keys are 1.2 wide with a 0.5
+     * spacer at each end, so the row totals 10 units and the keys sit closer together.
+     */
+    private fun punctuationRow(pageToggleLabel: String): List<KeyDefinition> = listOf(
+        KeyDefinition(pageToggleLabel, type = KeyType.LAYER_SWITCH, widthMultiplier = 1.5f),
+        spacer(0.5f),
+        KeyDefinition(".", output = ".", widthMultiplier = 1.2f),
+        KeyDefinition(",", output = ",", widthMultiplier = 1.2f),
+        KeyDefinition("?", output = "?", widthMultiplier = 1.2f),
+        KeyDefinition("!", output = "!", widthMultiplier = 1.2f),
+        KeyDefinition("'", output = "'", widthMultiplier = 1.2f),
+        spacer(0.5f),
+        KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
+    )
+
+    private fun spacer(widthMultiplier: Float) =
+        KeyDefinition(label = "", output = "", type = KeyType.SPACER, widthMultiplier = widthMultiplier)
 
     /**
      * Returns the letter layout for the given layout name.
