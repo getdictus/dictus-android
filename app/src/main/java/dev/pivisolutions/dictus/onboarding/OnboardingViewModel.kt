@@ -54,11 +54,10 @@ import javax.inject.Inject
  * showing the mic permission prompt. The flag only mirrors the system's permission, which
  * the microphone step re-reads on entry, so it needs no more than that.
  *
- * WHY regular MutableStateFlow for selectedLayout: transient, the layout can be re-chosen.
- * The install state needs no saving either: WorkManager keeps it across process death.
+ * The install state needs no saving: WorkManager keeps it across process death.
  *
- * WHY active model at step 5 but onboarding completion at step 7: The test recording in step 6
- * must use the exact recommended model that step 5 downloaded. Selecting that model when the
+ * WHY active model at step 4 but onboarding completion at step 6: The test recording in step 5
+ * must use the exact recommended model that step 4 downloaded. Selecting that model when the
  * download completes makes it available to DictationService without prematurely marking the
  * onboarding flow complete; HAS_COMPLETED_ONBOARDING is still written only on the success screen.
  *
@@ -120,13 +119,6 @@ class OnboardingViewModel @Inject constructor(
         savedStateHandle.getStateFlow("micPermissionGranted", false)
 
 
-    // --- Keyboard layout selection (transient — user can re-select after process death) ---
-
-    private val _selectedLayout = MutableStateFlow("azerty")
-
-    /** The keyboard layout chosen by the user. Defaults to "azerty". */
-    val selectedLayout: StateFlow<String> = _selectedLayout.asStateFlow()
-
     // --- Model install (owned by WorkManager, observed here) ---
 
     /** An install was asked for and WorkManager still reports the previous one (see [ModelPreparationTarget]). */
@@ -149,7 +141,7 @@ class OnboardingViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ModelInstallState.Idle)
 
-    /** What step 5's preparation screen draws (#181). */
+    /** What step 4's preparation screen draws (#181). */
     val preparation: StateFlow<ModelPreparationTarget> = combine(installState, _awaitingInstall) { install, awaiting ->
         ModelPreparationTarget(
             info = recommendedModelInfo,
@@ -170,11 +162,6 @@ class OnboardingViewModel @Inject constructor(
         savedStateHandle["micPermissionGranted"] = granted
     }
 
-
-    /** Change the selected keyboard layout preference. */
-    fun setLayout(layout: String) {
-        _selectedLayout.value = layout
-    }
 
     /**
      * Advance to the next onboarding step, respecting validation guards:
@@ -272,7 +259,7 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Persist the selected layout, active model, and onboarding completion flag to DataStore.
+     * Persist the active model and onboarding completion flag to DataStore.
      *
      * Called when the user taps "Commencer" on the completion step. The DataStore write causes
      * AppNavHost to recompose and switch from the onboarding flow to the main tab layout.
@@ -283,7 +270,6 @@ class OnboardingViewModel @Inject constructor(
     private fun completeOnboarding() {
         viewModelScope.launch {
             dataStore.edit { prefs ->
-                prefs[PreferenceKeys.KEYBOARD_LAYOUT] = _selectedLayout.value
                 prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey
                 prefs[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Welcome.storedName
                 prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true

@@ -2,7 +2,6 @@ package dev.pivisolutions.dictus.onboarding
 
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.Completion
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.FirstDictation
-import dev.pivisolutions.dictus.onboarding.OnboardingStep.KeyboardLayout
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.KeyboardSetup
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.Microphone
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.ModelPreparation
@@ -27,7 +26,7 @@ class OnboardingStepTest {
     @Test
     fun `the order is Android's current flow`() {
         assertEquals(
-            listOf(Welcome, Microphone, KeyboardSetup, KeyboardLayout, ModelPreparation, FirstDictation, Completion),
+            listOf(Welcome, Microphone, KeyboardSetup, ModelPreparation, FirstDictation, Completion),
             OnboardingStep.entries,
         )
     }
@@ -36,8 +35,7 @@ class OnboardingStepTest {
     fun `next walks the flow and ends after the completion`() {
         assertEquals(Microphone, Welcome.next)
         assertEquals(KeyboardSetup, Microphone.next)
-        assertEquals(KeyboardLayout, KeyboardSetup.next)
-        assertEquals(ModelPreparation, KeyboardLayout.next)
+        assertEquals(ModelPreparation, KeyboardSetup.next)
         assertEquals(FirstDictation, ModelPreparation.next)
         assertEquals(Completion, FirstDictation.next)
         assertNull(Completion.next)
@@ -48,7 +46,7 @@ class OnboardingStepTest {
     @Test
     fun `the progress bar covers every step between the intro and the completion`() {
         assertEquals(
-            listOf(Microphone, KeyboardSetup, KeyboardLayout, ModelPreparation, FirstDictation),
+            listOf(Microphone, KeyboardSetup, ModelPreparation, FirstDictation),
             OnboardingStep.progressSteps,
         )
         assertFalse(Welcome.showsProgress)
@@ -61,9 +59,8 @@ class OnboardingStepTest {
     fun `each step with the bar fills its own segment`() {
         assertEquals(0, Microphone.progressIndex)
         assertEquals(1, KeyboardSetup.progressIndex)
-        assertEquals(2, KeyboardLayout.progressIndex)
-        assertEquals(3, ModelPreparation.progressIndex)
-        assertEquals(4, FirstDictation.progressIndex)
+        assertEquals(2, ModelPreparation.progressIndex)
+        assertEquals(3, FirstDictation.progressIndex)
     }
 
     // --- Shell: Skip ---
@@ -120,11 +117,18 @@ class OnboardingStepTest {
     }
 
     @Test
+    fun `the removed ABC 123 step resumes at the step that followed it`() {
+        // #270: the step is gone, as on iOS (#213). An install stopped on it had set up the
+        // keyboard and not started the model, so it resumes at the model preparation.
+        assertEquals(ModelPreparation, OnboardingStep.resumed("keyboardLayout"))
+    }
+
+    @Test
     fun `the stored names are stable`() {
         // A renamed step would send every install mid-onboarding back to the welcome screen.
         assertEquals(
             listOf(
-                "welcome", "microphone", "keyboardSetup", "keyboardLayout", "modelPreparation",
+                "welcome", "microphone", "keyboardSetup", "modelPreparation",
                 "firstDictation", "completion",
             ),
             OnboardingStep.entries.map { it.storedName },

@@ -23,7 +23,7 @@ import dev.pivisolutions.dictus.ui.models.ModelPreparationScreen
  * @param onStart         starts the install unless one runs or failed.
  * @param onRetryInstall  retries a failed install.
  * @param onLoadEngine    asks the engine to load the selected model.
- * @param onNext          moves to step 6.
+ * @param onNext          moves to step 5.
  */
 @Composable
 fun OnboardingModelDownloadScreen(

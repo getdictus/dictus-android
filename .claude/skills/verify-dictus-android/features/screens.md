@@ -6,7 +6,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 
 | Screen ID | Screen | How to reach it | Features | States | Capture |
 | --- | --- | --- | --- | --- | --- |
-| `app.onboarding.welcome` | Onboarding 1/7: « Dictus — Dictation vocale, 100 % offline », « Commencer »; no progress bar | fresh install only | onboarding | — | no — onboarding completed on the Pixel; seeing it again requires wiping the data (forbidden) |
+| `app.onboarding.welcome` | Onboarding 1/6: « Dictus — Dictation vocale, 100 % offline », « Commencer »; no progress bar | fresh install only | onboarding | — | no — onboarding completed on the Pixel; seeing it again requires wiping the data (forbidden) |
 | `app.onboarding.language` | — | — | onboarding | absent on Android | — |
 | `app.onboarding.keyboard-setup` | — | — | onboarding | iOS-only; see app.onboarding.ime-setup | — |
 | `app.onboarding.apple-intelligence` | — | — | onboarding | iOS-only | — |
@@ -15,11 +15,11 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `app.onboarding.voice-notes-scene` | — | — | onboarding, voice-notes | absent | — |
 | `app.onboarding.vocabulary-scene` | — | — | onboarding, vocabulary | absent | — |
 | `app.onboarding.history-scene` | — | — | onboarding, history | absent | — |
-| `app.onboarding.model-preparation` | Onboarding 5/7: bar segment 4/5, full-screen « On prépare votre modèle » (#181), starts the install on entry | fresh install, after step 4 | onboarding, models.transcription | « Téléchargement N % » + « X Mo sur Y Mo » + « Le téléchargement continue si vous quittez l'app. » / « Préparation pour ce téléphone » / « Chargement du modèle » / « Votre modèle est prêt » (then step 6 by itself) / « Le modèle vocal n'a pas pu être préparé » + « Réessayer » | no — onboarding completed; besides, the step downloads a model |
-| `app.onboarding.microphone` | Onboarding 2/7: back chevron, bar segment 1/5, « Microphone », « Autoriser le micro » | fresh install, after step 1 | onboarding | not granted / granted (« Continuer ») | no — onboarding completed on the Pixel |
-| `app.onboarding.first-dictation` | Onboarding 6/7: bar segment 5/5, « Testez la dictée », mic, « Résultat », « Passer » | fresh install, after step 5 | onboarding, dictation.in-app | idle / recording « Toucher pour arrêter » / « Transcription en cours… » / result | no — onboarding completed on the Pixel |
+| `app.onboarding.model-preparation` | Onboarding 4/6: bar segment 3/4, full-screen « On prépare votre modèle » (#181), starts the install on entry | fresh install, after step 3 | onboarding, models.transcription | « Téléchargement N % » + « X Mo sur Y Mo » + « Le téléchargement continue si vous quittez l'app. » / « Préparation pour ce téléphone » / « Chargement du modèle » / « Votre modèle est prêt » (then step 5 by itself) / « Le modèle vocal n'a pas pu être préparé » + « Réessayer » | no — onboarding completed; besides, the step downloads a model |
+| `app.onboarding.microphone` | Onboarding 2/6: back chevron, bar segment 1/4, « Microphone », « Autoriser le micro » | fresh install, after step 1 | onboarding | not granted / granted (« Continuer ») | no — onboarding completed on the Pixel |
+| `app.onboarding.first-dictation` | Onboarding 5/6: bar segment 4/4, « Testez la dictée », mic, « Résultat », « Passer » | fresh install, after step 4 | onboarding, dictation.in-app | idle / recording « Toucher pour arrêter » / « Transcription en cours… » / result | no — onboarding completed on the Pixel |
 | `app.onboarding.stop-standby` | — | — | onboarding | iOS-only | — |
-| `app.onboarding.completion` | Onboarding 7/7: « C'est prêt ! », « Commencer »; no progress bar | fresh install, after step 6 | onboarding | — | no — onboarding completed on the Pixel |
+| `app.onboarding.completion` | Onboarding 6/6: « C'est prêt ! », « Commencer »; no progress bar | fresh install, after step 5 | onboarding | — | no — onboarding completed on the Pixel |
 | `app.whats-new` | — | — | onboarding | absent | — |
 | `app.home` | Home tab: logo, « Modèle actif », « Dernière transcription » + « Copier », « Nouvelle dictée » | tap `Accueil` | dictation.in-app | without a last transcription (captured) / with one | [yes](../screens/app.home.png) |
 | `app.recording` | Full-screen dictation: ✕ « Fermer » top left (no « Retour »), timer, « Arrêter », « Toucher pour arrêter » | Accueil → `Nouvelle dictée` (starts recording at once), or opening Dictus while a dictation records; ✕ / system back cancel it (#243) | dictation.in-app | idle / recording / keyboard dictation running (only « Arrêter » + ✕, #237) / transcription / « Résultat » + « Copier » / « Aucun mot détecté » (empty dictation) / loading overlay or « Aucun modèle vocal » | [yes](../screens/app.recording.png) |
@@ -58,8 +58,8 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `share.voice-note` | — | — | voice-notes | absent | — |
 | `widget.live-activity` | — | — | live-activity | iOS-only | — |
 | **Android-only** | | | | | |
-| `app.onboarding.ime-setup` | Onboarding 3/7: « Ajouter le clavier », « Ouvrir les paramètres » / « Sélectionner Dictus » / « Continuer » | fresh install, after step 2 | onboarding | not enabled / enabled but not selected / ready | no — onboarding completed on the Pixel |
-| `app.onboarding.default-page` | Onboarding 4/7: « Choisissez votre clavier », ABC / 123 | fresh install, after step 3 | onboarding | ABC / 123 | no — onboarding completed on the Pixel |
+| `app.onboarding.ime-setup` | Onboarding 3/6: « Ajouter le clavier », « Ouvrir les paramètres » / « Sélectionner Dictus » / « Continuer » | fresh install, after step 2 | onboarding | not enabled / enabled but not selected / ready | no — onboarding completed on the Pixel |
+| `app.onboarding.default-page` | — | — | onboarding, keyboard.languages | retired by #270, as iOS removed it (#213): the ABC / 123 choice is in Réglages only (`keyboard.default-page`) | — |
 | `app.settings.sound-picker` | Sound list (« Début » / « Fin » / « Annuler ») | Réglages → Sons → `Début` | feedback.sounds-haptics | selected sound checked | [yes](../screens/app.settings.sound-picker.png) |
 | `app.settings.picker` | Inline choice menus anchored to the row (iOS `.menu` pickers, #189): « Langue », « Langue du clavier », « Disposition du clavier », « Thème », « Langue de l'interface »; the selected value carries a ✓ | Réglages → tap a row | keyboard.languages, appearance | one menu per setting | [yes](../screens/app.settings.picker.png) — before #189 (a sheet), to re-take |
 | `kbd.model-loading` | — | — | dictation.keyboard, models.transcription | retired by #247: the keyboard is never covered while the model loads | — |
