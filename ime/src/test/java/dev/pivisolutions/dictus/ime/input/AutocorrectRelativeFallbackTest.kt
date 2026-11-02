@@ -26,29 +26,28 @@ class AutocorrectRelativeFallbackTest {
     }
 
     @Test
-    fun `the undo it hands back carries no selection to verify`() {
+    fun `the undo it hands back names the typed word and its correction`() {
         val editor = BlindEditor("bonjuor")
 
         val result = AutocorrectEditorTransaction.apply(editor, "bonjuor", "bonjour", true)
 
         val undo = (result as AutocorrectTransactionResult.Applied).undo
-        assertEquals(AutocorrectEditorTransaction.UNKNOWN_SELECTION, undo.correctedSelection)
         assertEquals("bonjuor", undo.original)
         assertEquals("bonjour", undo.correction)
     }
 
     @Test
-    fun `the relative undo restores the typed word and drops the added space`() {
-        val editor = BlindEditor("bonjour ")
+    fun `the relative undo restores the typed word and keeps what follows it`() {
+        val editor = BlindEditor("bonjour le")
 
         val result = AutocorrectEditorTransaction.undo(
             editor = editor,
-            undo = AutocorrectUndo("bonjuor", "bonjour", AutocorrectEditorTransaction.UNKNOWN_SELECTION),
+            undo = AutocorrectUndo("bonjuor", "bonjour", trailing = " le"),
             identityEligible = true,
         )
 
         assertTrue(result.toString(), result is AutocorrectTransactionResult.Restored)
-        assertEquals("bonjuor", editor.text)
+        assertEquals("bonjuor le", editor.text)
     }
 
     @Test
@@ -60,7 +59,7 @@ class AutocorrectRelativeFallbackTest {
         assertEquals("bonjour,", editor.text)
         val undo = (result as AutocorrectTransactionResult.Applied).undo
         assertTrue(AutocorrectEditorTransaction.undo(editor, undo, true) is AutocorrectTransactionResult.Restored)
-        assertEquals("bonjuor", editor.text)
+        assertEquals("bonjuor,", editor.text)
     }
 
     @Test

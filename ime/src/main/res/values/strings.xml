@@ -29,6 +29,7 @@
     <string name="ime_emoji_category_flags">Flags</string>
     <string name="ime_undo_dictation">Undo</string>
     <string name="ime_undo_dictation_description">Undo dictation insertion</string>
+    <string name="ime_undo_autocorrect_description">Undo correction, restore “%1$s”</string>
     <!-- Toolbar ☰ (#139): a tap still cycles the language and a hold opens Settings (actions below). -->
     <string name="ime_menu_description">Keyboard menu</string>
     <string name="ime_language_key_cycle_action">Cycle keyboard language</string>

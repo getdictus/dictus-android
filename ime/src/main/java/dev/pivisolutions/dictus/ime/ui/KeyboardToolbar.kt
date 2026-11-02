@@ -60,6 +60,7 @@ import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.core.R as CoreR
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
+import dev.pivisolutions.dictus.ime.input.AutocorrectUndoOffer
 import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
 import kotlin.math.PI
@@ -97,6 +98,8 @@ fun KeyboardToolbar(
     onUndoDictation: () -> Unit = {},
     dictationNotice: DictationNotice.Message? = null,
     isAppDictationInProgress: Boolean = false,
+    autocorrectUndo: AutocorrectUndoOffer? = null,
+    onUndoAutocorrect: () -> Unit = {},
 ) {
     val view = LocalView.current
     val micInteraction = remember { MutableInteractionSource() }
@@ -137,7 +140,7 @@ fun KeyboardToolbar(
         notice = dictationNotice,
         appDictationInProgress = isAppDictationInProgress,
         offersDictationUndo = isDictationUndoAvailable,
-        hasSuggestions = ToolbarCentreSlot.hasSuggestions(suggestions),
+        hasSuggestions = ToolbarCentreSlot.hasSuggestions(suggestions, autocorrectUndo),
     )
 
     Row(
@@ -220,6 +223,8 @@ fun KeyboardToolbar(
                 onSuggestionSelected = onSuggestionSelected,
                 predictionToken = predictionToken,
                 onCurrentWordSelected = onCurrentWordSelected,
+                undoOffer = autocorrectUndo,
+                onUndoAutocorrect = onUndoAutocorrect,
                 modifier = Modifier.weight(1f),
             )
             ToolbarCentreSlot.Empty -> Spacer(modifier = Modifier.weight(1f))
