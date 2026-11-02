@@ -79,46 +79,45 @@ fun SuggestionBar(
         slots.forEachIndexed { index, text ->
             if (undoOffer != null && index == 0) {
                 AutocorrectUndoChip(undoOffer, onUndoAutocorrect, Modifier.weight(1f))
-                SlotDivider()
-                return@forEachIndexed
-            }
-            val isRawInput = undoOffer == null && mode == SuggestionPresentationMode.COMPLETION && index == 0
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(36.dp)
-                    .then(
-                        if (text.isNotEmpty()) {
-                            Modifier.clickable(role = Role.Button) {
-                                if (isRawInput) {
-                                    onCurrentWordSelected()
-                                } else {
-                                    onSuggestionSelected(
-                                        text,
-                                        predictionToken.takeIf {
-                                            mode == SuggestionPresentationMode.PREDICTION
-                                        },
-                                    )
+            } else {
+                val isRawInput = undoOffer == null && mode == SuggestionPresentationMode.COMPLETION && index == 0
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .then(
+                            if (text.isNotEmpty()) {
+                                Modifier.clickable(role = Role.Button) {
+                                    if (isRawInput) {
+                                        onCurrentWordSelected()
+                                    } else {
+                                        onSuggestionSelected(
+                                            text,
+                                            predictionToken.takeIf {
+                                                mode == SuggestionPresentationMode.PREDICTION
+                                            },
+                                        )
+                                    }
                                 }
-                            }
-                        } else {
-                            Modifier
-                        },
-                    )
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (text.isNotEmpty()) {
-                    Text(
-                        text = text,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 14.sp,
-                        fontWeight = if (
-                            undoOffer == null && mode == SuggestionPresentationMode.COMPLETION && index == 1
-                        ) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (text.isNotEmpty()) {
+                        Text(
+                            text = text,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 14.sp,
+                            fontWeight = if (
+                                undoOffer == null && mode == SuggestionPresentationMode.COMPLETION && index == 1
+                            ) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             if (index < 2) SlotDivider()

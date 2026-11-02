@@ -19,6 +19,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
 /** The autocorrect undo chip in the keyboard bar (#276), iOS `SuggestionBarView.undoChip`. */
 @RunWith(RobolectricTestRunner::class)
@@ -26,6 +27,9 @@ class AutocorrectUndoChipUiTest {
     @get:Rule val composeRule = createComposeRule()
 
     private var offer by mutableStateOf<AutocorrectUndoOffer?>(null)
+    private var currentWord by mutableStateOf("")
+    private var suggestions by mutableStateOf(emptyList<String>())
+    private var mode by mutableStateOf(SuggestionPresentationMode.COMPLETION)
     private lateinit var view: View
 
     @Test
@@ -40,6 +44,27 @@ class AutocorrectUndoChipUiTest {
         composeRule.onNodeWithText("à").assertIsDisplayed()
         composeRule.onNodeWithText("tous").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Keyboard menu").assertDoesNotExist()
+    }
+
+    // The keyboard's own sequence on Space: completions, then an empty row, then the chip, then
+    // the predictions. The chip once took half the row there and crushed the second slot.
+    @Test
+    @Config(qualifiers = "w411dp-h868dp-420dpi")
+    fun `the chip takes one slot of three after the keyboard's own sequence, as iOS`() {
+        setBar(currentWord = "Maisn", suggestions = listOf("Maison", "Maisons"))
+        composeRule.waitForIdle()
+        currentWord = ""
+        suggestions = emptyList()
+        offer = AutocorrectUndoOffer("Maisno", 1)
+        composeRule.waitForIdle()
+        mode = SuggestionPresentationMode.PREDICTION
+        suggestions = listOf("de")
+
+        val chip = composeRule.onNodeWithContentDescription("Undo correction, restore “Maisno”")
+            .fetchSemanticsNode().boundsInRoot
+        val next = composeRule.onNodeWithText("de").fetchSemanticsNode().boundsInRoot
+        assertEquals("chip=$chip next=$next", chip.width, next.width, 2f)
+        assertEquals("chip=$chip next=$next", chip.right, next.left, 4f)
     }
 
     @Test
@@ -89,15 +114,18 @@ class AutocorrectUndoChipUiTest {
         mode: SuggestionPresentationMode = SuggestionPresentationMode.COMPLETION,
         onUndoAutocorrect: () -> Unit = {},
     ) {
+        this.currentWord = currentWord
+        this.suggestions = suggestions
+        this.mode = mode
         composeRule.setContent {
             view = LocalView.current
             DictusTheme {
                 KeyboardToolbar(
                     onCycleLanguage = {},
                     onOpenSettings = {},
-                    currentWord = currentWord,
-                    suggestions = suggestions,
-                    suggestionMode = mode,
+                    currentWord = this.currentWord,
+                    suggestions = this.suggestions,
+                    suggestionMode = this.mode,
                     autocorrectUndo = offer,
                     onUndoAutocorrect = onUndoAutocorrect,
                 )
