@@ -30,7 +30,6 @@ import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
 import dev.pivisolutions.dictus.recording.RecordingScreen
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.onboarding.OnboardingMicPermissionScreen
-import dev.pivisolutions.dictus.onboarding.OnboardingModeSelectionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModelDownloadScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingStep
 import dev.pivisolutions.dictus.onboarding.OnboardingSuccessScreen
@@ -171,7 +170,6 @@ private fun OnboardingScreen(
 
     val currentStep by viewModel.currentStep.collectAsState()
     val micGranted by viewModel.micPermissionGranted.collectAsState()
-    val selectedLayout by viewModel.selectedLayout.collectAsState()
     val preparation by viewModel.preparation.collectAsState()
 
     // The persisted step is still being read: the bare background, as AppNavHost does above.
@@ -205,11 +203,6 @@ private fun OnboardingScreen(
                 imeSelected = imeSelected,
                 onOpenSettings = onOpenKeyboardSettings,
                 onOpenPicker = onShowKeyboardPicker,
-                onNext = onNext,
-            )
-            OnboardingStep.KeyboardLayout -> OnboardingModeSelectionScreen(
-                selectedLayout = selectedLayout,
-                onSelectLayout = { viewModel.setLayout(it) },
                 onNext = onNext,
             )
             OnboardingStep.ModelPreparation -> OnboardingModelDownloadScreen(

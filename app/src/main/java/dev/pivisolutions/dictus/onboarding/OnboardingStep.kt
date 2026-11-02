@@ -30,9 +30,6 @@ enum class OnboardingStep(val storedName: String) {
     /** Enabling the Dictus keyboard, then selecting it (Android's own step). */
     KeyboardSetup("keyboardSetup"),
 
-    /** ABC or 123 as the keyboard's first page (Android's own step). */
-    KeyboardLayout("keyboardLayout"),
-
     /** Downloading and installing the recommended model. */
     ModelPreparation("modelPreparation"),
 
@@ -89,10 +86,21 @@ enum class OnboardingStep(val storedName: String) {
         val progressSteps: List<OnboardingStep> = entries.filter { it.showsProgress }
 
         /**
+         * The stored name of the ABC/123 step, removed by #270 as iOS removed it (#213). The
+         * default page is chosen in Settings only.
+         */
+        const val LEGACY_KEYBOARD_LAYOUT_NAME = "keyboardLayout"
+
+        /**
          * The step to resume at for a name read from DataStore: the step of that name, or
          * [Welcome] for nothing stored or a name this build does not know.
+         *
+         * An install stopped on the removed ABC/123 step resumes at the step that followed
+         * it, as iOS's `resumed(fromStoredRawValue:)` does for its removed steps.
          */
-        fun resumed(storedName: String?): OnboardingStep =
-            entries.firstOrNull { it.storedName == storedName } ?: Welcome
+        fun resumed(storedName: String?): OnboardingStep {
+            if (storedName == LEGACY_KEYBOARD_LAYOUT_NAME) return ModelPreparation
+            return entries.firstOrNull { it.storedName == storedName } ?: Welcome
+        }
     }
 }

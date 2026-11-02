@@ -59,7 +59,7 @@ Not in the map as files, on purpose: the iOS features absent on Android (`smart-
 
 ## All IDs
 
-Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 109 sub-features, 51 screens; `kbd.numbers` and `kbd.symbols` added from iOS `develop` @ `61adacf` in #264), then the Android-only IDs. **Vocabulary.** *Free/Pro* is the tier: Free, Pro on iOS (absent on Android), or Pro hidden behind `PremiumFlags.HISTORY_VISIBLE`; N/A for iOS-only IDs. **Android status**: present, partial (with what is missing), absent, or iOS-only (N/A: the iOS keyboard-to-app hand-off and Full Access, return to the host app, Apple Intelligence, Dynamic Island, App Group). Statuses come from the code of `develop` at `f2b15c5`, checked on the Pixel for every screen marked "yes" in [screens.md](screens.md) (2026-10-20). **Android-only** is yes for an ID that exists only on Android, no otherwise.
+Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 110 sub-features, 51 screens; `kbd.numbers` and `kbd.symbols` added from iOS `develop` @ `61adacf` in #264, `typing.autocorrect-on-punctuation` added on iOS by #872), then the Android-only IDs. **Vocabulary.** *Free/Pro* is the tier: Free, Pro on iOS (absent on Android), or Pro hidden behind `PremiumFlags.HISTORY_VISIBLE`; N/A for iOS-only IDs. **Android status**: present, partial (with what is missing), absent, or iOS-only (N/A: the iOS keyboard-to-app hand-off and Full Access, return to the host app, Apple Intelligence, Dynamic Island, App Group). Statuses come from the code of `develop` at `f2b15c5`, checked on the Pixel for every screen marked "yes" in [screens.md](screens.md) (2026-10-20). **Android-only** is yes for an ID that exists only on Android, no otherwise.
 
 | ID | Free/Pro | Android status | Android-only |
 | --- | --- | --- | --- |
@@ -74,8 +74,8 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `voice-notes` | Pro on iOS — absent | absent | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
 | [`typing.learned-words`](typing.learned-words.md) | Free | present | no |
-| [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no QWERTZ, no number row | no |
-| [`keyboard.emoji`](keyboard.emoji.md) | Free | partial — no search | no |
+| [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no layout picker until #191, no number row | no |
+| [`keyboard.emoji`](keyboard.emoji.md) | Free | partial — the keyboard bar disappears while picking (#139) | no |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Free | present | no |
 | `live-activity` | N/A | iOS-only (N/A) | no |
 | [`onboarding`](onboarding.md) | Free | partial — no language step, no Pro scenes, no What's new | no |
@@ -141,6 +141,7 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `voice-notes.progress-activity` | N/A | iOS-only (N/A) | no |
 | `typing.suggestions` | Free | present | no |
 | `typing.autocorrect-on-space` | Free | present | no |
+| `typing.autocorrect-on-punctuation` | Free | present — `, . ; : ! ?` and Return, never `'` or `-`, as iOS #872 (#268) | no |
 | `typing.undo-correction` | Free | partial — ⌫ right after the correction; no chip in the bar | no |
 | `typing.auto-full-stop` | Free | present — same rule as iOS `AutoFullStop`; ⌫ right after turns it back into one space (Android only); never in password fields | no |
 | `typing.accents` | Free | present — long press, accent strip | no |
@@ -155,9 +156,9 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `keyboard.default-page` | Free | present | no |
 | `keyboard.transcription-language` | Free | partial — `Automatique` or a fixed language; no « Suivre la langue du clavier » | no |
 | `keyboard.open-app` | Free | present — long press on the language code → Settings | no |
-| `emoji.picker` | Free | present | no |
-| `emoji.recents` | Free | present — « UTILISÉS RÉCEMMENT » (EmojiPickerView), seen on the Pixel | no |
-| `emoji.search` | Free | absent | no |
+| `emoji.picker` | Free | present — iOS categories, bar at the bottom (#192); no skin tones | no |
+| `emoji.recents` | Free | present — « Récents » (#192) | no |
+| `emoji.search` | Free | present — French keywords, then English names (#192) | no |
 | `emoji.back-to-letters` | Free | present | no |
 | `sounds.toggle` | Free | present | no |
 | `sounds.volume` | Free | present | no |
@@ -253,11 +254,11 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.private-fields` | Free | present — no suggestions or learning in sensitive fields | yes |
 | `sounds.key-clicks` | Free | present — « Sons du clavier » | yes |
 | `onboarding.ime-setup` | Free | present | yes |
-| `onboarding.default-page` | Free | present — ABC / 123 | yes |
+| `onboarding.default-page` | Free | retired (#270) — ABC / 123 in Réglages only, as on iOS | yes |
 | `models.english-only-warning` | Free | present — Parakeet 110M | yes |
 | `models.storage` | Free | present — « Stockage utilisé » | yes |
 | `app.onboarding.ime-setup` | Free | present | yes |
-| `app.onboarding.default-page` | Free | present | yes |
+| `app.onboarding.default-page` | Free | retired (#270) — as on iOS (#213) | yes |
 | `app.settings.sound-picker` | Free | present | yes |
 | `app.settings.picker` | Free | present — inline choice menus (#189) | yes |
 | `kbd.model-loading` | Free | retired (#247) — the keyboard is never covered | yes |
@@ -265,9 +266,9 @@ Every iOS ID (the 178 of the iOS « All IDs » table, same order: 18 features, 1
 | `sys.settings.ime` | Free | present | yes |
 | `sys.notification.recording` | Free | present | yes |
 
-**Count** (200 IDs: 178 iOS + 22 Android-only): present **61**, partial **13**, absent **75**, iOS-only (N/A) **29**, Android-only **22**.
+**Count** (201 IDs: 179 iOS + 22 Android-only): present **62**, partial **13**, absent **75**, iOS-only (N/A) **29**, Android-only **22**.
 
-Of the 149 iOS IDs that apply to Android: 61 present, 13 partial, 75 absent. 55 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
+Of the 150 iOS IDs that apply to Android: 62 present, 13 partial, 75 absent. 55 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
 
 ## Design gaps with iOS
 
@@ -311,12 +312,12 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: fix the tagline; replace the ABC / 123 step with the iOS language + layout step (the default mode stays in Settings).
 10. **Emoji — `kbd.emoji`**
     - iOS: categories at the bottom with 🔍 « Rechercher des Emoji » and ABC.
-    - Android: androidx `EmojiPickerView`, categories at the top, no search; ABC and ⌫ at the bottom; the mic row disappears while picking an emoji (on iOS, ☰ and the mic stay visible).
-    - Proposal: add emoji search (French keywords) and keep the keyboard bar visible (with #139).
+    - Android (since #192): the iOS picker ported to Compose: categories at the bottom, 🔍 « Rechercher des Emoji », ABC and ⌫; the mic row still disappears while picking an emoji (on iOS, ☰ and the mic stay visible).
+    - Proposal: search and categories done in #192; keep the keyboard bar visible with #139.
 11. **System keyboard picker — `sys.ime-picker`**
     - iOS: the keyboard shows up once, « Dictus », in the globe list.
-    - Android: Dictus declares two subtypes there, « AZERTY (Français) » and « QWERTY (Anglais) », unrelated to the four real languages (FR, EN, ES, DE) and to the layout chosen in Settings.
-    - Proposal: a single « Dictus » subtype (or one per language actually supported).
+    - Android (since #195): one entry, « Dictus », no subtype; the layout is a per-language preference inside Dictus (#134).
+    - Proposal: done in #195.
 12. **Keyboard accessibility labels — `kbd.keys`, `kbd.recording`**
     - iOS: labels in French on a French device.
     - Android (since #185): `Langue du clavier DE`, `Réglages`, and the actions « Changer la langue du clavier » / « Ouvrir les réglages Dictus », from strings.xml FR/EN.

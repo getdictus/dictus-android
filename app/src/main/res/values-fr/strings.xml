@@ -19,14 +19,9 @@
     <string name="onboarding_keyboard_setup_cta_select">Sélectionner Dictus</string>
     <string name="onboarding_keyboard_setup_cta_continue">Continuer</string>
 
-    <!-- Onboarding: Mode selection screen (Step 4) -->
-    <string name="onboarding_mode_selection_title">Choisissez votre clavier</string>
-    <string name="onboarding_mode_selection_body">ABC est s\u00e9lectionn\u00e9 par d\u00e9faut. Changez si vous pr\u00e9f\u00e9rez ouvrir sur les chiffres.</string>
-    <string name="onboarding_mode_selection_cta">Continuer</string>
+    <!-- Onboarding: Model download screen (Step 4) -->
 
-    <!-- Onboarding: Model download screen (Step 5) -->
-
-    <!-- Onboarding: Test recording screen (Step 6) -->
+    <!-- Onboarding: Test recording screen (Step 5) -->
     <string name="onboarding_test_recording_title">Testez la dict\u00e9e</string>
     <string name="onboarding_test_recording_body">Appuyez sur le micro et parlez.\nDictus transcrira votre voix.</string>
     <string name="onboarding_test_recording_result">R\u00e9sultat</string>
@@ -38,7 +33,7 @@
     <string name="onboarding_test_recording_cd_stop">Arr\u00eater</string>
     <string name="onboarding_test_recording_cd_record">Enregistrer</string>
 
-    <!-- Onboarding: Success screen (Step 7) -->
+    <!-- Onboarding: Success screen (Step 6) -->
     <string name="onboarding_success_title">C\u2019est pr\u00eat\u00a0!</string>
     <string name="onboarding_success_body">Dictus est configur\u00e9 et pr\u00eat \u00e0 l\u2019emploi.</string>
     <string name="onboarding_success_cta">Commencer</string>

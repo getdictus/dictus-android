@@ -130,7 +130,21 @@ class AutocorrectInputCoordinator(
         return accepted
     }
 
-    fun onSpace(editor: AutocorrectEditor, commitPlainSpace: () -> Unit): AutocorrectSpaceResult {
+    fun onSpace(editor: AutocorrectEditor, commitPlainSpace: () -> Unit): AutocorrectSpaceResult =
+        onWordEnd(editor, trailing = " ", commitPlain = commitPlainSpace)
+
+    /**
+     * Commits the word before the cursor, as Space does, followed by [trailing] (#268).
+     *
+     * [trailing] is " " for Space, the mark itself for a punctuation key ([AutocorrectTrigger]),
+     * and empty for Return, whose key event the caller sends afterwards. A correction writes
+     * [trailing] in the same verified replacement; otherwise [commitPlain] inserts it.
+     */
+    fun onWordEnd(
+        editor: AutocorrectEditor,
+        trailing: String,
+        commitPlain: () -> Unit,
+    ): AutocorrectSpaceResult {
         pendingUndo = null
         val expected = expectedSuggestion
         val offered = suggestionSnapshot
@@ -159,7 +173,7 @@ class AutocorrectInputCoordinator(
                 offered.isLearnedWord -> AutocorrectSpaceDiagnosis.INPUT_LEARNED
                 else -> AutocorrectSpaceDiagnosis.NO_CANDIDATE
             }
-            commitPlainSpace()
+            commitPlain()
             return AutocorrectSpaceResult.PLAIN_SPACE
         }
         val (evidence, candidate) = applicable
@@ -170,6 +184,7 @@ class AutocorrectInputCoordinator(
                 original = evidence.input,
                 correction = candidate,
                 identityEligible = true,
+                trailing = trailing,
             )
         ) {
             is AutocorrectTransactionResult.Applied -> {
@@ -191,10 +206,24 @@ class AutocorrectInputCoordinator(
                     is AutocorrectTransactionResult.EditorFailure -> "FAILED_${result.operation.name}"
                     else -> null
                 }
-                commitPlainSpace()
+                commitPlain()
                 AutocorrectSpaceResult.PLAIN_SPACE
             }
         }
+    }
+
+    /**
+     * Commits the word before the cursor for Return, then sends Return through [sendReturn].
+     *
+     * Return is always sent, whatever the correction did, as iOS `handleReturn` always inserts its
+     * newline: the correction writes nothing after the word, so Return can never double anything.
+     * What Return does belongs to the host (a new line, or its action), so no Backspace undo is kept.
+     */
+    fun onReturn(editor: AutocorrectEditor, sendReturn: () -> Unit): AutocorrectSpaceResult {
+        val result = onWordEnd(editor, trailing = "") {}
+        pendingUndo = null
+        sendReturn()
+        return result
     }
 
     fun onBackspace(editor: AutocorrectEditor, deletePlain: () -> Unit): AutocorrectBackspaceResult {

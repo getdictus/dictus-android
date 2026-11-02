@@ -11,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.isSystemInDarkTheme
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
@@ -104,11 +103,9 @@ fun KeyboardScreen(
                 },
                 onReturnToKeyboard = onEmojiToggle,
                 onDeleteBackward = onDeleteBackward,
-                isDarkTheme = when (themeMode) {
-                    ThemeMode.DARK -> true
-                    ThemeMode.LIGHT -> false
-                    ThemeMode.AUTO -> isSystemInDarkTheme()
-                },
+                keyboardLayout = currentLayout,
+                languageCode = languageProfile.code,
+                onKeySound = onKeySound,
             )
         } else {
             Column(
