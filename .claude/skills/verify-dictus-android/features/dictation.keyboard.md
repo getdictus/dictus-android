@@ -44,7 +44,7 @@ Preconditions: this session holds the lock, Launch and Doctor OK (Dictus is the 
 
 ## Gotchas
 
-- The keyboard's keys are all in Argent's tree as `StaticText` (labels follow the keyboard language: `Leertaste` / `Eingabe` in DE); tap the centre of their frames.
+- The keyboard's keys are all in Argent's tree as `StaticText` (labels follow the keyboard language: `Leertaste` / `Eingabe` in DE), except return, an icon whose label is that word (#280); tap the centre of their frames.
 - On this Pixel the recording notification is invisible (notifications denied for Dictus): `dictation.notification` cannot be shown without changing Pierre's permission. The running service shows only as « 1 appli est active » in Quick Settings.
 - The recording panel's `Changer de clavier` globe sits in the bottom-left corner, in the band of the system's keyboard nav bar (`⌄`, keyboard switcher): aim at its frame, not at the nav icons.
 - Never tap the nav bar's keyboard switcher (`Changer le mode de saisie`): a tap switches to the AOSP keyboard at once.

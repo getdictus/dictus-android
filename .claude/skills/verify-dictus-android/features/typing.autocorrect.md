@@ -34,7 +34,7 @@ Preconditions: Launch and Doctor OK, a scratch note focused, keyboard language F
 
 - **Type through the keys.** Tap the letter keys `b o n j o u r` by coordinate (AZERTY, from the `kbd.keys` capture); `mcp__argent__keyboard` would bypass the Dictus keys and prove nothing. → the bar proposes completions (`evidence.sh 01-typing`).
 - **Misspell, then space.** Type `b o n j o r u`, tap space. → the field reads `bonjour ` in the tree (`evidence.sh 02-after-space`).
-- **Punctuation and Return.** Type `b o n j o r u`, then `,` from the 123 page. → the field reads `bonjour,`. Same with `.`; with Return (`retour`) the field reads `bonjour` and a new line.
+- **Punctuation and Return.** Type `b o n j o r u`, then `,` from the 123 page. → the field reads `bonjour,`. Same with `.`; with Return (the ↵ icon, labelled `retour`) the field reads `bonjour` and a new line.
 - **Undo the correction (test device only, see Gotchas).** After the correction on space, the first slot shows `↶ bonjoru` (`kbd.suggestions`). Tap ⌫ once. → the field reads `bonjour`, the chip is still there. Tap the chip. → the field reads `bonjoru` again.
 - **Auto-capitalization.** Focus an empty scratch note. → the shift key is lit (accent background) and the letter keys show capitals (`evidence.sh 04-autocap-start`). Type `o k . ` with the keys (`.` from the 123 page, back with `ABC`). → shift is lit again after the space (`evidence.sh 05-autocap-after-stop`). Focus an e-mail or password field (a login screen). → shift stays off.
 - **Double-space full stop.** In a scratch note, type `o k` with the keys, then tap space twice. → the field reads `ok. ` and shift is lit (`evidence.sh 06-full-stop`). Tap ⌫ once. → the field reads `ok ` and shift is off (`evidence.sh 07-full-stop-undo`).
