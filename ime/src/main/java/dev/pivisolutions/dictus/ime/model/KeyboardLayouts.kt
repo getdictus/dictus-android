@@ -29,12 +29,7 @@ object KeyboardLayouts {
             KeyDefinition("'", type = KeyType.ACCENT_ADAPTIVE),
             KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
         ),
-        listOf(
-            KeyDefinition("123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
-            KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
-            KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 4.5f),
-            KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
-        ),
+        bottomRow(layerSwitchLabel = "123"),
     )
 
     val qwertyLetters: List<List<KeyDefinition>> = listOf(
@@ -53,12 +48,7 @@ object KeyboardLayouts {
             KeyDefinition("M", output = "m"),
             KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
         ),
-        listOf(
-            KeyDefinition("123", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
-            KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
-            KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 4.5f),
-            KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
-        ),
+        bottomRow(layerSwitchLabel = "123"),
     )
 
     /**
@@ -91,12 +81,7 @@ object KeyboardLayouts {
         listOf("-", "/", ":", ";", "(", ")", "\u20AC", "&", "@", "\"")
             .map { KeyDefinition(label = it, output = it) },
         punctuationRow(pageToggleLabel = "#+="),
-        listOf(
-            KeyDefinition("ABC", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
-            KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
-            KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 4.5f),
-            KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
-        ),
+        bottomRow(layerSwitchLabel = "ABC"),
     )
 
     val symbolsRows: List<List<KeyDefinition>> = listOf(
@@ -105,12 +90,7 @@ object KeyboardLayouts {
         listOf("_", "\\", "|", "~", "<", ">", "$", "\u00A3", "\u00A5", "\u00B7")
             .map { KeyDefinition(label = it, output = it) },
         punctuationRow(pageToggleLabel = "123"),
-        listOf(
-            KeyDefinition("ABC", type = KeyType.LAYER_SWITCH, widthMultiplier = 1.2f),
-            KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.2f),
-            KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 4.5f),
-            KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
-        ),
+        bottomRow(layerSwitchLabel = "ABC"),
     )
 
     /**
@@ -128,6 +108,18 @@ object KeyboardLayouts {
         KeyDefinition("'", output = "'", widthMultiplier = 1.2f),
         spacer(0.5f),
         KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
+    )
+
+    /**
+     * Row 4 of every page, as iOS draws it without the globe key (`bottomRow`): 123/ABC 1.25,
+     * emoji 1.25, space 5.5, return 2.0, so the row totals 10 units and is the same on the
+     * letters and symbols pages; only the page switch label changes.
+     */
+    private fun bottomRow(layerSwitchLabel: String): List<KeyDefinition> = listOf(
+        KeyDefinition(layerSwitchLabel, type = KeyType.LAYER_SWITCH, widthMultiplier = 1.25f),
+        KeyDefinition("\uD83D\uDE0A", type = KeyType.EMOJI, widthMultiplier = 1.25f),
+        KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 5.5f),
+        KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 2.0f),
     )
 
     private fun spacer(widthMultiplier: Float) =

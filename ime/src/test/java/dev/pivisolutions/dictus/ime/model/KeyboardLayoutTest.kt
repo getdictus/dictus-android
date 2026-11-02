@@ -187,6 +187,34 @@ class KeyboardLayoutTest {
         }
     }
 
+    // iOS reference: DictusKeyboard/KeyboardLayouts.swift:349-369, bottomRow without the globe
+    // key (getdictus/dictus-ios develop @ 4fe6549).
+    @Test
+    fun `bottom row matches iOS widths on every page`() {
+        val pages = mapOf(
+            "azerty" to KeyboardLayouts.azertyLetters,
+            "qwerty" to KeyboardLayouts.qwertyLetters,
+            "qwertz" to KeyboardLayouts.qwertzLetters,
+            "numbers" to KeyboardLayouts.numbersRows,
+            "symbols" to KeyboardLayouts.symbolsRows,
+        )
+        for ((page, rows) in pages) {
+            val row4 = rows[3]
+            assertEquals(
+                page,
+                listOf(KeyType.LAYER_SWITCH, KeyType.EMOJI, KeyType.SPACE, KeyType.RETURN),
+                row4.map { it.type },
+            )
+            assertEquals(page, listOf(1.25f, 1.25f, 5.5f, 2.0f), row4.map { it.widthMultiplier })
+            assertEquals(page, 10f, row4.sumOf { it.widthMultiplier.toDouble() }.toFloat(), 0.001f)
+        }
+        // Same row on every page, so nothing resizes on 123 / ABC; only the switch label changes.
+        val widths = pages.values.map { rows -> rows[3].map { it.widthMultiplier } }.toSet()
+        assertEquals(1, widths.size)
+        assertEquals("ABC", KeyboardLayouts.numbersRows[3][0].label)
+        assertEquals("ABC", KeyboardLayouts.symbolsRows[3][0].label)
+    }
+
     @Test
     fun `spacers carry no output`() {
         val spacers = (KeyboardLayouts.numbersRows + KeyboardLayouts.symbolsRows).flatten()
