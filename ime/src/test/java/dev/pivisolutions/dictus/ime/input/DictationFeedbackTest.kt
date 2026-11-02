@@ -18,7 +18,7 @@ class DictationFeedbackTest {
 
     private val scope = TestScope()
     private val notice = DictationNotice(scope)
-    private val undo = DictationUndo()
+    private val undo = DictationUndo(scope)
     private val feedback = DictationFeedback(undo, notice)
     private val inserted = mutableListOf<String>()
 
@@ -78,6 +78,16 @@ class DictationFeedbackTest {
         assertTrue(undo.isAvailable.value)
 
         feedback.withdraw()
+
+        assertFalse(undo.isAvailable.value)
+    }
+
+    // iOS KeyboardState.swift:1221 (#266): the field is no longer in front of the user.
+    @Test
+    fun `closing the keyboard drops the undo offer`() {
+        undo.recordInsertion("Bonjour. ", cursorAfter = 9)
+
+        feedback.onKeyboardHidden()
 
         assertFalse(undo.isAvailable.value)
     }

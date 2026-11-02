@@ -165,10 +165,10 @@ class DictusImeService : LifecycleInputMethodService() {
     private val autoFullStop = AutoFullStopInput()
     private var isAutoFullStopAllowed = false
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
-    // Last dictation insertion, offered for undo in the suggestion bar (issue #132).
-    private val dictationUndo = DictationUndo()
+    // Last dictation insertion, offered for undo in the keyboard toolbar (#132, #139).
+    private val dictationUndo = DictationUndo(bindingScope)
     // "No words detected" or "The dictation failed" after a dictation that inserted nothing,
-    // in the suggestion bar (#153, #182).
+    // in the keyboard toolbar (#153, #182).
     private val dictationNotice = DictationNotice(bindingScope)
     // Withdraws both offers together wherever the field changes.
     private val dictationFeedback = DictationFeedback(dictationUndo, dictationNotice)
@@ -677,6 +677,7 @@ class DictusImeService : LifecycleInputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
         cancelActiveTouch()
+        dictationFeedback.onKeyboardHidden()
         super.onFinishInputView(finishingInput)
     }
 
