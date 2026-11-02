@@ -17,6 +17,7 @@ import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.ShiftState
+import dev.pivisolutions.dictus.ime.model.SymbolsRun
 import dev.pivisolutions.dictus.ime.input.AutocorrectUndoOffer
 import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
@@ -76,11 +77,15 @@ fun KeyboardScreen(
     onFrenchAdaptiveKey: () -> Unit = {},
     onFrenchAdaptiveVariant: (String) -> Unit = {},
     autoCapSignal: AutoCapSignal? = null,
+    // Bumped by the service each time the keyboard is hidden, so the next opening starts afresh.
+    keyboardSession: Int = 0,
 ) {
     // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
     // remember(initialLayer) ensures recomposition resets the layer if the preference changes.
     var currentLayer by remember(initialLayer) { mutableStateOf(initialLayer) }
     var shiftState by remember { mutableStateOf(ShiftState()) }
+    // A space that ends a run of symbols returns to letters (#286).
+    var symbolsRun by remember { mutableStateOf(SymbolsRun()) }
     val isShifted = shiftState.isShifted
     val isCapsLock = shiftState.isCapsLock
     var isTrackpadActive by remember { mutableStateOf(false) }
@@ -96,6 +101,10 @@ fun KeyboardScreen(
     // runs after the key handler, so a letter's one-shot unshift happens before the new decision.
     LaunchedEffect(autoCapSignal) {
         autoCapSignal?.let { shiftState = shiftState.afterAutoCapCheck(it.shouldCapitalize) }
+    }
+
+    LaunchedEffect(keyboardSession) {
+        symbolsRun = symbolsRun.afterKeyboardShown()
     }
 
     DictusTheme(themeMode = themeMode) {
@@ -172,12 +181,24 @@ fun KeyboardScreen(
                                 )
                             },
                             onLayerChanged = { layer ->
+                                symbolsRun = symbolsRun.afterLayerSwitch(currentLayer, layer, shiftState.isCapsLock)
                                 currentLayer = layer
                                 Timber.d("Layer switched to: %s", layer)
                             },
                             onAutoUnshift = {
                                 // Turn off shift after typing a character (unless caps lock)
                                 shiftState = shiftState.afterLetterTyped()
+                            },
+                            onCharacterTyped = {
+                                symbolsRun = symbolsRun.afterCharacterTyped(currentLayer)
+                            },
+                            onBeforeSpace = {
+                                symbolsRun.onSpace(currentLayer)?.let { ret ->
+                                    symbolsRun = ret.run
+                                    shiftState = ret.shiftState
+                                    currentLayer = KeyboardLayer.LETTERS
+                                    Timber.d("Space returned to letters after symbols")
+                                }
                             },
                         )
                     },
@@ -218,14 +239,20 @@ private fun handleKeyPress(
     onShiftTapped: (isDoubleTap: Boolean, tapTime: Long) -> Unit,
     onLayerChanged: (KeyboardLayer) -> Unit,
     onAutoUnshift: () -> Unit,
+    onCharacterTyped: () -> Unit,
+    onBeforeSpace: () -> Unit,
 ) {
     when (key.type) {
         KeyType.CHARACTER -> {
             val output = if (isShifted) key.output.uppercase() else key.output
             onCommitText(output)
             onAutoUnshift()
+            onCharacterTyped()
         }
         KeyType.SPACE -> {
+            // The page switches before the space goes in, as on iOS: the autocapitalization
+            // check that follows the space then shifts the letters page after ". ".
+            onBeforeSpace()
             onCommitText(" ")
         }
         KeyType.RETURN -> {

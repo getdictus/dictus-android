@@ -160,6 +160,7 @@ class DictusImeService : LifecycleInputMethodService() {
     // only to skip a repeat decision for an unchanged editor, so a shift the user just tapped off
     // is not re-armed by a late selection update.
     private val _autoCapSignal = MutableStateFlow<AutoCapSignal?>(null)
+    private val _keyboardSession = MutableStateFlow(0)
     private var autoCapMode = AutoCapMode.NONE
     private var lastAutoCapContext: String? = null
     // Double-space full stop (#193): allowed per field from EditorInfo, undone by the next Backspace.
@@ -683,6 +684,8 @@ class DictusImeService : LifecycleInputMethodService() {
         Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
         cancelActiveTouch()
         dictationFeedback.onKeyboardHidden()
+        // The next opening starts without a run of symbols (#286).
+        _keyboardSession.value++
         super.onFinishInputView(finishingInput)
     }
 
@@ -795,6 +798,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
         val autoCapSignal by _autoCapSignal.collectAsState()
+        val keyboardSession by _keyboardSession.collectAsState()
         val activeKeyboardState by _activeKeyboardState.collectAsState()
         val activeLanguage = activeKeyboardState.language
         val activeLayout = activeKeyboardState.layout
@@ -1028,6 +1032,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         if (usesFrenchAdaptiveKey) handleFrenchAdaptiveVariant(variant)
                     },
                     autoCapSignal = autoCapSignal,
+                    keyboardSession = keyboardSession,
                 )
             }
             is DictationState.Recording -> {
