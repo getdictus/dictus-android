@@ -81,10 +81,12 @@ sealed interface AutocorrectReplacementOutcome {
 data class AutocorrectUndo(
     /** Exact spelling/code-point representation replaced in the editor. */
     val original: String,
-    /** Exact correction inserted in the editor, without its trailing space. */
+    /** Exact correction inserted in the editor, without its trailing text. */
     val correction: String,
-    /** Absolute collapsed selection after inserting the correction and its owned trailing space. */
+    /** Absolute collapsed selection after inserting the correction and its owned trailing text. */
     val correctedSelection: Int,
+    /** What the correction wrote after the word: a space, a punctuation mark, or nothing (#268). */
+    val trailing: String = " ",
 )
 
 enum class AutocorrectBatchCleanup {
@@ -147,16 +149,17 @@ object AutocorrectEditorTransaction {
         original: String,
         correction: String,
         identityEligible: Boolean,
+        trailing: String = " ",
     ): AutocorrectTransactionResult {
         val normalizedOriginal = original.nfc()
         val normalizedCorrection = correction.nfc()
         validateRequest(normalizedOriginal, normalizedCorrection, identityEligible)?.let { return it }
         val snapshot = readSnapshot(editor)
-            ?: return applyRelative(editor, normalizedOriginal, normalizedCorrection)
+            ?: return applyRelative(editor, normalizedOriginal, normalizedCorrection, trailing)
         val match = matchTokenAtCursor(snapshot, normalizedOriginal) ?: return snapshotValidationFailure(snapshot, normalizedOriginal)
 
         val insertedCorrection = normalizedCorrection
-        val correctedSelection = match.absoluteStart.toLong() + insertedCorrection.length + 1
+        val correctedSelection = match.absoluteStart.toLong() + insertedCorrection.length + trailing.length
         if (correctedSelection > Int.MAX_VALUE) {
             return rejected(AutocorrectRejection.CONTEXT_UNAVAILABLE)
         }
@@ -167,11 +170,11 @@ object AutocorrectEditorTransaction {
                 absoluteStart = match.absoluteStart,
                 absoluteEnd = match.absoluteEnd,
                 expectedText = match.editorText,
-                replacement = "$insertedCorrection ",
+                replacement = insertedCorrection + trailing,
             ),
         ) { cleanup ->
             AutocorrectTransactionResult.Applied(
-                AutocorrectUndo(match.editorText, insertedCorrection, correctedSelection.toInt()),
+                AutocorrectUndo(match.editorText, insertedCorrection, correctedSelection.toInt(), trailing),
                 cleanup,
             )
         }
@@ -187,11 +190,12 @@ object AutocorrectEditorTransaction {
         editor: AutocorrectEditor,
         original: String,
         correction: String,
+        trailing: String,
     ): AutocorrectTransactionResult {
-        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(original, "$correction ") }
+        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(original, correction + trailing) }
         return when (outcome.result) {
             AutocorrectReplacementOutcome.Applied -> AutocorrectTransactionResult.Applied(
-                AutocorrectUndo(original, correction, UNKNOWN_SELECTION),
+                AutocorrectUndo(original, correction, UNKNOWN_SELECTION, trailing),
                 outcome.cleanup,
             )
             AutocorrectReplacementOutcome.RejectedUnchanged ->
@@ -249,9 +253,9 @@ object AutocorrectEditorTransaction {
         val normalizedCorrection = undo.correction.nfc()
         validateRequest(normalizedOriginal, normalizedCorrection, identityEligible)?.let { return it }
         val snapshot = readSnapshot(editor)
-            ?: return undoRelative(editor, normalizedCorrection, normalizedOriginal)
-        val match = matchCorrectionAndSpaceAtCursor(snapshot, normalizedCorrection)
-            ?: return snapshotValidationFailure(snapshot, normalizedCorrection, trailingSpace = true)
+            ?: return undoRelative(editor, normalizedCorrection + undo.trailing, normalizedOriginal)
+        val match = matchCorrectionAndTrailingAtCursor(snapshot, normalizedCorrection, undo.trailing)
+            ?: return snapshotValidationFailure(snapshot, normalizedCorrection, undo.trailing)
 
         return replace(
             editor,
@@ -265,13 +269,17 @@ object AutocorrectEditorTransaction {
         ) { cleanup -> AutocorrectTransactionResult.Restored(cleanup) }
     }
 
-    /** Reverses a relative correction, restoring the original token and dropping its space. */
+    /**
+     * Reverses a relative correction, restoring the original token and dropping its trailing text.
+     *
+     * @param written the correction followed by the trailing text it wrote.
+     */
     private fun undoRelative(
         editor: AutocorrectEditor,
-        correction: String,
+        written: String,
         original: String,
     ): AutocorrectTransactionResult {
-        val outcome = withBatch(editor) { editor.attemptRelativeReplacement("$correction ", original) }
+        val outcome = withBatch(editor) { editor.attemptRelativeReplacement(written, original) }
         return when (outcome.result) {
             AutocorrectReplacementOutcome.Applied ->
                 AutocorrectTransactionResult.Restored(outcome.cleanup)
@@ -319,14 +327,17 @@ object AutocorrectEditorTransaction {
         return snapshot.match(editorToken, start, cursor)
     }
 
-    private fun matchCorrectionAndSpaceAtCursor(
+    private fun matchCorrectionAndTrailingAtCursor(
         snapshot: AutocorrectEditorSnapshot,
         expectedCorrectionNfc: String,
+        trailing: String,
     ): Match? {
         if (!snapshot.hasValidCollapsedSelection()) return null
         val cursor = snapshot.selectionStart
-        if (cursor == 0 || snapshot.text[cursor - 1] != ' ' || !snapshot.hasProvenRightTokenBoundary(cursor)) return null
-        val tokenEnd = cursor - 1
+        if (!snapshot.text.startsWith(trailing, cursor - trailing.length) || !snapshot.hasProvenRightTokenBoundary(cursor)) {
+            return null
+        }
+        val tokenEnd = cursor - trailing.length
         var tokenStart = tokenEnd
         while (tokenStart > 0) {
             val codePoint = snapshot.text.codePointBefore(tokenStart)
@@ -342,7 +353,7 @@ object AutocorrectEditorTransaction {
     private fun snapshotValidationFailure(
         snapshot: AutocorrectEditorSnapshot,
         expectedNfc: String,
-        trailingSpace: Boolean = false,
+        trailing: String = "",
     ): AutocorrectTransactionResult.Rejected {
         if (!snapshot.hasValidCollapsedSelection()) {
             return if (snapshot.selectionStart != snapshot.selectionEnd) {
@@ -355,7 +366,8 @@ object AutocorrectEditorTransaction {
         if (cursor < snapshot.text.length && snapshot.text.codePointAt(cursor).isTokenCodePoint()) {
             return rejected(AutocorrectRejection.TOKEN_MISMATCH)
         }
-        val tokenEnd = if (trailingSpace && cursor > 0 && snapshot.text[cursor - 1] == ' ') cursor - 1 else cursor
+        val trailingAtCursor = trailing.isNotEmpty() && snapshot.text.startsWith(trailing, cursor - trailing.length)
+        val tokenEnd = if (trailingAtCursor) cursor - trailing.length else cursor
         var start = tokenEnd
         while (start > 0 && snapshot.text.codePointBefore(start).isTokenCodePoint()) {
             start -= Character.charCount(snapshot.text.codePointBefore(start))
@@ -364,7 +376,7 @@ object AutocorrectEditorTransaction {
             return rejected(AutocorrectRejection.CONTEXT_UNAVAILABLE)
         }
         val candidate = snapshot.text.substring(start, tokenEnd)
-        return if (candidate.nfc() == expectedNfc && !trailingSpace) {
+        return if (candidate.nfc() == expectedNfc && trailing.isEmpty()) {
             rejected(AutocorrectRejection.CONTEXT_UNAVAILABLE)
         } else {
             rejected(AutocorrectRejection.TOKEN_MISMATCH)

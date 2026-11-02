@@ -52,6 +52,18 @@ class AutocorrectRelativeFallbackTest {
     }
 
     @Test
+    fun `a comma correction and its undo go through the relative path too`() {
+        val editor = BlindEditor("bonjuor")
+
+        val result = AutocorrectEditorTransaction.apply(editor, "bonjuor", "bonjour", true, trailing = ",")
+
+        assertEquals("bonjour,", editor.text)
+        val undo = (result as AutocorrectTransactionResult.Applied).undo
+        assertTrue(AutocorrectEditorTransaction.undo(editor, undo, true) is AutocorrectTransactionResult.Restored)
+        assertEquals("bonjuor", editor.text)
+    }
+
+    @Test
     fun `a stale precondition leaves the editor untouched`() {
         val editor = BlindEditor("autre chose")
 
