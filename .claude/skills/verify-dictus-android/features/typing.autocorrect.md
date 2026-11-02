@@ -30,7 +30,7 @@ While typing with the Dictus keyboard, a three-slot bar above the keys offers co
 
 ## Driving it with Argent
 
-Preconditions: Launch and Doctor OK, a scratch note focused, keyboard language FR (the language code in the top bar reads `FR`).
+Preconditions: Launch and Doctor OK, a scratch note focused, keyboard language FR (the space bar reads `espace`).
 
 - **Type through the keys.** Tap the letter keys `b o n j o u r` by coordinate (AZERTY, from the `kbd.keys` capture); `mcp__argent__keyboard` would bypass the Dictus keys and prove nothing. → the bar proposes completions (`evidence.sh 01-typing`).
 - **Misspell, then space.** Type `b o n j o r u`, tap space. → the field reads `bonjour ` in the tree (`evidence.sh 02-after-space`).
@@ -44,6 +44,6 @@ Preconditions: Launch and Doctor OK, a scratch note focused, keyboard language F
 
 - `mcp__argent__keyboard` types through adb (`input text`), not through the Dictus keys: it never exercises suggestions or autocorrect.
 - A word learned earlier (`typing.learned-words`) is no longer corrected, and the ⌫ undo step **teaches the misspelling** (only « Réinitialiser les mots appris » removes it, and that forgets every learned word): on Pierre's Pixel, stop at the correction on space and skip the ⌫ step; run the undo only on a test device.
-- The bar is empty (hidden) when there is nothing to suggest; with « Suggestions » off it never appears, but the undo chip after a dictation still does.
+- With nothing to suggest, the bar shows ☰ and the mic only; with « Suggestions » off the slots never appear, but the undo pill after a dictation still does (#139).
 - Search, e-mail, URL and password fields hide the bar on purpose (`typing.private-fields`).
 - Auto-capitalization follows the field's cap flags: a plain text field that does not ask for capitals (some search boxes, some apps' custom fields) never lights shift, by design. The Pixel shows it as the key colour; the tree has no shift state.
