@@ -74,7 +74,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `voice-notes` | Pro on iOS — absent | absent | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
 | [`typing.learned-words`](typing.learned-words.md) | Free | present | no |
-| [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no QWERTZ, no number row | no |
+| [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no layout picker until #191, no number row | no |
 | [`keyboard.emoji`](keyboard.emoji.md) | Free | partial — the keyboard bar disappears while picking (#139) | no |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Free | present | no |
 | `live-activity` | N/A | iOS-only (N/A) | no |
@@ -151,7 +151,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `learned-words.learn` | Free | present | no |
 | `learned-words.reset` | Free | present — Réglages → Clavier, with confirmation (#194) | no |
 | `keyboard.language-switch` | Free | present — tap on the language code (FR→EN→ES→DE), no panel | no |
-| `keyboard.layout` | Free | partial — AZERTY / QWERTY, no QWERTZ | no |
+| `keyboard.layout` | Free | partial — one layout per language, QWERTZ for German (#134); no picker until #191 | no |
 | `keyboard.number-row` | Free | absent | no |
 | `keyboard.default-page` | Free | present | no |
 | `keyboard.transcription-language` | Free | partial — `Automatique` or a fixed language; no « Suivre la langue du clavier » | no |

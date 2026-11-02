@@ -1,9 +1,7 @@
 package dev.pivisolutions.dictus.ui.settings
 
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -69,16 +67,11 @@ class SettingsLayoutTest {
         assertEquals("abc", pref(PreferenceKeys.KEYBOARD_MODE))
     }
 
+    /** #134: each language has its own layout; the single row is gone until the keyboard picker (#191). */
     @Test
-    fun `keyboard layout picks inline from a menu, not a sheet`() {
-        composeRule.onNodeWithText("Disposition du clavier").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        // A sheet repeated the row label as its title; the menu only lists the choices.
-        composeRule.onAllNodesWithText("Disposition du clavier").assertCountEquals(1)
-
-        composeRule.onNodeWithText("QWERTY").performClick()
-        composeRule.waitForIdle()
-        assertEquals("qwerty", pref(PreferenceKeys.KEYBOARD_LAYOUT))
+    fun `no single keyboard layout row`() {
+        composeRule.onNodeWithText("Disposition du clavier").assertDoesNotExist()
+        composeRule.onNodeWithText("Disposition").assertDoesNotExist()
     }
 
     @Test

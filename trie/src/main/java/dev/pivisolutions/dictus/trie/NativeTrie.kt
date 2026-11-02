@@ -10,9 +10,11 @@ import java.security.MessageDigest
 import java.text.Normalizer
 import java.util.Locale
 
-enum class TrieKeyboardLayout(internal val nativeValue: Int) {
-    AZERTY(0),
-    QWERTY(1),
+/** Layouts the scorer knows the geometry of; see [KeyboardProximity]. */
+enum class TrieKeyboardLayout {
+    AZERTY,
+    QWERTY,
+    QWERTZ,
 }
 
 data class NgramPrediction(
@@ -99,7 +101,10 @@ class NativeTrie private constructor(
                 check(nativeTrie.nativeLoad(handle, file.absolutePath)) {
                     "Invalid trie dictionary"
                 }
-                nativeTrie.nativeSetLayout(handle, layout.nativeValue)
+                val proximity = KeyboardProximity.costTable(layout)
+                check(nativeTrie.nativeSetProximityTable(handle, proximity.characters, proximity.distances)) {
+                    "Invalid proximity table"
+                }
                 val loadedNgram = ngramFile != null && nativeTrie.nativeLoadNgram(
                     handle,
                     ngramFile.absolutePath.toByteArray(StandardCharsets.UTF_8),
@@ -292,7 +297,11 @@ class NativeTrie private constructor(
     private external fun nativeCreate(): Long
     private external fun nativeDestroy(handle: Long)
     private external fun nativeLoad(handle: Long, path: String): Boolean
-    private external fun nativeSetLayout(handle: Long, layout: Int)
+    private external fun nativeSetProximityTable(
+        handle: Long,
+        characters: CharArray,
+        distances: FloatArray,
+    ): Boolean
     private external fun nativeWordExists(handle: Long, word: String): Boolean
     private external fun nativeFrequency(handle: Long, word: String): Int
     private external fun nativeMaxFrequency(handle: Long): Long

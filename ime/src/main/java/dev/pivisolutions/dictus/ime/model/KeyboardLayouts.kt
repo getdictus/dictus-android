@@ -7,8 +7,9 @@ package dev.pivisolutions.dictus.ime.model
  * Row 1-2: character keys. Row 3: shift + characters + delete. Row 4: utility keys.
  *
  * The AZERTY layout is the default for French users (fr_FR locale).
- * The QWERTY layout is used for English (en_US locale).
- * Numbers and symbols layers are shared across both layouts.
+ * The QWERTY layout is used for English and Spanish, QWERTZ for German. These are defaults:
+ * each keyboard language can be given any of the three (`KeyboardLayoutPreference`, #134).
+ * Numbers and symbols layers are shared across all layouts.
  */
 object KeyboardLayouts {
 
@@ -58,6 +59,30 @@ object KeyboardLayouts {
             KeyDefinition("space", output = " ", type = KeyType.SPACE, widthMultiplier = 4.5f),
             KeyDefinition("\u21B5", type = KeyType.RETURN, widthMultiplier = 1.8f),
         ),
+    )
+
+    /**
+     * QWERTZ, the German default, as iOS draws it (`QWERTZLayout`): ü closes the top row, ö and
+     * ä the home row, so those two rows carry 11 keys and render slightly narrower ones. There
+     * is no ß key: it stays a long press on S. The bottom row is the same as QWERTY's.
+     */
+    val qwertzLetters: List<List<KeyDefinition>> = listOf(
+        listOf("Q", "W", "E", "R", "T", "Z", "U", "I", "O", "P", "\u00DC")
+            .map { KeyDefinition(label = it, output = it.lowercase()) },
+        listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "\u00D6", "\u00C4")
+            .map { KeyDefinition(label = it, output = it.lowercase()) },
+        listOf(
+            KeyDefinition("\u21E7", type = KeyType.SHIFT, widthMultiplier = 1.5f),
+            KeyDefinition("Y", output = "y"),
+            KeyDefinition("X", output = "x"),
+            KeyDefinition("C", output = "c"),
+            KeyDefinition("V", output = "v"),
+            KeyDefinition("B", output = "b"),
+            KeyDefinition("N", output = "n"),
+            KeyDefinition("M", output = "m"),
+            KeyDefinition("\u232B", type = KeyType.DELETE, widthMultiplier = 1.5f),
+        ),
+        qwertyLetters[3],
     )
 
     val numbersRows: List<List<KeyDefinition>> = listOf(
@@ -111,6 +136,7 @@ object KeyboardLayouts {
     fun lettersForLayout(layout: String): List<List<KeyDefinition>> = when (layout) {
         "azerty" -> azertyLetters
         "qwerty" -> qwertyLetters
+        "qwertz" -> qwertzLetters
         else -> azertyLetters
     }
 

@@ -261,6 +261,9 @@ class OnboardingViewModel @Inject constructor(
     /**
      * Persist the active model and onboarding completion flag to DataStore.
      *
+     * No layout since #134: each keyboard language follows its own default until the user picks
+     * one, as on iOS.
+     *
      * Called when the user taps "Commencer" on the completion step. The DataStore write causes
      * AppNavHost to recompose and switch from the onboarding flow to the main tab layout.
      *
