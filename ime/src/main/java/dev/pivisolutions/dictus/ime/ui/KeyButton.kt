@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,6 +36,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
@@ -47,6 +49,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.input.BackspaceDeletion
 import dev.pivisolutions.dictus.ime.input.BackspaceRepeatPolicy
@@ -407,13 +410,24 @@ fun KeyButton(
             .then(gestureModifier),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = displayLabel,
-            color = LocalDictusColors.current.keyText,
-            fontSize = fontSize,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.alpha(labelAlpha),
-        )
+        if (key.type == KeyType.RETURN) {
+            // A fixed ↵ icon in every language, as iOS draws the SF Symbol "return" on iPhone
+            // (#280); the profile's word stays the spoken label.
+            Icon(
+                painter = painterResource(R.drawable.ic_keyboard_return),
+                contentDescription = key.label,
+                tint = LocalDictusColors.current.keyText,
+                modifier = Modifier.size(22.dp).alpha(labelAlpha),
+            )
+        } else {
+            Text(
+                text = displayLabel,
+                color = LocalDictusColors.current.keyText,
+                fontSize = fontSize,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.alpha(labelAlpha),
+            )
+        }
 
         // Character preview popup (like Gboard) — shown on touch-down
         if (showPreviewPopup) {
