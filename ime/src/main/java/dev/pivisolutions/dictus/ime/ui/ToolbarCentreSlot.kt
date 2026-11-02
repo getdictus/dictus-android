@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import dev.pivisolutions.dictus.ime.input.AutocorrectUndoOffer
 import dev.pivisolutions.dictus.ime.input.DictationNotice
 
 /**
@@ -17,7 +18,7 @@ import dev.pivisolutions.dictus.ime.input.DictationNotice
  * 2. **Undo**: expires in seconds and on the first keystroke, and it is the only alternative to
  *    holding backspace on a long dictation. Right after an insertion the user has typed nothing,
  *    so the suggestions were predicted from dictated text and are worth less.
- * 3. **Suggestions**: the keyboard's core job.
+ * 3. **Suggestions**: the keyboard's core job, the autocorrect undo chip included (#276).
  */
 sealed interface ToolbarCentreSlot {
 
@@ -61,8 +62,10 @@ sealed interface ToolbarCentreSlot {
         /**
          * Whether the suggestion row has anything to offer. The word being typed does not count
          * on its own: iOS `SuggestionState` empties the row when there is no completion, and ☰
-         * comes back.
+         * comes back. The autocorrect undo chip counts, as iOS puts the typed word in the row; it
+         * shows even with the suggestions turned off, as the only way left to revert a correction.
          */
-        fun hasSuggestions(suggestions: List<String>): Boolean = suggestions.isNotEmpty()
+        fun hasSuggestions(suggestions: List<String>, autocorrectUndo: AutocorrectUndoOffer? = null): Boolean =
+            suggestions.isNotEmpty() || autocorrectUndo != null
     }
 }

@@ -17,6 +17,7 @@ import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.ShiftState
+import dev.pivisolutions.dictus.ime.input.AutocorrectUndoOffer
 import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.DictationNotice
@@ -63,6 +64,8 @@ fun KeyboardScreen(
     onUndoDictation: () -> Unit = {},
     dictationNotice: DictationNotice.Message? = null,
     isAppDictationInProgress: Boolean = false,
+    autocorrectUndo: AutocorrectUndoOffer? = null,
+    onUndoAutocorrect: () -> Unit = {},
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
@@ -116,6 +119,8 @@ fun KeyboardScreen(
                 onUndoDictation = onUndoDictation,
                 dictationNotice = dictationNotice,
                 isAppDictationInProgress = isAppDictationInProgress,
+                autocorrectUndo = autocorrectUndo,
+                onUndoAutocorrect = onUndoAutocorrect,
             )
 
             // Emoji picker in the key area, under the toolbar, as iOS KeyboardRootView

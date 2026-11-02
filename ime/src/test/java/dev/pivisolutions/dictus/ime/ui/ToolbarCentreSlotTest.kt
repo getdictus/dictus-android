@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import dev.pivisolutions.dictus.ime.input.AutocorrectUndoOffer
 import dev.pivisolutions.dictus.ime.input.DictationNotice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -108,5 +109,12 @@ class ToolbarCentreSlotTest {
     fun `a typed word without any suggestion leaves the bar empty, as iOS`() {
         assertFalse(ToolbarCentreSlot.hasSuggestions(emptyList()))
         assertTrue(ToolbarCentreSlot.hasSuggestions(listOf("bonjour")))
+    }
+
+    // #276: the undo chip sits in the suggestion row, so it alone fills the slot, suggestions off
+    // included (decided by Pierre: it is the only way left to revert a correction).
+    @Test
+    fun `the autocorrect undo chip alone counts as a suggestion`() {
+        assertTrue(ToolbarCentreSlot.hasSuggestions(emptyList(), AutocorrectUndoOffer("helo", 1)))
     }
 }

@@ -46,7 +46,7 @@ Implementation details stay out of the map: only user paths, stable handles, req
 | [`dictation.keyboard`](dictation.keyboard.md) | Dictation from the keyboard | Free | present | Yes — start + cancel proven on the Pixel (2026-10-20); ✓ records the room |
 | [`dictation.in-app`](dictation.in-app.md) | Dictation inside the app | Free | present | Screens yes; opening the recorder records at once; its single ✕ cancels (#243) |
 | [`models.transcription`](models.transcription.md) | Transcription models | Free | present | Browsing yes; no download/delete on Pierre's phone |
-| [`typing.autocorrect`](typing.autocorrect.md) | Autocorrect and suggestions | Free | present | Yes, keys by coordinate in a scratch note; the ⌫ undo step on a test device only |
+| [`typing.autocorrect`](typing.autocorrect.md) | Autocorrect and suggestions | Free | present | Yes, keys by coordinate in a scratch note; the undo chip step on a test device only |
 | [`typing.learned-words`](typing.learned-words.md) | Learned words | Free | present | No on Pierre's Pixel (learning and reset both change his dictionary): test device only |
 | [`keyboard.languages`](keyboard.languages.md) | Keyboard languages and layouts | Free | partial | Yes (cycle a full turn) |
 | [`keyboard.emoji`](keyboard.emoji.md) | Emoji | Free | partial | Yes |

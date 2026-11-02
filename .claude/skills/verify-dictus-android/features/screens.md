@@ -53,7 +53,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `kbd.emoji` | Emoji picker (#192) under the keyboard bar (#139): category name, 8-column grid, bar at the bottom: ABC, 🔍, one emoji per category, ⌫ | tap 😊 | keyboard.emoji | categories / recents / search (field, result row, mini keyboard) / « Aucun résultat » | [stale](../screens/kbd.emoji.png) — still the androidx picker from before #192; re-take on the Pixel |
 | `kbd.voice-note-reader` | — | — | voice-notes | absent | — |
 | `kbd.smart-mode-fan` | — | — | smart-modes | absent | — |
-| `kbd.suggestions` | The keyboard bar's centre slot (#139): 3 suggestion slots in place of ☰; the « Annuler » pill (8 s) after a dictation, above the suggestions; a notice above both | type in a scratch note | typing.autocorrect, dictation.keyboard | completions / predictions / dictation undo pill / « Aucun mot détecté » or « La dictée a échoué… » notice (3 s) | [yes](../screens/kbd.suggestions.png) |
+| `kbd.suggestions` | The keyboard bar's centre slot (#139): 3 suggestion slots in place of ☰; the « Annuler » pill (8 s) after a dictation, above the suggestions; a notice above both | type in a scratch note | typing.autocorrect, dictation.keyboard | completions / predictions / autocorrect undo chip `↶ mot` in slot 0 (#276) / dictation undo pill / « Aucun mot détecté » or « La dictée a échoué… » notice (3 s) | [yes](../screens/kbd.suggestions.png) |
 | `sys.settings.full-access` | — | — | dictation.keyboard | iOS-only | — |
 | `share.voice-note` | — | — | voice-notes | absent | — |
 | `widget.live-activity` | — | — | live-activity | iOS-only | — |
