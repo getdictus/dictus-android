@@ -14,6 +14,7 @@ import dev.pivisolutions.dictus.model.DeviceRam
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
+import dev.pivisolutions.dictus.service.DictationLanguage
 import dev.pivisolutions.dictus.service.ModelInstallState
 import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -280,9 +281,12 @@ class ModelsViewModel @Inject constructor(
         }
     }
 
-    /** An English-only model while the transcription language is not English. */
+    /**
+     * An English-only model while dictation would not be in English. In follow mode that
+     * is the keyboard's language, as the dictation itself would use.
+     */
     private suspend fun needsLanguageConfirmation(info: ModelInfo): Boolean =
-        info.isEnglishOnly && (dataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto") != "en"
+        info.isEnglishOnly && DictationLanguage.engineLanguage(dataStore.data.first()) != "en"
 
     /** Confirm Parakeet activation despite language mismatch. */
     fun confirmParakeetActivation() {
