@@ -85,7 +85,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `dictation.stop` | Free | present | no |
 | `dictation.cancel` | Free | present | no |
 | `dictation.status` | Free | present | no |
-| `dictation.undo-insert` | Free | present — « Annuler » chip (#137) | no |
+| `dictation.undo-insert` | Free | present — « Annuler » pill in the single bar, 8 s (#137, #139) | no |
 | `dictation.handoff` | N/A | iOS-only (N/A) | no |
 | `dictation.requires-full-access` | N/A | iOS-only (N/A) | no |
 | `dictation.device-gating` | Free | absent — no device is refused outright; only the models' RAM filter exists | no |
@@ -150,12 +150,12 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |
 | `learned-words.learn` | Free | present | no |
 | `learned-words.reset` | Free | present — Réglages → Clavier, with confirmation (#194) | no |
-| `keyboard.language-switch` | Free | present — tap on the language code (FR→EN→ES→DE), no panel | no |
+| `keyboard.language-switch` | Free | present — tap on ☰ (FR→EN→ES→DE), no panel | no |
 | `keyboard.layout` | Free | partial — one layout per language, QWERTZ for German (#134); no picker until #191 | no |
 | `keyboard.number-row` | Free | absent | no |
 | `keyboard.default-page` | Free | present | no |
 | `keyboard.transcription-language` | Free | partial — `Automatique` or a fixed language; no « Suivre la langue du clavier » | no |
-| `keyboard.open-app` | Free | present — long press on the language code → Settings | no |
+| `keyboard.open-app` | Free | present — long press on ☰ → Settings | no |
 | `emoji.picker` | Free | present — iOS categories, bar at the bottom (#192); no skin tones | no |
 | `emoji.recents` | Free | present — « Récents » (#192) | no |
 | `emoji.search` | Free | present — French keywords, then English names (#192) | no |
@@ -231,7 +231,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.voice-note.result` | Pro on iOS — absent | absent | no |
 | `kbd.keys` | Free | present | no |
 | `kbd.no-full-access` | N/A | iOS-only (N/A) | no |
-| `kbd.dictation-error` | Free | present — « La dictée a échoué… » in the suggestion bar; no overlay (#247) | no |
+| `kbd.dictation-error` | Free | present — « La dictée a échoué… » in the keyboard bar; no overlay (#247) | no |
 | `kbd.recording` | Free | present | no |
 | `kbd.numbers` | Free | present — same keys and order as iOS (#264); row 3 punctuation narrower (#266) | no |
 | `kbd.symbols` | Free | present — same keys and order as iOS (#264); row 3 punctuation narrower (#266) | no |
@@ -274,17 +274,16 @@ Of the 150 iOS IDs that apply to Android: 62 present, 13 partial, 75 absent. 55 
 
 Screen by screen, what looks different between the Android captures of `../screens/` and the iOS design (captures in `docs/agents/screens/` of the iOS repo, iPhone 17 simulator in light theme, and `verify-dictus-ios/features/`). Each gap is worded to become an issue: **screen**, **iOS**, **Android**, **proposal**. Gaps that come from a missing feature (Smart Modes, Pro…) are in the table above, not here. The theme differs by design: iOS follows the system appearance, Android defaults to the Dark theme; the comparisons are about structure, not colours.
 
-1. **Keyboard bar — `kbd.keys`, `kbd.suggestions`** (issue #139, waiting for a mockup validated by Pierre; not started here).
+1. **Keyboard bar — `kbd.keys`, `kbd.suggestions`** (closed by #139).
    - iOS: a single bar above the keys: ☰ on the left, suggestions in the middle, the mic (blue pill) on the right; « Annuler » also shows there.
-   - Android: two stacked rows: the suggestion bar (3 slots, « Annuler » chip after a dictation) then the row with the language code `FR` on the left + mic on the right. The keyboard is taller and the mic is separate from the suggestions.
-   - Proposal: merge into a single bar following the #139 mockup.
+   - Android (since #139): the same single 52 dp bar; the centre slot shows the notice, then the « Annuler » pill, then the suggestions, each in place of ☰. Remaining gap: a tap on ☰ cycles the language instead of opening the voice notes (#209, #191).
 2. **Dictation in the keyboard — `kbd.recording`**
    - iOS: ✕ and ✓ in the keyboard bar, waveform above the keys.
    - Android: a panel that replaces the whole keyboard: ✕ / ✓ glass capsules at the top (#239), waveform + timer (20 sp, medium, monospaced, like iOS since #190) + « En écoute… » in the middle, and at the bottom left a globe « Changer de clavier » stuck to the system keyboard's navigation bar (next to ⌄), which opens the Android keyboard picker (#190; a `Réglages` gear before).
    - Proposal: align the recording bar with #139.
 3. **Keyboard languages — `kbd.panel`**
    - iOS: long press on ☰: a panel lists « Français » / « English » / « Español » / « Deutsch » and the layouts, closed with ✕.
-   - Android: no panel; a tap on the `FR` code moves to the next language (FR→EN→ES→DE), a long press opens Settings. Nothing hints at these gestures.
+   - Android: no panel; a tap on ☰ moves to the next language (FR→EN→ES→DE), a long press opens Settings (#139). Nothing hints at these gestures.
    - Proposal: a ☰ menu (or a long press on the code) that lists the languages and the layout, like iOS.
 4. **Home without a model — `app.home`**
    - iOS: without a model, a « Télécharger un modèle pour commencer » card links to Models and replaces « Nouvelle dictée ».
