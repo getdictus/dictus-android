@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,8 +19,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -48,8 +45,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -98,7 +93,6 @@ fun SettingsScreen(
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
     val learnedWordCount by viewModel.learnedWordCount.collectAsState()
-    val keyboardMode by viewModel.keyboardMode.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
 
@@ -141,7 +135,8 @@ fun SettingsScreen(
         }
 
         // ---------- SECTION: Clavier ----------
-        // iOS order: keyboard language, ABC/123, layout, haptics, sounds, autocorrect, reset.
+        // iOS order: keyboard language, layout, haptics, sounds, autocorrect, reset.
+        // No ABC / 123 row since #288: the keyboard always opens on letters (iOS #888).
         // No layout row since #134: each language has its own, chosen from the keyboard (#191).
         // Keyboard sounds and suggestions are Android-only, next to their closest iOS row.
         SectionHeader(text = stringResource(R.string.settings_section_keyboard))
@@ -151,11 +146,6 @@ fun SettingsScreen(
                 options = keyboardLanguageOptions(),
                 selected = keyboardLanguage,
                 onSelect = { viewModel.setKeyboardLanguage(it) },
-            )
-            SettingDivider()
-            KeyboardModeSegment(
-                selected = keyboardMode,
-                onSelect = { viewModel.setKeyboardMode(it) },
             )
             SettingDivider()
             SettingToggleRow(
@@ -435,51 +425,6 @@ private fun SettingMenuRow(
                         modifier = Modifier.semantics { this.selected = value == selected },
                     )
                 }
-            }
-        }
-    }
-}
-
-/**
- * Inline ABC / 123 segmented control for the keyboard's default mode (iOS `DefaultLayerPicker`).
- *
- * Writes the same values as the former picker: "abc" or "123"; any other stored value reads as ABC.
- */
-@Composable
-private fun KeyboardModeSegment(
-    selected: String,
-    onSelect: (String) -> Unit,
-) {
-    val description = stringResource(R.string.settings_default_mode)
-    val current = if (selected == "123") "123" else "abc"
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .height(36.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.background)
-            .padding(2.dp)
-            .semantics { contentDescription = description }
-            .selectableGroup(),
-    ) {
-        listOf("abc" to "ABC", "123" to "123").forEach { (value, text) ->
-            val isSelected = value == current
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (isSelected) LocalDictusColors.current.keySpecialBackground else Color.Transparent)
-                    .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(value) }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = text,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 15.sp,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                )
             }
         }
     }

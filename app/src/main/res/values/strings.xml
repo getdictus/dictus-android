@@ -52,7 +52,6 @@
     <!-- Settings: Row labels -->
     <string name="settings_language">Language</string>
     <string name="settings_keyboard_language">Keyboard language</string>
-    <string name="settings_default_mode">Default mode</string>
     <string name="settings_haptic_feedback">Haptic feedback</string>
     <string name="settings_keyboard_sounds">Keyboard sounds</string>
     <string name="settings_suggestions">Suggestions</string>

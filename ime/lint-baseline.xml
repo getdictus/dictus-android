@@ -26,17 +26,6 @@
     <issue
         id="FlowOperatorInvokedInComposition"
         message="Flow operator functions should not be invoked within composition"
-        errorLine1="            .map { it[PreferenceKeys.KEYBOARD_MODE] ?: &quot;abc&quot; }"
-        errorLine2="             ~~~">
-        <location
-            file="src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
-            line="283"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="FlowOperatorInvokedInComposition"
-        message="Flow operator functions should not be invoked within composition"
         errorLine1="            .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }"
         errorLine2="             ~~~">
         <location

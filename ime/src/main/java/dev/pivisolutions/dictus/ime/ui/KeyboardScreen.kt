@@ -68,7 +68,6 @@ fun KeyboardScreen(
     onUndoAutocorrect: () -> Unit = {},
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
-    initialLayer: KeyboardLayer = KeyboardLayer.LETTERS,
     onKeySound: (KeyType) -> Unit = {},
     onMoveCursor: (Int) -> Unit = {},
     keyboardLayout: String = "azerty",  // NEW — AZERTY/QWERTY from DataStore
@@ -77,9 +76,8 @@ fun KeyboardScreen(
     onFrenchAdaptiveVariant: (String) -> Unit = {},
     autoCapSignal: AutoCapSignal? = null,
 ) {
-    // Keyboard state — initialLayer drives the starting layer from the KEYBOARD_MODE preference.
-    // remember(initialLayer) ensures recomposition resets the layer if the preference changes.
-    var currentLayer by remember(initialLayer) { mutableStateOf(initialLayer) }
+    // Keyboard state — the keyboard always opens on letters (#288, no "open on 123" setting).
+    var currentLayer by remember { mutableStateOf(KeyboardLayer.LETTERS) }
     var shiftState by remember { mutableStateOf(ShiftState()) }
     val isShifted = shiftState.isShifted
     val isCapsLock = shiftState.isCapsLock

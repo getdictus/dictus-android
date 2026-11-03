@@ -1,7 +1,7 @@
 package dev.pivisolutions.dictus.ui.settings
 
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -51,20 +51,12 @@ class SettingsLayoutTest {
         }
     }
 
+    /** #288: the keyboard always opens on letters, as iOS #888; no ABC / 123 choice is left. */
     @Test
-    fun `default mode is an inline ABC 123 segment writing the same preference`() {
-        composeRule.onNodeWithText("ABC").assertIsSelected()
-
-        composeRule.onNodeWithText("123").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        assertEquals("123", pref(PreferenceKeys.KEYBOARD_MODE))
-        composeRule.onNodeWithText("123").assertIsSelected()
-        // The former bottom sheet's title never shows.
-        composeRule.onNodeWithText("Mode par défaut du clavier").assertDoesNotExist()
-
-        composeRule.onNodeWithText("ABC").performClick()
-        composeRule.waitForIdle()
-        assertEquals("abc", pref(PreferenceKeys.KEYBOARD_MODE))
+    fun `no default page segment`() {
+        composeRule.onNodeWithText("ABC").assertDoesNotExist()
+        composeRule.onNodeWithText("123").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Mode par défaut").assertDoesNotExist()
     }
 
     /** #134: each language has its own layout; the single row is gone until the keyboard picker (#191). */

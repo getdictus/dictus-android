@@ -63,7 +63,7 @@ object PreferenceKeys {
     val LAST_TRANSCRIPTION_SAVED_AT = longPreferencesKey("last_transcription_saved_at")
 
     // --- Keyboard mode (Phase 5) ---
-    /** Default keyboard opening mode: "abc" (letters) or "123" (numbers). */
+    // Read by nothing since #288, which opens the keyboard on letters always: only removed at app start.
     val KEYBOARD_MODE = stringPreferencesKey("keyboard_mode")
 
     // --- Suggestions (Phase 8) ---
