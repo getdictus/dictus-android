@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Onboarding: Welcome screen (Step 1) -->
-    <string name="onboarding_welcome_wordmark">Dictus</string>
-    <string name="onboarding_welcome_tagline">Dictation vocale, 100\u00a0% offline</string>
+    <!-- Onboarding: Welcome screen (Step 1), the intro carousel (#197, iOS WelcomePage) -->
+    <string name="onboarding_intro_walking_title">Parlez. Dictus \u00e9crit.</string>
+    <string name="onboarding_intro_walking_subtitle">Dans toutes vos apps, depuis le clavier.</string>
+    <string name="onboarding_intro_metro_title">M\u00eame sans r\u00e9seau.</string>
+    <string name="onboarding_intro_metro_subtitle">Dans le m\u00e9tro ou en avion, Dictus \u00e9crit quand m\u00eame. Tout se passe sur votre t\u00e9l\u00e9phone.</string>
+    <string name="onboarding_intro_keyboard_title">Dans votre clavier.</string>
+    <string name="onboarding_intro_keyboard_subtitle">Dans vos notes, messages ou e-mails\u00a0: touchez le micro, parlez, le texte arrive.</string>
+    <string name="onboarding_intro_page">Page %1$d sur %2$d</string>
     <string name="onboarding_welcome_cta">Commencer</string>
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
