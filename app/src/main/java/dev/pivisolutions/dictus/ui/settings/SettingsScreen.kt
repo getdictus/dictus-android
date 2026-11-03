@@ -2,10 +2,12 @@ package dev.pivisolutions.dictus.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,6 +86,7 @@ fun SettingsScreen(
     onNavigateToLicences: () -> Unit = {},
     onNavigateToDebugLogs: () -> Unit = {},
     onNavigateToSoundSettings: () -> Unit = {},
+    onNavigateToTranscriptionDebug: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
@@ -216,9 +219,17 @@ fun SettingsScreen(
         // Legal notices is Android-only, next to the other web link.
         SectionHeader(text = stringResource(R.string.settings_section_about))
         SettingsCard {
+            // Five taps open the hidden transcription debug log (#295), in release builds too, as on iOS.
+            val versionTaps = remember { MultiTapCounter() }
             SettingInfoRow(
                 label = stringResource(R.string.settings_version),
                 value = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    if (versionTaps.onTap(SystemClock.uptimeMillis())) onNavigateToTranscriptionDebug()
+                },
             )
             SettingDivider()
             SettingLinkRow(
@@ -438,9 +449,10 @@ private fun SettingMenuRow(
 private fun SettingInfoRow(
     label: String,
     value: String,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
             .padding(horizontal = 16.dp),

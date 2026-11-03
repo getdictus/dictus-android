@@ -31,6 +31,7 @@ import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.TranscriptionHistoryMetadata
@@ -50,6 +51,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import dev.pivisolutions.dictus.asr.ParakeetProvider
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelManager
@@ -85,6 +87,7 @@ import timber.log.Timber
 interface DictationServiceEntryPoint {
     fun dataStore(): DataStore<Preferences>
     fun transcriptionHistoryWriter(): TranscriptionHistoryWriter
+    fun transcriptionDebugStore(): TranscriptionDebugStore
 }
 
 class DictationService : Service(), DictationController {
@@ -127,7 +130,14 @@ class DictationService : Service(), DictationController {
             wakeLock = transcriptionWakeLock,
             lastTranscription = LastTranscriptionStore.instance,
             recordTally = DictationTally(dataStore)::record,
+            recordDebugEntry = { entry -> withContext(Dispatchers.IO) { transcriptionDebugStore.append(entry) } },
         )
+    }
+    private val transcriptionDebugStore: TranscriptionDebugStore by lazy {
+        EntryPointAccessors.fromApplication(
+            applicationContext,
+            DictationServiceEntryPoint::class.java,
+        ).transcriptionDebugStore()
     }
     private val transcriptionWakeLock by lazy { PowerManagerTranscriptionWakeLock(applicationContext) }
 
@@ -159,6 +169,9 @@ class DictationService : Service(), DictationController {
     // Only touched on the main thread (binder calls from UI and onStartCommand).
     private var pendingStart = false
     private var pendingSource = DictationSource.APP
+
+    // The surface of the take being recorded or transcribed: the debug log's writer (#295).
+    private var takeSource = DictationSource.APP
 
     // Sound feedback for recording lifecycle events.
     // Initialized in onCreate(); conditionally played based on SOUND_ENABLED preference.
@@ -296,6 +309,7 @@ class DictationService : Service(), DictationController {
                     return START_NOT_STICKY
                 }
                 pendingStart = false
+                takeSource = pendingSource
                 recorder.start(pendingSource)
                 if (soundEnabled) soundPlayer.playStart()
                 Timber.i(
@@ -451,7 +465,8 @@ class DictationService : Service(), DictationController {
             )
 
             // 3. Download the model if needed, transcribe, post-process.
-            val outcome = transcriber.transcribe(samples, activeModelKey, engineLanguage)
+            val dictation = DictationContext.from(prefs, engineLanguage, takeSource)
+            val outcome = transcriber.transcribe(samples, activeModelKey, dictation)
 
             // 4. Only a dictation with words reaches history.
             if (outcome is TranscriptionOutcome.Transcribed) {

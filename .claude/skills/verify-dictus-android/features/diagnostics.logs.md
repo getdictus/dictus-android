@@ -5,7 +5,7 @@ Réglages → À propos shows the version, the app's own log (without any dictat
 - **ID:** `diagnostics.logs`
 - **Tier:** Gratuit
 - **Statut Android:** présent
-- **Screens:** `app.settings.debug-logs`, `app.settings.licences`, `app.settings` — see [screens.md](screens.md)
+- **Screens:** `app.settings.debug-logs`, `app.settings.polish-debug`, `app.settings.licences`, `app.settings` — see [screens.md](screens.md)
 
 ## Sub-features
 
@@ -13,6 +13,7 @@ Réglages → À propos shows the version, the app's own log (without any dictat
 - `diagnostics.log-export`: « Exporter les logs de débogage »: a ZIP (`dictus-logs.zip`) through the share sheet. — présent
 - `diagnostics.app-group-check`: — Spécifique iOS.
 - `diagnostics.about`: « Version », « Licences », « GitHub », « Mentions légales ». — présent
+- `polish.debug` (iOS ID): « Transcription debug », opened by tapping « Version » five times quickly, in release builds too. One entry per dictation the engine returned text for, app (`<APP>`) or keyboard (`<KBD>`), kept 7 days in `files/polish_events.jsonl` with the dictated text in plain text; menu « Exporter le JSON… » (`dictus-polish-debug-<yyyyMMdd-HHmmss>.json`, the iOS schema, through the share sheet) and « Effacer ». — présent (#295)
 
 ## How to get to it (user POV)
 
@@ -26,6 +27,7 @@ Preconditions: Launch and Doctor OK.
 - **Scroll.** Réglages, `gesture-swipe` (0.5, 0.8) → (0.5, 0.2) twice. → `À propos`, `Version`, `Debug Logs` (`evidence.sh about`).
 - **Read the log.** Tap `Debug Logs`. → title `Debug Logs`, the menu `⋮`, log lines oldest first (`screen.sh app.settings.debug-logs`); `Retour`.
 - **Export (sheet only).** Tap `Exporter les logs de débogage`. → the share sheet `Partage de 1 fichier`, `dictus-logs.zip` (seen 2026-10-20); system back, never pick a destination.
+- **Transcription debug.** Tap `Version` five times quickly (`gesture-tap` with `clickCount: 5`). → title `Transcription debug`, `Résultats (N affichés)`, `Événements récents`, one row per dictation (`polish off`, the raw text, `<KBD>  none  stt=<model>  det=-  <ms>ms  <n>→<n>`); tap a row → `Événement de transcription` with `tx mode`, `keyboard`, `stt lang` (`(inert)` on Parakeet). Menu `Menu` → `Exporter le JSON…` opens the share sheet on `dictus-polish-debug-….json`: system back, never send. From the host: `adb shell run-as dev.pivisolutions.dictus cat files/polish_events.jsonl` (one JSON per line, `metrics.languageResolution.sttLanguageCode` is the language the engine got).
 - **Licences.** Tap `Licences`. → the list (`screen.sh app.settings.licences`); `Retour`.
 - **Proof.** The tree of each screen. The same log is readable from the host: `adb shell run-as dev.pivisolutions.dictus cat files/dictus.log`. The exported `dictus.log` inside the ZIP is that file with the context header on top; to pull it without a share target, `adb exec-out run-as dev.pivisolutions.dictus cat cache/dictus-logs.zip > dictus-logs.zip` after tapping export.
 
@@ -39,7 +41,7 @@ Preconditions: Launch and Doctor OK.
 
 ## Gotchas
 
-- Do not tap « Effacer » in the menu: it erases Pierre's log.
+- Do not tap « Effacer » in the menu: it erases Pierre's log. The same goes for « Effacer » in Transcription debug: it erases his dictation journal.
 - The export opens the share sheet with Pierre's apps and accounts: prove the sheet opens, then system back; never send.
 - Coming back from Debug Logs restores Réglages at another scroll offset: re-read the frames before the next tap (a stale frame opened the export sheet once).
 - « GitHub » and « Mentions légales » open the browser.

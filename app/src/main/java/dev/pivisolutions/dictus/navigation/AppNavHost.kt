@@ -46,6 +46,7 @@ import dev.pivisolutions.dictus.ui.settings.LicencesScreen
 import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
+import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
 import kotlinx.coroutines.flow.map
 
 /**
@@ -271,6 +272,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.History.route &&
         currentRoute != AppDestination.Licences.route &&
         currentRoute != AppDestination.DebugLogs.route &&
+        currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
         !currentRoute.startsWith("sound_picker")
 
@@ -343,6 +345,9 @@ private fun MainTabsScreen(
                     onNavigateToSoundSettings = {
                         navController.navigate(AppDestination.SoundSettings.route)
                     },
+                    onNavigateToTranscriptionDebug = {
+                        navController.navigate(AppDestination.TranscriptionDebug.route)
+                    },
                 )
             }
             composable(AppDestination.Licences.route) {
@@ -352,6 +357,11 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.DebugLogs.route) {
                 DebugLogsScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(AppDestination.TranscriptionDebug.route) {
+                TranscriptionDebugScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

@@ -7,12 +7,14 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.history.RoomTranscriptionHistoryRepository
 import dev.pivisolutions.dictus.history.TranscriptionHistoryDatabase
 import dev.pivisolutions.dictus.history.TranscriptionHistoryRepository
 import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
 import dev.pivisolutions.dictus.service.ModelInstaller
+import java.io.File
 import javax.inject.Singleton
 
 /**
@@ -63,4 +65,10 @@ object AppModule {
     fun provideTranscriptionHistoryWriter(
         repository: TranscriptionHistoryRepository,
     ): TranscriptionHistoryWriter = TranscriptionHistoryWriter(repository)
+
+    /** One instance per process: its lock is what serializes the keyboard's and the app's writes. */
+    @Provides
+    @Singleton
+    fun provideTranscriptionDebugStore(@ApplicationContext context: Context): TranscriptionDebugStore =
+        TranscriptionDebugStore(File(context.filesDir, TranscriptionDebugStore.FILE_NAME))
 }

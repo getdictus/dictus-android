@@ -120,6 +120,28 @@
     <string name="debug_logs_menu_cd">Menu</string>
     <string name="debug_logs_back_cd">Retour</string>
 
+    <!-- TranscriptionDebugScreen (#295) -->
+    <plurals name="transcription_debug_outcomes">
+        <item quantity="one">Résultats (%1$d affiché)</item>
+        <item quantity="many">Résultats (%1$d affichés)</item>
+        <item quantity="other">Résultats (%1$d affichés)</item>
+    </plurals>
+    <plurals name="transcription_debug_stored">
+        <item quantity="one">%1$d événement enregistré au total (7 derniers jours). L’export contient toute la période.</item>
+        <item quantity="many">%1$d événements enregistrés au total (7 derniers jours). L’export contient toute la période.</item>
+        <item quantity="other">%1$d événements enregistrés au total (7 derniers jours). L’export contient toute la période.</item>
+    </plurals>
+    <string name="transcription_debug_retention">Conservés 7 jours sur cet appareil. L’export contient toute la période.</string>
+    <string name="transcription_debug_recent">Événements récents</string>
+    <string name="transcription_debug_empty">Aucun événement pour l’instant. Dictez quelque chose, puis revenez.</string>
+    <string name="transcription_debug_export">Exporter le JSON…</string>
+    <string name="transcription_debug_clear">Effacer</string>
+    <string name="transcription_debug_export_failed">Échec de l’export</string>
+    <string name="transcription_debug_event_title">Événement de transcription</string>
+    <string name="transcription_debug_raw">Sortie brute du moteur</string>
+    <string name="transcription_debug_engine_output">Sortie du polish</string>
+    <string name="transcription_debug_no_polish">(pas de polish : moteur non appelé)</string>
+
     <!-- LicencesScreen -->
     <string name="licences_title">Licences</string>
     <string name="licences_back_cd">Retour</string>

@@ -66,9 +66,10 @@ class DictationLogPrivacyTest {
             recordTally = DictationTally(
                 PreferenceDataStoreFactory.create(produceFile = { folder.newFile("tally.preferences_pb") }),
             )::record,
+            recordDebugEntry = {},
         )
 
-        val outcome = transcriber.transcribe(FloatArray(16_000), "tiny", "fr")
+        val outcome = transcriber.transcribe(FloatArray(16_000), "tiny", fixed("fr"))
         DictationTrace.end()
         // Rotate by hand (the real cap is 2 MB) so the engine lines sit in the previous file.
         val logFile = TimberSetup.getLogFile()!!
