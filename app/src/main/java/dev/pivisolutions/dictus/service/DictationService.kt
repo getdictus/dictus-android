@@ -22,7 +22,6 @@ import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.audio.DictationSoundPlayer
 import dev.pivisolutions.dictus.core.logging.DictationTrace
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
-import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationStartGuard
@@ -454,9 +453,9 @@ class DictationService : Service(), DictationController {
             //    without needing a service restart.
             val prefs = dataStore.data.first()
             val activeModelKey = prefs[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY
-            val languagePref = TranscriptionLanguage.resolve(prefs[PreferenceKeys.TRANSCRIPTION_LANGUAGE])
-            // "auto" is passed through: whisper.cpp detects the language itself.
-            val engineLanguage = TranscriptionLanguage.engineLanguage(languagePref)
+            // "auto" is passed through: whisper.cpp detects the language itself. In follow
+            // mode this is the keyboard's language at the moment the take is transcribed.
+            val engineLanguage = DictationLanguage.engineLanguage(prefs)
 
             Timber.i(
                 "confirmAndTranscribe: model=%s, engine=%s, language=%s",
@@ -478,7 +477,7 @@ class DictationService : Service(), DictationController {
                     retention = PremiumFlags.effectiveRetention(retention),
                     text = outcome.text,
                     metadata = TranscriptionHistoryMetadata(
-                        requestedLanguage = languagePref,
+                        requestedLanguage = engineLanguage,
                         durationMillis = samples.size * 1_000L / RecordingDurationPolicy.SAMPLE_RATE_HZ,
                         modelKey = activeModelKey,
                         provider = model?.provider?.name ?: "UNKNOWN",
