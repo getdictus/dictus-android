@@ -54,7 +54,7 @@ class SettingsViewModel @Inject constructor(
     /** Currently selected transcription language, one of [TranscriptionLanguage.SUPPORTED]. */
     val language: StateFlow<String> = dataStore.data
         .map { TranscriptionLanguage.resolve(it[PreferenceKeys.TRANSCRIPTION_LANGUAGE]) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, TranscriptionLanguage.AUTO)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TranscriptionLanguage.FOLLOW)
 
     /** Keyboard correction language, independent from transcription language. */
     val keyboardLanguage: StateFlow<String> = dataStore.data

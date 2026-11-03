@@ -78,6 +78,7 @@
     <string name="settings_legal">Legal notices</string>
 
     <!-- Settings: Language picker values -->
+    <string name="settings_language_follow_keyboard">Follow keyboard language</string>
     <string name="settings_language_auto">Automatic</string>
     <string name="settings_language_fr">Fran\u00e7ais</string>
     <string name="settings_language_en">English</string>
