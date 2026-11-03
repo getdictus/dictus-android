@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.theme.DictusTheme
+import dev.pivisolutions.dictus.service.ModelInstallState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -48,13 +49,32 @@ class HomeScreenNoModelTest {
         composeRule.onNodeWithText("New dictation").assertDoesNotExist()
     }
 
-    private fun showHome(downloaded: Set<String>) {
+    @Test
+    fun `an install that ends while home is on screen brings the normal home`() {
+        val downloaded = mutableSetOf<String>()
+        val install = MutableStateFlow<ModelInstallState>(ModelInstallState.Downloading(80))
+        showHome(downloaded, install)
+        composeRule.onNodeWithText("Download a model to get started").assertExists()
+
+        downloaded += "base"
+        install.value = ModelInstallState.Done
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Download a model to get started").assertDoesNotExist()
+        composeRule.onNodeWithText("New dictation").assertExists()
+    }
+
+    private fun showHome(
+        downloaded: Set<String>,
+        install: Flow<ModelInstallState> = MutableStateFlow(ModelInstallState.Idle),
+    ) {
         composeRule.setContent {
             DictusTheme {
                 HomeScreen(
                     dataStore = FakeDataStore(activeModel = "base"),
                     onNewDictation = {},
                     isModelDownloaded = { it in downloaded },
+                    installState = { install },
                 )
             }
         }

@@ -58,6 +58,9 @@ import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
+import dev.pivisolutions.dictus.service.ModelInstallState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 
 /**
@@ -75,6 +78,8 @@ import kotlinx.coroutines.flow.map
  *   premium flag; tests override it to exercise the gated behaviour both ways.
  * @param isModelDownloaded Whether every file of a model is on disk. Defaults to
  *   [ModelManager.isDownloaded]; tests answer it themselves instead of writing model files.
+ * @param installState A model's background install, as `ModelInstaller.state` reports it: each
+ *   change checks the disk again, so an install that ends while Home is on screen shows at once.
  */
 @Composable
 fun HomeScreen(
@@ -83,6 +88,7 @@ fun HomeScreen(
     onOpenHistory: () -> Unit = {},
     historyEnabled: Boolean = PremiumFlags.HISTORY_VISIBLE,
     isModelDownloaded: (modelKey: String) -> Boolean = rememberModelDownloadCheck(),
+    installState: (modelKey: String) -> Flow<ModelInstallState> = { emptyFlow() },
 ) {
     // null until DataStore answers, so the no-model card never flashes for a user whose
     // active model is downloaded but is not the default one.
@@ -95,9 +101,11 @@ fun HomeScreen(
 
     val activeModel = ModelCatalog.findByKey(activeModelKey)
     val context = LocalContext.current
-    // Checked when Home enters the composition: a download finishes on the Models tab, and
-    // coming back to Home composes it again, as iOS refreshes on onAppear.
-    val modelReady = remember(storedModelKey, isModelDownloaded) {
+    // Checked when Home is composed and whenever the active model's install moves, as iOS
+    // HomeView follows ModelManager's published state.
+    val activeInstall by remember(activeModelKey, installState) { installState(activeModelKey) }
+        .collectAsState(initial = null)
+    val modelReady = remember(storedModelKey, activeInstall, isModelDownloaded) {
         storedModelKey?.let(isModelDownloaded) ?: true
     }
     val historySwipeThresholdPx = with(LocalDensity.current) { 120.dp.toPx() }
