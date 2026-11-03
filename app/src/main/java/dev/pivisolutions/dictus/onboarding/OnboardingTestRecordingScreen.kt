@@ -1,6 +1,8 @@
 package dev.pivisolutions.dictus.onboarding
 
+import android.app.Activity
 import android.os.SystemClock
+import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
@@ -35,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -84,7 +87,9 @@ import kotlinx.coroutines.delay
  * The picker reaches Dictus from any of them.
  *
  * WHY THE PAGE ENDS AT THE KEYBOARD (imePadding): the app cannot draw over the keyboard, so
- * the hint and « Passer » sit right above it, as on iOS.
+ * the hint and « Passer » sit right above it, as on iOS. The window is set to resize while
+ * the page is shown: in the default mode Android pans it up to the cursor instead, and the
+ * title leaves the screen.
  *
  * @param isDictusKeyboard whether Dictus is Android's current keyboard (MainActivity
  *   watches the system setting).
@@ -131,6 +136,15 @@ fun OnboardingTestRecordingScreen(
     fun leave() {
         frozenStage = stage
         isCompleted = true
+    }
+
+    val activity = context as? Activity
+    DisposableEffect(activity) {
+        val window = activity?.window
+        val previousMode = window?.attributes?.softInputMode
+        @Suppress("DEPRECATION") // Still what stops the pan on an edge-to-edge window.
+        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        onDispose { if (window != null && previousMode != null) window.setSoftInputMode(previousMode) }
     }
 
     LaunchedEffect(Unit) {
