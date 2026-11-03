@@ -11,6 +11,15 @@
     <string name="onboarding_intro_page">Page %1$d sur %2$d</string>
     <string name="onboarding_welcome_cta">Commencer</string>
 
+    <!-- Onboarding: Language step (#198) -->
+    <string name="onboarding_language_title">Votre langue</string>
+    <string name="onboarding_language_subtitle">Celle de votre téléphone, déjà choisie. Vous pourrez la changer plus tard dans Réglages.</string>
+    <string name="onboarding_language_role">Dictée et clavier</string>
+    <string name="onboarding_language_change">Changer</string>
+    <string name="onboarding_language_layout">Disposition du clavier</string>
+    <string name="onboarding_language_model">Modèle %1$s, le meilleur pour votre langue sur ce téléphone. ~%2$d Mo, téléchargés dès que vous continuez. Modifiable dans Modèles.</string>
+    <string name="onboarding_language_cta">Continuer</string>
+
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>
     <string name="onboarding_mic_permission_body">Dictus a besoin du microphone pour transcrire votre voix. Vos enregistrements restent sur votre appareil.</string>
