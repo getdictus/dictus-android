@@ -9,7 +9,7 @@ A first launch walks through six steps inside the onboarding shell (#196, iOS `O
 
 ## Sub-features
 
-- `onboarding.welcome`: « Dictus — Dictation vocale, 100 % offline », « Commencer ». — présent
+- `onboarding.welcome`: the intro carousel (#197, iOS `WelcomePage`): three swipeable pages, each looping the iOS scene video (muted, light or dark render after the app's theme, its still frame until the first frame, for good under « Réduire les animations »): « Parlez. Dictus écrit. » / « Dans toutes vos apps, depuis le clavier. », « Même sans réseau. » / « … Tout se passe sur votre téléphone. », « Dans votre clavier. » / « Dans vos notes, messages ou e-mails : … »; page dots (current page a blue capsule, TalkBack « Page N sur 3 »), « Commencer » on every page. Unlike iOS, the pages do not turn by themselves. — présent
 - `onboarding.language`: — absent: no language or layout step (layout defaults to AZERTY, changeable in Réglages).
 - `onboarding.keyboard-setup`: — Spécifique iOS (Full Access); Android's own step is `onboarding.ime-setup`.
 - `onboarding.apple-intelligence`: — Spécifique iOS.

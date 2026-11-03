@@ -6,7 +6,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 
 | Screen ID | Screen | How to reach it | Features | States | Capture |
 | --- | --- | --- | --- | --- | --- |
-| `app.onboarding.welcome` | Onboarding 1/6: « Dictus — Dictation vocale, 100 % offline », « Commencer »; no progress bar | fresh install only | onboarding | — | no — onboarding completed on the Pixel; seeing it again requires wiping the data (forbidden) |
+| `app.onboarding.welcome` | Onboarding 1/6: intro carousel (#197), looping scene video, « Parlez. Dictus écrit. », page dots, « Commencer »; no progress bar | fresh install only | onboarding | page 1 walking / page 2 « Même sans réseau. » / page 3 « Dans votre clavier. »; light / dark render | no — onboarding completed on the Pixel; seeing it again requires wiping the data (forbidden) |
 | `app.onboarding.language` | — | — | onboarding | absent on Android | — |
 | `app.onboarding.keyboard-setup` | — | — | onboarding | iOS-only; see app.onboarding.ime-setup | — |
 | `app.onboarding.apple-intelligence` | — | — | onboarding | iOS-only | — |
