@@ -19,6 +19,11 @@ import dev.pivisolutions.dictus.R
  * disappears against the background it was rendered for. The drawn text in the videos
  * and stills is in English by default and in French under `raw-fr` / `drawable-fr-nodpi`.
  *
+ * WHY H.264 WHEN iOS SHIPS HEVC: the iOS files are HEVC Main 10 (10-bit), which Android
+ * does not require phones to decode, and the emulator's decoder rejects. The same frames
+ * re-encoded to H.264 High 8-bit (`ffmpeg -c:v libx264 -crf 26 -tune animation`, SSIM
+ * 0.992 or more against the iOS file) play on every Android phone, and weigh less.
+ *
  * @param stillFrameMs where in the video the still was taken (iOS `stillFrameSeconds`).
  *   The video's first play starts there, so the hand-over from the still shows no jump.
  */
