@@ -89,7 +89,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 
 /**
  * Main IME service for Dictus keyboard.
@@ -160,6 +159,7 @@ class DictusImeService : LifecycleInputMethodService() {
     // only to skip a repeat decision for an unchanged editor, so a shift the user just tapped off
     // is not re-armed by a late selection update.
     private val _autoCapSignal = MutableStateFlow<AutoCapSignal?>(null)
+    private val _keyboardSession = MutableStateFlow(0)
     private var autoCapMode = AutoCapMode.NONE
     private var lastAutoCapContext: String? = null
     // Double-space full stop (#193): allowed per field from EditorInfo, undone by the next Backspace.
@@ -683,6 +683,8 @@ class DictusImeService : LifecycleInputMethodService() {
         Timber.d("Keyboard hidden: finishingInput=%b", finishingInput)
         cancelActiveTouch()
         dictationFeedback.onKeyboardHidden()
+        // The next opening starts without a run of symbols (#286).
+        _keyboardSession.value++
         super.onFinishInputView(finishingInput)
     }
 
@@ -795,6 +797,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val predictionToken by _predictionToken.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
         val autoCapSignal by _autoCapSignal.collectAsState()
+        val keyboardSession by _keyboardSession.collectAsState()
         val activeKeyboardState by _activeKeyboardState.collectAsState()
         val activeLanguage = activeKeyboardState.language
         val activeLayout = activeKeyboardState.layout
@@ -845,13 +848,6 @@ class DictusImeService : LifecycleInputMethodService() {
             "auto" -> ThemeMode.AUTO
             else -> ThemeMode.DARK
         }
-
-        // Read keyboard mode preference to set the initial layer when the keyboard opens.
-        // "123" starts in the NUMBERS layer; everything else defaults to LETTERS.
-        val keyboardModeKey by entryPoint.dataStore().data
-            .map { it[PreferenceKeys.KEYBOARD_MODE] ?: "abc" }
-            .collectAsState(initial = "abc")
-        val initialLayer = if (keyboardModeKey == "123") KeyboardLayer.NUMBERS else KeyboardLayer.LETTERS
 
         // Distinct from the configurable recording start/stop/cancel sounds.
         val keySoundsFlow = remember {
@@ -1000,7 +996,6 @@ class DictusImeService : LifecycleInputMethodService() {
                         }
                     },
                     themeMode = themeMode,
-                    initialLayer = initialLayer,
                     onKeySound = { keyType ->
                         keyboardSoundPlayer.play(keyType, keySoundsEnabled)
                     },
@@ -1028,6 +1023,7 @@ class DictusImeService : LifecycleInputMethodService() {
                         if (usesFrenchAdaptiveKey) handleFrenchAdaptiveVariant(variant)
                     },
                     autoCapSignal = autoCapSignal,
+                    keyboardSession = keyboardSession,
                 )
             }
             is DictationState.Recording -> {

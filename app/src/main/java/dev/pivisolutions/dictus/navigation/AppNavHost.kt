@@ -10,7 +10,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,6 +30,7 @@ import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
 import dev.pivisolutions.dictus.recording.RecordingScreen
+import dev.pivisolutions.dictus.service.ModelInstaller
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.onboarding.OnboardingMicPermissionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModelDownloadScreen
@@ -299,6 +302,8 @@ private fun MainTabsScreen(
                 .padding(innerPadding),
         ) {
             composable(AppDestination.Home.route) {
+                val context = LocalContext.current
+                val modelInstaller = remember(context) { ModelInstaller(context.applicationContext) }
                 HomeScreen(
                     dataStore = dataStore,
                     onNewDictation = {
@@ -307,6 +312,7 @@ private fun MainTabsScreen(
                     onOpenHistory = {
                         navController.navigate(AppDestination.History.route) { launchSingleTop = true }
                     },
+                    installState = modelInstaller::state,
                 )
             }
             // History is a Pro feature that has not shipped yet: while the flag is off the

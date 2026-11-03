@@ -91,7 +91,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `dictation.device-gating` | Free | absent — no device is refused outright; only the models' RAM filter exists | no |
 | `dictation.start-in-app` | Free | present | no |
 | `dictation.copy-last` | Free | present | no |
-| `dictation.download-prompt` | Free | partial — no prompt on Home; only the mic answers « Aucun modèle vocal » | no |
+| `dictation.download-prompt` | Free | present — Home card « Télécharger un modèle pour commencer », no « Nouvelle dictée » (#187) | no |
 | `dictation.from-widget` | Free | absent — no widget | no |
 | `return.swipe-back` | N/A | iOS-only (N/A) | no |
 | `return.auto-return` | N/A | iOS-only (N/A) | no |
@@ -153,7 +153,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `keyboard.language-switch` | Free | present — tap on ☰ (FR→EN→ES→DE), no panel | no |
 | `keyboard.layout` | Free | partial — one layout per language, QWERTZ for German (#134); no picker until #191 | no |
 | `keyboard.number-row` | Free | absent | no |
-| `keyboard.default-page` | Free | present | no |
+| `keyboard.default-page` | Free | retired (#288) — the keyboard always opens on letters; iOS removes it in getdictus/dictus-ios#888, not shipped yet | no |
 | `keyboard.transcription-language` | Free | present — « Suivre la langue du clavier » (default, #186), `Automatique` or a fixed language | no |
 | `keyboard.open-app` | Free | present — long press on ☰ → Settings | no |
 | `emoji.picker` | Free | present — iOS categories, bar at the bottom (#192); no skin tones | no |
@@ -254,7 +254,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.private-fields` | Free | present — no suggestions or learning in sensitive fields | yes |
 | `sounds.key-clicks` | Free | present — « Sons du clavier » | yes |
 | `onboarding.ime-setup` | Free | present | yes |
-| `onboarding.default-page` | Free | retired (#270) — ABC / 123 in Réglages only, as on iOS | yes |
+| `onboarding.default-page` | Free | retired (#270), as on iOS; the Réglages choice is retired too (#288) | yes |
 | `models.english-only-warning` | Free | present — Parakeet 110M | yes |
 | `models.storage` | Free | present — « Stockage utilisé » | yes |
 | `app.onboarding.ime-setup` | Free | present | yes |
@@ -295,7 +295,7 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: a language sheet per model.
 6. **Settings — `app.settings`**
    - iOS: section headers in normal case (« Transcription », « Clavier »), transcription language « Suivre la langue du clavier », ABC / 123 choice as a segment with a keyboard preview.
-   - Android (since #189): large « Réglages » title, sentence-case headers in the iOS order, inline ABC / 123 segment, inline menus instead of sheets, « Suivre la langue du clavier » first in « Langue » (#186). Still different: no keyboard preview under the segment; an extra « Apparence » section.
+   - Android (since #189): large « Réglages » title, sentence-case headers in the iOS order, inline menus instead of sheets, « Suivre la langue du clavier » first in « Langue » (#186). Still different: no ABC / 123 choice (retired by #288; iOS removes it in getdictus/dictus-ios#888, not shipped yet); an extra « Apparence » section.
    - Proposal: none for the dictation language, closed by #186.
 7. **Sounds — `app.settings.sounds`**
    - iOS: « Activer les sons » with an explanatory note, « Sons par événement »: « Début », « Fin », « Annuler » with the chosen sound shown on the right.
@@ -307,8 +307,8 @@ Screen by screen, what looks different between the Android captures of `../scree
    - Proposal: done in #185.
 9. **Onboarding — `app.onboarding.*`**
    - iOS: dashed progress bar at the top, illustrations, tagline « Parlez. Dictus écrit. », language + layout step.
-   - Android: progress dots, tagline « Dictation vocale, 100 % offline » (« Dictation » is English; in French: « Dictée vocale »), no language step but an ABC / 123 step.
-   - Proposal: fix the tagline; replace the ABC / 123 step with the iOS language + layout step (the default mode stays in Settings).
+   - Android: progress dots, tagline « Dictation vocale, 100 % offline » (« Dictation » is English; in French: « Dictée vocale »), no language step (the ABC / 123 step was retired by #270).
+   - Proposal: fix the tagline; add the iOS language + layout step.
 10. **Emoji — `kbd.emoji`**
     - iOS: categories at the bottom with 🔍 « Rechercher des Emoji » and ABC.
     - Android (since #192): the iOS picker ported to Compose: categories at the bottom, 🔍 « Rechercher des Emoji », ABC and ⌫; since #139 the picker sits under the keyboard bar, which stays visible as on iOS, and the keyboard keeps its height.

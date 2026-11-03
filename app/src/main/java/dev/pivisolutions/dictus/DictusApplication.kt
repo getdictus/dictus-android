@@ -5,7 +5,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.HiltAndroidApp
 import dev.pivisolutions.dictus.core.logging.TimberSetup
-import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
@@ -56,12 +55,6 @@ class DictusApplication : Application() {
         // the active language (#134). The IME runs in this process, so this covers it too; the
         // reads also resolve as if migrated, in case the keyboard reads before this lands.
         scope.launch { KeyboardLayoutPreference.migrateIfNeeded(dataStore) }
-        // Home's card lives in memory since #245; this drops the text an older version left on disk.
-        scope.launch {
-            dataStore.edit { preferences ->
-                preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION)
-                preferences.remove(PreferenceKeys.LAST_TRANSCRIPTION_SAVED_AT)
-            }
-        }
+        scope.launch { RetiredPreferences.remove(dataStore) }
     }
 }

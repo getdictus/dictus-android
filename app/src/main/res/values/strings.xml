@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Onboarding: Welcome screen (Step 1) -->
-    <string name="onboarding_welcome_wordmark">Dictus</string>
-    <string name="onboarding_welcome_tagline">Voice dictation, 100\u00a0% offline</string>
-    <string name="onboarding_welcome_cta">Start</string>
+    <!-- Onboarding: Welcome screen (Step 1), the intro carousel (#197, iOS WelcomePage) -->
+    <string name="onboarding_intro_walking_title">Speak. Dictus writes.</string>
+    <string name="onboarding_intro_walking_subtitle">In all your apps, from the keyboard.</string>
+    <string name="onboarding_intro_metro_title">Even offline.</string>
+    <string name="onboarding_intro_metro_subtitle">On the metro or on a plane, Dictus still writes. Everything happens on your phone.</string>
+    <string name="onboarding_intro_keyboard_title">In your keyboard.</string>
+    <string name="onboarding_intro_keyboard_subtitle">In your notes, messages or emails: tap the mic, speak, and the text appears.</string>
+    <string name="onboarding_intro_page">Page %1$d of %2$d</string>
+    <string name="onboarding_welcome_cta">Get started</string>
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>
@@ -52,7 +57,6 @@
     <!-- Settings: Row labels -->
     <string name="settings_language">Language</string>
     <string name="settings_keyboard_language">Keyboard language</string>
-    <string name="settings_default_mode">Default mode</string>
     <string name="settings_haptic_feedback">Haptic feedback</string>
     <string name="settings_keyboard_sounds">Keyboard sounds</string>
     <string name="settings_suggestions">Suggestions</string>
@@ -200,6 +204,8 @@
 
     <!-- HomeScreen -->
     <string name="home_active_model">Active model</string>
+    <string name="home_no_model_title">Download a model to get started</string>
+    <string name="home_no_model_body">Go to the Models tab to download your first transcription model.</string>
     <string name="home_last_transcription">Last transcription</string>
     <string name="home_copy_cd">Copy</string>
     <string name="home_new_dictation">New dictation</string>
