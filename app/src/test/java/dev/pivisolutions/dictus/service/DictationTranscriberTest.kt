@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.service
 
+import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.stats.DictationTally
@@ -134,7 +135,7 @@ class DictationTranscriberTest {
     fun `every take the engine returned is logged with the language that reached the engine`() = runTest {
         // (stored mode, keyboard, code handed to the engine) → iOS transcriptionMode.
         val modes = listOf(
-            Triple("follow", "de", "de") to "followKeyboard",
+            Triple(TranscriptionLanguage.FOLLOW, "de", "de") to "followKeyboard",
             Triple("auto", "de", "auto") to "autoDetect",
             Triple("fr", "de", "fr") to "explicit(fr)",
         )

@@ -152,7 +152,7 @@ data class LanguageResolution(
     companion object {
         /** iOS `TranscriptionLanguageMode.telemetryDescription` of a resolved stored mode. */
         fun transcriptionModeDescription(mode: String): String = when (mode) {
-            "follow" -> "followKeyboard"
+            TranscriptionLanguage.FOLLOW -> "followKeyboard"
             TranscriptionLanguage.AUTO -> "autoDetect"
             else -> "explicit($mode)"
         }

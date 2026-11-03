@@ -25,11 +25,26 @@ class DictationContextTest {
     }
 
     @Test
-    fun `missing preferences resolve as the service and the keyboard resolve them`() {
+    fun `missing preferences follow the keyboard, French by default`() {
         assertEquals(
-            // The stored default is the resolver's to decide ("follow" once #292 lands).
-            DictationContext("auto", TranscriptionLanguage.resolve(null), "fr", DictationSource.APP),
-            DictationContext.from(emptyPreferences(), sttLanguage = "auto", source = DictationSource.APP),
+            DictationContext("fr", TranscriptionLanguage.FOLLOW, "fr", DictationSource.APP),
+            DictationContext.from(emptyPreferences(), sttLanguage = "fr", source = DictationSource.APP),
         )
+    }
+
+    @Test
+    fun `in follow mode the engine language and the logged keyboard language are the keyboard's`() {
+        // The Pixel check of #292: FR then DE keyboard, sttLanguageCode fr then de.
+        for (keyboard in listOf("fr", "de")) {
+            val prefs = preferencesOf(
+                PreferenceKeys.TRANSCRIPTION_LANGUAGE to TranscriptionLanguage.FOLLOW,
+                PreferenceKeys.KEYBOARD_LANGUAGE to keyboard,
+            )
+
+            assertEquals(
+                DictationContext(keyboard, TranscriptionLanguage.FOLLOW, keyboard, DictationSource.KEYBOARD),
+                DictationContext.from(prefs, DictationLanguage.engineLanguage(prefs), DictationSource.KEYBOARD),
+            )
+        }
     }
 }

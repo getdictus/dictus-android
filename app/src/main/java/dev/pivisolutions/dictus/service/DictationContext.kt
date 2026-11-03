@@ -10,8 +10,8 @@ import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
  * What [DictationTranscriber] is told about one take beyond its audio.
  *
  * @param sttLanguage the code handed to the engine, or "auto".
- * @param transcriptionMode the stored transcription language, resolved: "auto", a language code,
- *   or "follow" once the keyboard-following mode exists (#292).
+ * @param transcriptionMode the stored transcription language, resolved: [TranscriptionLanguage.FOLLOW],
+ *   [TranscriptionLanguage.AUTO] or a language code.
  * @param keyboardLanguage the keyboard's language when the take is transcribed.
  * @param source the surface that started the dictation, the debug log's `writer` (#295).
  */
