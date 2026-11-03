@@ -218,7 +218,7 @@ private fun OnboardingScreen(
                 onNext = onNext,
             )
             OnboardingStep.FirstDictation -> OnboardingTestRecordingScreen(
-                dictationController = dictationController,
+                isDictusKeyboard = imeSelected,
                 // Like iOS leaveFirstDictation: the test dictation must not greet the user on Home.
                 onNext = {
                     LastTranscriptionStore.instance.clear()

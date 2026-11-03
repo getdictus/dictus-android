@@ -26,21 +26,21 @@
 
     <!-- Onboarding: Model download screen (Step 4) -->
 
-    <!-- Onboarding: Test recording screen (Step 5) -->
-    <string name="onboarding_test_recording_title">Testez la dict\u00e9e</string>
-    <string name="onboarding_test_recording_body">Appuyez sur le micro et parlez.\nDictus transcrira votre voix.</string>
-    <string name="onboarding_test_recording_result">R\u00e9sultat</string>
-    <string name="onboarding_test_recording_transcribing">Transcription en cours\u2026</string>
-    <string name="onboarding_test_recording_no_result">(Aucun r\u00e9sultat)</string>
-    <string name="onboarding_test_recording_tap_to_stop">Toucher pour arr\u00eater</string>
-    <string name="onboarding_test_recording_cta_continue">Continuer</string>
-    <string name="onboarding_test_recording_cd_copy">Copier</string>
-    <string name="onboarding_test_recording_cd_stop">Arr\u00eater</string>
-    <string name="onboarding_test_recording_cd_record">Enregistrer</string>
+    <!-- Onboarding: first dictation (#199, iOS GlobeKeyTutorialPage) -->
+    <string name="onboarding_first_dictation_title">Essayez maintenant</string>
+    <string name="onboarding_first_dictation_opening">Votre clavier s\u2019ouvre en dessous.</string>
+    <string name="onboarding_first_dictation_before_tap">Touchez le champ pour ouvrir votre clavier</string>
+    <string name="onboarding_first_dictation_other_keyboard">Changez de clavier, puis choisissez Dictus.</string>
+    <string name="onboarding_first_dictation_dictus_keyboard">Touchez le micro bleu et parlez. Le texte arrive ici.</string>
+    <string name="onboarding_first_dictation_placeholder_tap">Touchez ici pour \u00e9crire</string>
+    <string name="onboarding_first_dictation_placeholder_say">Dites quelque chose\u2026</string>
+    <string name="onboarding_first_dictation_banner_choose">Choisir Dictus</string>
+    <string name="onboarding_first_dictation_banner_mic">Touchez le micro bleu, puis parlez</string>
+    <string name="onboarding_first_dictation_continue">Continuer</string>
 
     <!-- Onboarding: Success screen (Step 6) -->
-    <string name="onboarding_success_title">C\u2019est pr\u00eat\u00a0!</string>
-    <string name="onboarding_success_body">Dictus est configur\u00e9 et pr\u00eat \u00e0 l\u2019emploi.</string>
+    <string name="onboarding_success_title">C\u2019est pr\u00eat</string>
+    <string name="onboarding_success_body">Dictus vous attend dans le clavier de chaque app. Un appui sur le micro, et parlez.</string>
     <string name="onboarding_success_cta">Commencer</string>
 
     <!-- Onboarding: shell around every step (#196) -->
