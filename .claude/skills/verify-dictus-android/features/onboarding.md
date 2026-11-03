@@ -1,21 +1,21 @@
 # Onboarding
 
-A first launch walks through six steps inside the onboarding shell (#196, iOS `OnboardingShell`): welcome, microphone, adding and selecting the keyboard, model download, a test dictation, and « C'est prêt ! ». The shell draws a dashed progress bar of four segments (microphone to test dictation; none on the welcome and completion screens), a back chevron on the microphone step, a large title, a blue pill button and a « Passer » row under it on the test dictation.
+A first launch walks through seven steps inside the onboarding shell (#196, iOS `OnboardingShell`): welcome, language (#198), microphone, adding and selecting the keyboard, model download, a test dictation, and « C'est prêt ! ». The shell draws a dashed progress bar of five segments (language to test dictation; none on the welcome and completion screens), a back chevron on the language step, a large title, a blue pill button and a « Passer » row under it on the test dictation.
 
 - **ID:** `onboarding`
 - **Tier:** Gratuit
-- **Statut Android:** partiel (no language step, no Pro scenes, no What's new)
-- **Screens:** `app.onboarding.welcome`, `app.onboarding.microphone`, `app.onboarding.ime-setup`, `app.onboarding.model-preparation`, `app.onboarding.first-dictation`, `app.onboarding.completion`, `sys.settings.ime`, `sys.ime-picker` — see [screens.md](screens.md)
+- **Statut Android:** partiel (no Pro scenes, no What's new)
+- **Screens:** `app.onboarding.welcome`, `app.onboarding.language`, `app.onboarding.microphone`, `app.onboarding.ime-setup`, `app.onboarding.model-preparation`, `app.onboarding.first-dictation`, `app.onboarding.completion`, `sys.settings.ime`, `sys.ime-picker` — see [screens.md](screens.md)
 
 ## Sub-features
 
 - `onboarding.welcome`: the intro carousel (#197, iOS `WelcomePage`): three swipeable pages, each looping the iOS scene video (muted, light or dark render after the app's theme, its still frame until the first frame, for good under « Réduire les animations »): « Parlez. Dictus écrit. » / « Dans toutes vos apps, depuis le clavier. », « Même sans réseau. » / « … Tout se passe sur votre téléphone. », « Dans votre clavier. » / « Dans vos notes, messages ou e-mails : … »; page dots (current page a blue capsule, TalkBack « Page N sur 3 »), « Commencer » on every page. Unlike iOS, the pages do not turn by themselves. — présent
-- `onboarding.language`: — absent: no language or layout step (layout defaults to AZERTY, changeable in Réglages).
+- `onboarding.language`: « Votre langue » (#198, iOS `LanguageSetupPage`), right after the intro, prefilled from the phone's languages (the first one with a Dictus keyboard, else English, as on iOS). One « Dictée et clavier » row (code badge, language name, « Changer » opening the four keyboard languages): dictation follows the keyboard (#292), so there is no separate dictation language. « DISPOSITION DU CLAVIER » AZERTY / QWERTY / QWERTZ, the model line (« Modèle Parakeet 0.6B v3, le meilleur pour votre langue sur ce téléphone. ~N Mo, téléchargés dès que vous continuez. Modifiable dans Modèles. »), and a preview drawn by the keyboard's own `KeyboardView` in the chosen layout. « Continuer » saves the keyboard language and layout (a layout equal to the language's default stays inherited, #134) and starts the recommended model's install in the background (#170 worker). Nothing is saved before « Continuer »; going back to the intro keeps the choices. — présent
 - `onboarding.keyboard-setup`: — Spécifique iOS (Full Access); Android's own step is `onboarding.ime-setup`.
 - `onboarding.apple-intelligence`: — Spécifique iOS.
 - `onboarding.pro-scenes`: — absent.
 - `onboarding.smart-mode-pick`: — absent.
-- `onboarding.model-download`: the full-screen preparation screen (`app.onboarding.model-preparation`, #181) for the model recommended for the phone's RAM. The install starts when the step opens (no « Télécharger »): « On prépare votre modèle », « Téléchargement  N % », « X Mo sur Y Mo », « Le téléchargement continue si vous quittez l'app. », then « Préparation pour ce téléphone » (extraction, verification), « Chargement du modèle » (engine load), « Votre modèle est prêt »; after 1.5 s the step moves on by itself (no « Continuer »). On failure « Le modèle vocal n'a pas pu être préparé » + « Réessayer ». The install runs in a WorkManager foreground worker (#169): it goes on with the screen off or the app in the background, and the step shows its state again when reopened. — présent
+- `onboarding.model-download`: the full-screen preparation screen (`app.onboarding.model-preparation`, #181) for the model recommended for the phone's RAM. The install starts with « Continuer » on the language step, or when this step opens if it is not running (no « Télécharger »): « On prépare votre modèle », « Téléchargement  N % », « X Mo sur Y Mo », « Le téléchargement continue si vous quittez l'app. », then « Préparation pour ce téléphone » (extraction, verification), « Chargement du modèle » (engine load), « Votre modèle est prêt »; after 1.5 s the step moves on by itself (no « Continuer »). On failure « Le modèle vocal n'a pas pu être préparé » + « Réessayer ». The install runs in a WorkManager foreground worker (#169): it goes on with the screen off or the app in the background, and the step shows its state again when reopened. — présent
 - `onboarding.microphone`: « Microphone », « Autoriser le micro » then the system prompt. — présent
 - `onboarding.first-dictation`: « Testez la dictée »: tap the mic, speak (live waveform, same as the recording screen, #184), see « Résultat », « Continuer »; « Passer » under it goes to « C'est prêt ! ». Leaving the step empties « Dernière transcription », so the test dictation does not show on Accueil (#245, iOS `leaveFirstDictation`). — présent
 - `onboarding.stop-standby`: — Spécifique iOS.
@@ -25,19 +25,19 @@ A first launch walks through six steps inside the onboarding shell (#196, iOS `O
 - `onboarding.ime-setup` *(Spécifique Android)*: « Ajouter le clavier »: « Ouvrir les paramètres » (system on-screen keyboards) then « Sélectionner Dictus » (system picker); « Continuer » only once Dictus is enabled and selected.
 - `onboarding.default-page` *(Spécifique Android)*: — retired by #270, as iOS removed its layer-choice step (#213). The Réglages choice is retired too (`keyboard.default-page`, #288): the keyboard always opens on letters.
 
-- `onboarding.back` *(shell)*: the chevron at the top left, and the system back, return from the microphone step to the welcome screen. No step from the keyboard setup on goes back, as on iOS; there the system back leaves the app, and the next launch resumes on the same step.
+- `onboarding.back` *(shell)*: the chevron at the top left, and the system back, return from the language step to the welcome screen. No step after the language step goes back (the model download has started), as on iOS; there the system back leaves the app, and the next launch resumes on the same step.
 
 ## How to get to it (user POV)
 
 1. Install Dictus and open it.
-2. « Commencer » → micro → clavier → modèle → test → « C'est prêt ! ».
+2. « Commencer » → langue → micro → clavier → modèle → test → « C'est prêt ! ».
 
 ## Driving it with Argent
 
 Preconditions: a phone where Dictus has **never completed onboarding**. Pierre's Pixel has completed it, and the only way back is clearing the app's data (models, settings, notes' state): **not allowed** on this phone.
 
 - **Reach step 1.** Not reachable on Pierre's Pixel without `pm clear`: report `onboarding` as not driven, with this precondition, unless a disposable device or AVD (`dictus_api35`, headless) is provided.
-- **On a fresh install.** `launch.sh` → `READY`; `mcp__argent__await-ui-element {selector:{text:"Commencer"}}` → tap → `Microphone` → `Autoriser le micro` → system dialog → `Continuer` → `Ajouter le clavier` …
+- **On a fresh install.** `launch.sh` → `READY`; `mcp__argent__await-ui-element {selector:{text:"Commencer"}}` → tap → `Votre langue` → `Continuer` → `Microphone` → `Autoriser le micro` → system dialog → `Continuer` → `Ajouter le clavier` …
 - **Resume.** No helper writes a step into DataStore (a protobuf file): walk to the step, then `adb shell am force-stop dev.pivisolutions.dictus` and relaunch; the same step and the same bar segment come back.
 - **Proof.** One capture per step and the final `Accueil` tab in the tree; `has_completed_onboarding` true in `adb shell run-as dev.pivisolutions.dictus cat files/datastore/*.preferences_pb | strings`.
 
