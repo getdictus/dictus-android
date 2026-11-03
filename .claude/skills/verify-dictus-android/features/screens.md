@@ -33,7 +33,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `app.settings.diagnostic` | — | — | diagnostics.logs | iOS-only | — |
 | `app.settings.debug-logs` | Settings → Debug Logs, « Effacer » / « Copier » menu | Réglages, scroll → `Debug Logs` | diagnostics.logs | logs / « Aucun log disponible » / menu open | [yes](../screens/app.settings.debug-logs.png) |
 | `app.settings.licences` | Settings → Licences | Réglages, scroll → `Licences` | diagnostics.logs | — | [yes](../screens/app.settings.licences.png) |
-| `app.settings.polish-debug` | — | — | polish | iOS-only | — |
+| `app.settings.polish-debug` | « Transcription debug » (#295): « Résultats » counts, « Événements récents » newest first, detail sheet « Événement de transcription », menu « Exporter le JSON… » / « Effacer » | Réglages, scroll → tap `Version` five times quickly | diagnostics.logs | events / « Aucun événement pour l'instant » / detail sheet / menu open / share sheet | no — seen on the emulator (#295), Pixel capture to take |
 | `app.pro.hub` | — | — | pro.subscription | absent | — |
 | `app.pro.smart-modes` | — | — | smart-modes | absent | — |
 | `app.pro.history` | — | — | history | absent | — |

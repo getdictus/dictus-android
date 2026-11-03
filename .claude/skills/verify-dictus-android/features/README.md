@@ -107,7 +107,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `polish.toggle` | N/A | iOS-only (N/A) | no |
 | `polish.clean-up` | N/A | iOS-only (N/A) | no |
 | `polish.in-keyboard` | N/A | iOS-only (N/A) | no |
-| `polish.debug` | N/A | iOS-only (N/A) | no |
+| `polish.debug` | Free | present — « Transcription debug », five taps on « Version »; one polish-off event per dictation, as there is no polish on Android (#295) | no |
 | `smart-modes.fan` | Pro on iOS — absent | absent | no |
 | `smart-modes.structured` | Pro on iOS — absent | absent | no |
 | `smart-modes.list` | Pro on iOS — absent | absent | no |
@@ -219,7 +219,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.settings.diagnostic` | N/A | iOS-only (N/A) | no |
 | `app.settings.debug-logs` | Free | present | no |
 | `app.settings.licences` | Free | present | no |
-| `app.settings.polish-debug` | N/A | iOS-only (N/A) | no |
+| `app.settings.polish-debug` | Free | present — « Transcription debug » (#295) | no |
 | `app.pro.hub` | Pro on iOS — absent | absent | no |
 | `app.pro.smart-modes` | Pro on iOS — absent | absent | no |
 | `app.pro.history` | Pro on iOS — absent | absent | no |
