@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.onboarding
 
 import android.app.Activity
+import android.os.Build
 import android.os.SystemClock
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -109,7 +110,10 @@ fun OnboardingTestRecordingScreen(
     var text by rememberSaveable { mutableStateOf("") }
     var isFieldFocused by remember { mutableStateOf(false) }
     // A focused field is not enough: the system back closes the keyboard and keeps the focus.
-    val isKeyboardUp = isFieldFocused && WindowInsets.isImeVisible
+    // Below Android 15 this window is not edge to edge, so Compose sees no keyboard inset and
+    // the focus is all there is to go by, as on iOS.
+    val isKeyboardUp = isFieldFocused &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM || WindowInsets.isImeVisible)
 
     // True from the page's start until a keyboard comes up or the wait gives up.
     var isAwaitingAutoFocus by remember { mutableStateOf(true) }
