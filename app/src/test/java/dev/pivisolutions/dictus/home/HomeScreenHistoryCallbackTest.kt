@@ -33,6 +33,7 @@ class HomeScreenHistoryCallbackTest {
                     onNewDictation = { dictationCalls++ },
                     onOpenHistory = { historyCalls++ },
                     historyEnabled = true,
+                    isModelDownloaded = { true },
                 )
             }
         }

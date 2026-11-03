@@ -200,6 +200,8 @@
 
     <!-- HomeScreen -->
     <string name="home_active_model">Mod\u00e8le actif</string>
+    <string name="home_no_model_title">T\u00e9l\u00e9charger un mod\u00e8le pour commencer</string>
+    <string name="home_no_model_body">Allez dans l\u2019onglet Mod\u00e8les pour t\u00e9l\u00e9charger votre premier mod\u00e8le de transcription.</string>
     <string name="home_last_transcription">Derni\u00e8re transcription</string>
     <string name="home_copy_cd">Copier</string>
     <string name="home_new_dictation">Nouvelle dict\u00e9e</string>
