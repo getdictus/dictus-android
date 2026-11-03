@@ -119,6 +119,27 @@
     <string name="debug_logs_menu_cd">Menu</string>
     <string name="debug_logs_back_cd">Back</string>
 
+    <!-- TranscriptionDebugScreen (#295): hidden, five taps on Settings > Version -->
+    <string name="transcription_debug_title" translatable="false">Transcription debug</string>
+    <plurals name="transcription_debug_outcomes">
+        <item quantity="one">Outcomes (%1$d shown)</item>
+        <item quantity="other">Outcomes (%1$d shown)</item>
+    </plurals>
+    <plurals name="transcription_debug_stored">
+        <item quantity="one">%1$d total event persisted (last 7 days). Export ships the full window.</item>
+        <item quantity="other">%1$d total events persisted (last 7 days). Export ships the full window.</item>
+    </plurals>
+    <string name="transcription_debug_retention">Kept on this device for 7 days. Export ships the full window.</string>
+    <string name="transcription_debug_recent">Recent events</string>
+    <string name="transcription_debug_empty">No transcription events yet. Dictate something, then come back.</string>
+    <string name="transcription_debug_export">Export JSON…</string>
+    <string name="transcription_debug_clear">Clear</string>
+    <string name="transcription_debug_export_failed">Export failed</string>
+    <string name="transcription_debug_event_title">Transcription event</string>
+    <string name="transcription_debug_raw">Raw STT output</string>
+    <string name="transcription_debug_engine_output">Engine output</string>
+    <string name="transcription_debug_no_polish">(polish off: engine not called)</string>
+
     <!-- LicencesScreen -->
     <string name="licences_title">Licences</string>
     <string name="licences_back_cd">Back</string>
