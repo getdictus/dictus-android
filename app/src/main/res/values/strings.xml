@@ -199,6 +199,8 @@
 
     <!-- HomeScreen -->
     <string name="home_active_model">Active model</string>
+    <string name="home_no_model_title">Download a model to get started</string>
+    <string name="home_no_model_body">Go to the Models tab to download your first transcription model.</string>
     <string name="home_last_transcription">Last transcription</string>
     <string name="home_copy_cd">Copy</string>
     <string name="home_new_dictation">New dictation</string>
