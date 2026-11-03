@@ -91,7 +91,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `dictation.device-gating` | Free | absent — no device is refused outright; only the models' RAM filter exists | no |
 | `dictation.start-in-app` | Free | present | no |
 | `dictation.copy-last` | Free | present | no |
-| `dictation.download-prompt` | Free | partial — no prompt on Home; only the mic answers « Aucun modèle vocal » | no |
+| `dictation.download-prompt` | Free | present — Home card « Télécharger un modèle pour commencer », no « Nouvelle dictée » (#187) | no |
 | `dictation.from-widget` | Free | absent — no widget | no |
 | `return.swipe-back` | N/A | iOS-only (N/A) | no |
 | `return.auto-return` | N/A | iOS-only (N/A) | no |
