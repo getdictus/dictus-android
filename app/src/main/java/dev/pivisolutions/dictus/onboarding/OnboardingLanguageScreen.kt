@@ -32,6 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -39,6 +43,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -253,9 +258,17 @@ private fun ModelLine(model: ModelInfo, modifier: Modifier = Modifier) {
     }
 }
 
+/** Test tag of the keyboard preview, for the tests that check where it ends. */
+internal const val LANGUAGE_PREVIEW_TAG = "onboarding_language_preview"
+
 /**
  * The letter keyboard in the chosen layout, drawn by the keyboard's own [KeyboardView], so
  * the preview is exactly what the user will type on. Touches stop here: it is a picture.
+ *
+ * WHY SCALED DOWN (#198): at its own size (48 dp keys, ~212 dp in all) the page outgrew a
+ * Pixel 4 and the last row ran under « Continuer ». [PREVIEW_SCALE] brings the keys near
+ * iOS's preview (40 pt, `LanguageSetupPage.swift`); the keyboard is laid out at the width
+ * divided by the scale, so once scaled it still fills the width.
  */
 @Composable
 private fun LayoutPreview(setup: LanguageSetup) {
@@ -264,7 +277,7 @@ private fun LayoutPreview(setup: LanguageSetup) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.background)
-            .clearAndSetSemantics {}
+            .clearAndSetSemantics { testTag = LANGUAGE_PREVIEW_TAG }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -273,7 +286,18 @@ private fun LayoutPreview(setup: LanguageSetup) {
                     }
                 }
             }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp)
+            .layout { measurable, constraints ->
+                val width = constraints.maxWidth
+                val keyboard = measurable.measure(Constraints.fixedWidth((width / PREVIEW_SCALE).roundToInt()))
+                layout(width, (keyboard.height * PREVIEW_SCALE).roundToInt()) {
+                    keyboard.placeWithLayer(0, 0) {
+                        scaleX = PREVIEW_SCALE
+                        scaleY = PREVIEW_SCALE
+                        transformOrigin = TransformOrigin(0f, 0f)
+                    }
+                }
+            },
     ) {
         KeyboardView(
             layer = KeyboardLayer.LETTERS,
@@ -285,3 +309,6 @@ private fun LayoutPreview(setup: LanguageSetup) {
         )
     }
 }
+
+/** The preview's size against the keyboard's own: 48 dp keys drawn 38 dp tall. */
+private const val PREVIEW_SCALE = 0.8f

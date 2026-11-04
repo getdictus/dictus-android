@@ -105,6 +105,9 @@ object OnboardingMetrics {
     /** Gap between the top of the safe area and the top row. */
     val topBarTopPadding = 8.dp
 
+    /** Gap between a page's content and its primary button, as iOS's page bottom padding. */
+    val contentBottomGap = 16.dp
+
     /** Gap between the primary button and the Skip row under it. */
     val skipRowSpacing = 12.dp
 }
@@ -327,6 +330,12 @@ private val RemainingSegmentDark = Color(0xFF232D40)
  * scroll that only moves when the content overflows keeps the button reachable and costs
  * nothing where everything fits.
  *
+ * WHY THE 16 DP GAP SITS OUTSIDE THE SCROLL (#198): iOS puts it at the end of the scrolled
+ * content (`OnboardingShell.swift`, `.padding(.bottom, 16)`), so it only shows once the
+ * page is scrolled to its end. Content taller than the screen was then cut flush against
+ * the button, under its shadow, on a Pixel 4. Outside the scroll, the cut edge stays 16 dp
+ * above the button, and a page that fits looks the same as on iOS.
+ *
  * @param bottom the primary button, or nothing on a step without one.
  */
 @Composable
@@ -341,9 +350,9 @@ fun OnboardingPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .padding(bottom = OnboardingMetrics.contentBottomGap)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = OnboardingMetrics.horizontalPadding)
-                .padding(bottom = 16.dp),
+                .padding(horizontal = OnboardingMetrics.horizontalPadding),
         ) {
             OnboardingHeader(
                 title = title,
