@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.onboarding
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.Completion
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.FirstDictation
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.KeyboardSetup
+import dev.pivisolutions.dictus.onboarding.OnboardingStep.Language
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.Microphone
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.ModelPreparation
 import dev.pivisolutions.dictus.onboarding.OnboardingStep.Welcome
@@ -16,24 +17,25 @@ import org.junit.Test
  * The onboarding's order, bar, back, Skip and resume rules (#196).
  *
  * Ported from iOS `DictusCore/Tests/DictusCoreTests/OnboardingStepTests.swift`, on Android's
- * current order. The iOS cases about steps Android does not have yet (language, Pro
- * scenes, stop-standby, the legacy page index) wait for the sub-issues that add them.
+ * current order. The iOS cases about steps Android does not have yet (Pro scenes,
+ * stop-standby, the legacy page index) wait for the sub-issues that add them.
  */
 class OnboardingStepTest {
 
     // --- The order ---
 
     @Test
-    fun `the order is Android's current flow`() {
+    fun `the order is Android's current flow, the language step after the intro`() {
         assertEquals(
-            listOf(Welcome, Microphone, KeyboardSetup, ModelPreparation, FirstDictation, Completion),
+            listOf(Welcome, Language, Microphone, KeyboardSetup, ModelPreparation, FirstDictation, Completion),
             OnboardingStep.entries,
         )
     }
 
     @Test
     fun `next walks the flow and ends after the completion`() {
-        assertEquals(Microphone, Welcome.next)
+        assertEquals(Language, Welcome.next)
+        assertEquals(Microphone, Language.next)
         assertEquals(KeyboardSetup, Microphone.next)
         assertEquals(ModelPreparation, KeyboardSetup.next)
         assertEquals(FirstDictation, ModelPreparation.next)
@@ -46,7 +48,7 @@ class OnboardingStepTest {
     @Test
     fun `the progress bar covers every step between the intro and the completion`() {
         assertEquals(
-            listOf(Microphone, KeyboardSetup, ModelPreparation, FirstDictation),
+            listOf(Language, Microphone, KeyboardSetup, ModelPreparation, FirstDictation),
             OnboardingStep.progressSteps,
         )
         assertFalse(Welcome.showsProgress)
@@ -57,10 +59,11 @@ class OnboardingStepTest {
 
     @Test
     fun `each step with the bar fills its own segment`() {
-        assertEquals(0, Microphone.progressIndex)
-        assertEquals(1, KeyboardSetup.progressIndex)
-        assertEquals(2, ModelPreparation.progressIndex)
-        assertEquals(3, FirstDictation.progressIndex)
+        assertEquals(0, Language.progressIndex)
+        assertEquals(1, Microphone.progressIndex)
+        assertEquals(2, KeyboardSetup.progressIndex)
+        assertEquals(3, ModelPreparation.progressIndex)
+        assertEquals(4, FirstDictation.progressIndex)
     }
 
     // --- Shell: Skip ---
@@ -75,15 +78,14 @@ class OnboardingStepTest {
     @Test
     fun `the steps that go back and where to`() {
         val backs = OnboardingStep.entries.mapNotNull { step -> step.stepBack?.let { step to it } }.toMap()
-        assertEquals(mapOf(Microphone to Welcome), backs)
+        assertEquals(mapOf(Language to Welcome), backs)
     }
 
     @Test
-    fun `no step goes back from the keyboard setup on`() {
-        // As on iOS: once #200 moves this flow to iOS's order, the keyboard setup follows
-        // the step that starts the model download, and going back would cancel or
-        // duplicate it.
-        for (step in OnboardingStep.entries.filter { it.ordinal >= KeyboardSetup.ordinal }) {
+    fun `no step goes back after the language step`() {
+        // As on iOS: confirming the language starts the model download, and going back
+        // past it would cancel or duplicate that download.
+        for (step in OnboardingStep.entries.filter { it.ordinal > Language.ordinal }) {
             assertNull("$step", step.stepBack)
         }
     }
@@ -128,7 +130,7 @@ class OnboardingStepTest {
         // A renamed step would send every install mid-onboarding back to the welcome screen.
         assertEquals(
             listOf(
-                "welcome", "microphone", "keyboardSetup", "modelPreparation",
+                "welcome", "language", "microphone", "keyboardSetup", "modelPreparation",
                 "firstDictation", "completion",
             ),
             OnboardingStep.entries.map { it.storedName },

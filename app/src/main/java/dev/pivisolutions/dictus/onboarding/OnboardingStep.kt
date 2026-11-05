@@ -3,10 +3,10 @@ package dev.pivisolutions.dictus.onboarding
 /**
  * One step of the first-run onboarding, in order, persisted by [storedName] (#196).
  *
- * Port of iOS `DictusCore/OnboardingStep.swift`. The order is still Android's v1 flow; the
- * iOS 2.0 order (language step, microphone right before the first dictation, model wait only
- * when needed) comes with #198 and #200. Steps added later slot in as new entries with new
- * stored names; the existing names keep their meaning.
+ * Port of iOS `DictusCore/OnboardingStep.swift`. The language step follows the intro, as on
+ * iOS (#198); the rest of the order is still Android's v1 flow until #200 moves it to iOS's
+ * (microphone right before the first dictation, model wait only when needed). Steps added
+ * later slot in as new entries with new stored names; the existing names keep their meaning.
  *
  * WHY persisted by name and not by index: every step added or removed would shift the
  * meaning of every index after it. A name means the same step for as long as the step
@@ -23,6 +23,9 @@ package dev.pivisolutions.dictus.onboarding
 enum class OnboardingStep(val storedName: String) {
     /** The welcome screen. */
     Welcome("welcome"),
+
+    /** The keyboard language and layout; confirming it starts the model download (#198). */
+    Language("language"),
 
     /** The microphone permission. Comes before the keyboard in this order (#200 moves it). */
     Microphone("microphone"),
@@ -71,13 +74,13 @@ enum class OnboardingStep(val storedName: String) {
      * The step right after the intro returns to it, as iOS's language step does (#700): a
      * reflex tap on « Commencer » should not lock the user out of the welcome screen.
      *
-     * WHY NOT FROM THE KEYBOARD SETUP ON: iOS gives no back from that step on, and #200
-     * moves this flow to iOS's order, where the keyboard setup follows the step that starts
-     * the model download. Going back there would cancel or duplicate that download.
+     * WHY NOT AFTER THE LANGUAGE STEP: confirming it starts the model download, as on iOS,
+     * which gives no back from the steps that follow it. Going back there would cancel or
+     * duplicate that download.
      */
     val stepBack: OnboardingStep?
         get() = when (this) {
-            Microphone -> Welcome
+            Language -> Welcome
             else -> null
         }
 

@@ -54,36 +54,36 @@ class OnboardingShellTest {
     // --- Progress bar ---
 
     @Test
-    fun `the bar says which step of four is on screen`() {
-        setShell(OnboardingStep.Microphone)
-        composeTestRule.onNodeWithContentDescription("Step 1 of 4").assertExists()
+    fun `the bar says which step of five is on screen`() {
+        setShell(OnboardingStep.Language)
+        composeTestRule.onNodeWithContentDescription("Step 1 of 5").assertExists()
 
         step = OnboardingStep.ModelPreparation
-        composeTestRule.onNodeWithContentDescription("Step 3 of 4").assertExists()
+        composeTestRule.onNodeWithContentDescription("Step 4 of 5").assertExists()
 
         step = OnboardingStep.FirstDictation
-        composeTestRule.onNodeWithContentDescription("Step 4 of 4").assertExists()
+        composeTestRule.onNodeWithContentDescription("Step 5 of 5").assertExists()
     }
 
     @Test
     fun `the welcome and completion screens have no bar`() {
         setShell(OnboardingStep.Welcome)
-        composeTestRule.onNodeWithContentDescription("of 4", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("of 5", substring = true).assertDoesNotExist()
 
         step = OnboardingStep.Completion
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("of 4", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("of 5", substring = true).assertDoesNotExist()
     }
 
     // --- Back ---
 
     @Test
-    fun `the microphone step shows the back chevron and it goes back`() {
-        setShell(OnboardingStep.Microphone)
+    fun `the language step shows the back chevron and it goes back`() {
+        setShell(OnboardingStep.Language)
 
         composeTestRule.onNodeWithContentDescription("Back").performSemanticsAction(SemanticsActions.OnClick)
 
-        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Microphone), backs) }
+        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Language), backs) }
     }
 
     @Test
@@ -98,13 +98,13 @@ class OnboardingShellTest {
 
     @Test
     fun `the system back goes back a step where the chevron does`() {
-        setShell(OnboardingStep.Microphone)
+        setShell(OnboardingStep.Language)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
         }
 
-        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Microphone), backs) }
+        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Language), backs) }
     }
 
     @Test
