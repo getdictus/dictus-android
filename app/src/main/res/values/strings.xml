@@ -19,6 +19,9 @@
     <string name="onboarding_language_layout">Keyboard layout</string>
     <string name="onboarding_language_model">%1$s model, the best for your language on this phone. ~%2$d MB, downloaded as soon as you continue. You can change it in Models.</string>
     <string name="onboarding_language_cta">Continue</string>
+    <string name="onboarding_download_notice_title">The model is downloading</string>
+    <string name="onboarding_download_notice_message">The model (~%1$d MB) is downloading now. You can leave the app, for example to add the keyboard: the download keeps going in the background.</string>
+    <string name="onboarding_download_notice_ok">Got it</string>
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>

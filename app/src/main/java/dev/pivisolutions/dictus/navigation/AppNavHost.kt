@@ -28,6 +28,7 @@ import dev.pivisolutions.dictus.home.HomeScreen
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingDownloadNotice
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingLanguageScreen
 import dev.pivisolutions.dictus.recording.RecordingScreen
@@ -177,6 +178,7 @@ private fun OnboardingScreen(
     val micGranted by viewModel.micPermissionGranted.collectAsState()
     val preparation by viewModel.preparation.collectAsState()
     val languageSetup by viewModel.languageSetup.collectAsState()
+    val downloadNotice by viewModel.downloadNotice.collectAsState()
 
     // The persisted step is still being read: the bare background, as AppNavHost does above.
     val step = currentStep ?: run {
@@ -208,6 +210,12 @@ private fun OnboardingScreen(
                     onLayout = { viewModel.setKeyboardLayout(it) },
                     onContinue = { viewModel.confirmLanguage() },
                 )
+                if (downloadNotice) {
+                    OnboardingDownloadNotice(
+                        model = viewModel.recommendedModelInfo,
+                        onDismiss = { viewModel.dismissDownloadNotice() },
+                    )
+                }
             }
             OnboardingStep.Microphone -> OnboardingMicPermissionScreen(
                 micGranted = micGranted,
