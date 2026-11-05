@@ -1,15 +1,20 @@
 package dev.pivisolutions.dictus.onboarding
 
 import android.content.Context
+import android.content.res.Resources
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
@@ -27,12 +32,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.IOException
+import java.util.Locale
 import javax.inject.Inject
 
 /**
  * ViewModel for the onboarding flow ([OnboardingStep]).
  *
  * Manages state transitions between onboarding steps with validation guards:
+ * - Language: confirming saves the keyboard language and layout and starts the model install
  * - Microphone: user must grant RECORD_AUDIO permission
  * - Keyboard setup: user must enable the Dictus IME
  * - Model preparation: model install must complete before advancing
@@ -67,15 +74,28 @@ import javax.inject.Inject
  * @param modelManager Says whether the recommended model's files are already on disk.
  * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists the mic flag
  *   across process death caused by the mic permission dialog.
+ * @param systemLocales the phone's languages in order of preference, which the language step
+ *   opens on. The system's, not the app's: the app may run in another language.
  */
 @HiltViewModel
-class OnboardingViewModel @Inject constructor(
+class OnboardingViewModel(
     @ApplicationContext context: Context,
     private val dataStore: DataStore<Preferences>,
     private val modelInstaller: ModelInstaller,
     private val modelManager: ModelManager,
     private val savedStateHandle: SavedStateHandle,
+    private val systemLocales: List<Locale>,
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        dataStore: DataStore<Preferences>,
+        modelInstaller: ModelInstaller,
+        modelManager: ModelManager,
+        savedStateHandle: SavedStateHandle,
+    ) : this(context, dataStore, modelInstaller, modelManager, savedStateHandle, systemLocales())
+
 
     // --- Recommended model based on device RAM ---
 
@@ -84,6 +104,22 @@ class OnboardingViewModel @Inject constructor(
 
     /** Full ModelInfo for the recommended model, used by the UI to display name/size/quality. */
     val recommendedModelInfo: ModelInfo = ModelCatalog.findByKey(recommendedKey)!!
+
+    // --- Language step (#198) ---
+
+    /** The stored preferences as read at start, for the layout each keyboard language has. */
+    private var storedPreferences: Preferences = emptyPreferences()
+
+    private val _languageSetup = MutableStateFlow<LanguageSetup?>(null)
+
+    /**
+     * The language step's choices, null until the stored preferences have been read.
+     *
+     * WHY HELD HERE (iOS's draft, #700): the step's back returns to the intro, and the page
+     * reopens on the choices the user left rather than on the system's language again.
+     * Nothing is written before « Continuer ».
+     */
+    val languageSetup: StateFlow<LanguageSetup?> = _languageSetup.asStateFlow()
 
     // --- Step state machine (DataStore-backed, #196) ---
 
@@ -100,15 +136,17 @@ class OnboardingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val stored = try {
-                dataStore.data.first()[PreferenceKeys.ONBOARDING_STEP]
+            val preferences = try {
+                dataStore.data.first()
             } catch (e: IOException) {
                 // An unreadable store starts at the welcome screen rather than crashing.
                 Timber.w(e, "Cannot read the onboarding step")
-                null
+                emptyPreferences()
             }
+            storedPreferences = preferences
+            _languageSetup.compareAndSet(null, LanguageSetup.prefilled(systemLocales, ::storedLayout))
             // A step change made before the read finished wins over the stored step.
-            _currentStep.compareAndSet(null, OnboardingStep.resumed(stored))
+            _currentStep.compareAndSet(null, OnboardingStep.resumed(preferences[PreferenceKeys.ONBOARDING_STEP]))
         }
     }
 
@@ -156,6 +194,39 @@ class OnboardingViewModel @Inject constructor(
     )
 
     // --- Public actions ---
+
+    /** The language step's « Changer » list: [language], on the layout it already has. */
+    fun setKeyboardLanguage(language: SupportedLanguage) {
+        _languageSetup.value = _languageSetup.value?.withLanguage(language, ::storedLayout)
+    }
+
+    /** The language step's layout segment. */
+    fun setKeyboardLayout(layout: KeyboardLayout) {
+        _languageSetup.value = _languageSetup.value?.copy(layout = layout)
+    }
+
+    /**
+     * The language step's « Continuer »: saves the keyboard language and layout, starts the
+     * recommended model's install in the background, and moves on (#198).
+     *
+     * WHY THE INSTALL STARTS HERE (as iOS's language step): the model downloads while the
+     * user finishes the setup, so the preparation step often finds it done.
+     * [startPreparation] is idempotent, and the preparation step calls it again.
+     */
+    fun confirmLanguage() {
+        if (currentStep.value != OnboardingStep.Language) return
+        val setup = languageSetup.value ?: return
+        viewModelScope.launch {
+            try {
+                dataStore.edit { setup.applyTo(it) }
+            } catch (e: IOException) {
+                // The keyboard keeps its current language; Settings can still change it.
+                Timber.w(e, "Cannot save the keyboard language")
+            }
+        }
+        startPreparation()
+        advanceStep()
+    }
 
     /** Grant or revoke microphone permission state. Persisted via SavedStateHandle. */
     fun setMicPermissionGranted(granted: Boolean) {
@@ -245,6 +316,10 @@ class OnboardingViewModel @Inject constructor(
 
     // --- Private ---
 
+    /** The layout [language] types on, as stored before the onboarding started. */
+    private fun storedLayout(language: SupportedLanguage): KeyboardLayout =
+        KeyboardLayoutPreference.layout(storedPreferences, language)
+
     /** Puts [step] on screen and records it as the step to resume at. */
     private fun show(step: OnboardingStep) {
         _currentStep.value = step
@@ -279,4 +354,10 @@ class OnboardingViewModel @Inject constructor(
             }
         }
     }
+}
+
+/** The phone's languages in order of preference, whatever language the app itself runs in. */
+private fun systemLocales(): List<Locale> {
+    val locales = Resources.getSystem().configuration.locales
+    return List(locales.size()) { locales[it] }
 }

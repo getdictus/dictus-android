@@ -6,6 +6,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.models.ModelPreparationPhase
 import dev.pivisolutions.dictus.service.ModelInstallState
@@ -25,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.util.Locale
 
 /**
  * Unit tests for OnboardingViewModel step state machine, download orchestration, and DataStore persistence.
@@ -76,6 +80,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `resume - a relaunch resumes on the step the user left`() = runTest(testDispatcher) {
+        viewModel.advanceStep() // -> Language
         viewModel.advanceStep() // -> Microphone
         viewModel.advanceStep() // -> KeyboardSetup
         advanceUntilIdle()
@@ -88,7 +93,7 @@ class OnboardingViewModelTest {
         viewModel.advanceStep()
         advanceUntilIdle()
 
-        assertEquals("microphone", fakeDataStore.data.first()[PreferenceKeys.ONBOARDING_STEP])
+        assertEquals("language", fakeDataStore.data.first()[PreferenceKeys.ONBOARDING_STEP])
     }
 
     @Test
@@ -108,7 +113,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `resume - going back is what a relaunch resumes on`() = runTest(testDispatcher) {
-        viewModel.advanceStep() // -> Microphone
+        viewModel.advanceStep() // -> Language
         viewModel.goBack() // -> Welcome
         advanceUntilIdle()
 
@@ -141,7 +146,94 @@ class OnboardingViewModelTest {
         vm.advanceStep()
         advanceUntilIdle()
 
+        assertEquals(OnboardingStep.Language, vm.currentStep.value)
+    }
+
+    // --- Language step (#198) ---
+
+    /** A ViewModel on a phone whose languages are [tags], on the language step. */
+    private suspend fun onLanguageStep(vararg tags: String): OnboardingViewModel {
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Language.storedName }
+        return OnboardingViewModel(
+            context, fakeDataStore, fakeInstaller, ModelManager(context), SavedStateHandle(),
+            tags.map(Locale::forLanguageTag),
+        )
+    }
+
+    @Test
+    fun `language - the step opens on the phone's language`() = runTest(testDispatcher) {
+        val vm = onLanguageStep("de-DE", "en-US")
+
+        assertEquals(LanguageSetup(SupportedLanguage.GERMAN, KeyboardLayout.QWERTZ), vm.languageSetup.value)
+    }
+
+    @Test
+    fun `language - the step keeps a layout the user already chose`() = runTest(testDispatcher) {
+        fakeDataStore.edit { KeyboardLayoutPreference.setLayout(it, KeyboardLayout.QWERTY, SupportedLanguage.FRENCH) }
+
+        val vm = onLanguageStep("fr-FR")
+
+        assertEquals(LanguageSetup(SupportedLanguage.FRENCH, KeyboardLayout.QWERTY), vm.languageSetup.value)
+    }
+
+    @Test
+    fun `language - Continue saves the keyboard language and layout`() = runTest(testDispatcher) {
+        val vm = onLanguageStep("fr-FR")
+        vm.setKeyboardLanguage(SupportedLanguage.SPANISH)
+        vm.setKeyboardLayout(KeyboardLayout.AZERTY)
+
+        vm.confirmLanguage()
+        advanceUntilIdle()
+
+        val prefs = fakeDataStore.data.first()
+        assertEquals("es", prefs[PreferenceKeys.KEYBOARD_LANGUAGE])
+        assertEquals(KeyboardLayout.AZERTY, KeyboardLayoutPreference.layout(prefs, SupportedLanguage.SPANISH))
+        assertEquals(null, prefs[PreferenceKeys.TRANSCRIPTION_LANGUAGE])
+    }
+
+    @Test
+    fun `language - Continue starts the recommended model's download and moves on`() = runTest(testDispatcher) {
+        val vm = onLanguageStep("fr-FR")
+
+        vm.confirmLanguage()
+        advanceUntilIdle()
+
+        assertEquals(listOf(vm.recommendedKey), fakeInstaller.installed)
         assertEquals(OnboardingStep.Microphone, vm.currentStep.value)
+    }
+
+    @Test
+    fun `language - Continue does not start a second download over a running one`() = runTest(testDispatcher) {
+        fakeInstaller.state.value = ModelInstallState.Downloading(10)
+        val vm = onLanguageStep("fr-FR")
+
+        vm.confirmLanguage()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), fakeInstaller.installed)
+    }
+
+    @Test
+    fun `language - nothing is saved before Continue`() = runTest(testDispatcher) {
+        val vm = onLanguageStep("fr-FR")
+
+        vm.setKeyboardLanguage(SupportedLanguage.GERMAN)
+        advanceUntilIdle()
+
+        assertEquals(null, fakeDataStore.data.first()[PreferenceKeys.KEYBOARD_LANGUAGE])
+        assertEquals(emptyList<String>(), fakeInstaller.installed)
+    }
+
+    @Test
+    fun `language - going back to the intro keeps the choices`() = runTest(testDispatcher) {
+        val vm = onLanguageStep("fr-FR")
+        vm.setKeyboardLanguage(SupportedLanguage.GERMAN)
+
+        vm.goBack()
+        vm.advanceStep()
+
+        assertEquals(OnboardingStep.Language, vm.currentStep.value)
+        assertEquals(SupportedLanguage.GERMAN, vm.languageSetup.value?.language)
     }
 
     // --- SavedStateHandle restoration ---
@@ -170,13 +262,14 @@ class OnboardingViewModelTest {
     // --- Step navigation ---
 
     @Test
-    fun `advanceStep from the welcome screen moves to the microphone`() = runTest(testDispatcher) {
+    fun `advanceStep from the welcome screen moves to the language step`() = runTest(testDispatcher) {
         viewModel.advanceStep()
-        assertEquals(OnboardingStep.Microphone, viewModel.currentStep.value)
+        assertEquals(OnboardingStep.Language, viewModel.currentStep.value)
     }
 
     @Test
     fun `advanceStep from the microphone moves to the keyboard setup`() = runTest(testDispatcher) {
+        viewModel.advanceStep() // -> Language
         viewModel.advanceStep() // -> Microphone
         viewModel.advanceStep() // -> KeyboardSetup
         assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
@@ -186,7 +279,7 @@ class OnboardingViewModelTest {
     fun `advanceStep from step 5 is blocked when download not complete`() =
         runTest(testDispatcher) {
             // Move to step 5
-            repeat(3) { viewModel.advanceStep() }
+            repeat(4) { viewModel.advanceStep() }
             assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
 
             // Attempt advance — blocked since download not complete
@@ -198,7 +291,7 @@ class OnboardingViewModelTest {
     fun `advanceStep from step 5 advances when download is complete`() =
         runTest(testDispatcher) {
             // Move to step 5
-            repeat(3) { viewModel.advanceStep() }
+            repeat(4) { viewModel.advanceStep() }
 
             viewModel.startModelDownload()
             fakeInstaller.state.value = ModelInstallState.Downloading(50)
@@ -216,7 +309,7 @@ class OnboardingViewModelTest {
     fun `advanceStep from step 6 writes HAS_COMPLETED_ONBOARDING to DataStore`() =
         runTest(testDispatcher) {
             // Move to step 5, complete download, advance to 6
-            repeat(3) { viewModel.advanceStep() }
+            repeat(4) { viewModel.advanceStep() }
             viewModel.startModelDownload()
             fakeInstaller.state.value = ModelInstallState.Done
             advanceUntilIdle()
@@ -237,8 +330,8 @@ class OnboardingViewModelTest {
         }
 
     @Test
-    fun `goBack from the microphone returns to the welcome screen`() = runTest(testDispatcher) {
-        viewModel.advanceStep() // -> Microphone
+    fun `goBack from the language step returns to the welcome screen`() = runTest(testDispatcher) {
+        viewModel.advanceStep() // -> Language
         viewModel.goBack()
         assertEquals(OnboardingStep.Welcome, viewModel.currentStep.value)
     }
@@ -251,16 +344,16 @@ class OnboardingViewModelTest {
 
     @Test
     fun `goBack does nothing on a step without a way back`() = runTest(testDispatcher) {
-        repeat(2) { viewModel.advanceStep() } // -> KeyboardSetup
+        repeat(2) { viewModel.advanceStep() } // -> Microphone, after the download started
         viewModel.goBack()
-        assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
+        assertEquals(OnboardingStep.Microphone, viewModel.currentStep.value)
     }
 
     @Test
     fun `advanceFrom a page no longer on screen is ignored`() = runTest(testDispatcher) {
         // The microphone page, sliding away after the grant moved the flow on, runs its
         // auto-advance a second time: it must not skip the keyboard setup.
-        viewModel.advanceStep() // -> Microphone
+        repeat(2) { viewModel.advanceStep() } // -> Microphone
         viewModel.advanceFrom(OnboardingStep.Microphone) // -> KeyboardSetup
         viewModel.advanceFrom(OnboardingStep.Microphone)
         assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
@@ -282,7 +375,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `skip does nothing on a step that does not offer it`() = runTest(testDispatcher) {
-        repeat(3) { viewModel.advanceStep() } // -> ModelPreparation, install not done
+        repeat(4) { viewModel.advanceStep() } // -> ModelPreparation, install not done
         viewModel.skipStep()
         assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
@@ -292,7 +385,7 @@ class OnboardingViewModelTest {
     @Test
     fun `the keyboard setup leads straight to the model preparation`() = runTest(testDispatcher) {
         // #270: no ABC/123 step in between, as on iOS (#213).
-        repeat(2) { viewModel.advanceStep() } // -> KeyboardSetup
+        repeat(3) { viewModel.advanceStep() } // -> KeyboardSetup
         viewModel.advanceStep()
         assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
@@ -339,7 +432,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `step 5 stays blocked while the install runs`() = runTest(testDispatcher) {
-        repeat(3) { viewModel.advanceStep() }
+        repeat(4) { viewModel.advanceStep() }
         fakeInstaller.state.value = ModelInstallState.Verifying
         advanceUntilIdle()
 

@@ -78,7 +78,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | [`keyboard.emoji`](keyboard.emoji.md) | Free | partial — the keyboard bar disappears while picking (#139) | no |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Free | present | no |
 | `live-activity` | N/A | iOS-only (N/A) | no |
-| [`onboarding`](onboarding.md) | Free | partial — no language step, no Pro scenes, no What's new | no |
+| [`onboarding`](onboarding.md) | Free | partial — no Pro scenes, no What's new | no |
 | `pro.subscription` | Pro on iOS — absent | absent | no |
 | [`diagnostics.logs`](diagnostics.logs.md) | Free | present | no |
 | `dictation.start` | Free | present | no |
@@ -170,7 +170,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `live-activity.controls` | N/A | iOS-only (N/A) | no |
 | `live-activity.toggle` | N/A | iOS-only (N/A) | no |
 | `onboarding.welcome` | Free | present | no |
-| `onboarding.language` | Free | absent — no language/layout step | no |
+| `onboarding.language` | Free | present (#198) | no |
 | `onboarding.keyboard-setup` | N/A | iOS-only (N/A) — Android equivalent: onboarding.ime-setup | no |
 | `onboarding.apple-intelligence` | N/A | iOS-only (N/A) | no |
 | `onboarding.pro-scenes` | Free | absent | no |
@@ -193,7 +193,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `diagnostics.app-group-check` | N/A | iOS-only (N/A) | no |
 | `diagnostics.about` | Free | present | no |
 | `app.onboarding.welcome` | Free | present | no |
-| `app.onboarding.language` | Free | absent | no |
+| `app.onboarding.language` | Free | present (#198) | no |
 | `app.onboarding.keyboard-setup` | N/A | iOS-only (N/A) — equivalent: app.onboarding.ime-setup | no |
 | `app.onboarding.apple-intelligence` | N/A | iOS-only (N/A) | no |
 | `app.onboarding.smart-modes-scene` | Free | absent | no |

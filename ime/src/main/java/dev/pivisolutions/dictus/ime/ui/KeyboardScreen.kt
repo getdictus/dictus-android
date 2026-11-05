@@ -101,7 +101,9 @@ fun KeyboardScreen(
         autoCapSignal?.let { shiftState = shiftState.afterAutoCapCheck(it.shouldCapitalize) }
     }
 
+    // Each opening (hide/show, field change) starts on letters, never on 123 or #+= (#291).
     LaunchedEffect(keyboardSession) {
+        currentLayer = KeyboardLayer.LETTERS
         symbolsRun = symbolsRun.afterKeyboardShown()
     }
 
