@@ -279,6 +279,14 @@ licensee {
 // Copy licensee artifacts.json into APK assets so LicencesScreen can read it at runtime.
 // The licensee plugin generates the file in build/reports/ but does not bundle it as an asset.
 androidComponents {
+    // No release unit tests in :app (#222). Robolectric runs an application module's tests
+    // against the variant's own packaged manifest, so the ComponentActivity that
+    // createComposeRule() launches (ui-test-manifest) would have to ship in the release APK.
+    // Release unit tests would only repeat the debug ones; library modules keep theirs.
+    beforeVariants(selector().withBuildType("release")) { variantBuilder ->
+        variantBuilder.enableUnitTest = false
+    }
+
     onVariants { variant ->
         variant.outputs.forEach { output ->
             output.versionName.set(appVersionName)

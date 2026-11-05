@@ -32,7 +32,7 @@ Native libraries must support 16 KB memory pages (Google Play, Android 15+). `:w
 
 ## Testing
 
-- Run unit tests: `./gradlew testDebugUnitTest`
+- Run unit tests: `./gradlew test` (debug and release variants; `:app` runs debug only)
 - To test the keyboard on a device: enable Dictus in **Settings > System > Languages & input > On-screen keyboard > Manage on-screen keyboards**, then switch to it in any text field
 
 ## Contributing Guidelines
