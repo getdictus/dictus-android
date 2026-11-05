@@ -23,6 +23,10 @@ import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 /**
  * Onboarding microphone step — permission request, in the shell's centred page.
  *
+ * Right before the first dictation, as iOS's `MicPermissionPage` (#200): no step before it
+ * uses the microphone, and asking here keeps the system prompt out of the first recording.
+ * The flow passes over the step when the permission is already granted.
+ *
  * The CTA button changes based on permission state:
  * - Before grant: "Autoriser le micro" with mic icon → triggers system permission dialog
  * - After grant: "Continuer" with no icon → advances to next step

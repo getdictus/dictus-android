@@ -9,6 +9,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.models.ModelPreparationPhase
 import dev.pivisolutions.dictus.service.ModelInstallState
@@ -78,14 +79,29 @@ class OnboardingViewModelTest {
     /** A new ViewModel on the same DataStore: what a relaunch after a force-stop reads. */
     private fun relaunch() = OnboardingViewModel(context, fakeDataStore, fakeInstaller, ModelManager(context), SavedStateHandle())
 
+    /** The system's microphone permission, as a second run or an earlier grant leaves it. */
+    private fun grantMicrophone() {
+        org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication())
+            .grantPermissions(android.Manifest.permission.RECORD_AUDIO)
+    }
+
+    /** Every file of the recommended model at its exact size: what [ModelManager.isDownloaded] reads. */
+    private fun placeRecommendedModelOnDisk() {
+        val key = viewModel.recommendedKey
+        val dir = java.io.File(ModelManager(context).getTargetPath(key)!!).parentFile!!.apply { mkdirs() }
+        for (file in ModelCatalog.findByKey(key)!!.files) {
+            // Sparse: the size is all ModelManager checks.
+            java.io.RandomAccessFile(java.io.File(dir, file.name), "rw").use { it.setLength(file.sizeBytes) }
+        }
+        assertTrue(ModelManager(context).isDownloaded(key))
+    }
+
     @Test
     fun `resume - a relaunch resumes on the step the user left`() = runTest(testDispatcher) {
-        viewModel.advanceStep() // -> Language
-        viewModel.advanceStep() // -> Microphone
-        viewModel.advanceStep() // -> KeyboardSetup
+        repeat(3) { viewModel.advanceStep() } // -> ModelPreparation
         advanceUntilIdle()
 
-        assertEquals(OnboardingStep.KeyboardSetup, relaunch().currentStep.value)
+        assertEquals(OnboardingStep.ModelPreparation, relaunch().currentStep.value)
     }
 
     @Test
@@ -97,8 +113,8 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `resume - every stored step is restored`() = runTest(testDispatcher) {
-        for (step in OnboardingStep.entries) {
+    fun `resume - every stored step but the microphone is restored`() = runTest(testDispatcher) {
+        for (step in OnboardingStep.entries - OnboardingStep.Microphone) {
             fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = step.storedName }
             assertEquals("$step", step, relaunch().currentStep.value)
         }
@@ -110,6 +126,15 @@ class OnboardingViewModelTest {
 
         assertEquals(OnboardingStep.Welcome, relaunch().currentStep.value)
     }
+
+    @Test
+    fun `resume - a microphone stored by the order before #200 resumes at the keyboard setup`() =
+        runTest(testDispatcher) {
+            // Written while the microphone came before the keyboard: the keyboard is not set up.
+            fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = "microphone" }
+
+            assertEquals(OnboardingStep.KeyboardSetup, relaunch().currentStep.value)
+        }
 
     @Test
     fun `resume - going back is what a relaunch resumes on`() = runTest(testDispatcher) {
@@ -199,7 +224,7 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(vm.recommendedKey), fakeInstaller.installed)
-        assertEquals(OnboardingStep.Microphone, vm.currentStep.value)
+        assertEquals(OnboardingStep.KeyboardSetup, vm.currentStep.value)
     }
 
     @Test
@@ -268,18 +293,68 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `advanceStep from the microphone moves to the keyboard setup`() = runTest(testDispatcher) {
-        viewModel.advanceStep() // -> Language
-        viewModel.advanceStep() // -> Microphone
-        viewModel.advanceStep() // -> KeyboardSetup
-        assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
+    fun `the new order on a fresh install - every step is shown`() = runTest(testDispatcher) {
+        // #200: nothing ready, nothing granted. The model wait is left by its own Done below.
+        val walked = mutableListOf(viewModel.currentStep.value)
+        repeat(3) { viewModel.advanceStep(); walked += viewModel.currentStep.value }
+        fakeInstaller.state.value = ModelInstallState.Done
+        advanceUntilIdle()
+        repeat(3) { viewModel.advanceStep(); walked += viewModel.currentStep.value }
+
+        assertEquals(
+            listOf(
+                OnboardingStep.Welcome, OnboardingStep.Language, OnboardingStep.KeyboardSetup,
+                OnboardingStep.ModelPreparation, OnboardingStep.Microphone, OnboardingStep.FirstDictation,
+                OnboardingStep.Completion,
+            ),
+            walked,
+        )
     }
 
     @Test
-    fun `advanceStep from step 5 is blocked when download not complete`() =
+    fun `the keyboard setup passes over the model wait once the model is on disk`() = runTest(testDispatcher) {
+        placeRecommendedModelOnDisk()
+        repeat(3) { viewModel.advanceStep() } // -> KeyboardSetup, then past the model wait
+
+        assertEquals(OnboardingStep.Microphone, viewModel.currentStep.value)
+    }
+
+    @Test
+    fun `the keyboard setup waits for the model while it is still installing`() = runTest(testDispatcher) {
+        fakeInstaller.state.value = ModelInstallState.Downloading(40)
+        advanceUntilIdle()
+        repeat(3) { viewModel.advanceStep() }
+
+        assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
+    }
+
+    @Test
+    fun `the model wait passes over a microphone already granted`() = runTest(testDispatcher) {
+        grantMicrophone()
+        repeat(3) { viewModel.advanceStep() } // -> ModelPreparation
+        fakeInstaller.state.value = ModelInstallState.Done
+        advanceUntilIdle()
+
+        viewModel.advanceStep()
+        assertEquals(OnboardingStep.FirstDictation, viewModel.currentStep.value)
+    }
+
+    @Test
+    fun `a ready model and a granted microphone go from the keyboard to the first dictation`() =
         runTest(testDispatcher) {
-            // Move to step 5
-            repeat(4) { viewModel.advanceStep() }
+            placeRecommendedModelOnDisk()
+            grantMicrophone()
+            repeat(3) { viewModel.advanceStep() }
+
+            assertEquals(OnboardingStep.FirstDictation, viewModel.currentStep.value)
+            advanceUntilIdle()
+            assertEquals("firstDictation", fakeDataStore.data.first()[PreferenceKeys.ONBOARDING_STEP])
+        }
+
+    @Test
+    fun `advanceStep from the model wait is blocked when download not complete`() =
+        runTest(testDispatcher) {
+            repeat(3) { viewModel.advanceStep() }
             assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
 
             // Attempt advance — blocked since download not complete
@@ -288,10 +363,9 @@ class OnboardingViewModelTest {
         }
 
     @Test
-    fun `advanceStep from step 5 advances when download is complete`() =
+    fun `advanceStep from the model wait moves to the microphone when download is complete`() =
         runTest(testDispatcher) {
-            // Move to step 5
-            repeat(4) { viewModel.advanceStep() }
+            repeat(3) { viewModel.advanceStep() }
 
             viewModel.startModelDownload()
             fakeInstaller.state.value = ModelInstallState.Downloading(50)
@@ -300,24 +374,35 @@ class OnboardingViewModelTest {
 
             assertEquals(ModelInstallState.Done, viewModel.installState.value)
 
-            // Now advance should work
             viewModel.advanceStep()
-            assertEquals(OnboardingStep.FirstDictation, viewModel.currentStep.value)
+            assertEquals(OnboardingStep.Microphone, viewModel.currentStep.value)
         }
 
     @Test
-    fun `advanceStep from step 6 writes HAS_COMPLETED_ONBOARDING to DataStore`() =
+    fun `the microphone moves to the first dictation`() = runTest(testDispatcher) {
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.ModelPreparation.storedName }
+        fakeInstaller.state.value = ModelInstallState.Done
+        val vm = relaunch()
+        advanceUntilIdle()
+        vm.advanceStep() // -> Microphone
+
+        vm.advanceFrom(OnboardingStep.Microphone)
+        assertEquals(OnboardingStep.FirstDictation, vm.currentStep.value)
+    }
+
+    @Test
+    fun `advanceStep from the completion writes HAS_COMPLETED_ONBOARDING to DataStore`() =
         runTest(testDispatcher) {
-            // Move to step 5, complete download, advance to 6
-            repeat(4) { viewModel.advanceStep() }
+            repeat(3) { viewModel.advanceStep() } // -> ModelPreparation
             viewModel.startModelDownload()
             fakeInstaller.state.value = ModelInstallState.Done
             advanceUntilIdle()
-            viewModel.advanceStep() // -> 6
+            viewModel.advanceStep() // -> Microphone
+            viewModel.advanceStep() // -> FirstDictation
+            viewModel.advanceStep() // -> Completion
+            assertEquals(OnboardingStep.Completion, viewModel.currentStep.value)
 
-            // Tap "Commencer" on step 6 -> moves to step 7
-            viewModel.advanceStep()
-            // Step 7 triggers completeOnboarding()
+            // « Commencer » on the completion screen
             viewModel.advanceStep()
             advanceUntilIdle()
 
@@ -344,19 +429,28 @@ class OnboardingViewModelTest {
 
     @Test
     fun `goBack does nothing on a step without a way back`() = runTest(testDispatcher) {
-        repeat(2) { viewModel.advanceStep() } // -> Microphone, after the download started
-        viewModel.goBack()
-        assertEquals(OnboardingStep.Microphone, viewModel.currentStep.value)
+        // From the keyboard setup on, as on iOS: the language step has started the download.
+        for (step in OnboardingStep.entries.filter { it.ordinal > OnboardingStep.Language.ordinal }) {
+            fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = step.storedName }
+            val vm = relaunch()
+            val shown = vm.currentStep.value
+            vm.goBack()
+            assertEquals("$step", shown, vm.currentStep.value)
+        }
     }
 
     @Test
     fun `advanceFrom a page no longer on screen is ignored`() = runTest(testDispatcher) {
         // The microphone page, sliding away after the grant moved the flow on, runs its
-        // auto-advance a second time: it must not skip the keyboard setup.
-        repeat(2) { viewModel.advanceStep() } // -> Microphone
-        viewModel.advanceFrom(OnboardingStep.Microphone) // -> KeyboardSetup
-        viewModel.advanceFrom(OnboardingStep.Microphone)
-        assertEquals(OnboardingStep.KeyboardSetup, viewModel.currentStep.value)
+        // auto-advance a second time: it must not skip the first dictation.
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.ModelPreparation.storedName }
+        fakeInstaller.state.value = ModelInstallState.Done
+        val vm = relaunch()
+        advanceUntilIdle()
+        vm.advanceStep() // -> Microphone
+        vm.advanceFrom(OnboardingStep.Microphone) // -> FirstDictation
+        vm.advanceFrom(OnboardingStep.Microphone)
+        assertEquals(OnboardingStep.FirstDictation, vm.currentStep.value)
     }
 
     // --- Skip (#196) ---
@@ -375,7 +469,7 @@ class OnboardingViewModelTest {
 
     @Test
     fun `skip does nothing on a step that does not offer it`() = runTest(testDispatcher) {
-        repeat(4) { viewModel.advanceStep() } // -> ModelPreparation, install not done
+        repeat(3) { viewModel.advanceStep() } // -> ModelPreparation, install not done
         viewModel.skipStep()
         assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
@@ -385,7 +479,7 @@ class OnboardingViewModelTest {
     @Test
     fun `the keyboard setup leads straight to the model preparation`() = runTest(testDispatcher) {
         // #270: no ABC/123 step in between, as on iOS (#213).
-        repeat(3) { viewModel.advanceStep() } // -> KeyboardSetup
+        repeat(2) { viewModel.advanceStep() } // -> KeyboardSetup
         viewModel.advanceStep()
         assertEquals(OnboardingStep.ModelPreparation, viewModel.currentStep.value)
     }
@@ -431,8 +525,8 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `step 5 stays blocked while the install runs`() = runTest(testDispatcher) {
-        repeat(4) { viewModel.advanceStep() }
+    fun `the model wait stays blocked while the install runs`() = runTest(testDispatcher) {
+        repeat(3) { viewModel.advanceStep() }
         fakeInstaller.state.value = ModelInstallState.Verifying
         advanceUntilIdle()
 

@@ -8,13 +8,14 @@ import dev.pivisolutions.dictus.ui.models.ModelPreparationContext
 import dev.pivisolutions.dictus.ui.models.ModelPreparationScreen
 
 /**
- * Onboarding Step 5 — the recommended model's preparation (#181), in the shell's page (#196).
+ * Onboarding model preparation — the wait for the recommended model (#181), in the shell's page (#196).
  *
  * The step is the preparation screen, as on iOS (`ModelDownloadPage` showing
- * `ModelLoadingOverlay` in its onboarding context): the install starts when the step opens
- * ([onStart]), the screen follows the download, the preparation and the engine load, and the
- * step moves on by itself once the model is ready ([onNext]). No « Continuer » stop: the step
- * only waits. A failure stays here, on « Réessayer ».
+ * `ModelLoadingOverlay` in its onboarding context): it waits for the install the language
+ * step started, and starts it only if none runs ([onStart]). The screen follows the download,
+ * the preparation and the engine load, and the step moves on by itself once the model is
+ * ready ([onNext]). No « Continuer » stop: the step only waits. A failure stays here, on
+ * « Réessayer ». The flow passes over the step when the model is already on disk (#200).
  *
  * The shell draws the top row and the dashed progress bar above it, as on every other step.
  *
@@ -23,7 +24,7 @@ import dev.pivisolutions.dictus.ui.models.ModelPreparationScreen
  * @param onStart         starts the install unless one runs or failed.
  * @param onRetryInstall  retries a failed install.
  * @param onLoadEngine    asks the engine to load the selected model.
- * @param onNext          moves to step 5.
+ * @param onNext          moves to the next step (the microphone, unless granted).
  */
 @Composable
 fun OnboardingModelDownloadScreen(

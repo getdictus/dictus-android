@@ -59,6 +59,9 @@ class OnboardingShellTest {
         composeTestRule.onNodeWithContentDescription("Step 1 of 5").assertExists()
 
         step = OnboardingStep.ModelPreparation
+        composeTestRule.onNodeWithContentDescription("Step 3 of 5").assertExists()
+
+        step = OnboardingStep.Microphone
         composeTestRule.onNodeWithContentDescription("Step 4 of 5").assertExists()
 
         step = OnboardingStep.FirstDictation

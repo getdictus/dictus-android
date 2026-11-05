@@ -1,7 +1,10 @@
 package dev.pivisolutions.dictus.onboarding
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Resources
+import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -40,9 +43,10 @@ import javax.inject.Inject
  *
  * Manages state transitions between onboarding steps with validation guards:
  * - Language: confirming saves the keyboard language and layout and starts the model install
- * - Microphone: user must grant RECORD_AUDIO permission
  * - Keyboard setup: user must enable the Dictus IME
- * - Model preparation: model install must complete before advancing
+ * - Model preparation: model install must complete before advancing; passed over when the
+ *   model is already on disk
+ * - Microphone: user must grant RECORD_AUDIO permission; passed over when already granted
  * - Completion: tapping "Commencer" writes HAS_COMPLETED_ONBOARDING=true to DataStore
  *
  * WHY ViewModel (not stateless composable): Onboarding state survives configuration changes
@@ -63,10 +67,11 @@ import javax.inject.Inject
  *
  * The install state needs no saving: WorkManager keeps it across process death.
  *
- * WHY active model at step 4 but onboarding completion at step 6: The test recording in step 5
- * must use the exact recommended model that step 4 downloaded. Selecting that model when the
- * download completes makes it available to DictationService without prematurely marking the
- * onboarding flow complete; HAS_COMPLETED_ONBOARDING is still written only on the success screen.
+ * WHY active model at the model preparation but onboarding completion at the last step: the
+ * first dictation must use the exact recommended model the preparation installed. Selecting
+ * that model when the download completes makes it available to DictationService without
+ * prematurely marking the onboarding flow complete; HAS_COMPLETED_ONBOARDING is still written
+ * only on the success screen.
  *
  * @param context Application context for device capability checks (RAM-based model recommendation).
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
@@ -79,7 +84,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class OnboardingViewModel(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val dataStore: DataStore<Preferences>,
     private val modelInstaller: ModelInstaller,
     private val modelManager: ModelManager,
@@ -179,7 +184,7 @@ class OnboardingViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ModelInstallState.Idle)
 
-    /** What step 4's preparation screen draws (#181). */
+    /** What the model preparation step draws (#181). */
     val preparation: StateFlow<ModelPreparationTarget> = combine(installState, _awaitingInstall) { install, awaiting ->
         ModelPreparationTarget(
             info = recommendedModelInfo,
@@ -238,6 +243,7 @@ class OnboardingViewModel(
      * Advance to the next onboarding step, respecting validation guards:
      * - Model preparation: blocked until model download completes.
      * - Completion: triggers DataStore persistence and completes onboarding.
+     * The steps with nothing left to ask are passed over ([satisfiedSteps]).
      */
     fun advanceStep() {
         val step = currentStep.value ?: return
@@ -245,7 +251,7 @@ class OnboardingViewModel(
             // Block: install not complete
             step == OnboardingStep.ModelPreparation && installState.value !is ModelInstallState.Done && !modelManager.isDownloaded(recommendedKey) -> return
             step == OnboardingStep.Completion -> completeOnboarding()
-            else -> step.next?.let { show(it) }
+            else -> step.next(satisfiedSteps())?.let { show(it) }
         }
     }
 
@@ -278,11 +284,11 @@ class OnboardingViewModel(
     fun skipStep() {
         val step = currentStep.value ?: return
         if (!step.isSkippable) return
-        step.next?.let { show(it) }
+        step.next(satisfiedSteps())?.let { show(it) }
     }
 
     /**
-     * Step 5 opened: start the install unless one runs, failed or already finished (#181).
+     * The model preparation opened: start the install unless one runs, failed or already finished (#181).
      *
      * WHY no « Télécharger » tap: like iOS, the step is the preparation screen and the download
      * starts with it. A failure is not retried here: the screen shows it with « Réessayer ».
@@ -319,6 +325,20 @@ class OnboardingViewModel(
     /** The layout [language] types on, as stored before the onboarding started. */
     private fun storedLayout(language: SupportedLanguage): KeyboardLayout =
         KeyboardLayoutPreference.layout(storedPreferences, language)
+
+    /**
+     * The steps with nothing left to ask, which [OnboardingStep.next] passes over (#200), read
+     * when the flow moves on, as iOS's `satisfiedSteps`:
+     * - the model preparation once the model's files are on disk. The language step's
+     *   [startPreparation] has already selected it then, so the engine loads it.
+     * - the microphone once RECORD_AUDIO is granted. A denied one is still shown.
+     */
+    private fun satisfiedSteps(): Set<OnboardingStep> = buildSet {
+        if (modelManager.isDownloaded(recommendedKey)) add(OnboardingStep.ModelPreparation)
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            add(OnboardingStep.Microphone)
+        }
+    }
 
     /** Puts [step] on screen and records it as the step to resume at. */
     private fun show(step: OnboardingStep) {
