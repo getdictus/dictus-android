@@ -84,7 +84,11 @@
     <string name="settings_export_logs">Exporter les logs de d\u00e9bogage</string>
     <string name="settings_licences">Licences</string>
     <string name="settings_github">GitHub</string>
-    <string name="settings_legal">Mentions l\u00e9gales</string>
+    <string name="settings_privacy">Politique de confidentialit\u00e9</string>
+    <string name="settings_terms">Conditions d\u2019utilisation</string>
+    <!-- The website pages in the interface language (#220). -->
+    <string name="settings_privacy_url">https://www.getdictus.com/fr/privacy</string>
+    <string name="settings_terms_url">https://www.getdictus.com/fr/terms</string>
 
     <!-- Settings: Language picker values -->
     <string name="settings_language_follow_keyboard">Suivre la langue du clavier</string>
