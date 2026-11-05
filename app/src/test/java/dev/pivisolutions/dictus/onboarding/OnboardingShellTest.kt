@@ -133,12 +133,23 @@ class OnboardingShellTest {
     }
 
     @Test
+    fun `the microphone offers Not now and it declines`() {
+        setShell(OnboardingStep.Microphone)
+
+        composeTestRule.onNodeWithText("Skip").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Not now").performSemanticsAction(SemanticsActions.OnClick)
+
+        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Microphone), skips) }
+    }
+
+    @Test
     fun `no other step offers Skip`() {
         setShell(OnboardingStep.Welcome)
         for (s in OnboardingStep.entries.filter { !it.isSkippable }) {
             step = s
             composeTestRule.waitForIdle()
             composeTestRule.onNodeWithText("Skip").assertDoesNotExist()
+            composeTestRule.onNodeWithText("Not now").assertDoesNotExist()
         }
     }
 }

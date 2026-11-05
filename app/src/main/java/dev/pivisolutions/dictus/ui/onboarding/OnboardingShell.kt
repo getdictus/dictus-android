@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.ui.onboarding
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.animateColorAsState
@@ -166,7 +167,11 @@ fun OnboardingShell(
                 },
                 label = "onboarding_page",
             ) { pageStep ->
-                val skip = if (pageStep.isSkippable) OnboardingSkipAction(onSkip) else null
+                val skip = if (pageStep.isSkippable) {
+                    OnboardingSkipAction(stringResource(pageStep.skipLabel()), onSkip)
+                } else {
+                    null
+                }
                 // The page sliding away takes no more taps: a second tap on its button would
                 // act on the step that replaced it.
                 val leaving = transition.targetState == EnterExitState.PostExit
@@ -197,7 +202,12 @@ private fun Modifier.consumeAllTouches(): Modifier = pointerInput(Unit) {
  * the row is drawn by the page, several composables down. Passing it through every step
  * screen would make each carry a parameter only the shell reads.
  */
-class OnboardingSkipAction(val perform: () -> Unit)
+class OnboardingSkipAction(val label: String, val perform: () -> Unit)
+
+/** The microphone's Skip declines it, and says so (#220); elsewhere it reads « Passer ». */
+@StringRes
+private fun OnboardingStep.skipLabel(): Int =
+    if (this == OnboardingStep.Microphone) R.string.onboarding_mic_permission_not_now else R.string.onboarding_skip
 
 val LocalOnboardingSkip = staticCompositionLocalOf<OnboardingSkipAction?> { null }
 
@@ -487,10 +497,9 @@ fun OnboardingBottomBlock(content: @Composable ColumnScope.() -> Unit) {
 fun OnboardingSkipRow() {
     val skip = LocalOnboardingSkip.current
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val label = stringResource(R.string.onboarding_skip)
         if (skip != null) {
             Text(
-                text = label,
+                text = skip.label,
                 color = LocalDictusColors.current.textSecondary,
                 fontSize = SkipFontSize,
                 lineHeight = SkipLineHeight,
@@ -503,7 +512,7 @@ fun OnboardingSkipRow() {
         } else {
             // Same height as the link, invisible and out of the accessibility tree.
             Text(
-                text = label,
+                text = stringResource(R.string.onboarding_skip),
                 fontSize = SkipFontSize,
                 lineHeight = SkipLineHeight,
                 maxLines = 1,

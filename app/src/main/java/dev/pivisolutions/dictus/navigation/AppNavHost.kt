@@ -1,5 +1,10 @@
 package dev.pivisolutions.dictus.navigation
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -13,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -21,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
@@ -213,6 +220,7 @@ private fun OnboardingScreen(
                 micGranted = micGranted,
                 onPermissionResult = { viewModel.setMicPermissionGranted(it) },
                 onNext = onNext,
+                onDecline = { viewModel.skipStep() },
             )
             OnboardingStep.KeyboardSetup -> OnboardingKeyboardSetupScreen(
                 imeEnabled = imeEnabled,
@@ -318,10 +326,25 @@ private fun MainTabsScreen(
             composable(AppDestination.Home.route) {
                 val context = LocalContext.current
                 val modelInstaller = remember(context) { ModelInstaller(context.applicationContext) }
+                // A microphone declined in the onboarding, or revoked since, is asked for when the
+                // user starts a dictation (#220). After a refusal the toast says where to allow it.
+                val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    if (granted) {
+                        navController.navigate(AppDestination.Recording.route)
+                    } else {
+                        Toast.makeText(context, R.string.home_mic_refused, Toast.LENGTH_LONG).show()
+                    }
+                }
                 HomeScreen(
                     dataStore = dataStore,
                     onNewDictation = {
-                        navController.navigate(AppDestination.Recording.route)
+                        val micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED
+                        if (micGranted) {
+                            navController.navigate(AppDestination.Recording.route)
+                        } else {
+                            micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
                     },
                     onOpenHistory = {
                         navController.navigate(AppDestination.History.route) { launchSingleTop = true }

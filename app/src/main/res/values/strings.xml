@@ -22,9 +22,12 @@
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>
-    <string name="onboarding_mic_permission_body">Dictus needs the microphone to transcribe your voice. Your recordings stay on your device.</string>
-    <string name="onboarding_mic_permission_cta_grant">Allow Microphone</string>
+    <string name="onboarding_mic_permission_body">Dictus records your voice only during a dictation you start, to turn it into text. Transcription runs on your phone: the audio and the text never leave your device.</string>
+    <string name="onboarding_mic_permission_cta_grant">Allow microphone</string>
+    <string name="onboarding_mic_permission_not_now">Not now</string>
+    <string name="onboarding_mic_permission_refused">Without the microphone, dictation cannot work. You can allow it later in Android settings.</string>
     <string name="onboarding_mic_permission_cta_continue">Continue</string>
+    <string name="home_mic_refused">Allow the microphone for Dictus in Android settings to dictate.</string>
 
     <!-- Onboarding: Keyboard setup screen (Step 3) -->
     <string name="onboarding_keyboard_setup_title">Add the keyboard</string>

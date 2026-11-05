@@ -468,6 +468,21 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun `not now on the microphone moves to the completion`() = runTest(testDispatcher) {
+        // #220: declining the microphone passes over the first dictation, which needs it.
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.ModelPreparation.storedName }
+        fakeInstaller.state.value = ModelInstallState.Done
+        val vm = relaunch()
+        advanceUntilIdle()
+        vm.advanceStep() // -> Microphone
+
+        vm.skipStep()
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.Completion, vm.currentStep.value)
+    }
+
+    @Test
     fun `skip does nothing on a step that does not offer it`() = runTest(testDispatcher) {
         repeat(3) { viewModel.advanceStep() } // -> ModelPreparation, install not done
         viewModel.skipStep()

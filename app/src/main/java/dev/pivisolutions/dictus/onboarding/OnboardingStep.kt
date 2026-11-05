@@ -93,11 +93,21 @@ enum class OnboardingStep(val storedName: String) {
     /**
      * Whether the shell offers the discreet « Passer » under the primary button.
      *
-     * Only the first dictation, as on iOS (where the Pro scenes also have it). Every other
-     * step sets up something dictation needs, and the completion screen is its own way out.
+     * The first dictation, as on iOS (where the Pro scenes also have it), and the microphone,
+     * where it reads « Pas maintenant »: Google Play's prominent disclosure asks for a real
+     * choice before the system prompt (#220). Every other step sets up something dictation
+     * needs, and the completion screen is its own way out.
      */
     val isSkippable: Boolean
-        get() = this == FirstDictation
+        get() = this == FirstDictation || this == Microphone
+
+    /**
+     * Where « Passer » leads from this step: the next step, except from the microphone, which
+     * also passes over the first dictation, since it cannot record without it (#220). The user
+     * dictates later from Home, which asks for the microphone again.
+     */
+    fun afterSkip(skipping: Set<OnboardingStep> = emptySet()): OnboardingStep? =
+        if (this == Microphone) Completion else next(skipping)
 
     /**
      * The step the back chevron, and the system back, return to; null for a step without one.
