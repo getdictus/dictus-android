@@ -35,22 +35,22 @@
 
     <!-- Onboarding: Model download screen (Step 4) -->
 
-    <!-- Onboarding: Test recording screen (Step 5) -->
-    <string name="onboarding_test_recording_title">Test dictation</string>
-    <string name="onboarding_test_recording_body">Tap the mic and speak.\nDictus will transcribe your voice.</string>
-    <string name="onboarding_test_recording_result">Result</string>
-    <string name="onboarding_test_recording_transcribing">Transcribing\u2026</string>
-    <string name="onboarding_test_recording_no_result">(No result)</string>
-    <string name="onboarding_test_recording_tap_to_stop">Tap to stop</string>
-    <string name="onboarding_test_recording_cta_continue">Continue</string>
-    <string name="onboarding_test_recording_cd_copy">Copy</string>
-    <string name="onboarding_test_recording_cd_stop">Stop</string>
-    <string name="onboarding_test_recording_cd_record">Record</string>
+    <!-- Onboarding: first dictation (#199, iOS GlobeKeyTutorialPage) -->
+    <string name="onboarding_first_dictation_title">Try it now</string>
+    <string name="onboarding_first_dictation_opening">Your keyboard opens below.</string>
+    <string name="onboarding_first_dictation_before_tap">Tap the field to open your keyboard</string>
+    <string name="onboarding_first_dictation_other_keyboard">Switch keyboards, then choose Dictus.</string>
+    <string name="onboarding_first_dictation_dictus_keyboard">Tap the blue mic and speak. The text lands here.</string>
+    <string name="onboarding_first_dictation_placeholder_tap">Tap here to write</string>
+    <string name="onboarding_first_dictation_placeholder_say">Say something\u2026</string>
+    <string name="onboarding_first_dictation_banner_choose">Choose Dictus</string>
+    <string name="onboarding_first_dictation_banner_mic">Tap the blue mic, then speak</string>
+    <string name="onboarding_first_dictation_continue">Continue</string>
 
     <!-- Onboarding: Success screen (Step 6) -->
-    <string name="onboarding_success_title">All set!</string>
-    <string name="onboarding_success_body">Dictus is configured and ready to use.</string>
-    <string name="onboarding_success_cta">Start</string>
+    <string name="onboarding_success_title">You\'re all set</string>
+    <string name="onboarding_success_body">Dictus is waiting in the keyboard of every app. Tap the mic, and speak.</string>
+    <string name="onboarding_success_cta">Get started</string>
 
     <!-- Onboarding: shell around every step (#196) -->
     <string name="onboarding_back">Back</string>
