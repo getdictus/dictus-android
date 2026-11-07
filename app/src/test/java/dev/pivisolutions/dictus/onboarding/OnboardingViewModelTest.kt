@@ -217,15 +217,22 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `language - Continue starts the recommended model's download and moves on`() = runTest(testDispatcher) {
-        val vm = onLanguageStep("fr-FR")
+    fun `language - Continue starts the recommended model's download and says so before moving on`() =
+        runTest(testDispatcher) {
+            val vm = onLanguageStep("fr-FR")
 
-        vm.confirmLanguage()
-        advanceUntilIdle()
+            vm.confirmLanguage()
+            advanceUntilIdle()
 
-        assertEquals(listOf(vm.recommendedKey), fakeInstaller.installed)
-        assertEquals(OnboardingStep.KeyboardSetup, vm.currentStep.value)
-    }
+            assertEquals(listOf(vm.recommendedKey), fakeInstaller.installed)
+            assertTrue(vm.downloadNotice.value)
+            assertEquals(OnboardingStep.Language, vm.currentStep.value)
+
+            vm.dismissDownloadNotice()
+
+            assertFalse(vm.downloadNotice.value)
+            assertEquals(OnboardingStep.KeyboardSetup, vm.currentStep.value)
+        }
 
     @Test
     fun `language - Continue does not start a second download over a running one`() = runTest(testDispatcher) {
@@ -236,6 +243,35 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertEquals(emptyList<String>(), fakeInstaller.installed)
+        assertFalse(vm.downloadNotice.value)
+        assertEquals(OnboardingStep.KeyboardSetup, vm.currentStep.value)
+    }
+
+    @Test
+    fun `language - Continue with the model already on disk moves on without the notice`() = runTest(testDispatcher) {
+        placeRecommendedModelOnDisk()
+        val vm = onLanguageStep("fr-FR")
+
+        vm.confirmLanguage()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), fakeInstaller.installed)
+        assertFalse(vm.downloadNotice.value)
+        assertEquals(OnboardingStep.KeyboardSetup, vm.currentStep.value)
+    }
+
+    @Test
+    fun `language - Continue after a failed install moves on without the notice`() = runTest(testDispatcher) {
+        // The preparation step shows the failure with « Réessayer »; nothing starts here.
+        fakeInstaller.state.value = ModelInstallState.Failed
+        val vm = onLanguageStep("fr-FR")
+
+        vm.confirmLanguage()
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), fakeInstaller.installed)
+        assertFalse(vm.downloadNotice.value)
+        assertEquals(OnboardingStep.KeyboardSetup, vm.currentStep.value)
     }
 
     @Test

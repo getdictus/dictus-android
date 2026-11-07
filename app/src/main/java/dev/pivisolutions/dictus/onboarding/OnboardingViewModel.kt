@@ -42,7 +42,8 @@ import javax.inject.Inject
  * ViewModel for the onboarding flow ([OnboardingStep]).
  *
  * Manages state transitions between onboarding steps with validation guards:
- * - Language: confirming saves the keyboard language and layout and starts the model install
+ * - Language: confirming saves the keyboard language and layout and starts the model install;
+ *   when that starts a download, a notice says so before the flow moves on (#304)
  * - Keyboard setup: user must enable the Dictus IME
  * - Model preparation: model install must complete before advancing; passed over when the
  *   model is already on disk
@@ -125,6 +126,18 @@ class OnboardingViewModel(
      * Nothing is written before « Continuer ».
      */
     val languageSetup: StateFlow<LanguageSetup?> = _languageSetup.asStateFlow()
+
+    private val _downloadNotice = MutableStateFlow(false)
+
+    /**
+     * True while the language step's notice is up: « Continuer » has just started the
+     * recommended model's download (#304, iOS `keepOpenWarningModel`). Not shown when the
+     * model is on disk, an install already runs, or the last one failed.
+     *
+     * WHY: the download is several hundred MB and starts without any other sign. A line
+     * of text on the page is not read; a dialog at the moment it starts is.
+     */
+    val downloadNotice: StateFlow<Boolean> = _downloadNotice.asStateFlow()
 
     // --- Step state machine (DataStore-backed, #196) ---
 
@@ -212,7 +225,8 @@ class OnboardingViewModel(
 
     /**
      * The language step's « Continuer »: saves the keyboard language and layout, starts the
-     * recommended model's install in the background, and moves on (#198).
+     * recommended model's install in the background, and moves on (#198). When a download
+     * has just started, [downloadNotice] goes up instead and its button moves on (#304).
      *
      * WHY THE INSTALL STARTS HERE (as iOS's language step): the model downloads while the
      * user finishes the setup, so the preparation step often finds it done.
@@ -229,8 +243,24 @@ class OnboardingViewModel(
                 Timber.w(e, "Cannot save the keyboard language")
             }
         }
-        startPreparation()
-        advanceStep()
+        viewModelScope.launch {
+            if (prepareRecommendedModel()) {
+                _downloadNotice.value = true
+            } else {
+                advanceFrom(OnboardingStep.Language)
+            }
+        }
+    }
+
+    /**
+     * The notice's « J'ai compris »: closes it and moves on. The download keeps running.
+     *
+     * WHY advanceFrom: a second « Continuer » tapped before the first one's check finished
+     * may already have moved the flow on; the notice must not move it a second step.
+     */
+    fun dismissDownloadNotice() {
+        _downloadNotice.value = false
+        advanceFrom(OnboardingStep.Language)
     }
 
     /** Grant or revoke microphone permission state. Persisted via SavedStateHandle. */
@@ -295,15 +325,25 @@ class OnboardingViewModel(
      * Reads WorkManager's state itself: [installState] starts as Idle before WorkManager answers.
      */
     fun startPreparation() {
-        viewModelScope.launch {
-            if (modelManager.isDownloaded(recommendedKey)) {
-                // Installed outside this run's WorkManager history: select it so the engine loads it.
-                dataStore.edit { prefs -> prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey }
-                return@launch
-            }
-            val state = modelInstaller.state(recommendedKey).first()
-            if (!state.isInProgress && state != ModelInstallState.Failed) startModelDownload()
+        viewModelScope.launch { prepareRecommendedModel() }
+    }
+
+    /**
+     * [startPreparation]'s work.
+     *
+     * @return true when this call started a download, as iOS `startDownloadIfNeeded`
+     *   returns whether bytes are now being transferred: what [downloadNotice] is about.
+     */
+    private suspend fun prepareRecommendedModel(): Boolean {
+        if (modelManager.isDownloaded(recommendedKey)) {
+            // Installed outside this run's WorkManager history: select it so the engine loads it.
+            dataStore.edit { prefs -> prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey }
+            return false
         }
+        val state = modelInstaller.state(recommendedKey).first()
+        if (state.isInProgress || state == ModelInstallState.Failed) return false
+        startModelDownload()
+        return true
     }
 
     /**

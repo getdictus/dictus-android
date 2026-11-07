@@ -19,6 +19,9 @@
     <string name="onboarding_language_layout">Disposition du clavier</string>
     <string name="onboarding_language_model">Modèle %1$s, le meilleur pour votre langue sur ce téléphone. ~%2$d Mo, téléchargés dès que vous continuez. Modifiable dans Modèles.</string>
     <string name="onboarding_language_cta">Continuer</string>
+    <string name="onboarding_download_notice_title">Le modèle se télécharge</string>
+    <string name="onboarding_download_notice_message">Le modèle (~%1$d Mo) se télécharge maintenant. Vous pouvez quitter l\'app, par exemple pour ajouter le clavier : le téléchargement continue en arrière-plan.</string>
+    <string name="onboarding_download_notice_ok">J\'ai compris</string>
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>
