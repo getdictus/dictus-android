@@ -1,5 +1,8 @@
 package dev.pivisolutions.dictus.onboarding
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,20 +25,52 @@ import dev.pivisolutions.dictus.model.ModelInfo
  * WHY ONLY THE BUTTON CLOSES IT: it moves the flow on, as iOS's « Got it » does. A back or
  * an outside tap moving the flow forward would be a surprise.
  *
+ * WHY THE NOTIFICATION PROMPT FROM HERE (#308): with [requestNotifications], the message adds
+ * that Android will ask for notifications and what they show, then the button opens that
+ * prompt. Whatever the answer, the flow moves on; a refusal only hides the notification.
+ *
  * @param model the model being downloaded, whose size the message gives.
- * @param onDismiss « J'ai compris »: closes the dialog and moves on.
+ * @param requestNotifications whether the button opens the POST_NOTIFICATIONS prompt first.
+ * @param onNotificationsRequested the prompt is opening.
+ * @param onDismiss « J'ai compris », or the prompt's answer: closes the dialog and moves on.
  */
 @Composable
-fun OnboardingDownloadNotice(model: ModelInfo, onDismiss: () -> Unit) {
+fun OnboardingDownloadNotice(
+    model: ModelInfo,
+    requestNotifications: Boolean,
+    onNotificationsRequested: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        onDismiss()
+    }
     AlertDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.onboarding_download_notice_title)) },
         text = {
-            Text(stringResource(R.string.onboarding_download_notice_message, model.expectedSizeBytes / 1_000_000))
+            val message = stringResource(R.string.onboarding_download_notice_message, model.expectedSizeBytes / 1_000_000)
+            Text(
+                if (requestNotifications) {
+                    message + "\n\n" + stringResource(R.string.onboarding_download_notice_notifications)
+                } else {
+                    message
+                }
+            )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = {
+                    if (requestNotifications) {
+                        onNotificationsRequested()
+                        // Only set from API 33 (shouldRequestNotificationPermission).
+                        @Suppress("InlinedApi")
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        onDismiss()
+                    }
+                },
+            ) {
                 Text(stringResource(R.string.onboarding_download_notice_ok))
             }
         },

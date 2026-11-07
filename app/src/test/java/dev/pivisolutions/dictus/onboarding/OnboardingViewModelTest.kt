@@ -235,6 +235,60 @@ class OnboardingViewModelTest {
         }
 
     @Test
+    fun `language - on Android 13+ the notice asks for notifications once, even after a refusal`() =
+        runTest(testDispatcher) {
+            val vm = onLanguageStep("fr-FR")
+
+            vm.confirmLanguage()
+            advanceUntilIdle()
+
+            assertTrue(vm.downloadNotice.value)
+            assertTrue(vm.notificationRequest.value)
+
+            // The button opens the prompt; the user refuses, and the answer closes the notice.
+            vm.notificationPermissionRequested()
+            vm.dismissDownloadNotice()
+            advanceUntilIdle()
+
+            assertFalse(vm.notificationRequest.value)
+            assertEquals(true, fakeDataStore.data.first()[PreferenceKeys.NOTIFICATION_PERMISSION_ASKED])
+
+            // A later onboarding run that starts a download again: the notice, without the prompt.
+            val again = onLanguageStep("fr-FR")
+            again.confirmLanguage()
+            advanceUntilIdle()
+
+            assertTrue(again.downloadNotice.value)
+            assertFalse(again.notificationRequest.value)
+        }
+
+    @Test
+    fun `language - on Android 13+ the notice does not ask when notifications are granted`() =
+        runTest(testDispatcher) {
+            org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication())
+                .grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+            val vm = onLanguageStep("fr-FR")
+
+            vm.confirmLanguage()
+            advanceUntilIdle()
+
+            assertTrue(vm.downloadNotice.value)
+            assertFalse(vm.notificationRequest.value)
+        }
+
+    @Test
+    @org.robolectric.annotation.Config(sdk = [30])
+    fun `language - below Android 13 the notice never asks for notifications`() = runTest(testDispatcher) {
+        val vm = onLanguageStep("fr-FR")
+
+        vm.confirmLanguage()
+        advanceUntilIdle()
+
+        assertTrue(vm.downloadNotice.value)
+        assertFalse(vm.notificationRequest.value)
+    }
+
+    @Test
     fun `language - Continue does not start a second download over a running one`() = runTest(testDispatcher) {
         fakeInstaller.state.value = ModelInstallState.Downloading(10)
         val vm = onLanguageStep("fr-FR")
