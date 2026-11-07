@@ -13,6 +13,7 @@ import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.ui.settings.LogExporter
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -92,6 +93,13 @@ class DictationLogPrivacyTest {
             exported,
             exported.contains("Dictation tally: added audioSeconds=1; today words=3, audioSeconds=1, timeSavedSeconds=2"),
         )
+        // Every Stop -> result stage carries the dictation's t+, in pipeline order (#145).
+        val stages = listOf("Transcription started", "Transcription finished", "Transcription outcome", "Dictation tally")
+        val stageLines = stages.map { stage ->
+            exported.lines().singleOrNull { it.contains("d=$id: $stage") } ?: error("no line for $stage in:\n$exported")
+        }
+        stageLines.forEach { line -> assertTrue(line, Regex("""t\+=\d+ms""").containsMatchIn(line)) }
+        assertEquals(stageLines, stageLines.sortedBy { exported.indexOf(it) })
     }
 
     private fun export(): String {

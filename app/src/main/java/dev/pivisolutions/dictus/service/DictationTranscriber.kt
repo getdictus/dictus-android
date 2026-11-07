@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.service
 
+import dev.pivisolutions.dictus.core.logging.DictationTrace
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
@@ -100,8 +101,8 @@ internal class DictationTranscriber(
                 providerId = provider.providerId
                 engineStartedAt = System.nanoTime()
                 Timber.i(
-                    "Transcription started: engine=%s, model=%s, samples=%d, audioMs=%d, factor=%s, timeoutMs=%d",
-                    provider.providerId, modelKey, samples.size, audioMs, factor, timeoutMs,
+                    "Transcription started: engine=%s, model=%s, samples=%d, audioMs=%d, factor=%s, timeoutMs=%d, t+=%dms",
+                    provider.providerId, modelKey, samples.size, audioMs, factor, timeoutMs, DictationTrace.elapsedMs(),
                 )
                 // The lock's own timeout is a backstop: the latest the engine can return, the
                 // timeout plus the time an aborted Whisper decode gets to hand back its segments.
@@ -110,7 +111,11 @@ internal class DictationTranscriber(
                     provider.transcribe(samples, dictation.sttLanguage, timeoutMs).also { transcript ->
                         engineEndedAt = System.nanoTime()
                         val durationMs = (engineEndedAt - engineStartedAt) / 1_000_000
-                        Timber.i(PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, transcript))
+                        Timber.i(
+                            "%s, t+=%dms",
+                            PrivacySafeLog.transcriptionFinished(provider.providerId, durationMs, transcript),
+                            DictationTrace.elapsedMs(),
+                        )
                     }
                 } finally {
                     wakeLock.release()
@@ -123,7 +128,7 @@ internal class DictationTranscriber(
 
             // Drop non-speech tags (#161), then post-process (trim + punctuation)
             val processedText = TextPostProcessor.process(NonSpeechMarkers.spokenText(transcript.text))
-            Timber.d(PrivacySafeLog.transcriptionProcessed(transcript.text, processedText))
+            Timber.d("%s, t+=%dms", PrivacySafeLog.transcriptionProcessed(transcript.text, processedText), DictationTrace.elapsedMs())
             val timings = Timings(
                 preprocessMs = elapsedMs(startedAt, engineStartedAt),
                 engineMs = elapsedMs(engineStartedAt, engineEndedAt),
@@ -137,10 +142,11 @@ internal class DictationTranscriber(
                 TranscriptionOutcome.fromPartialText(processedText)
             }
             Timber.i(
-                "Transcription outcome: state=%s, segments=%s, length=%d",
+                "Transcription outcome: state=%s, segments=%s, length=%d, t+=%dms",
                 outcome.javaClass.simpleName,
                 transcript.segmentCount ?: "-",
                 (outcome as? TranscriptionOutcome.Transcribed)?.text?.length ?: 0,
+                DictationTrace.elapsedMs(),
             )
             if (outcome is TranscriptionOutcome.Transcribed) {
                 lastTranscription.save(outcome.text)
@@ -214,8 +220,8 @@ internal class DictationTranscriber(
         try {
             val today = recordTally(text, audioSeconds) ?: return
             Timber.i(
-                "Dictation tally: added audioSeconds=%d; today words=%d, audioSeconds=%d, timeSavedSeconds=%d",
-                audioSeconds, today.words, today.audioSeconds, today.timeSavedSeconds,
+                "Dictation tally: added audioSeconds=%d; today words=%d, audioSeconds=%d, timeSavedSeconds=%d, t+=%dms",
+                audioSeconds, today.words, today.audioSeconds, today.timeSavedSeconds, DictationTrace.elapsedMs(),
             )
         } catch (cancellation: CancellationException) {
             throw cancellation

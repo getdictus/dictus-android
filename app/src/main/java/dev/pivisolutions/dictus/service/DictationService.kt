@@ -458,10 +458,11 @@ class DictationService : Service(), DictationController {
             val engineLanguage = DictationLanguage.engineLanguage(prefs)
 
             Timber.i(
-                "confirmAndTranscribe: model=%s, engine=%s, language=%s",
+                "confirmAndTranscribe: model=%s, engine=%s, language=%s, t+=%dms",
                 activeModelKey,
                 ModelCatalog.findByKey(activeModelKey)?.provider ?: "UNKNOWN",
                 engineLanguage,
+                DictationTrace.elapsedMs(),
             )
 
             // 3. Download the model if needed, transcribe, post-process.
@@ -471,10 +472,11 @@ class DictationService : Service(), DictationController {
             // 4. Only a dictation with words reaches history.
             if (outcome is TranscriptionOutcome.Transcribed) {
                 val model = ModelCatalog.findByKey(activeModelKey)
+                // Pro gate: callers still express the retention their context deserves,
+                // the flag only ever downgrades it (see PremiumFlags.HISTORY_VISIBLE).
+                val effectiveRetention = PremiumFlags.effectiveRetention(retention)
                 transcriptionHistoryWriter.persist(
-                    // Pro gate: callers still express the retention their context deserves,
-                    // the flag only ever downgrades it (see PremiumFlags.HISTORY_VISIBLE).
-                    retention = PremiumFlags.effectiveRetention(retention),
+                    retention = effectiveRetention,
                     text = outcome.text,
                     metadata = TranscriptionHistoryMetadata(
                         requestedLanguage = engineLanguage,
@@ -483,6 +485,8 @@ class DictationService : Service(), DictationController {
                         provider = model?.provider?.name ?: "UNKNOWN",
                     ),
                 )
+                // An EPHEMERAL retention skips the write: the line still marks the step (#145).
+                Timber.i("Transcription history step done: retention=%s, t+=%dms", effectiveRetention, DictationTrace.elapsedMs())
             }
             outcome
         } catch (cancellation: CancellationException) {
