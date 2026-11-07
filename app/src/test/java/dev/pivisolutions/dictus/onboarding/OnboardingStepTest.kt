@@ -110,8 +110,15 @@ class OnboardingStepTest {
     // --- Shell: Skip ---
 
     @Test
-    fun `only the first dictation offers Skip`() {
-        assertEquals(listOf(FirstDictation), OnboardingStep.entries.filter { it.isSkippable })
+    fun `the microphone and the first dictation offer Skip`() {
+        assertEquals(listOf(Microphone, FirstDictation), OnboardingStep.entries.filter { it.isSkippable })
+    }
+
+    @Test
+    fun `declining the microphone passes over the first dictation`() {
+        // #220: the first dictation cannot record without the microphone.
+        assertEquals(Completion, Microphone.afterSkip())
+        assertEquals(Completion, FirstDictation.afterSkip())
     }
 
     // --- Shell: going back ---

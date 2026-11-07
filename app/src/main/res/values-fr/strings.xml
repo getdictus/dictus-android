@@ -25,9 +25,12 @@
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>
-    <string name="onboarding_mic_permission_body">Dictus a besoin du microphone pour transcrire votre voix. Vos enregistrements restent sur votre appareil.</string>
+    <string name="onboarding_mic_permission_body">Dictus enregistre votre voix uniquement pendant une dict\u00e9e que vous lancez, pour la transformer en texte. La transcription se fait sur votre t\u00e9l\u00e9phone\u00a0: l\u2019audio et le texte ne quittent jamais votre appareil.</string>
     <string name="onboarding_mic_permission_cta_grant">Autoriser le micro</string>
+    <string name="onboarding_mic_permission_not_now">Pas maintenant</string>
+    <string name="onboarding_mic_permission_refused">Sans le micro, la dict\u00e9e ne peut pas fonctionner. Vous pourrez l\u2019autoriser plus tard dans les r\u00e9glages Android.</string>
     <string name="onboarding_mic_permission_cta_continue">Continuer</string>
+    <string name="home_mic_refused">Autorisez le micro pour Dictus dans les r\u00e9glages Android pour dicter.</string>
 
     <!-- Onboarding: Keyboard setup screen (Step 3) -->
     <string name="onboarding_keyboard_setup_title">Ajouter le clavier</string>
@@ -87,7 +90,11 @@
     <string name="settings_export_logs">Exporter les logs de d\u00e9bogage</string>
     <string name="settings_licences">Licences</string>
     <string name="settings_github">GitHub</string>
-    <string name="settings_legal">Mentions l\u00e9gales</string>
+    <string name="settings_privacy">Politique de confidentialit\u00e9</string>
+    <string name="settings_terms">Conditions d\u2019utilisation</string>
+    <!-- The website pages in the interface language (#220). -->
+    <string name="settings_privacy_url">https://www.getdictus.com/fr/privacy</string>
+    <string name="settings_terms_url">https://www.getdictus.com/fr/terms</string>
 
     <!-- Settings: Language picker values -->
     <string name="settings_language_follow_keyboard">Suivre la langue du clavier</string>

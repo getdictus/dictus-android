@@ -308,13 +308,13 @@ class OnboardingViewModel(
 
     /**
      * The shell's « Passer », on the steps that offer it ([OnboardingStep.isSkippable]):
-     * moves on as the step's own button would. On the first dictation that is the
-     * completion screen, as a finished dictation goes.
+     * moves on to [OnboardingStep.afterSkip]. On the first dictation that is the completion
+     * screen, as a finished dictation goes; from a microphone left off, too (#220).
      */
     fun skipStep() {
         val step = currentStep.value ?: return
         if (!step.isSkippable) return
-        step.next(satisfiedSteps())?.let { show(it) }
+        step.afterSkip(satisfiedSteps())?.let { show(it) }
     }
 
     /**

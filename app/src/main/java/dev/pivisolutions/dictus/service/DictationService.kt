@@ -1,17 +1,20 @@
 package dev.pivisolutions.dictus.service
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.EntryPointAccessors
@@ -350,6 +353,13 @@ class DictationService : Service(), DictationController {
      * Refused while a dictation records, transcribes or is still being started (#237).
      */
     override fun startRecording(source: DictationSource): Boolean {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            // A microphone foreground service without the permission throws on Android 14+.
+            // The callers check it first; this keeps a declined or revoked microphone from
+            // crashing the app (#220).
+            Timber.w("Recording start refused: source=%s, RECORD_AUDIO not granted", source)
+            return false
+        }
         if (!DictationStartGuard.canStartNewDictation(_state.value, pendingStart)) {
             Timber.w(
                 "Recording start refused: source=%s, state=%s, pendingStart=%b",

@@ -239,8 +239,14 @@ fun SettingsScreen(
             )
             SettingDivider()
             SettingLinkRow(
-                label = stringResource(R.string.settings_legal),
-                url = "https://pivisolutions.dev/legal",
+                label = stringResource(R.string.settings_privacy),
+                url = stringResource(R.string.settings_privacy_url),
+                context = context,
+            )
+            SettingDivider()
+            SettingLinkRow(
+                label = stringResource(R.string.settings_terms),
+                url = stringResource(R.string.settings_terms_url),
                 context = context,
             )
             SettingDivider()

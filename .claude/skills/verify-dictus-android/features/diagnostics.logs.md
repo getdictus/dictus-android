@@ -1,6 +1,6 @@
 # Debug logs and diagnostics
 
-Réglages → À propos shows the version, the app's own log (without any dictated or typed text), an export of that log, the licences, GitHub and legal notices.
+Réglages → À propos shows the version, the app's own log (without any dictated or typed text), an export of that log, the licences, GitHub, the privacy policy and the terms of use.
 
 - **ID:** `diagnostics.logs`
 - **Tier:** Gratuit
@@ -12,7 +12,7 @@ Réglages → À propos shows the version, the app's own log (without any dictat
 - `diagnostics.log-view`: « Debug Logs »: the log, with a menu to « Effacer » or « Copier ». — présent
 - `diagnostics.log-export`: « Exporter les logs de débogage »: a ZIP (`dictus-logs.zip`) through the share sheet. — présent
 - `diagnostics.app-group-check`: — Spécifique iOS.
-- `diagnostics.about`: « Version », « Licences », « GitHub », « Mentions légales ». — présent
+- `diagnostics.about`: « Version », « Licences », « GitHub », « Politique de confidentialité » and « Conditions d’utilisation » (EN « Privacy policy », « Terms of use »), which open getdictus.com/fr/privacy and /fr/terms, /en/ in English (#220; « Mentions légales » pointed to a dead page). — présent
 - `polish.debug` (iOS ID): « Transcription debug », opened by tapping « Version » five times quickly, in release builds too. One entry per dictation the engine returned text for, app (`<APP>`) or keyboard (`<KBD>`), kept 7 days in `files/polish_events.jsonl` with the dictated text in plain text; menu « Exporter le JSON… » (`dictus-polish-debug-<yyyyMMdd-HHmmss>.json`, the iOS schema, through the share sheet) and « Effacer ». — présent (#295)
 
 ## How to get to it (user POV)
@@ -45,4 +45,4 @@ Preconditions: Launch and Doctor OK.
 - Do not tap « Effacer » in the menu: it erases Pierre's log. The same goes for « Effacer » in Transcription debug: it erases his dictation journal.
 - The export opens the share sheet with Pierre's apps and accounts: prove the sheet opens, then system back; never send.
 - Coming back from Debug Logs restores Réglages at another scroll offset: re-read the frames before the next tap (a stale frame opened the export sheet once).
-- « GitHub » and « Mentions légales » open the browser.
+- « GitHub », « Politique de confidentialité » and « Conditions d’utilisation » open the browser; the two legal pages in the interface language.
