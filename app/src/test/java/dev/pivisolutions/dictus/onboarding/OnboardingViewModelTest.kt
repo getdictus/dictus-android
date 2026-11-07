@@ -263,6 +263,35 @@ class OnboardingViewModelTest {
         }
 
     @Test
+    fun `language - a second Continue before the first one is handled is ignored`() = runTest(testDispatcher) {
+        // WorkManager answers later than a second tap: the first « Continuer » waits on it.
+        val answer = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val slowInstaller = object : ModelInstaller(context) {
+            val installed = mutableListOf<String>()
+            override fun install(modelKey: String) {
+                installed += modelKey
+            }
+            override fun state(modelKey: String): Flow<ModelInstallState> =
+                kotlinx.coroutines.flow.flow { answer.await(); emit(ModelInstallState.Idle) }
+        }
+        fakeDataStore.edit { it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Language.storedName }
+        val vm = OnboardingViewModel(
+            context, fakeDataStore, slowInstaller, ModelManager(context), SavedStateHandle(),
+            listOf(Locale.FRANCE),
+        )
+        advanceUntilIdle()
+
+        vm.confirmLanguage()
+        vm.confirmLanguage()
+        answer.complete(Unit)
+        settle()
+
+        assertEquals(listOf(vm.recommendedKey), slowInstaller.installed)
+        assertTrue(vm.downloadNotice.value)
+        assertEquals(OnboardingStep.Language, vm.currentStep.value)
+    }
+
+    @Test
     fun `language - on Android 13+ the notice does not ask when notifications are granted`() =
         runTest(testDispatcher) {
             org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication())

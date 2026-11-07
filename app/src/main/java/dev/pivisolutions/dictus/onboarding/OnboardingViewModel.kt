@@ -249,7 +249,7 @@ class OnboardingViewModel(
      * [startPreparation] is idempotent, and the preparation step calls it again.
      */
     fun confirmLanguage() {
-        if (currentStep.value != OnboardingStep.Language) return
+        if (currentStep.value != OnboardingStep.Language || confirming) return
         val setup = languageSetup.value ?: return
         viewModelScope.launch {
             try {
@@ -259,6 +259,7 @@ class OnboardingViewModel(
                 Timber.w(e, "Cannot save the keyboard language")
             }
         }
+        confirming = true
         viewModelScope.launch {
             if (prepareRecommendedModel()) {
                 _notificationRequest.value = notificationRequestDue()
@@ -266,8 +267,16 @@ class OnboardingViewModel(
             } else {
                 advanceFrom(OnboardingStep.Language)
             }
+            confirming = false
         }
     }
+
+    /**
+     * A « Continuer » is being handled. WHY: a second tap before the first one's checks end
+     * found the download running and moved the flow on, and the notice, with the notification
+     * prompt, then went up on a step that does not draw it. Once up, the notice covers the button.
+     */
+    private var confirming = false
 
     /**
      * The notice's « J'ai compris »: closes it and moves on. The download keeps running.
