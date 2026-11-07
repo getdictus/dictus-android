@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Resources
+import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -22,6 +23,7 @@ import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.models.ModelPreparationTarget
+import dev.pivisolutions.dictus.permission.shouldRequestNotificationPermission
 import dev.pivisolutions.dictus.service.ModelInstallState
 import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +45,8 @@ import javax.inject.Inject
  *
  * Manages state transitions between onboarding steps with validation guards:
  * - Language: confirming saves the keyboard language and layout and starts the model install;
- *   when that starts a download, a notice says so before the flow moves on (#304)
+ *   when that starts a download, a notice says so before the flow moves on (#304), and on
+ *   Android 13+ asks for notifications the first time (#308)
  * - Keyboard setup: user must enable the Dictus IME
  * - Model preparation: model install must complete before advancing; passed over when the
  *   model is already on disk
@@ -139,6 +142,19 @@ class OnboardingViewModel(
      */
     val downloadNotice: StateFlow<Boolean> = _downloadNotice.asStateFlow()
 
+    private val _notificationRequest = MutableStateFlow(false)
+
+    /**
+     * True while the notice's button is to open the POST_NOTIFICATIONS prompt (#308): set with
+     * [downloadNotice] when [shouldRequestNotificationPermission] says so.
+     *
+     * WHY AT THE NOTICE (Android's guidance: ask in context): the install's notification is
+     * what the permission shows, and it is there the moment the user allows it. The
+     * microphone step stays a disclosure of the microphone alone (#220), and comes after the
+     * download.
+     */
+    val notificationRequest: StateFlow<Boolean> = _notificationRequest.asStateFlow()
+
     // --- Step state machine (DataStore-backed, #196) ---
 
     private val _currentStep = MutableStateFlow<OnboardingStep?>(null)
@@ -233,7 +249,7 @@ class OnboardingViewModel(
      * [startPreparation] is idempotent, and the preparation step calls it again.
      */
     fun confirmLanguage() {
-        if (currentStep.value != OnboardingStep.Language) return
+        if (currentStep.value != OnboardingStep.Language || confirming) return
         val setup = languageSetup.value ?: return
         viewModelScope.launch {
             try {
@@ -243,14 +259,24 @@ class OnboardingViewModel(
                 Timber.w(e, "Cannot save the keyboard language")
             }
         }
+        confirming = true
         viewModelScope.launch {
             if (prepareRecommendedModel()) {
+                _notificationRequest.value = notificationRequestDue()
                 _downloadNotice.value = true
             } else {
                 advanceFrom(OnboardingStep.Language)
             }
+            confirming = false
         }
     }
+
+    /**
+     * A « Continuer » is being handled. WHY: a second tap before the first one's checks end
+     * found the download running and moved the flow on, and the notice, with the notification
+     * prompt, then went up on a step that does not draw it. Once up, the notice covers the button.
+     */
+    private var confirming = false
 
     /**
      * The notice's « J'ai compris »: closes it and moves on. The download keeps running.
@@ -261,6 +287,23 @@ class OnboardingViewModel(
     fun dismissDownloadNotice() {
         _downloadNotice.value = false
         advanceFrom(OnboardingStep.Language)
+    }
+
+    /**
+     * The notice's button is opening the POST_NOTIFICATIONS prompt: records it, so no later
+     * notice asks again, whatever the answer. The prompt's answer then calls
+     * [dismissDownloadNotice].
+     */
+    fun notificationPermissionRequested() {
+        _notificationRequest.value = false
+        viewModelScope.launch {
+            try {
+                dataStore.edit { prefs -> prefs[PreferenceKeys.NOTIFICATION_PERMISSION_ASKED] = true }
+            } catch (e: IOException) {
+                // Only a later notice would ask again.
+                Timber.w(e, "Cannot save the notification prompt")
+            }
+        }
     }
 
     /** Grant or revoke microphone permission state. Persisted via SavedStateHandle. */
@@ -361,6 +404,21 @@ class OnboardingViewModel(
     fun retryDownload() = startModelDownload()
 
     // --- Private ---
+
+    /** Whether the notice about to go up asks for notifications ([shouldRequestNotificationPermission]). */
+    private suspend fun notificationRequestDue(): Boolean {
+        val asked = try {
+            dataStore.data.first()[PreferenceKeys.NOTIFICATION_PERMISSION_ASKED] == true
+        } catch (e: IOException) {
+            Timber.w(e, "Cannot read the notification prompt flag")
+            false
+        }
+        // Below API 33 the permission is unknown and reads as denied; the SDK check answers there.
+        @Suppress("InlinedApi")
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        return shouldRequestNotificationPermission(Build.VERSION.SDK_INT, granted, asked)
+    }
 
     /** The layout [language] types on, as stored before the onboarding started. */
     private fun storedLayout(language: SupportedLanguage): KeyboardLayout =
