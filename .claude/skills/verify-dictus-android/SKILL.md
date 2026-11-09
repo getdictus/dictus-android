@@ -44,7 +44,7 @@ adb -s 99071FFAZ00EBN logcat -G 16M     # per buffer; check with: adb -s 99071FF
 
 The size holds until the phone reboots: run it again after a reboot.
 
-**4. Out of reach.** Pierre has no phone more recent than the Pixel 4. `small` and `medium-q5_0` cannot be validated on the phones they are meant for. A PR that changes them says "not tested on a recent phone". `parakeet-tdt-0.6b-v3` is not in this tier: it is gated at 6 GB of RAM, like iOS (#148), so it runs on the 6 GB Pixel 4 and is measured in tier 2. Onboarding installs Parakeet v3 from 6 GB of RAM (so on the Pixel 4) and Small Q5 below 6 GB (`ModelCatalog.recommendedModelKey`); a phone below 6 GB sees `Nécessite 6 Go de RAM ou plus` on Parakeet 0.6B in Modèles; `DEFAULT_KEY` (`tiny`) is only a fallback when no model is active.
+**4. Out of reach.** Pierre has no phone more recent than the Pixel 4. `small` and `medium-q5_0` cannot be validated on the phones they are meant for. A PR that changes them says "not tested on a recent phone". `parakeet-tdt-0.6b-v3` is not in this tier: it is gated at 6 GB of RAM, like iOS (#148), so it runs on the 6 GB Pixel 4 and is measured in tier 2. Onboarding installs Parakeet v3 from 6 GB of RAM (so on the Pixel 4) and, below 6 GB, Base, or Tiny on a CPU without ARMv8.2 `fphp` (`ModelCatalog.recommendedModelKey`, `SocClass`, #309); a phone below 6 GB sees `Nécessite 6 Go de RAM ou plus` on Parakeet 0.6B in Modèles; `DEFAULT_KEY` (`tiny`) is only a fallback when no model is active.
 
 ## Launch
 
@@ -116,7 +116,7 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | --- | --- |
 | Bottom tabs | `Accueil`, `Modèles`, `Réglages` |
 | Accueil | `Modèle actif`, the model name (`Small Q5`), `Nouvelle dictée`; `Dernière transcription` + `Copier` only after a dictation |
-| In-app recording | `Retour`, the timer `0:06`, `Arrêter`, `Toucher pour arrêter`; then `Transcription en cours…`, `Résultat` + `Copier` |
+| In-app recording | `Retour`, the timer `0:06`, `Arrêter`, `Toucher pour arrêter`; then `Transcription en cours…`, its timer `0:12`, past the threshold `Modèle lent : essayez un modèle plus léger dans Modèles` (log `Slow transcription hint shown`, #309), `Résultat` + `Copier` |
 | Modèles | `Téléchargés`, `Disponibles`, card names `Tiny` `Base` `Small` `Small Q5` `Medium` `Parakeet 110M` `Parakeet 0.6B`, badges `WK` / `NV`, `Actif`, `Télécharger`, `Anglais uniquement`, `Nécessite 6 Go de RAM ou plus` (below 6 GB only), `Stockage utilisé : …` |
 | Réglages | `Réglages` (title), `Transcription`, `Langue / Automatique`, `Clavier`, `Langue du clavier / …`, `ABC` / `123` (segment), `Retour haptique`, `Sons du clavier`, `Sons`, `Suggestions`, `Correction automatique`, `Réinitialiser les mots appris`, `Apparence`, `Thème / Sombre`, `Langue de l'interface / Automatique`, `À propos`, `Version`, `GitHub`, `Politique de confidentialité`, `Conditions d’utilisation`, `Licences`, `Debug Logs`, `Exporter les logs de débogage` |
 | Picker menus | options anchored to the row, the current one with ✓; system back dismisses without choosing |
