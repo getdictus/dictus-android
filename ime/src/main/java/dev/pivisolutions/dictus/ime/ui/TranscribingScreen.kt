@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -24,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
+import dev.pivisolutions.dictus.core.ui.rememberTranscriptionFeedback
 
 /**
  * Transcribing overlay shown while whisper.cpp processes audio.
@@ -90,13 +92,29 @@ fun TranscribingScreen(
                 processingPhase = phase,
             )
 
-            // "Transcription..." label
+            val feedback = rememberTranscriptionFeedback(surface = "keyboard")
+            val label = stringResource(dev.pivisolutions.dictus.ime.R.string.ime_transcribing)
+
+            // "Transcription... 00:12" label
             Text(
-                text = stringResource(dev.pivisolutions.dictus.ime.R.string.ime_transcribing),
+                text = feedback?.let {
+                    String.format("%s %02d:%02d", label, it.elapsedMs / 60000, (it.elapsedMs % 60000) / 1000)
+                } ?: label,
                 color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 16.dp),
             )
+
+            if (feedback?.showSlowHint == true) {
+                Text(
+                    text = stringResource(dev.pivisolutions.dictus.core.R.string.transcription_slow_hint),
+                    color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    modifier = Modifier.padding(top = 4.dp, start = 16.dp, end = 16.dp),
+                )
+            }
         }
 
         // Bottom spacer (46.dp)

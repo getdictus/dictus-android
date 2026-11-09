@@ -12,6 +12,7 @@ import android.content.pm.ServiceInfo
 import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -31,6 +32,7 @@ import dev.pivisolutions.dictus.core.service.DictationStartGuard
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
+import dev.pivisolutions.dictus.core.service.TranscriptionProgress
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
@@ -467,6 +469,10 @@ class DictationService : Service(), DictationController {
             // mode this is the keyboard's language at the moment the take is transcribed.
             val engineLanguage = DictationLanguage.engineLanguage(prefs)
 
+            TranscriptionProgress.begin(
+                startedAtMs = SystemClock.elapsedRealtime(),
+                slowHintAfterMs = SlowTranscriptionHint.showAfterMs(TranscriptionTimeout.audioMs(samples.size), activeModelKey),
+            )
             Timber.i(
                 "confirmAndTranscribe: model=%s, engine=%s, language=%s, t+=%dms",
                 activeModelKey,
@@ -509,6 +515,7 @@ class DictationService : Service(), DictationController {
 
     /** Every confirmAndTranscribe exit: back to Idle and out of the foreground. */
     private fun finishTranscription() {
+        TranscriptionProgress.end()
         _state.value = DictationState.Idle
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

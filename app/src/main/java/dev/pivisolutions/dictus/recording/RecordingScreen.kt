@@ -71,6 +71,7 @@ import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import dev.pivisolutions.dictus.core.ui.WaveformBars
+import dev.pivisolutions.dictus.core.ui.rememberTranscriptionFeedback
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
@@ -425,11 +426,8 @@ fun RecordingScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        val seconds = (recording.elapsedMs / 1000).toInt()
-                        val minutes = seconds / 60
-                        val secs = seconds % 60
                         Text(
-                            text = "%d:%02d".format(minutes, secs),
+                            text = formatTimer(recording.elapsedMs),
                             color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Medium,
@@ -439,11 +437,34 @@ fun RecordingScreen(
                     }
 
                     isTranscribing -> {
+                        val feedback = rememberTranscriptionFeedback(surface = "app")
+
                         Text(
                             text = stringResource(R.string.recording_transcribing),
                             color = LocalDictusColors.current.textSecondary,
                             fontSize = 17.sp,
                         )
+
+                        if (feedback != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Text(
+                                text = formatTimer(feedback.elapsedMs),
+                                color = LocalDictusColors.current.textSecondary,
+                                fontSize = 15.sp,
+                            )
+                        }
+
+                        if (feedback?.showSlowHint == true) {
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = stringResource(CoreR.string.transcription_slow_hint),
+                                color = LocalDictusColors.current.textSecondary,
+                                fontSize = 15.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -588,6 +609,11 @@ fun RecordingScreen(
             },
         )
     }
+}
+
+private fun formatTimer(elapsedMs: Long): String {
+    val seconds = elapsedMs / 1000
+    return "%d:%02d".format(seconds / 60, seconds % 60)
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
