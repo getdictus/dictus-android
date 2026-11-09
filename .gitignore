@@ -22,6 +22,9 @@ Thumbs.db
 *.jks
 *.keystore
 keystore.properties
+*.pepk
+*service-account*.json
+play-*.json
 
 # Asset builder download cache
 .cache/
