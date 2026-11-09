@@ -1,0 +1,1 @@
+First Dictus release on Google Play: a dictation keyboard that transcribes your voice on your phone, even with no connection.

@@ -1,0 +1,1 @@
+Première version de Dictus sur Google Play : un clavier de dictée qui transcrit votre voix sur votre téléphone, même sans connexion.
