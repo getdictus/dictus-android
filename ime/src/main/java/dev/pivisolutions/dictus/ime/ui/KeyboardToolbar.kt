@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.ime.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -97,6 +98,7 @@ fun KeyboardToolbar(
     isDictationUndoAvailable: Boolean = false,
     onUndoDictation: () -> Unit = {},
     dictationNotice: DictationNotice.Message? = null,
+    onRequestMicrophone: () -> Unit = {},
     isAppDictationInProgress: Boolean = false,
     autocorrectUndo: AutocorrectUndoOffer? = null,
     onUndoAutocorrect: () -> Unit = {},
@@ -205,15 +207,27 @@ fun KeyboardToolbar(
         }
 
         when (centreSlot) {
-            is ToolbarCentreSlot.Error -> DictationNoticeText(
-                when (centreSlot.notice) {
-                    DictationNotice.Message.NoWordsDetected -> CoreR.string.dictation_no_words_detected
-                    DictationNotice.Message.Failed -> CoreR.string.dictation_failed
-                },
-            )
+            is ToolbarCentreSlot.Error -> when (centreSlot.notice) {
+                DictationNotice.Message.NoWordsDetected -> DictationNoticeText(CoreR.string.dictation_no_words_detected)
+                DictationNotice.Message.Failed -> DictationNoticeText(CoreR.string.dictation_failed)
+                DictationNotice.Message.MicrophoneRefused -> {
+                    DictationNoticeText(R.string.ime_mic_refused_notice)
+                    ToolbarAccentPill(
+                        text = stringResource(R.string.ime_mic_refused_action),
+                        description = stringResource(R.string.ime_mic_refused_action),
+                        onClick = onRequestMicrophone,
+                    )
+                }
+            }
             ToolbarCentreSlot.AppDictationInProgress -> DictationNoticeText(R.string.ime_app_dictation_in_progress)
             ToolbarCentreSlot.DictationUndo -> {
-                DictationUndoPill(onUndoDictation)
+                // iOS `ToolbarView.dictationUndoButton`, with SF arrow.uturn.backward at 13 pt semibold.
+                ToolbarAccentPill(
+                    text = stringResource(R.string.ime_undo_dictation),
+                    description = stringResource(R.string.ime_undo_dictation_description),
+                    iconRes = R.drawable.ic_undo,
+                    onClick = onUndoDictation,
+                )
                 Spacer(modifier = Modifier.weight(1f))
             }
             ToolbarCentreSlot.Suggestions -> SuggestionBar(
@@ -284,25 +298,26 @@ fun KeyboardToolbar(
     }
 }
 
-/**
- * Removes the dictation that was just inserted (#132), iOS `ToolbarView.dictationUndoButton`:
- * an accent-tinted capsule with the U-turn arrow and "Undo", 36dp tall in a 44dp touch target.
- */
+/** The bar's one-tap action, an accent-tinted capsule 36dp tall in a 44dp touch target. */
 @Composable
-private fun DictationUndoPill(onUndoDictation: () -> Unit) {
+private fun ToolbarAccentPill(
+    text: String,
+    description: String,
+    onClick: () -> Unit,
+    @DrawableRes iconRes: Int? = null,
+) {
     val view = LocalView.current
-    val description = stringResource(R.string.ime_undo_dictation_description)
     Box(
         modifier = Modifier
             .height(44.dp)
             .clickable {
                 HapticHelper.performKeyHaptic(view)
-                onUndoDictation()
+                onClick()
             }
             .clearAndSetSemantics {
                 contentDescription = description
                 role = Role.Button
-                onClick { onUndoDictation(); true }
+                onClick { onClick(); true }
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -315,15 +330,16 @@ private fun DictationUndoPill(onUndoDictation: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_undo),
-                contentDescription = null,
-                tint = DictusColors.Accent,
-                // SF arrow.uturn.backward at 13 pt semibold.
-                modifier = Modifier.size(16.dp),
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = DictusColors.Accent,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
             Text(
-                text = stringResource(R.string.ime_undo_dictation),
+                text = text,
                 color = DictusColors.Accent,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
