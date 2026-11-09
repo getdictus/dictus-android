@@ -29,3 +29,6 @@ play-*.json
 # Asset builder download cache
 .cache/
 tools/__pycache__/
+
+# Play listing renderer
+tools/play-listing/node_modules/
