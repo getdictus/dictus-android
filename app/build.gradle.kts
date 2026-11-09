@@ -185,6 +185,20 @@ android {
                 this.keyPassword = keyPassword
             }
         }
+        // The upload key signs only the AAB sent to Play, which re-signs what it delivers
+        // with the app signing key, the same key as "release" above (#219).
+        create("upload") {
+            val keystorePath = System.getenv("UPLOAD_KEYSTORE_PATH")
+            val keyAlias = System.getenv("UPLOAD_KEY_ALIAS")
+            val keyPassword = System.getenv("UPLOAD_KEY_PASSWORD")
+            val storePassword = System.getenv("UPLOAD_STORE_PASSWORD")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
     }
 
     defaultConfig {
@@ -221,7 +235,12 @@ android {
         }
         release {
             buildConfigField("int", "PARAKEET_MIN_RAM_GB", "6")
-            signingConfig = signingConfigs.getByName("release")
+            // A build type has one signing config for its APK and its AAB, so the environment
+            // picks it: release.yml builds them in separate steps, and only the bundle step
+            // sets UPLOAD_KEYSTORE_PATH.
+            signingConfig = signingConfigs.getByName(
+                if (System.getenv("UPLOAD_KEYSTORE_PATH") != null) "upload" else "release",
+            )
             isMinifyEnabled = false
         }
     }
@@ -274,6 +293,15 @@ licensee {
     allow("CC-BY-4.0")
     allow("BSD-2-Clause")
     allow("BSD-3-Clause")
+}
+
+// An APK signed with the upload key could not update the GitHub installs (#219).
+tasks.matching { it.name == "packageRelease" }.configureEach {
+    doFirst {
+        if (System.getenv("UPLOAD_KEYSTORE_PATH") != null) {
+            throw GradleException("UPLOAD_KEYSTORE_PATH is for bundleRelease only: unset it to build the release APK")
+        }
+    }
 }
 
 // Copy licensee artifacts.json into APK assets so LicencesScreen can read it at runtime.
