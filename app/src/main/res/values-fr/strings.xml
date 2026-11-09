@@ -22,6 +22,7 @@
     <string name="onboarding_download_notice_title">Le modèle se télécharge</string>
     <string name="onboarding_download_notice_message">Le modèle (~%1$d Mo) se télécharge maintenant. Vous pouvez quitter l\'app, par exemple pour ajouter le clavier : le téléchargement continue en arrière-plan.</string>
     <string name="onboarding_download_notice_ok">J\'ai compris</string>
+    <string name="onboarding_download_notice_notifications">Android va ensuite vous demander d\'autoriser les notifications\u00a0: elles affichent la progression du t\u00e9l\u00e9chargement.</string>
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>

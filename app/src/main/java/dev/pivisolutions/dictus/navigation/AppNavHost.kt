@@ -186,6 +186,7 @@ private fun OnboardingScreen(
     val preparation by viewModel.preparation.collectAsState()
     val languageSetup by viewModel.languageSetup.collectAsState()
     val downloadNotice by viewModel.downloadNotice.collectAsState()
+    val notificationRequest by viewModel.notificationRequest.collectAsState()
 
     // The persisted step is still being read: the bare background, as AppNavHost does above.
     val step = currentStep ?: run {
@@ -220,6 +221,8 @@ private fun OnboardingScreen(
                 if (downloadNotice) {
                     OnboardingDownloadNotice(
                         model = viewModel.recommendedModelInfo,
+                        requestNotifications = notificationRequest,
+                        onNotificationsRequested = { viewModel.notificationPermissionRequested() },
                         onDismiss = { viewModel.dismissDownloadNotice() },
                     )
                 }
