@@ -48,6 +48,7 @@ import dev.pivisolutions.dictus.onboarding.OnboardingSuccessScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingTestRecordingScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingViewModel
 import dev.pivisolutions.dictus.onboarding.OnboardingWelcomeScreen
+import dev.pivisolutions.dictus.permission.KeyboardMicRequest
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingShell
 import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
 import dev.pivisolutions.dictus.ui.settings.DebugLogsScreen
@@ -82,6 +83,7 @@ import kotlinx.coroutines.flow.map
  * @param onOpenKeyboardSettings Callback to open system keyboard settings.
  * @param onOpenAppSettings Callback to open app details settings.
  * @param openModelsRequested Start on the Models tab: the keyboard's mic tap with no model (#247).
+ * @param microphoneRequested Ask for the microphone on Home: the keyboard's refused-mic notice (#307).
  */
 @Composable
 fun AppNavHost(
@@ -94,6 +96,7 @@ fun AppNavHost(
     onOpenAppSettings: () -> Unit,
     openSettingsRequested: Boolean = false,
     openModelsRequested: Boolean = false,
+    microphoneRequested: Boolean = false,
 ) {
     val hasCompletedOnboarding by dataStore.data
         .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
@@ -147,6 +150,7 @@ fun AppNavHost(
                 } else {
                     AppDestination.Home.route
                 },
+                microphoneRequested = microphoneRequested,
             )
         }
     }
@@ -283,6 +287,7 @@ private fun MainTabsScreen(
     onOpenAppSettings: () -> Unit,
     startDestination: String = AppDestination.Home.route,
     showMainNavigation: Boolean = true,
+    microphoneRequested: Boolean = false,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -337,6 +342,7 @@ private fun MainTabsScreen(
             composable(AppDestination.Home.route) {
                 val context = LocalContext.current
                 val modelInstaller = remember(context) { ModelInstaller(context.applicationContext) }
+                if (microphoneRequested) KeyboardMicRequest(onOpenAppSettings)
                 // A microphone declined in the onboarding, or revoked since, is asked for when the
                 // user starts a dictation (#220). After a refusal the toast says where to allow it.
                 val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
