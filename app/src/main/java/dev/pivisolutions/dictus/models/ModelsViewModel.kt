@@ -13,6 +13,7 @@ import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.DeviceRam
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
+import dev.pivisolutions.dictus.model.SocClass
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.service.DictationLanguage
 import dev.pivisolutions.dictus.service.ModelInstallState
@@ -123,7 +124,7 @@ class ModelsViewModel @Inject constructor(
     private val totalMemBytes: Long = DeviceRam.totalMemBytes(appContext)
 
     // Onboarding's rule, so the badge marks the model onboarding installed (#188)
-    private val recommendedKey: String = ModelCatalog.recommendedModelKey(totalMemBytes)
+    private val recommendedKey: String = ModelCatalog.recommendedModelKey(totalMemBytes, SocClass.current())
 
     init {
         Timber.d("Device totalMem=%d bytes (%d GB marketed)", totalMemBytes, DeviceRam.marketedGb(totalMemBytes))

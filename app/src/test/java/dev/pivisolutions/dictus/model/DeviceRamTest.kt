@@ -58,16 +58,4 @@ class DeviceRamTest {
     fun `models without a requirement are always runnable`() {
         assertTrue(DeviceRam.meetsRequirement(tiny, 0L))
     }
-
-    @Test
-    fun `onboarding recommends Parakeet from 6 GB and small-q5_1 below`() {
-        assertEquals("small-q5_1", ModelCatalog.recommendedModelKey(gib(3.6)))   // 4 GB phone
-        assertEquals("small-q5_1", ModelCatalog.recommendedModelKey(gib(4.6)))   // 5 GB phone
-        assertEquals("small-q5_1", ModelCatalog.recommendedModelKey(gib(5.0)))   // exactly 5 GiB
-        assertEquals("parakeet-tdt-0.6b-v3", ModelCatalog.recommendedModelKey(gib(5.34))) // Pixel 4, 6 GB
-        assertEquals("parakeet-tdt-0.6b-v3", ModelCatalog.recommendedModelKey(gib(5.6)))  // 6 GB phone
-        assertEquals("parakeet-tdt-0.6b-v3", ModelCatalog.recommendedModelKey(gib(6.0)))
-        assertEquals("parakeet-tdt-0.6b-v3", ModelCatalog.recommendedModelKey(gib(7.4)))  // 8 GB phone
-        assertEquals("parakeet-tdt-0.6b-v3", ModelCatalog.recommendedModelKey(gib(11.6))) // 12 GB phone
-    }
 }

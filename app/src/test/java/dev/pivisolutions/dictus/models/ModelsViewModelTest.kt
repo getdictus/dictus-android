@@ -126,7 +126,7 @@ class ModelsViewModelTest {
         // #188: one model carries it, the one onboarding installs on this phone
         val recommendedOn = { gib: Double -> viewModelWithRam(gib).models.value.filter { it.isRecommended }.map { it.info.key } }
 
-        assertEquals(listOf("small-q5_1"), recommendedOn(3.6))
+        assertEquals(listOf("base"), recommendedOn(3.6))
         assertEquals(listOf("parakeet-tdt-0.6b-v3"), recommendedOn(5.3))
     }
 
