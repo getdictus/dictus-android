@@ -237,25 +237,23 @@ function addKeyboards(list, i, labels) {
 
 /* A single cosine from the first panel's left edge to the second panel's right edge, icons turned to it. */
 function addRibbon() {
-  const X0 = -70, X1 = 2720, A = 96, Y0 = 2250, SIZE = 112, P = X1 - X0;
+  const X0 = -70, X1 = 2720, A = 96, Y0 = 2250, SIZE = 84, P = X1 - X0;
   const Y = (x) => Y0 + A * Math.cos(2 * Math.PI * (x - X0) / P);
   const dY = (x) => -A * (2 * Math.PI / P) * Math.sin(2 * Math.PI * (x - X0) / P);
   const GLYPHS = ['<path d="M5 6h14v9H10l-5 4z"/>', '<path d="M4 7h16v11H4zM4 7l8 6 8-6"/>', '<path d="M7 4h7l4 4v12H7zM14 4v4h4M10 12h5M10 15h5"/>',
     '<circle cx="12" cy="12" r="3.5"/><path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12a8.5 8.5 0 1 0-3.4 6.8"/>', '<path d="M4 12l16-7-6 15-3-6z"/>', '<path d="M5 19l1-4L16 5l3 3L9 18z"/>'];
   const COLOURS = [["#3D7EFF", "#fff"], ["#DCE8FF", "#2563EB"], ["#0A1628", "#fff"], ["#6BA3FF", "#fff"], ["#2563EB", "#fff"], ["#EEF3FF", "#3D7EFF"]];
-  /* In the iOS ribbon's order (screenshots.html, RIBBON_APPS_14), one per visible slot. */
-  const LOGOS = ["gmail", "whatsapp", "chatgpt", "messenger", "gemini", "notion", "slack", "instagram", "telegram"];
-  let slot = 0;
-  const count = 15, clearOfShoes = 960;
+  /* The 16 slots of the iOS ribbon (RIBBON15.fit), its apps that exist on Android, reordered so that
+     no two dark or two blue icons touch. They start past the shoes, so they are smaller than on iOS. */
+  const LOGOS = ["gmail", "linkedin", "whatsapp", "chatgpt", "messenger", "claude", "telegram", "gemini",
+    "perplexity", "notion", "lechat", "slack", "obsidian", "signal", "instagram", "discord"];
+  const count = LOGOS.length, clearOfShoes = 960, end = 2 * PANEL_W;
   for (let n = 0; n < count; n++) {
-    const x = n * 2 * PANEL_W / (count - 1);
-    if (x < clearOfShoes) continue;
-    const y = Y(x), rot = Math.atan2(dY(x), 1) * 180 / Math.PI;
+    const x = clearOfShoes + n * (end - clearOfShoes) / (count - 1), y = Y(x), rot = Math.atan2(dY(x), 1) * 180 / Math.PI;
     const [bg, fg] = COLOURS[n % COLOURS.length];
-    const logo = LOGOS[slot++];
     const d = el("ribbon-icon", RIBBON === "tiles"
       ? `<svg viewBox="0 0 24 24" fill="none" stroke="${fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[n % GLYPHS.length]}</svg>`
-      : `<img alt="" src=".icons/${logo}.png">`);
+      : `<img alt="" src=".icons/${LOGOS[n]}.png">`);
     Object.assign(d.style, { left: `${x - SIZE / 2}px`, top: `${y - SIZE / 2}px`, width: `${SIZE}px`, height: `${SIZE}px`, background: RIBBON === "tiles" ? bg : "none", transform: `rotate(${rot}deg)` });
     strip.appendChild(d);
   }

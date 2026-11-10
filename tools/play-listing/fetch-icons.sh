@@ -14,11 +14,18 @@ APPS=(
   "whatsapp:310633997"
   "chatgpt:6448311069"
   "messenger:454638411"
+  "claude:6473753684"
   "gemini:6477489729"
+  "perplexity:1668000334"
   "notion:1232780281"
+  "lechat:6740410176"
+  "obsidian:1557175442"
   "slack:618783545"
+  "signal:874139669"
   "instagram:389801252"
+  "discord:985746746"
   "telegram:686449807"
+  "linkedin:288429040"
 )
 
 for entry in "${APPS[@]}"; do
