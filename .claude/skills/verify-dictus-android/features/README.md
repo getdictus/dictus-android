@@ -262,11 +262,12 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.settings.sound-picker` | Free | present | yes |
 | `app.settings.picker` | Free | present — inline choice menus (#189) | yes |
 | `kbd.model-loading` | Free | retired (#247) — the keyboard is never covered | yes |
+| `kbd.mic-refused` | Free | present — notice and « Ouvrir Dictus » (#307) | yes |
 | `sys.ime-picker` | Free | present | yes |
 | `sys.settings.ime` | Free | present | yes |
 | `sys.notification.recording` | Free | present | yes |
 
-**Count** (201 IDs: 179 iOS + 22 Android-only): present **62**, partial **13**, absent **75**, iOS-only (N/A) **29**, Android-only **22**.
+**Count** (202 IDs: 179 iOS + 23 Android-only): present **62**, partial **13**, absent **75**, iOS-only (N/A) **29**, Android-only **23**.
 
 Of the 150 iOS IDs that apply to Android: 62 present, 13 partial, 75 absent. 55 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
 

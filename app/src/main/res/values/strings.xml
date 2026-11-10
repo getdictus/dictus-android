@@ -226,6 +226,7 @@
     <string name="model_install_channel_name">Model installs</string>
     <string name="model_download_error">Download failed.</string>
     <string name="model_requires_ram">Requires %1$d GB of RAM or more</string>
+    <string name="model_size_approx">~%1$d MB</string>
     <string name="model_precision">Precision</string>
     <string name="model_speed">Speed</string>
     <string name="model_delete_cd">Delete</string>

@@ -22,7 +22,7 @@ import dev.pivisolutions.dictus.ime.input.DictationNotice
  */
 sealed interface ToolbarCentreSlot {
 
-    /** A dictation that inserted nothing, in grey (#153, #182). */
+    /** A dictation that inserted nothing (#153, #182) or a refused microphone (#307), in grey. */
     data class Error(val notice: DictationNotice.Message) : ToolbarCentreSlot
 
     /** "Dictation in progress in Dictus" while the app records (#248). */

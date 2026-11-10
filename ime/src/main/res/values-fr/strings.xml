@@ -8,6 +8,9 @@
     <string name="ime_recording_confirm">Terminer la dict\u00e9e</string>
     <string name="ime_transcribing">Transcription\u2026</string>
     <string name="ime_app_dictation_in_progress">Dictée en cours dans Dictus</string>
+    <!-- Mic tap without RECORD_AUDIO (#307), after iOS "Full access required" and "Open Dictus". -->
+    <string name="ime_mic_refused_notice">Acc\u00e8s au micro requis</string>
+    <string name="ime_mic_refused_action">Ouvrir Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
     <!-- Emoji picker (#192): labels and categories, after iOS EmojiPickerView. -->
     <string name="ime_emoji_search_placeholder">Rechercher des Emoji</string>

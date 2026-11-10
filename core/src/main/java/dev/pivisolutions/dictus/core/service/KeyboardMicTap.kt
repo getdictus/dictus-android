@@ -13,10 +13,19 @@ enum class KeyboardMicTap {
     RECORD,
 
     /** No model on disk: open Dictus on the Models screen, with no keyboard panel. */
-    OPEN_MODELS;
+    OPEN_MODELS,
+
+    /**
+     * RECORD_AUDIO is not granted: the keyboard says so and offers to open Dictus (#307). It
+     * comes before the model check because no model can be used without the microphone.
+     */
+    MICROPHONE_REFUSED;
 
     companion object {
-        fun decide(engineState: SttEngineState): KeyboardMicTap =
-            if (engineState is SttEngineState.ModelMissing) OPEN_MODELS else RECORD
+        fun decide(engineState: SttEngineState, micGranted: Boolean): KeyboardMicTap = when {
+            !micGranted -> MICROPHONE_REFUSED
+            engineState is SttEngineState.ModelMissing -> OPEN_MODELS
+            else -> RECORD
+        }
     }
 }

@@ -828,11 +828,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 engineState,
             )
             if (DictationStartGuard.canStartNewDictation(dictationState)) {
-                if (micGranted) {
-                    startKeyboardDictation(KeyboardMicTap.decide(engineState))
-                } else {
-                    Timber.w("RECORD_AUDIO permission not granted")
-                }
+                startKeyboardDictation(KeyboardMicTap.decide(engineState, micGranted))
             } else {
                 handleMicTap()
             }
@@ -916,6 +912,10 @@ class DictusImeService : LifecycleInputMethodService() {
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
                     dictationNotice = dictationNoticeMessage,
+                    onRequestMicrophone = {
+                        dictationFeedback.withdraw()
+                        openDictus(AppLaunchContract.ACTION_REQUEST_MICROPHONE)
+                    },
                     isAppDictationInProgress = appDictationActive,
                     autocorrectUndo = autocorrectUndo,
                     onUndoAutocorrect = { undoAutocorrect() },
@@ -1100,8 +1100,16 @@ class DictusImeService : LifecycleInputMethodService() {
      * loads a newly selected model, and re-checks the disk for a missing one. If the load fails
      * again, the transcription retries it with the audio in hand, then the bar shows the failure
      * notice.
+     *
+     * Without the microphone nothing starts and the bar shows the notice (#307). That check comes
+     * first because the notice does not need the service.
      */
     private fun startKeyboardDictation(tap: KeyboardMicTap) {
+        if (tap == KeyboardMicTap.MICROPHONE_REFUSED) {
+            Timber.w("RECORD_AUDIO permission not granted: notice shown")
+            dictationNotice.show(DictationNotice.Message.MicrophoneRefused)
+            return
+        }
         val controller = dictationController
         if (controller == null) {
             // A dead mic button and an unused keyboard must not leave the same empty log (#112).
@@ -1109,32 +1117,29 @@ class DictusImeService : LifecycleInputMethodService() {
             return
         }
         controller.prewarmEngine()
-        when (tap) {
-            KeyboardMicTap.RECORD -> {
-                transcriptionRetentionSession.begin(
-                    isCurrentEditorSuggestionEligible,
-                    isPersonalizedLearningAllowed,
-                )
-                controller.startRecording(DictationSource.KEYBOARD)
-            }
-            KeyboardMicTap.OPEN_MODELS -> {
-                DictationTrace.end()
-                openDictusModels()
-            }
+        if (tap == KeyboardMicTap.OPEN_MODELS) {
+            DictationTrace.end()
+            // iOS `intent=prepare`: the Models tab is where the user downloads a model.
+            openDictus(AppLaunchContract.ACTION_OPEN_MODELS)
+            return
         }
+        transcriptionRetentionSession.begin(
+            isCurrentEditorSuggestionEligible,
+            isPersonalizedLearningAllowed,
+        )
+        controller.startRecording(DictationSource.KEYBOARD)
     }
 
-    /** Opens Dictus on the Models tab, where the user downloads a model (iOS `intent=prepare`). */
-    private fun openDictusModels() {
-        val intent = Intent(AppLaunchContract.ACTION_OPEN_MODELS).apply {
+    private fun openDictus(action: String) {
+        val intent = Intent(action).apply {
             component = ComponentName(packageName, AppLaunchContract.MAIN_ACTIVITY_CLASS)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
         try {
             startActivity(intent)
-            Timber.i("Mic tap with no model: opened Dictus on Models")
+            Timber.i("Opened Dictus from the keyboard: action=%s", action)
         } catch (error: RuntimeException) {
-            Timber.e(error, "Unable to open Dictus Models from IME")
+            Timber.e(error, "Unable to open Dictus from the keyboard: action=%s", action)
         }
     }
 

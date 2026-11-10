@@ -170,6 +170,7 @@ class MainActivity : AppCompatActivity() {
                     onOpenAppSettings = { openAppSettings() },
                     openSettingsRequested = restrictedSettingsLaunch,
                     openModelsRequested = intent?.action == AppLaunchContract.ACTION_OPEN_MODELS,
+                    microphoneRequested = intent?.action == AppLaunchContract.ACTION_REQUEST_MICROPHONE,
                 )
             }
         }
