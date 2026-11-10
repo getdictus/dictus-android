@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.pivisolutions.dictus.BuildConfig
+import dev.pivisolutions.dictus.companion.settings.CompanionSettingsSection
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -78,6 +79,7 @@ fun SettingsScreen(
     onNavigateToLicences: () -> Unit = {},
     onNavigateToDebugLogs: () -> Unit = {},
     onNavigateToSoundSettings: () -> Unit = {},
+    onNavigateToModels: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val keyboardLanguage by viewModel.keyboardLanguage.collectAsState()
@@ -106,6 +108,8 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState()),
     ) {
+        CompanionSettingsSection(onOpenModels = onNavigateToModels)
+
         // ---------- SECTION: TRANSCRIPTION ----------
         SectionHeader(text = stringResource(R.string.settings_section_transcription))
         SettingsCard {

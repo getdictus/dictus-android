@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".DictusApplication"
@@ -14,7 +16,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="Dictus"
+        android:label="${dictusAppLabel}"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">
 
@@ -32,6 +34,27 @@
             android:name=".service.DictationService"
             android:foregroundServiceType="microphone"
             android:exported="false" />
+
+        <activity android:name=".companion.CompanionActivationActivity"
+            android:exported="false" android:excludeFromRecents="true"
+            android:taskAffinity="" android:theme="@style/Theme.AppCompat.DayNight.Dialog" />
+        <receiver android:name=".companion.CompanionActionReceiver" android:exported="false" />
+        <service android:name=".companion.CompanionOverlayService" android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-enabled persistent draggable dictation control; microphone capture uses a separate microphone foreground service after visible activity activation" />
+        </service>
+        <service android:name=".companion.CompanionTileService" android:exported="true"
+            android:label="@string/companion_tile_label" android:icon="@drawable/ic_mic"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".companion.insertion.CompanionAccessibilityService"
+            android:exported="true" android:label="@string/companion_title"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/companion_accessibility_service" />
+        </service>
 
         <!--
             FileProvider for sharing the debug log ZIP via the Android share sheet.

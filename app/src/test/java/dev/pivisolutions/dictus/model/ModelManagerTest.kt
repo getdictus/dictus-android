@@ -43,7 +43,7 @@ class ModelManagerTest {
         file.writeBytes(ByteArray(77_691_713))
         val path = modelManager.getModelPath("tiny")
         assertNotNull(path)
-        assertTrue(path!!.endsWith("models/ggml-tiny.bin"))
+        assertEquals(file.absolutePath, path)
     }
 
     @Test

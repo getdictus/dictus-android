@@ -39,7 +39,7 @@ interface SttProvider {
     /**
      * Transcribe audio samples to raw text.
      * @param samples FloatArray of 16kHz mono audio.
-     * @param language BCP-47 language code ("fr", "en").
+     * @param language BCP-47 language code ("fr", "en") or "auto" for supported engines.
      * @return Raw transcribed text (before post-processing).
      */
     suspend fun transcribe(samples: FloatArray, language: String): String

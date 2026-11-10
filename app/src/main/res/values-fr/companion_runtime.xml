@@ -1,0 +1,23 @@
+<resources>
+    <string name="companion_overlay_error">Impossible d’afficher le micro. Ouvrez Dictus et vérifiez les autorisations du mode compagnon.</string>
+    <string name="companion_recording_behavior">Enregistrement : toucher pour démarrer, toucher à nouveau pour transcrire. Appui long pour annuler. Arrêt manuel ; aucune écoute en veille.</string>
+    <string name="companion_tile_label">Dictus Dictation</string>
+    <string name="companion_recording">Enregistrement — toucher pour arrêter</string>
+    <string name="companion_processing">Traitement local…</string>
+    <string name="companion_tap_start">Démarrer la dictée</string>
+    <string name="companion_error">Erreur de dictée</string>
+    <string name="companion_result">Résultat de dictée disponible</string>
+    <string name="companion_overlay_notification">Micro flottant actif. Toucher pour les commandes.</string>
+    <string name="companion_result_notification">Toucher pour consulter et copier. Le texte reste en mémoire.</string>
+    <string name="companion_stop">Arrêter et transcrire</string>
+    <string name="companion_cancel">Annuler la dictée</string>
+    <string name="companion_start_error">Impossible de terminer la dictée. Vérifiez le microphone, le modèle téléchargé et les autorisations, puis réessayez.</string>
+    <string name="companion_inserted">Texte inséré.</string>
+    <string name="companion_controls_help">Gardez votre clavier habituel. Appui long sur le micro pour ces commandes.</string>
+    <string name="companion_copy_warning">Insertion automatique indisponible ou non vérifiée. Vérifiez le champ avant de coller pour éviter les doublons. Le texte reste ici jusqu’à sa fermeture explicite.</string>
+    <string name="companion_copy">Copier</string>
+    <string name="companion_hide">Masquer le micro flottant</string>
+    <string name="companion_settings">Paramètres</string>
+    <string name="companion_return">Revenir à votre application</string>
+    <string name="companion_dismiss">Fermer et effacer le résultat</string>
+</resources>

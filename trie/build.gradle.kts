@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+val dictusTestAbi = providers.gradleProperty("dictusTestAbi").orNull
+require(dictusTestAbi == null || dictusTestAbi == "x86_64") { "dictusTestAbi supports x86_64 only" }
+
 android {
     namespace = "dev.pivisolutions.dictus.trie"
     compileSdk = 35
@@ -12,7 +15,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += if (dictusTestAbi != null) listOf(dictusTestAbi) else listOf("arm64-v8a", "armeabi-v7a")
         }
         externalNativeBuild {
             cmake {

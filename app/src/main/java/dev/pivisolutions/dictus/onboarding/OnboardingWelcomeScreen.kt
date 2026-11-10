@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,6 +43,7 @@ import dev.pivisolutions.dictus.ui.onboarding.OnboardingStepScaffold
 @Composable
 fun OnboardingWelcomeScreen(
     onNext: () -> Unit,
+    onCompanion: (() -> Unit)? = null,
 ) {
     // Processing animation driver — produces a traveling sine wave via
     // WaveformDriver.processingEnergy(), matching iOS BrandWaveformDriver.
@@ -90,5 +92,16 @@ fun OnboardingWelcomeScreen(
             color = LocalDictusColors.current.textSecondary,
             fontSize = 17.sp,
         )
+        if (onCompanion != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            TextButton(onClick = onCompanion) {
+                Text(stringResource(R.string.companion_onboarding_choose))
+            }
+            Text(
+                stringResource(R.string.companion_onboarding_description),
+                color = LocalDictusColors.current.textSecondary,
+                fontSize = 14.sp,
+            )
+        }
     }
 }

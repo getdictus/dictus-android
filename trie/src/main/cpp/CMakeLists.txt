@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(dictus_trie LANGUAGES CXX)
 
+add_link_options("-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
+
 add_library(
     dictus_trie
     SHARED

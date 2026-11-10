@@ -1,0 +1,23 @@
+<resources>
+    <string name="companion_overlay_error">Could not show the microphone. Open Dictus and check Companion permissions.</string>
+    <string name="companion_recording_behavior">Recording: tap to start, tap again to transcribe. Long press for Cancel. Manual stop; no microphone capture while idle.</string>
+    <string name="companion_tile_label">Dictus Dictation</string>
+    <string name="companion_recording">Recording — tap to stop</string>
+    <string name="companion_processing">Processing locally…</string>
+    <string name="companion_tap_start">Start dictation</string>
+    <string name="companion_error">Dictation error</string>
+    <string name="companion_result">Dictation result available</string>
+    <string name="companion_overlay_notification">Floating microphone enabled. Tap for controls.</string>
+    <string name="companion_result_notification">Tap to review and copy. Text is held in memory.</string>
+    <string name="companion_stop">Stop and transcribe</string>
+    <string name="companion_cancel">Cancel dictation</string>
+    <string name="companion_start_error">Could not complete dictation. Check microphone access, the downloaded model and permissions, then retry.</string>
+    <string name="companion_inserted">Text inserted.</string>
+    <string name="companion_controls_help">Keep your regular keyboard. Long press the microphone for these controls.</string>
+    <string name="companion_copy_warning">Automatic insertion is unavailable or unverified. Check the field before pasting to avoid duplicates. Text stays here until you explicitly dismiss it.</string>
+    <string name="companion_copy">Copy</string>
+    <string name="companion_hide">Hide floating microphone</string>
+    <string name="companion_settings">Settings</string>
+    <string name="companion_return">Return to your app</string>
+    <string name="companion_dismiss">Dismiss and clear result</string>
+</resources>

@@ -63,6 +63,20 @@ Dictus is currently in public beta — install by sideloading the APK from [GitH
 
 **Requirements:** Android 10 (API 29) or higher · ~150 MB for the smallest Whisper model.
 
+## Companion setup (keep your usual keyboard)
+
+Companion is an opt-in way to dictate while keeping Samsung Keyboard, Gboard, or another keyboard selected. Choose **Use Companion with my keyboard** during onboarding, or open **Settings → Companion Dictation**. Host tests and Android 15 emulator checks have run. On the Galaxy S24 Ultra, offline recognition and Samsung Keyboard preservation passed; the initial native-field insertion failed. Its editing-span correction is implemented and awaits physical retesting because the phone is no longer connected. The external-app matrix remains pending.
+
+1. Download and select a speech model in **Models** before dictating. Companion uses the same on-device engine and model settings as Dictus; it does not download a missing model during a session.
+2. Enable **Companion**. Start with **Copy mode**, which needs neither accessibility nor overlay permission. Allow microphone access when starting dictation.
+3. Add the **Dictus Dictation** Quick Settings tile, or optionally enable the **floating button** and grant **Display over other apps**. Allow notifications to make recording controls and result reminders visible. Notification actions provide the optional software shortcut mechanism.
+4. Tap the floating button or tile to start. A visible activation window opens while the microphone service starts, then returns you to your app. Tap again while recording to stop and transcribe; notification controls also provide **Stop** and **Cancel**. There is no silence detection or VAD auto-stop.
+5. If using Copy mode, or if insertion is unsafe or cannot be verified, open the result controls and tap **Copy**, then paste yourself. Check the destination first: a failed verification can mean some text was already written. The result remains only in process memory until dismissed; process death loses it. Recording never silently restarts after process death.
+
+**Automatic insertion is optional.** Review the in-app disclosure and explicitly enable the Companion accessibility service in Android settings. Current insertion support is deliberately limited to native plain `android.widget.EditText` fields. All numeric fields are rejected for OTP safety; password/sensitive fields, rich editors, fields with a WebView ancestor (even if exposed as `EditText`), and unknown editors fall back to Copy. Companion settings include haptic and sound toggles shared with Dictus. The primary validation target is Samsung Galaxy S24 Ultra with Samsung Keyboard, as clarified by the device owner; Gboard is secondary. Companion does not install hardware-button hooks.
+
+See [Companion behavior and architecture](COMPANION_MODE.md) and the [test results and device validation matrix](TESTING_COMPANION_MODE.md).
+
 ## Screenshots
 
 | Keyboard | Model Manager | Settings |

@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+// Optional host-emulator validation. Shipped Android ABIs remain ARM unless explicitly requested.
+val dictusTestAbi = providers.gradleProperty("dictusTestAbi").orNull
+require(dictusTestAbi == null || dictusTestAbi == "x86_64") { "dictusTestAbi supports x86_64 only" }
+
 android {
     namespace = "dev.pivisolutions.dictus.whisper"
     compileSdk = 35
@@ -10,7 +14,7 @@ android {
     defaultConfig {
         minSdk = 29
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += if (dictusTestAbi != null) listOf(dictusTestAbi) else listOf("arm64-v8a", "armeabi-v7a")
         }
     }
 
@@ -29,6 +33,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments("-DCMAKE_BUILD_TYPE=Release")
+                if (dictusTestAbi != null) arguments("-DGGML_NATIVE=OFF")
             }
         }
     }

@@ -4,6 +4,10 @@ project(whisper.cpp)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# NDK r27: align every built shared library, including ggml and CPU backends,
+# for Android devices using 16 KB memory pages.
+add_link_options("-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
+
 # Navigate from whisper/src/main/jni/whisper/ up 5 levels to project root,
 # then into third_party/whisper.cpp
 set(WHISPER_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../third_party/whisper.cpp)

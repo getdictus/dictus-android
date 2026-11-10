@@ -17,6 +17,14 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
  * Phase 4 additions: onboarding status, haptics, and sound toggles.
  */
 object PreferenceKeys {
+    // Companion is opt-in. Copy mode needs neither accessibility nor overlay permission.
+    val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
+    val COMPANION_FLOATING = booleanPreferencesKey("companion_floating")
+    val COMPANION_AUTOMATIC_INSERTION = booleanPreferencesKey("companion_automatic_insertion")
+    val COMPANION_DOCK_RIGHT = booleanPreferencesKey("companion_dock_right")
+    /** Vertical position as a fraction of available screen height (0..1). */
+    val COMPANION_Y = floatPreferencesKey("companion_y")
+
     // --- Keyboard settings (Phase 1-2) ---
     val KEYBOARD_LAYOUT = stringPreferencesKey("keyboard_layout")
     /** Keyboard correction language. Deliberately independent from ASR language. */

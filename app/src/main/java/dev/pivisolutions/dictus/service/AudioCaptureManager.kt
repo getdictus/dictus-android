@@ -3,14 +3,17 @@ package dev.pivisolutions.dictus.service
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
+import android.media.AudioRecordingConfiguration
 import android.media.MediaRecorder
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
+import java.util.concurrent.Executor
 import kotlin.math.sqrt
 
 /**
@@ -40,6 +43,9 @@ class AudioCaptureManager(
 
     private var recorder: AudioRecord? = null
     private var captureJob: Job? = null
+    @Volatile private var stopping = false
+    private var recordingCallback: AudioManager.AudioRecordingCallback? = null
+    private var failureMonitor: AudioCaptureFailureMonitor? = null
     private val samples = ArrayList<Float>()
     private val energyHistory = ArrayDeque<Float>(MAX_ENERGY_HISTORY).apply {
         // Pre-fill with zeros so the waveform renders all 30 bars immediately.
@@ -49,6 +55,8 @@ class AudioCaptureManager(
 
     /** Callback invoked on each energy update with a normalized 0.0-1.0 value. */
     var onEnergyUpdate: ((Float) -> Unit)? = null
+    /** Called on Main for Android silencing, or the capture dispatcher for read failures. */
+    var onCaptureFailure: (() -> Unit)? = null
 
     /**
      * Start capturing audio.
@@ -61,37 +69,66 @@ class AudioCaptureManager(
      *              runs on Dispatchers.Default (background thread pool) so it
      *              doesn't block the main thread.
      */
-    fun start(scope: CoroutineScope) {
+    fun start(scope: CoroutineScope): Boolean {
+        stopping = false
         val minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
         if (minBufferSize <= 0) {
             Timber.e("AudioRecord.getMinBufferSize returned $minBufferSize -- device may not support ENCODING_PCM_FLOAT")
-            return
+            return false
         }
 
         // Double the minimum buffer to reduce the risk of buffer underruns
         val bufferSize = minBufferSize * 2
 
-        recorder = AudioRecord(
+        val rec = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             SAMPLE_RATE,
             CHANNEL_CONFIG,
             AUDIO_FORMAT,
             bufferSize,
-        ).also { rec ->
+        )
+        recorder = rec
+        try {
             if (rec.state != AudioRecord.STATE_INITIALIZED) {
                 Timber.e("AudioRecord failed to initialize (state=${rec.state})")
                 rec.release()
                 recorder = null
-                return
+                return false
             }
             val routeResult = audioManager?.let { manager ->
                 preferBuiltInMicrophone(AndroidAudioInputRouteBackend(manager, rec))
             } ?: AudioInputRouteResult.NoBuiltInMic
+            val monitor = AudioCaptureFailureMonitor(rec.audioSessionId) { onCaptureFailure?.invoke() }
+            failureMonitor = monitor
+            val callback = object : AudioManager.AudioRecordingCallback() {
+                override fun onRecordingConfigChanged(configs: MutableList<AudioRecordingConfiguration>) {
+                    configs.forEach { config ->
+                        monitor.recordingChanged(config.clientAudioSessionId, config.isClientSilenced)
+                    }
+                }
+            }
+            recordingCallback = callback
+            // API 29+: observe this AudioRecord, without privileged access to other clients.
+            // Incoming calls can silence a client while reads continue returning zero samples.
+            rec.registerAudioRecordingCallback(Executor { command ->
+                scope.launch(Dispatchers.Main) { command.run() }
+            }, callback)
             rec.startRecording()
+            check(rec.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "Microphone did not start" }
+            check(rec.activeRecordingConfiguration?.isClientSilenced != true) { "Microphone client is silenced" }
             Timber.d(
                 "AudioRecord started: ${SAMPLE_RATE}Hz mono Float32, buffer=$bufferSize, " +
                     "inputPreference=$routeResult, routedType=${rec.routedDevice?.type ?: "unknown"}",
             )
+        } catch (failure: Exception) {
+            stopping = true
+            unregisterRecordingCallback(rec)
+            try {
+                rec.release()
+            } finally {
+                recorder = null
+            }
+            throw failure
         }
 
         // Read loop on a background thread.
@@ -99,20 +136,31 @@ class AudioCaptureManager(
         // and compute RMS energy for the waveform display.
         captureJob = scope.launch(Dispatchers.Default) {
             val readBuffer = FloatArray(minBufferSize / 4) // Float = 4 bytes
-            while (isActive) {
-                val read = recorder?.read(readBuffer, 0, readBuffer.size, AudioRecord.READ_BLOCKING) ?: break
-                if (read <= 0) break
-                synchronized(samples) {
-                    for (i in 0 until read) {
-                        samples.add(readBuffer[i])
+            try {
+                while (isActive) {
+                    val read = recorder?.read(readBuffer, 0, readBuffer.size, AudioRecord.READ_BLOCKING) ?: break
+                    if (read <= 0) {
+                        if (!stopping && isActive) failureMonitor?.fail()
+                        break
                     }
+                    synchronized(samples) {
+                        for (i in 0 until read) {
+                            samples.add(readBuffer[i])
+                        }
+                    }
+                    val rms = calculateRmsEnergy(readBuffer, read)
+                    val normalized = normalizeEnergy(rms)
+                    addEnergyToHistory(normalized)
+                    onEnergyUpdate?.invoke(normalized)
                 }
-                val rms = calculateRmsEnergy(readBuffer, read)
-                val normalized = normalizeEnergy(rms)
-                addEnergyToHistory(normalized)
-                onEnergyUpdate?.invoke(normalized)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                Timber.e(failure, "Microphone read failed")
+                if (!stopping && isActive) failureMonitor?.fail()
             }
         }
+        return true
     }
 
     /**
@@ -121,12 +169,17 @@ class AudioCaptureManager(
      * @return FloatArray of all captured samples at 16kHz mono.
      */
     fun stop(): FloatArray {
+        stopping = true
         val job = captureJob
         val activeRecorder = recorder
-        stopCaptureAndAwait(job) { activeRecorder?.stop() }
-        captureJob = null
-        activeRecorder?.release()
-        recorder = null
+        unregisterRecordingCallback(activeRecorder)
+        try {
+            stopCaptureAndAwait(job) { activeRecorder?.stop() }
+        } finally {
+            captureJob = null
+            recorder = null
+            activeRecorder?.release()
+        }
         Timber.d("AudioRecord stopped, captured ${samples.size} samples")
         val result: FloatArray
         synchronized(samples) {
@@ -141,18 +194,35 @@ class AudioCaptureManager(
      * Cancel capturing and discard all audio data.
      */
     fun cancel() {
+        stopping = true
         val job = captureJob
         val activeRecorder = recorder
+        unregisterRecordingCallback(activeRecorder)
         job?.cancel()
-        stopCaptureAndAwait(job) { activeRecorder?.stop() }
-        captureJob = null
-        activeRecorder?.release()
-        recorder = null
-        synchronized(samples) {
-            samples.clear()
+        try {
+            stopCaptureAndAwait(job) { activeRecorder?.stop() }
+        } finally {
+            captureJob = null
+            recorder = null
+            try {
+                activeRecorder?.release()
+            } finally {
+                synchronized(samples) { samples.clear() }
+                resetEnergyHistory()
+            }
         }
-        resetEnergyHistory()
         Timber.d("AudioRecord cancelled, samples discarded")
+    }
+
+    private fun unregisterRecordingCallback(activeRecorder: AudioRecord?) {
+        failureMonitor?.close()
+        failureMonitor = null
+        val callback = recordingCallback
+        recordingCallback = null
+        if (callback != null && activeRecorder != null) {
+            runCatching { activeRecorder.unregisterAudioRecordingCallback(callback) }
+                .onFailure { Timber.w(it, "Unable to unregister microphone recording callback") }
+        }
     }
 
     /**
@@ -236,9 +306,13 @@ class AudioCaptureManager(
      * short join is intentionally bridged here rather than exposing a racy result.
      */
     internal fun stopCaptureAndAwait(job: Job?, stopRecorder: () -> Unit) {
-        stopRecorder()
-        if (job != null) {
-            runBlocking { job.join() }
+        try {
+            stopRecorder()
+        } catch (failure: Exception) {
+            job?.cancel()
+            throw failure
+        } finally {
+            if (job != null) runBlocking { job.join() }
         }
     }
 }

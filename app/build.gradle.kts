@@ -30,8 +30,10 @@ android {
         applicationId = "dev.pivisolutions.dictus"
         minSdk = 29
         targetSdk = 35
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 1
         versionName = "1.0.0"
+        manifestPlaceholders["dictusAppLabel"] = "Dictus"
         val ciVersionCode = System.getenv("VERSION_CODE")?.toIntOrNull()
         val ciVersionName = System.getenv("VERSION_NAME")
         if (ciVersionCode != null) versionCode = ciVersionCode
@@ -39,6 +41,12 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            if (providers.gradleProperty("dictusSideBySide").orNull == "true") {
+                applicationIdSuffix = ".companiontest"
+                manifestPlaceholders["dictusAppLabel"] = "Dictus Companion Test"
+            }
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
@@ -167,5 +175,9 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.room.testing)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:rules:1.6.1")
     debugImplementation(libs.compose.ui.test.manifest)
 }

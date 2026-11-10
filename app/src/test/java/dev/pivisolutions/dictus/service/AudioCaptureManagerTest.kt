@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -153,6 +154,24 @@ class AudioCaptureManagerTest {
     @Test
     fun `stop waits for final read above minimum sample count`() = runBlocking {
         assertFinalReadIsIncluded(RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT + 1)
+    }
+
+    @Test
+    fun `failed recorder stop still cancels and joins capture job`() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val captureJob = CoroutineScope(Dispatchers.Default).launch {
+            started.complete(Unit)
+            awaitCancellation()
+        }
+        started.await()
+        val failure = IllegalStateException("stop failed")
+        try {
+            manager.stopCaptureAndAwait(captureJob) { throw failure }
+            throw AssertionError("Expected stop failure")
+        } catch (caught: IllegalStateException) {
+            assertTrue(caught === failure)
+        }
+        assertTrue(captureJob.isCompleted)
     }
 
     private suspend fun assertFinalReadIsIncluded(finalSampleCount: Int) {
