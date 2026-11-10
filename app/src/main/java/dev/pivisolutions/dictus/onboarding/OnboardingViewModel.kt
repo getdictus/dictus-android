@@ -108,7 +108,7 @@ class OnboardingViewModel(
 
     // --- Recommended model based on device RAM ---
 
-    /** Stable key for the recommended model (e.g. "parakeet-tdt-0.6b-v3" or "small-q5_1"). */
+    /** Stable key for the recommended model (e.g. "parakeet-tdt-0.6b-v3" or "base"). */
     val recommendedKey: String = ModelCatalog.recommendedModelKey(context)
 
     /** Full ModelInfo for the recommended model, used by the UI to display name/size/quality. */

@@ -87,6 +87,10 @@ data class ModelFile(val name: String, val sizeBytes: Long, val sha256: String)
  */
 object ModelCatalog {
     const val DEFAULT_KEY = "tiny"
+
+    /** The lightest model: nothing lighter exists to suggest once it is the one running (#309). */
+    const val LIGHTEST_KEY = "tiny"
+
     // Pinned revision: the SHA-256 below are the LFS object ids of the files at this commit, so a
     // later upstream change can never make a valid install fail its check.
     private const val WHISPER_BASE_URL =
@@ -219,25 +223,31 @@ object ModelCatalog {
     fun findByKey(key: String): ModelInfo? = ALL.find { it.key == key }
 
     /**
-     * Return the recommended model key for onboarding based on device RAM.
+     * Return the recommended model key for onboarding based on device RAM and CPU generation.
      *
-     * >= 6 GB marketed RAM (Parakeet's minRamGb) -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
-     * < 6 GB marketed RAM                         -> small-q5_1 (190 MB, best accuracy/size trade-off)
+     * >= 6 GB marketed RAM (Parakeet's minRamGb)     -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
+     * < 6 GB marketed RAM                            -> base (148 MB)
+     * < 6 GB marketed RAM on a [SocClass.LEGACY] CPU -> tiny (77 MB)
      *
-     * Same rule as iOS (ModelInfo.recommendedIdentifier, minus its A12/A13 exception). On a
-     * 6 GB Pixel 4, Parakeet peaks at ~1.5 GB PSS and answers in under 1 s for a 6 s dictation,
-     * where small-q5_1 takes about 30 s (#148).
+     * Follows iOS (ModelInfo.recommendedIdentifier), which keeps Small away from its old chips.
+     * On a 6 GB Pixel 4, Parakeet answers a 6 s dictation in under 1 s where small-q5_1 takes
+     * about 16 s, because whisper.cpp pads every take to a 30 s window (#145, #148): phones
+     * below 6 GB are usually slower than that one, so they get a lighter Whisper (#309).
      *
      * WHY DeviceRam: the Models screen gates the same model with the same helper, so
      * onboarding never recommends a model the Models screen shows as unavailable.
      */
     fun recommendedModelKey(context: Context): String =
-        recommendedModelKey(DeviceRam.totalMemBytes(context))
+        recommendedModelKey(DeviceRam.totalMemBytes(context), SocClass.current())
 
-    /** Pure variant of [recommendedModelKey] for a given totalMem reading. */
-    fun recommendedModelKey(totalMemBytes: Long): String {
+    /** Pure variant of [recommendedModelKey] for a given totalMem reading and CPU generation. */
+    fun recommendedModelKey(totalMemBytes: Long, socClass: SocClass): String {
         val parakeet = findByKey("parakeet-tdt-0.6b-v3")!!
-        return if (DeviceRam.meetsRequirement(parakeet, totalMemBytes)) parakeet.key else "small-q5_1"
+        return when {
+            DeviceRam.meetsRequirement(parakeet, totalMemBytes) -> parakeet.key
+            socClass == SocClass.LEGACY -> LIGHTEST_KEY
+            else -> "base"
+        }
     }
 
     /**
