@@ -9,6 +9,9 @@
     <string name="ime_transcribing">Transcribing\u2026</string>
     <!-- Over the disabled mic while a dictation started in the app runs (#248). -->
     <string name="ime_app_dictation_in_progress">Dictation in progress in Dictus</string>
+    <!-- Mic tap without RECORD_AUDIO (#307), after iOS "Full access required" and "Open Dictus". -->
+    <string name="ime_mic_refused_notice">Microphone access required</string>
+    <string name="ime_mic_refused_action">Open Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
     <!-- Emoji picker (#192): labels and categories, after iOS EmojiPickerView. -->
     <string name="ime_emoji_search_placeholder">Search Emoji</string>

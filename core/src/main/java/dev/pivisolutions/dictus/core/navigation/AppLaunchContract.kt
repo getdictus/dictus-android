@@ -11,6 +11,13 @@ object AppLaunchContract {
      * authorization: it bypasses nothing, and onboarding still runs first when incomplete.
      */
     const val ACTION_OPEN_MODELS = "dev.pivisolutions.dictus.action.OPEN_MODELS"
+
+    /**
+     * Opens Dictus and asks for the microphone, from the keyboard's refused-microphone notice
+     * (#307): an IME has no activity to ask from. It needs no authorization either, as it only
+     * shows Android's own prompt.
+     */
+    const val ACTION_REQUEST_MICROPHONE = "dev.pivisolutions.dictus.action.REQUEST_MICROPHONE"
     const val EXTRA_AUTHORIZATION = "dev.pivisolutions.dictus.extra.SETTINGS_AUTHORIZATION"
     const val MAIN_ACTIVITY_CLASS = "dev.pivisolutions.dictus.MainActivity"
 }

@@ -4,8 +4,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.ime.input.DictationNotice
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,6 +22,7 @@ class KeyboardToolbarNoticeUiTest {
         notice: DictationNotice.Message?,
         isDictationUndoAvailable: Boolean = false,
         isAppDictationInProgress: Boolean = false,
+        onRequestMicrophone: () -> Unit = {},
     ) {
         composeRule.setContent {
             DictusTheme {
@@ -30,6 +33,7 @@ class KeyboardToolbarNoticeUiTest {
                     suggestions = listOf("bonjour"),
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     dictationNotice = notice,
+                    onRequestMicrophone = onRequestMicrophone,
                     isAppDictationInProgress = isAppDictationInProgress,
                 )
             }
@@ -105,6 +109,30 @@ class KeyboardToolbarNoticeUiTest {
         composeRule.onNodeWithContentDescription("Undo dictation insertion").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Keyboard menu").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Microphone").assertIsDisplayed()
+    }
+
+    // #307: the mic tap without the permission used to leave only a log line.
+    @Test
+    fun `a refused microphone says so and offers one action`() {
+        var requests = 0
+        setBar(DictationNotice.Message.MicrophoneRefused, onRequestMicrophone = { requests++ })
+
+        composeRule.onNodeWithText("Microphone access required").assertIsDisplayed()
+        composeRule.onNodeWithText("bonjour").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Microphone").assertIsDisplayed()
+
+        composeRule.onNodeWithContentDescription("Open Dictus").assertIsDisplayed().performClick()
+
+        assertEquals(1, requests)
+    }
+
+    @Test
+    @Config(qualifiers = "fr")
+    fun `a refused microphone uses the French wording`() {
+        setBar(DictationNotice.Message.MicrophoneRefused)
+
+        composeRule.onNodeWithText("Accès au micro requis").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Ouvrir Dictus").assertIsDisplayed()
     }
 
     @Test
