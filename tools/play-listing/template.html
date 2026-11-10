@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dictus · Google Play listing images</title>
+<!--
+  Google Play counterpart of the iOS App Store template v16-B
+  (getdictus/dictus-ios, assets/appstore/screenshots.html): one background and
+  one waveform across the set, one short headline per slide, the same hero art.
+
+  What differs from iOS, and why:
+  - 9:16 panels (1320 x 2347), since Play refuses a side more than twice the other;
+  - a phone frame drawn here, generic Android: Play refuses other platforms' devices;
+  - the phone in the hero art gets an Android camera bar (cameraPatch);
+  - the ribbon shows only apps that exist on Android: no Apple Messages, Mail or Notes;
+  - five slides, none about Smart Modes, translation or Pro.
+
+  ?locale=fr-FR | en-US  copy from strings/<locale>.js, captures from captures/<locale>/
+  ?mode=screens | feature
+  ?ribbon=logos | tiles   real app icons (fetch-icons.sh), or neutral Dictus tiles if Google refuses them
+  Rendered by render.mjs.
+-->
+<style>
+  @font-face { font-family: "DM Sans"; src: url("fonts/DMSans.ttf"); font-weight: 100 1000; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #fff; }
+  #strip { position: relative; overflow: hidden; --ink: #0A1628; --sub: rgba(10, 22, 40, 0.55); }
+  #bg { position: absolute; inset: 0; }
+
+  .copy {
+    position: absolute; top: 96px; width: 1320px; padding: 0 90px; z-index: 6;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .headline {
+    font: 400 134px/1.0 "DM Sans"; letter-spacing: -0.045em; color: var(--ink);
+    text-wrap: balance; max-width: 1180px;
+  }
+  .footnote { margin-top: 26px; font: 400 40px/1.3 "DM Sans"; color: var(--sub); letter-spacing: -0.005em; }
+
+  .device {
+    position: absolute; z-index: 2; aspect-ratio: 1140 / 2340; border-radius: 9.5% / 4.6%;
+    background: linear-gradient(150deg, #454D5E 0%, #1B2029 22%, #11151C 78%, #3A4150 100%);
+    filter: drop-shadow(0 60px 90px rgba(10, 22, 40, 0.26)) drop-shadow(0 16px 28px rgba(10, 22, 40, 0.12));
+  }
+  .device .screen {
+    position: absolute; left: calc(30 / 1140 * 100%); top: calc(30 / 2340 * 100%);
+    width: calc(1080 / 1140 * 100%); height: calc(2280 / 2340 * 100%);
+    border-radius: 7.5% / 3.6%; overflow: hidden; background: #fff;
+  }
+  .device .screen > img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .device .layer { position: absolute; left: 0; top: 0; width: 1080px; height: 2280px; transform-origin: 0 0; }
+  .device .hole {
+    position: absolute; left: 50%; top: calc(26 / 2280 * 100%); width: calc(42 / 1080 * 100%);
+    aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%; background: #05070B;
+  }
+  .device .button { position: absolute; right: -0.9%; width: 1.3%; border-radius: 0 6px 6px 0; background: #2A303C; }
+
+  .lift {
+    position: absolute; z-index: 4; overflow: hidden; background: #fff;
+    box-shadow: 0 70px 120px rgba(10, 22, 40, 0.28), 0 18px 36px rgba(10, 22, 40, 0.14), 0 0 0 2px rgba(255, 255, 255, 0.85);
+  }
+  .lift img { position: absolute; display: block; }
+
+  .compose { position: absolute; left: 0; width: 1080px; background: #fff; font-family: "DM Sans"; color: #0A1628; }
+  .compose .bar { height: 150px; display: flex; align-items: center; justify-content: space-between; padding: 0 46px; }
+  .compose .bar .close { width: 42px; height: 42px; }
+  .compose .bar .send { width: 92px; height: 92px; border-radius: 50%; background: #3D7EFF; display: flex; align-items: center; justify-content: center; }
+  .compose .bar .send svg { width: 46px; height: 46px; }
+  .compose .field { margin: 0 46px; height: 110px; display: flex; align-items: center; gap: 22px; border-bottom: 2px solid #ECEEF3; font-size: 42px; }
+  .compose .field .label { color: #8A94A6; }
+  .compose .field .chip { padding: 12px 26px; border-radius: 34px; background: #E6EEFF; color: #2563EB; font-weight: 500; }
+  .compose .field.subject { font-weight: 600; }
+  .compose .body { margin: 44px 46px 0; font-size: 44px; line-height: 1.42; }
+  .compose .body p + p { margin-top: 34px; }
+  .compose .caret { display: inline-block; width: 5px; height: 54px; margin-left: 4px; vertical-align: -10px; background: #3D7EFF; border-radius: 3px; }
+
+  .kb { position: absolute; z-index: 3; }
+  .kb .crop {
+    position: relative; overflow: hidden; background: #fff;
+    box-shadow: 0 50px 90px rgba(10, 22, 40, 0.20), 0 12px 26px rgba(10, 22, 40, 0.10), 0 0 0 2px rgba(255, 255, 255, 0.9);
+  }
+  .kb .crop img { position: absolute; display: block; }
+  .kb .tag {
+    position: absolute; top: -30px; z-index: 2; padding: 14px 26px; border-radius: 20px;
+    font: 500 32px/1 "DM Sans"; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #fff; background: #0A1628; box-shadow: 0 10px 24px rgba(10, 22, 40, 0.25);
+  }
+
+  .hero-brand { position: absolute; left: 110px; top: 96px; z-index: 6; display: flex; align-items: center; gap: 20px; }
+  .hero-brand .bars { width: 72px; height: 72px; }
+  .hero-brand span { font: 700 78px/1 "DM Sans"; color: #3D7EFF; }
+  .hero-headline {
+    position: absolute; left: 110px; top: 196px; z-index: 6; width: 1110px;
+    font: 400 160px/0.98 "DM Sans"; letter-spacing: -0.045em; color: var(--ink); text-wrap: balance;
+  }
+  .art { position: absolute; width: 2640px; height: 2868px; transform-origin: 0 0; }
+  .art img, .art svg { position: absolute; left: 0; top: 0; }
+  .ribbon-icon {
+    position: absolute; z-index: 8; overflow: hidden; border-radius: 22.4%;
+    box-shadow: 0 18px 36px rgba(10, 22, 40, 0.22), 0 4px 10px rgba(10, 22, 40, 0.10);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ribbon-icon svg { width: 54%; height: 54%; }
+  .ribbon-icon img { width: 100%; height: 100%; display: block; }
+
+  .fg-copy { position: absolute; left: 56px; top: 84px; z-index: 6; width: 470px; }
+  .fg-copy .hero-brand { position: static; gap: 10px; }
+  .fg-copy .hero-brand .bars { width: 42px; height: 42px; }
+  .fg-copy .hero-brand span { font-size: 46px; }
+  .fg-copy .headline { margin-top: 24px; font-size: 76px; line-height: 1.0; text-align: left; max-width: none; }
+  .fg-copy .footnote { margin-top: 20px; font-size: 25px; }
+</style>
+</head>
+<body>
+<div id="strip"><canvas id="bg"></canvas></div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const LOCALE = params.get("locale") || "fr-FR";
+const MODE = params.get("mode") || "screens";
+const RIBBON = params.get("ribbon") || "logos";
+document.write(`<script src="strings/${LOCALE}.js"><\/script>`);
+</script>
+<script>
+const PANEL_W = 1320, PANEL_H = 2347, FEATURE_W = 1024, FEATURE_H = 500;
+/* The art's canvas is 2868 px tall for iOS's panel: ART_SHIFT raises it into the 9:16 panel. */
+const ART_SHIFT = 190;
+/* The strokes of the art end at this height on the first panel's right edge; the waveform carries on. */
+const WAVE_Y = 1600 - ART_SHIFT;
+const S = window.DICTUS_STRINGS;
+/* Pixels of the emulator captures (1080 x 2280): status bar, keyboard, downloaded models. */
+const SHOT = {
+  statusBarH: 66, keyboardTop: 1411,
+  keyboardBand: { y: 1411, h: 736, fill: "#0A1628" },
+  modelsBand: { x: 5, y: 296, w: 1070, h: 1330, radius: 66, fill: "#0A1628" },
+};
+
+const SLIDES = [
+  { key: "hero", hero: true },
+  { key: "dictate", phone: { capture: "01-recording.png", compose: true, size: { width: 770, top: 508 } } },
+  { key: "keyboard", keyboards: [
+    { capture: "fr.png", label: "fr" },
+    { capture: "en.png", label: "en" },
+    { capture: "de.png", label: "de" },
+  ] },
+  { key: "models", phone: { capture: "05-models.png" }, lift: { band: SHOT.modelsBand, width: 1020 } },
+  { key: "private", phone: { capture: "06-microphone.png" } },
+];
+const PANELS = SLIDES.length;
+const PHONE = { width: 816, top: 556 };
+
+const strip = document.getElementById("strip");
+const el = (cls, html) => { const d = document.createElement("div"); d.className = cls; if (html) d.innerHTML = html; return d; };
+const capture = (file) => `captures/${LOCALE}/${file}`;
+
+/* The Dictus mark on a light background: app icon bars, side bars grey, as the app does in light mode. */
+const LOGO_BARS = `<svg class="bars" viewBox="19 19 42 42"><defs><linearGradient id="hb" x1="0" y1="19" x2="0" y2="61" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6BA3FF"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs>
+  <rect x="19" y="31" width="9" height="18" rx="4.5" fill="#8E8E93" opacity="0.45"/><rect x="35.5" y="19" width="9" height="42" rx="4.5" fill="url(#hb)"/><rect x="52" y="26" width="9" height="27" rx="4.5" fill="#8E8E93" opacity="0.65"/></svg>`;
+
+/* The art's phone has iOS's square three-lens module. Painted over it, in the art's pixels:
+   the phone's own back colour, then a horizontal camera bar, tilted with the phone. */
+const cameraPatch = `<svg width="2640" height="2868" viewBox="0 0 2640 2868">
+  <g transform="translate(740 1040) scale(0.25)">
+    <path d="M214 226 L452 186 L474 470 L246 510 Q222 400 205 300 Q203 250 214 226 Z" fill="#3B5584"/>
+    <g transform="rotate(-10 335 300)">
+      <rect x="222" y="256" width="236" height="96" rx="48" fill="#0A1628"/>
+      <circle cx="282" cy="304" r="30" fill="#05070B" stroke="#3B5584" stroke-width="6"/>
+      <circle cx="274" cy="294" r="9" fill="#AFC4E8"/>
+      <circle cx="362" cy="304" r="24" fill="#05070B" stroke="#3B5584" stroke-width="6"/>
+      <circle cx="355" cy="296" r="7" fill="#AFC4E8"/>
+      <circle cx="424" cy="304" r="10" fill="#DCE8FF"/>
+    </g>
+  </g></svg>`;
+
+function art(left, top, scale) {
+  const d = el("art", `<img alt="" src="${S.heroArt}">${cameraPatch}`);
+  Object.assign(d.style, { left: `${left}px`, top: `${top}px`, transform: `scale(${scale})` });
+  return d;
+}
+
+function addPhone(p, i) {
+  const G = { ...PHONE, ...(p.size || {}) };
+  const scale = G.width / 1140;
+  const left = i * PANEL_W + (PANEL_W - G.width) / 2;
+  const d = el("device", `<span class="button" style="top:17%;height:9%"></span><span class="button" style="top:30%;height:6%"></span>
+    <div class="screen"><img alt="" src="${capture(p.capture)}"><div class="layer"></div><div class="hole"></div></div>`);
+  Object.assign(d.style, { left: `${left}px`, top: `${G.top}px`, width: `${G.width}px` });
+  d.querySelector(".layer").style.transform = `scale(${scale})`;
+  if (p.compose) d.querySelector(".layer").appendChild(composeScreen());
+  strip.appendChild(d);
+  return (x, y) => [left + (30 + x) * scale, G.top + (30 + y) * scale];
+}
+
+/* An unbranded email above the real recording keyboard, in capture pixels: the emulator has no
+   mail app, and a copy of Gmail would be someone else's trade dress. */
+function composeScreen() {
+  const e = S.slides.dictate;
+  const paragraphs = e.emailBody.map((t, n) => `<p>${t}${n === e.emailBody.length - 1 ? '<span class="caret"></span>' : ""}</p>`).join("");
+  const d = el("compose", `
+    <div class="bar">
+      <svg class="close" viewBox="0 0 24 24" fill="none" stroke="#0A1628" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
+      <span class="send"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+    </div>
+    <div class="field"><span class="label">${e.emailToLabel}</span><span class="chip">${e.emailTo}</span></div>
+    <div class="field subject">${e.emailSubject}</div>
+    <div class="body">${paragraphs}</div>`);
+  Object.assign(d.style, { top: `${SHOT.statusBarH}px`, height: `${SHOT.keyboardTop - SHOT.statusBarH}px` });
+  return d;
+}
+
+function addLift(l, toStrip, file, i) {
+  const band = { x: 0, w: 1080, ...l.band };
+  const k = l.width / band.w;
+  const [, y0] = toStrip(band.x, band.y), [, y1] = toStrip(band.x, band.y + band.h);
+  const h = band.h * k, cy = (y0 + y1) / 2;
+  const d = el("lift", `<img alt="" src="${capture(file)}">`);
+  Object.assign(d.style, {
+    left: `${i * PANEL_W + (PANEL_W - l.width) / 2}px`, top: `${cy - h / 2}px`, width: `${l.width}px`, height: `${h}px`,
+    borderRadius: `${band.radius * k}px`, background: band.fill,
+  });
+  Object.assign(d.querySelector("img").style, { width: `${1080 * k}px`, left: `${-band.x * k}px`, top: `${-band.y * k}px` });
+  strip.appendChild(d);
+}
+
+function addKeyboards(list, i, labels) {
+  const band = SHOT.keyboardBand, w = 780, k = w / 1080, h = Math.round(band.h * k), gap = 46, first = 500;
+  list.forEach((kb, n) => {
+    const d = el("kb", `<div class="tag">${labels[kb.label]}</div><div class="crop"><img alt="" src="captures/keyboards/${kb.capture}"></div>`);
+    Object.assign(d.style, { left: `${i * PANEL_W + (PANEL_W - w) / 2 + [-120, 120, -120][n]}px`, top: `${first + n * (h + gap)}px` });
+    d.querySelector(".tag").style[n % 2 ? "right" : "left"] = "40px";
+    const crop = d.querySelector(".crop");
+    Object.assign(crop.style, { width: `${w}px`, height: `${h}px`, borderRadius: `${54 * k}px`, background: band.fill });
+    Object.assign(crop.querySelector("img").style, { width: `${1080 * k}px`, top: `${-band.y * k}px`, left: "0" });
+    strip.appendChild(d);
+  });
+}
+
+/* A single cosine from the first panel's left edge to the second panel's right edge, icons turned to it. */
+function addRibbon() {
+  const X0 = -70, X1 = 2720, A = 96, Y0 = 2250, SIZE = 84, P = X1 - X0;
+  const Y = (x) => Y0 + A * Math.cos(2 * Math.PI * (x - X0) / P);
+  const dY = (x) => -A * (2 * Math.PI / P) * Math.sin(2 * Math.PI * (x - X0) / P);
+  const GLYPHS = ['<path d="M5 6h14v9H10l-5 4z"/>', '<path d="M4 7h16v11H4zM4 7l8 6 8-6"/>', '<path d="M7 4h7l4 4v12H7zM14 4v4h4M10 12h5M10 15h5"/>',
+    '<circle cx="12" cy="12" r="3.5"/><path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12a8.5 8.5 0 1 0-3.4 6.8"/>', '<path d="M4 12l16-7-6 15-3-6z"/>', '<path d="M5 19l1-4L16 5l3 3L9 18z"/>'];
+  const COLOURS = [["#3D7EFF", "#fff"], ["#DCE8FF", "#2563EB"], ["#0A1628", "#fff"], ["#6BA3FF", "#fff"], ["#2563EB", "#fff"], ["#EEF3FF", "#3D7EFF"]];
+  /* The 16 slots of the iOS ribbon (RIBBON15.fit), its apps that exist on Android, reordered so that
+     no two dark or two blue icons touch. They start past the shoes, so they are smaller than on iOS. */
+  const LOGOS = ["gmail", "linkedin", "whatsapp", "chatgpt", "messenger", "claude", "telegram", "gemini",
+    "perplexity", "notion", "lechat", "slack", "obsidian", "signal", "instagram", "discord"];
+  const count = LOGOS.length, clearOfShoes = 960, end = 2 * PANEL_W;
+  for (let n = 0; n < count; n++) {
+    const x = clearOfShoes + n * (end - clearOfShoes) / (count - 1), y = Y(x), rot = Math.atan2(dY(x), 1) * 180 / Math.PI;
+    const [bg, fg] = COLOURS[n % COLOURS.length];
+    const d = el("ribbon-icon", RIBBON === "tiles"
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="${fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[n % GLYPHS.length]}</svg>`
+      : `<img alt="" src=".icons/${LOGOS[n]}.png">`);
+    Object.assign(d.style, { left: `${x - SIZE / 2}px`, top: `${y - SIZE / 2}px`, width: `${SIZE}px`, height: `${SIZE}px`, background: RIBBON === "tiles" ? bg : "none", transform: `rotate(${rot}deg)` });
+    strip.appendChild(d);
+  }
+}
+
+function addHero(copy) {
+  strip.appendChild(el("hero-brand", `${LOGO_BARS}<span>Dictus</span>`));
+  strip.appendChild(el("hero-headline", copy.headline));
+  const a = art(0, -ART_SHIFT, 1);
+  a.style.zIndex = 3;
+  strip.appendChild(a);
+  addRibbon();
+}
+
+/* Background dots and the brand waveform (energy = 0.2 + 0.25 * (sin(2 pi t) + 1)), one drawing. */
+function drawBackground(ctx, w, h, wave) {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "rgb(245, 247, 251)"); g.addColorStop(1, "rgb(231, 236, 245)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(10, 22, 40, 0.05)";
+  for (let gy = wave.dot / 2; gy < h; gy += wave.dot) for (let gx = wave.dot / 2; gx < w; gx += wave.dot) {
+    ctx.beginPath(); ctx.arc(gx, gy, wave.dotR, 0, Math.PI * 2); ctx.fill();
+  }
+  const blue = (y, bh) => { const f = ctx.createLinearGradient(0, y, 0, y + bh); f.addColorStop(0, "#6BA3FF"); f.addColorStop(1, "#2563EB"); return f; };
+  const pitch = wave.barW + wave.gap;
+  ctx.globalAlpha = 0.62;
+  for (let x = wave.from; x < w - wave.barW; x += pitch) {
+    const cx = x + wave.barW / 2;
+    const energy = 0.2 + 0.25 * (Math.sin(2 * Math.PI * (cx / wave.period + 0.25)) + 1);
+    const grow = Math.min(1, Math.max(0, (cx - wave.from) / wave.ramp));
+    const bh = Math.max((wave.minH + energy * (wave.maxH - wave.minH)) * (0.22 + 0.78 * grow), wave.minH);
+    const y = wave.y - bh / 2;
+    const p = Math.min(Math.floor(cx / wave.panel), wave.panels - 1);
+    const off = Math.abs(cx - (p * wave.panel + wave.panel / 2)) / (wave.panel / 2);
+    ctx.fillStyle = off < 0.4 ? blue(y, bh) : `rgba(110,122,145,${((1 - off) * 0.9 + 0.15).toFixed(3)})`;
+    ctx.beginPath(); ctx.roundRect(x, y, wave.barW, bh, wave.barW / 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function canvasOf(w, h) {
+  const canvas = document.getElementById("bg");
+  canvas.width = w; canvas.height = h;
+  strip.style.width = `${w}px`; strip.style.height = `${h}px`;
+  return canvas.getContext("2d");
+}
+
+if (MODE === "feature") {
+  const f = S.feature;
+  drawBackground(canvasOf(FEATURE_W, FEATURE_H), FEATURE_W, FEATURE_H, {
+    dot: 22, dotR: 1, barW: 10, gap: 8, minH: 6, maxH: 230, y: 330, period: 480, from: 500, ramp: 90, panel: FEATURE_W, panels: 1,
+  });
+  strip.appendChild(el("fg-copy", `<div class="hero-brand">${LOGO_BARS}<span>Dictus</span></div>
+    <div class="headline">${f.headline}</div><div class="footnote">${f.footnote}</div>`));
+  const a = art(400, -345, 0.5);
+  a.style.zIndex = 3;
+  strip.appendChild(a);
+} else {
+  drawBackground(canvasOf(PANEL_W * PANELS, PANEL_H), PANEL_W * PANELS, PANEL_H, {
+    dot: 64, dotR: 2, barW: 30, gap: 16, minH: 14, maxH: 560, y: WAVE_Y, period: PANEL_W * PANELS / 4,
+    from: PANEL_W + 22, ramp: 230, panel: PANEL_W, panels: PANELS,
+  });
+  SLIDES.forEach((s, i) => {
+    const copy = S.slides[s.key];
+    if (s.hero) { addHero(copy); return; }
+    const c = el("copy", `<div class="headline">${copy.headline}</div>${copy.footnote ? `<div class="footnote">${copy.footnote}</div>` : ""}`);
+    c.style.left = `${i * PANEL_W}px`;
+    strip.appendChild(c);
+    const toStrip = s.phone ? addPhone(s.phone, i) : null;
+    if (s.lift) addLift(s.lift, toStrip, s.phone.capture, i);
+    if (s.keyboards) addKeyboards(s.keyboards, i, copy.labels);
+  });
+}
+
+window.PANELS = PANELS;
+/* render.mjs waits for the load event, so the images are in. */
+window.whenReady = Promise.all([
+  document.fonts.load('400 100px "DM Sans"'),
+  document.fonts.load('700 100px "DM Sans"'),
+]).then(() => new Promise((r) => setTimeout(r, 200)));
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+Speak instead of typing. Dictus is a voice keyboard that types what you say. Tap the mic, speak, and your words appear in any app. Speech recognition runs on your phone, even with no connection, once the model is downloaded.
+
+DICTATE IN ANY APP
+
+Messages, mail, notes: wherever you can type, Dictus is one tap away. Speak naturally and your words appear where your cursor is.
+
+A REAL KEYBOARD IN YOUR LANGUAGE
+
+Dictus is a complete keyboard, not just a mic button. AZERTY, QWERTY and QWERTZ layouts, with autocorrect and suggestions in French, English, German and Spanish. Type when you want, talk when you do not.
+
+EVEN OFFLINE
+
+Dictate on a plane, on the metro, anywhere. The models live on your phone: download one once, then use it offline, from compact and fast to most accurate. Whisper handles close to 100 languages, with quality that varies by language. Parakeet 0.6B transcribes 25 European languages and detects which one you are speaking; it needs 6 GB of RAM or more. Dictus shows the languages of each model.
+
+YOUR VOICE STAYS ON YOUR PHONE
+
+The microphone is used only during a dictation you start, and transcription happens on the device: Dictus does not send your voice or your text anywhere. No account, no ads, no tracking, no statistics sent. The network is only used to download speech models.
+
+Dictus is open source (MIT licence). Anyone can read the code and check these privacy claims: github.com/getdictus/dictus-android
+
+Terms of use: https://getdictus.com/en/terms
+Dictus collects no data. Privacy policy: https://getdictus.com/en/privacy
