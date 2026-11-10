@@ -35,7 +35,8 @@ enum class AiProvider { WHISPER, PARAKEET }
  *                        the catalog has no Context, the UI resolves it in its locale (#236).
  * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
  * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
- * @param provider        Download source and inference engine.
+ * @param provider        Inference engine.
+ * @param source          Where the files are downloaded from.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
  * @param languages       Spoken languages the model transcribes (issue #133).
  * @param timeoutFactor   Seconds of transcription allowed per second of audio, above the
@@ -46,6 +47,7 @@ data class ModelInfo(
     val fileName: String,
     val displayName: String,
     val files: List<ModelFile>,
+    val source: ModelSource,
     @StringRes val qualityLabelRes: Int,
     @StringRes val descriptionRes: Int,
     val precision: Float = 0f,
@@ -75,6 +77,23 @@ data class ModelInfo(
 data class ModelFile(val name: String, val sizeBytes: Long, val sha256: String)
 
 /**
+ * Where the files of a model are downloaded from.
+ *
+ * WHY a revision pinned in the URL: the hashes of [ModelInfo.files] describe one upstream
+ * version. A moving URL breaks every new install the day upstream republishes, which is what
+ * the sherpa-onnx Parakeet 0.6B v3 archive did on 2026-11-07 (#325).
+ */
+sealed interface ModelSource {
+    /** Each file of [ModelInfo.files] is fetched on its own from `<baseUrl>/<name>`. */
+    data class Files(val baseUrl: String) : ModelSource {
+        fun urlOf(file: ModelFile): String = "$baseUrl/${file.name}"
+    }
+
+    /** One tar.bz2 archive holding the files of [ModelInfo.files], extracted after download. */
+    data class Archive(val url: String) : ModelSource
+}
+
+/**
  * Static catalog of all supported ASR models (Whisper GGML and Parakeet ONNX).
  *
  * Acts as the single source of truth for model metadata. All download URLs,
@@ -95,8 +114,13 @@ object ModelCatalog {
     // later upstream change can never make a valid install fail its check.
     private const val WHISPER_BASE_URL =
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1"
-    private const val SHERPA_ONNX_RELEASES_URL =
-        "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models"
+    private const val PARAKEET_V3_BASE_URL =
+        "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/2bda32ec70b097a55adaa07d9a7173915b43cc78"
+
+    // Not pinned: the HuggingFace repo of this model holds no model files, so this release asset
+    // is the only source. Unchanged since 2025-07-08; a republish would fail its check (#325).
+    private const val PARAKEET_110M_ARCHIVE_URL =
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2"
 
     /**
      * All available models in selection order (fastest → most accurate).
@@ -112,10 +136,10 @@ object ModelCatalog {
      *   parakeet-ctc-110m-int8 — 126 MB — fast quantised, English-only (CTC)
      *   parakeet-tdt-0.6b-v3  — 640 MB — 25 languages, requires 6+ GB RAM (transducer)
      *
-     * Where the sizes and hashes come from (#169): Whisper, the HuggingFace API (size and LFS
-     * oid of each file at the pinned revision); Parakeet, the members of the release archives,
-     * measured on 2026-10-23. The 0.6B v3 encoder, decoder and joiner hashes match the LFS oids
-     * of csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8 on HuggingFace.
+     * Where the sizes and hashes come from (#169): Whisper and Parakeet 0.6B v3, the HuggingFace
+     * API (size and LFS oid of each file at the pinned revision; the hash of the 0.6B v3
+     * tokens.txt, which is not in LFS, measured on 2026-11-10, #325); Parakeet 110M, the members
+     * of its release archive, measured on 2026-10-23.
      */
     val ALL = listOf(
         ModelInfo(
@@ -123,6 +147,7 @@ object ModelCatalog {
             fileName = "ggml-tiny.bin",
             displayName = "Tiny",
             files = listOf(ModelFile("ggml-tiny.bin", 77_691_713L, "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21")),
+            source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_tiny,
             precision = 0.4f,
@@ -135,6 +160,7 @@ object ModelCatalog {
             fileName = "ggml-base.bin",
             displayName = "Base",
             files = listOf(ModelFile("ggml-base.bin", 147_951_465L, "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe")),
+            source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_balanced,
             descriptionRes = R.string.model_description_base,
             precision = 0.6f,
@@ -147,6 +173,7 @@ object ModelCatalog {
             fileName = "ggml-small.bin",
             displayName = "Small",
             files = listOf(ModelFile("ggml-small.bin", 487_601_967L, "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b")),
+            source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small,
             precision = 0.9f,
@@ -159,6 +186,7 @@ object ModelCatalog {
             fileName = "ggml-small-q5_1.bin",
             displayName = "Small Q5",
             files = listOf(ModelFile("ggml-small-q5_1.bin", 190_085_487L, "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb")),
+            source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small_q5,
             precision = 0.85f,
@@ -171,6 +199,7 @@ object ModelCatalog {
             fileName = "ggml-medium-q5_0.bin",
             displayName = "Medium",
             files = listOf(ModelFile("ggml-medium-q5_0.bin", 539_212_467L, "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f")),
+            source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_medium,
             precision = 0.9f,
@@ -179,7 +208,7 @@ object ModelCatalog {
             timeoutFactor = 1.0,
         ),
         // --- Parakeet models (sherpa-onnx) ---
-        // Downloaded as tar.bz2 archives, stored in models/{key}/ directory on device.
+        // Stored in the models/{key}/ directory on device.
         ModelInfo(
             key = "parakeet-ctc-110m-int8",
             fileName = "model.int8.onnx",
@@ -188,6 +217,7 @@ object ModelCatalog {
                 ModelFile("model.int8.onnx", 131_652_171L, "9177a9146cf32ee0cc8152276ef95116f312018d316be37ccf57f7efea81fc1a"),
                 ModelFile("tokens.txt", 9_953L, "450e56bd2f036fe5b6aa821865838cc5aa9d8b0106134ce9a9ba0664abe6cd10"),
             ),
+            source = ModelSource.Archive(PARAKEET_110M_ARCHIVE_URL),
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_parakeet_110m,
             precision = 0.75f,
@@ -207,6 +237,7 @@ object ModelCatalog {
                 ModelFile("joiner.int8.onnx", 6_355_277L, "3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3"),
                 ModelFile("tokens.txt", 93_939L, "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"),
             ),
+            source = ModelSource.Files(PARAKEET_V3_BASE_URL),
             qualityLabelRes = R.string.model_quality_premium,
             descriptionRes = R.string.model_description_parakeet_v3,
             precision = 0.95f,
@@ -258,27 +289,6 @@ object ModelCatalog {
      * Whisper models use a flat layout (models/{fileName}).
      */
     fun ModelInfo.isDirectoryModel(): Boolean = provider == AiProvider.PARAKEET
-
-    /**
-     * Build the download URL for a model based on its provider.
-     *
-     * WHY when expression: Exhaustive switch ensures a compile-time error if a
-     * new provider is added without implementing its URL scheme.
-     *
-     * Parakeet models are distributed as tar.bz2 archives from the sherpa-onnx
-     * GitHub Releases page (asr-models tag). Each archive extracts to a directory
-     * containing model.onnx (or model.int8.onnx) + tokens.txt.
-     */
-    fun downloadUrl(info: ModelInfo): String = when (info.provider) {
-        AiProvider.WHISPER -> "$WHISPER_BASE_URL/${info.fileName}"
-        AiProvider.PARAKEET -> when (info.key) {
-            "parakeet-ctc-110m-int8" ->
-                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2"
-            "parakeet-tdt-0.6b-v3" ->
-                "$SHERPA_ONNX_RELEASES_URL/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2"
-            else -> error("Unknown Parakeet model key: ${info.key}")
-        }
-    }
 }
 
 /**
@@ -325,22 +335,11 @@ class ModelManager(context: Context) {
     }
 
     /**
-     * Get the HuggingFace download URL for a model.
-     *
-     * Returns null for unknown model keys. Delegates URL construction to
-     * ModelCatalog so the URL scheme stays centralized.
-     */
-    fun downloadUrl(modelKey: String): String? {
-        val info = ModelCatalog.findByKey(modelKey) ?: return null
-        return ModelCatalog.downloadUrl(info)
-    }
-
-    /**
      * Get the target file path for downloading a model (may not exist yet).
      *
      * Used by ModelDownloader to determine the write destination.
      * For Parakeet models, returns the path to the ONNX file inside the model subdirectory.
-     * The parent directory is created by ModelDownloader during extraction.
+     * The parent directory is created by ModelDownloader when the install lands.
      */
     fun getTargetPath(modelKey: String): String? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
@@ -352,8 +351,8 @@ class ModelManager(context: Context) {
     }
 
     /**
-     * Directory an archive is extracted into before it is verified and renamed to the model
-     * directory, so the engine never sees a half-written model (#169).
+     * Directory the files of a directory model are gathered in before they are verified and
+     * renamed to the model directory, so the engine never sees a half-written model (#169).
      */
     fun getStagingDir(modelKey: String): File? {
         val info = ModelCatalog.findByKey(modelKey) ?: return null
