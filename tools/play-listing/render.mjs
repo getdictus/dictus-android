@@ -1,12 +1,12 @@
 // Renders the Google Play listing images into fastlane/metadata/android/<locale>/images/.
 //
-//   npm ci && npx playwright install chromium   once
-//   node render.mjs [--proofs <dir>]            every locale, plus one review board per locale in <dir>
+//   npm ci && npx playwright install chromium && ./fetch-icons.sh   once
+//   node render.mjs [--proofs <dir>] [--ribbon tiles]   every locale, plus one review board per locale in <dir>
 //
 // The icon is drawn from the app's own adaptive icon vectors, cut to the 72 dp a launcher shows.
 import { chromium } from "playwright";
 import sharp from "sharp";
-import { mkdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -15,7 +15,10 @@ const REPO = resolve(HERE, "../..");
 const METADATA = join(REPO, "fastlane/metadata/android");
 const LOCALES = ["fr-FR", "en-US"];
 const SHOT_W = 1440, SHOT_H = 2560, PANEL_W = 1320;
-const proofs = process.argv.includes("--proofs") ? process.argv[process.argv.indexOf("--proofs") + 1] : null;
+const option = (name) => (process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : null);
+const proofs = option("--proofs");
+const ribbon = option("--ribbon") ?? "logos";
+if (ribbon === "logos" && !existsSync(join(HERE, ".icons"))) throw new Error("App icons missing: run ./fetch-icons.sh");
 
 // Play wants 24-bit images: no alpha channel.
 const opaque = (buffer) => sharp(buffer).flatten({ background: "#ffffff" }).removeAlpha().png({ compressionLevel: 9 });
@@ -32,7 +35,7 @@ async function open(browser, viewport, scale, query) {
 
 async function screenshots(browser, locale, out) {
   const scale = SHOT_W / PANEL_W;
-  const page = await open(browser, { width: PANEL_W * 5, height: 2347 }, scale, `?locale=${locale}&mode=screens`);
+  const page = await open(browser, { width: PANEL_W * 5, height: 2347 }, scale, `?locale=${locale}&mode=screens&ribbon=${ribbon}`);
   const count = await page.evaluate(() => window.PANELS);
   const files = [];
   for (let i = 0; i < count; i++) {

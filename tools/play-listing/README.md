@@ -3,9 +3,12 @@
 Generates the phone screenshots, the feature graphic and the icon under `fastlane/metadata/android/<locale>/images/` (#221). The texts next to them are written by hand.
 
 ```bash
-npm ci && npx playwright install chromium   # once
-node render.mjs --proofs /tmp/planche       # every locale, plus one review board per locale
+npm ci && npx playwright install chromium && ./fetch-icons.sh   # once
+node render.mjs --proofs /tmp/planche                           # every locale, plus one review board per locale
+node render.mjs --ribbon tiles --proofs /tmp/planche            # neutral tiles instead of the app logos
 ```
+
+The ribbon of slides 1 and 2 shows real app logos, like iOS. They are third-party trademarks: `.icons/` stays out of git, and Google may refuse them on a listing. `--ribbon tiles` is the way back.
 
 `template.html` is the Google Play counterpart of the iOS slides v16-B (`assets/appstore/screenshots.html` in `getdictus/dictus-ios`, read at `3dca1cf`). Its header lists what differs from iOS and why. `art/` holds that repo's `art/v16-B/hero.png` (`hero-en-US.png`) and `hero-fr-FR.png`, unchanged. The Android camera bar is drawn over the art by the template.
 
@@ -17,5 +20,5 @@ node render.mjs --proofs /tmp/planche       # every locale, plus one review boar
 - Language: system locale, plus `cmd locale set-app-locales`. The keyboard follows the system locale, not the app's.
 - `01-recording.png`: keyboard dictation in Messages, about 1 s into `fr-beau-paris.wav` on the virtual microphone. The screen above the keyboard is covered by the template's unbranded email.
 - `keyboards/`: « Dem », « Sta », « Mor » typed on the Dictus keys, in the French, English and German keyboards.
-- `05-models.png`: Modèles, with Tiny (active) and Small Q5 downloaded.
+- `05-models.png`: Modèles, with Tiny (active) and Small Q5 downloaded. The EN capture comes from a local build with the #318 fix (« MB »).
 - `06-microphone.png`: the onboarding's microphone step (#220).

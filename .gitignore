@@ -32,3 +32,4 @@ tools/__pycache__/
 
 # Play listing renderer
 tools/play-listing/node_modules/
+tools/play-listing/.icons/

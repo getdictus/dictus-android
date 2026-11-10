@@ -12,11 +12,12 @@
   - 9:16 panels (1320 x 2347), since Play refuses a side more than twice the other;
   - a phone frame drawn here, generic Android: Play refuses other platforms' devices;
   - the phone in the hero art gets an Android camera bar (cameraPatch);
-  - neutral tiles on the ribbon: no third-party logos in store images;
+  - the ribbon shows only apps that exist on Android: no Apple Messages, Mail or Notes;
   - five slides, none about Smart Modes, translation or Pro.
 
   ?locale=fr-FR | en-US  copy from strings/<locale>.js, captures from captures/<locale>/
   ?mode=screens | feature
+  ?ribbon=logos | tiles   real app icons (fetch-icons.sh), or neutral Dictus tiles if Google refuses them
   Rendered by render.mjs.
 -->
 <style>
@@ -100,6 +101,7 @@
     display: flex; align-items: center; justify-content: center;
   }
   .ribbon-icon svg { width: 54%; height: 54%; }
+  .ribbon-icon img { width: 100%; height: 100%; display: block; }
 
   .fg-copy { position: absolute; left: 56px; top: 84px; z-index: 6; width: 470px; }
   .fg-copy .hero-brand { position: static; gap: 10px; }
@@ -116,6 +118,7 @@
 const params = new URLSearchParams(location.search);
 const LOCALE = params.get("locale") || "fr-FR";
 const MODE = params.get("mode") || "screens";
+const RIBBON = params.get("ribbon") || "logos";
 document.write(`<script src="strings/${LOCALE}.js"><\/script>`);
 </script>
 <script>
@@ -240,14 +243,20 @@ function addRibbon() {
   const GLYPHS = ['<path d="M5 6h14v9H10l-5 4z"/>', '<path d="M4 7h16v11H4zM4 7l8 6 8-6"/>', '<path d="M7 4h7l4 4v12H7zM14 4v4h4M10 12h5M10 15h5"/>',
     '<circle cx="12" cy="12" r="3.5"/><path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12a8.5 8.5 0 1 0-3.4 6.8"/>', '<path d="M4 12l16-7-6 15-3-6z"/>', '<path d="M5 19l1-4L16 5l3 3L9 18z"/>'];
   const COLOURS = [["#3D7EFF", "#fff"], ["#DCE8FF", "#2563EB"], ["#0A1628", "#fff"], ["#6BA3FF", "#fff"], ["#2563EB", "#fff"], ["#EEF3FF", "#3D7EFF"]];
+  /* In the iOS ribbon's order (screenshots.html, RIBBON_APPS_14), one per visible slot. */
+  const LOGOS = ["gmail", "whatsapp", "chatgpt", "messenger", "gemini", "notion", "slack", "instagram", "telegram"];
+  let slot = 0;
   const count = 15, clearOfShoes = 960;
   for (let n = 0; n < count; n++) {
     const x = n * 2 * PANEL_W / (count - 1);
     if (x < clearOfShoes) continue;
     const y = Y(x), rot = Math.atan2(dY(x), 1) * 180 / Math.PI;
     const [bg, fg] = COLOURS[n % COLOURS.length];
-    const d = el("ribbon-icon", `<svg viewBox="0 0 24 24" fill="none" stroke="${fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[n % GLYPHS.length]}</svg>`);
-    Object.assign(d.style, { left: `${x - SIZE / 2}px`, top: `${y - SIZE / 2}px`, width: `${SIZE}px`, height: `${SIZE}px`, background: bg, transform: `rotate(${rot}deg)` });
+    const logo = LOGOS[slot++];
+    const d = el("ribbon-icon", RIBBON === "tiles"
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="${fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[n % GLYPHS.length]}</svg>`
+      : `<img alt="" src=".icons/${logo}.png">`);
+    Object.assign(d.style, { left: `${x - SIZE / 2}px`, top: `${y - SIZE / 2}px`, width: `${SIZE}px`, height: `${SIZE}px`, background: RIBBON === "tiles" ? bg : "none", transform: `rotate(${rot}deg)` });
     strip.appendChild(d);
   }
 }
@@ -322,10 +331,10 @@ if (MODE === "feature") {
 }
 
 window.PANELS = PANELS;
+/* render.mjs waits for the load event, so the images are in. */
 window.whenReady = Promise.all([
   document.fonts.load('400 100px "DM Sans"'),
   document.fonts.load('700 100px "DM Sans"'),
-  ...[...document.images].map((im) => im.decode()),
 ]).then(() => new Promise((r) => setTimeout(r, 200)));
 </script>
 </body>
