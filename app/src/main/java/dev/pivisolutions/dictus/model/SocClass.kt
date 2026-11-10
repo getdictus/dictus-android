@@ -26,11 +26,16 @@ enum class SocClass {
             CURRENT
         }
 
-        /** Only ARM reports a `Features` line: with none (an x86 emulator) no chip tier applies, as on iOS. */
+        /**
+         * Every core must have `fphp`, the rule the Whisper library choice follows (#321), so both
+         * class a phone the same way. Only ARM reports `Features` lines: with none (an x86
+         * emulator) no chip tier applies, as on iOS.
+         */
         internal fun fromCpuInfo(cpuInfo: String): SocClass {
-            val features = cpuInfo.lineSequence().firstOrNull { it.startsWith("Features") } ?: return CURRENT
-            val hasHalfPrecision = "fphp" in features.substringAfter(':').trim().split(Regex("\\s+"))
-            return if (hasHalfPrecision) CURRENT else LEGACY
+            val featureLines = cpuInfo.lineSequence().filter { it.substringBefore(':').trim() == "Features" }.toList()
+            if (featureLines.isEmpty()) return CURRENT
+            val everyCoreHasFphp = featureLines.all { "fphp" in it.substringAfter(':').trim().split(Regex("\\s+")) }
+            return if (everyCoreHasFphp) CURRENT else LEGACY
         }
     }
 }

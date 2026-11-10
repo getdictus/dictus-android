@@ -27,6 +27,19 @@ class SocClassTest {
     }
 
     @Test
+    fun `a big_LITTLE CPU with one core without fphp is legacy`() {
+        val withFphp = "Features\t: fp asimd fphp asimdhp"
+        val withoutFphp = "Features\t: fp asimd"
+        assertEquals(SocClass.LEGACY, SocClass.fromCpuInfo("$withFphp\n$withFphp\n$withoutFphp\n"))
+    }
+
+    @Test
+    fun `fphp counts only as a whole word of a Features line`() {
+        val notTheFeature = "Features\t: fp asimd fphpx\nmodel name\t: fphp\n"
+        assertEquals(SocClass.LEGACY, SocClass.fromCpuInfo(notTheFeature))
+    }
+
+    @Test
     fun `an x86 emulator has no chip tier`() {
         assertEquals(SocClass.CURRENT, SocClass.fromCpuInfo("processor\t: 0\nflags\t\t: fpu vme sse4_2\n"))
     }
