@@ -172,4 +172,37 @@ class ModelCardTest {
         composeTestRule.onNodeWithText("Précis et équilibré").assertIsDisplayed()
         composeTestRule.onNodeWithText("Recommandé").assertIsDisplayed()
     }
+
+    @Test
+    fun `English UI shows the size in MB`() {
+        showTinyCard()
+
+        composeTestRule.onNodeWithText("~$tinySizeMb MB").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "fr")
+    fun `French UI shows the size in Mo`() {
+        showTinyCard()
+
+        composeTestRule.onNodeWithText("~$tinySizeMb Mo").assertIsDisplayed()
+    }
+
+    private val tinySizeMb = ModelCatalog.findByKey("tiny")!!.expectedSizeBytes / 1_000_000
+
+    private fun showTinyCard() {
+        composeTestRule.setContent {
+            DictusTheme {
+                ModelCard(
+                    model = ModelCatalog.findByKey("tiny")!!,
+                    isDownloaded = false,
+                    isActive = false,
+                    canDelete = false,
+                    onDownload = {},
+                    onDelete = {},
+                    onRetry = {},
+                )
+            }
+        }
+    }
 }

@@ -346,7 +346,7 @@ fun ModelCard(
                 // Size label
                 val sizeMb = model.expectedSizeBytes / 1_000_000
                 Text(
-                    text = "~$sizeMb Mo",
+                    text = stringResource(R.string.model_size_approx, sizeMb),
                     color = LocalDictusColors.current.textSecondary,
                     fontSize = 12.sp,
                 )

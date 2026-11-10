@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.theme.DictusTheme
+import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.service.ModelInstallState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,14 @@ class HomeScreenNoModelTest {
         composeRule.onNodeWithText("Download a model to get started").assertDoesNotExist()
         composeRule.onNodeWithText("Active model").assertExists()
         composeRule.onNodeWithText("New dictation").assertExists()
+    }
+
+    @Test
+    fun `the active model size uses the unit of the UI language`() {
+        showHome(downloaded = setOf("base"))
+
+        val sizeMb = ModelCatalog.findByKey("base")!!.expectedSizeBytes / 1_000_000
+        composeRule.onNodeWithText("~$sizeMb MB").assertExists()
     }
 
     @Test
