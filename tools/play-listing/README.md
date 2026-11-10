@@ -20,5 +20,5 @@ The ribbon of slides 1 and 2 shows real app logos, like iOS. They are third-part
 - Language: system locale, plus `cmd locale set-app-locales`. The keyboard follows the system locale, not the app's.
 - `01-recording.png`: keyboard dictation in Messages, about 1 s into `fr-beau-paris.wav` on the virtual microphone. The screen above the keyboard is covered by the template's unbranded email.
 - `keyboards/`: « Dem », « Sta », « Mor » typed on the Dictus keys, in the French, English and German keyboards.
-- `05-models.png`: Modèles, with Tiny (active), Base and Small Q5 downloaded. Below 6 GB of RAM, as on this AVD, the « Recommandé » badge is on Base (#309).
+- `05-models.png`: Modèles, scrolled to Parakeet 0.6B v3 and its « Recommandé » badge, not downloaded, Tiny active. The badge needs 6 GB of RAM or more, so this one comes from a temporary copy of `dictus_api35` with `hw.ramSize = 6144M`, booted with `DICTUS_AVD=<copy> DICTUS_EMU_MEMORY=6144`.
 - `06-microphone.png`: the onboarding's microphone step (#220).
