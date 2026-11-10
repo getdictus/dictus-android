@@ -5,6 +5,8 @@ import dev.pivisolutions.dictus.model.ModelCatalog.isDirectoryModel
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelIntegrity
 import dev.pivisolutions.dictus.model.ModelManager
+import dev.pivisolutions.dictus.model.ModelSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -41,7 +43,7 @@ sealed class DownloadProgress {
     /** Download is in flight. [percent] is 0–100. */
     data class Progress(val percent: Int) : DownloadProgress()
 
-    /** Archive downloaded, model files being extracted (Parakeet). [percent] is 0–100. */
+    /** Archive downloaded, model files being extracted (Parakeet 110M). [percent] is 0–100. */
     data class Extracting(val percent: Int) : DownloadProgress()
 
     /** Files written, size and SHA-256 being checked before they replace the model on disk. */
@@ -55,13 +57,13 @@ sealed class DownloadProgress {
 }
 
 /**
- * Downloads and installs Whisper GGML models (HuggingFace) and Parakeet models (sherpa-onnx
- * tar.bz2 archives).
+ * Downloads and installs Whisper GGML models and Parakeet 0.6B v3 file by file (HuggingFace,
+ * pinned revision), and Parakeet 110M from its sherpa-onnx tar.bz2 archive ([ModelSource]).
  *
- * Every install takes the same path (#169): download to a temp file, extract an archive into
- * a staging directory, check every file against [ModelInfo.files] (exact size and SHA-256),
- * then rename into place. The engine never sees a partial or unverified file, and a failure
- * leaves nothing behind.
+ * Every install takes the same path (#169): download to temp files, gather a directory model
+ * in a staging directory, check every file against [ModelInfo.files] (exact size and SHA-256),
+ * then rename into place. The engine never sees a partial or unverified file. A failed check
+ * leaves nothing behind; a network error keeps what a retry can resume (#131).
  *
  * Callers: [ModelInstallWorker] (the UI path, in the background) and
  * [ensureModelAvailable] (DictationService, first use of a missing model).
@@ -122,18 +124,18 @@ class ModelDownloader(
     fun downloadWithProgress(modelKey: String): Flow<DownloadProgress> {
         val info = ModelCatalog.findByKey(modelKey)
             ?: return flowOf(DownloadProgress.Error("Unknown model key: $modelKey"))
-        return install(info, ModelCatalog.downloadUrl(info))
+        return install(info)
     }
 
     /**
-     * Install [info] from [url]. Internal so tests can pass a mock server URL and a manifest
-     * that matches the bytes it serves.
+     * Install [info] from its [ModelInfo.source]. Internal so tests can pass a source on a mock
+     * server and a manifest that matches the bytes it serves.
      *
      * WHY catch() after the flow (not try/catch inside): it only sees upstream failures, so
      * an exception from the collector is never turned into an Error event, and coroutine
      * cancellation passes through.
      */
-    internal fun install(info: ModelInfo, url: String): Flow<DownloadProgress> = flow {
+    internal fun install(info: ModelInfo): Flow<DownloadProgress> = flow {
         installLocks.getOrPut(info.key) { Mutex() }.withLock {
             val existingPath = modelManager.getModelPath(info.key)
             if (existingPath != null) {
@@ -142,7 +144,11 @@ class ModelDownloader(
                 return@withLock
             }
             val target = File(modelManager.getTargetPath(info.key) ?: throw IOException("No target path for ${info.key}"))
-            if (info.isDirectoryModel()) installArchive(info, url, target) else installFile(info, url, target)
+            when (val source = info.source) {
+                is ModelSource.Archive -> installArchive(info, source, target)
+                is ModelSource.Files ->
+                    if (info.isDirectoryModel()) installFiles(info, source, target) else installFile(info, source, target)
+            }
         }
     }.catch { e ->
         Timber.e(e, "Install failed for %s", info.key)
@@ -150,10 +156,10 @@ class ModelDownloader(
     }.flowOn(Dispatchers.IO)
 
     /** Whisper: one file, downloaded to `<target>.tmp`, verified, renamed. */
-    private suspend fun FlowCollector<DownloadProgress>.installFile(info: ModelInfo, url: String, target: File) {
+    private suspend fun FlowCollector<DownloadProgress>.installFile(info: ModelInfo, source: ModelSource.Files, target: File) {
         val temp = File("${target.path}.tmp")
         try {
-            download(url, temp)
+            download(source.urlOf(info.files.single()), temp)
             emit(DownloadProgress.Verifying)
             verify(info) { ModelIntegrity.problemWithFile(temp, info.files.single()) }
             if (!temp.renameTo(target)) throw IOException("Failed to rename ${temp.name}")
@@ -164,21 +170,74 @@ class ModelDownloader(
     }
 
     /**
-     * Parakeet: archive downloaded to `models/<key>.archive.tmp`, extracted into the staging
-     * directory `models/<key>.part/`, verified, then the staging directory replaces
-     * `models/<key>/`. Nothing is written inside `models/<key>/` before that rename.
+     * Parakeet 0.6B v3: each file downloaded to `models/<key>.<name>.tmp`, then moved into the
+     * staging directory by [installStaged]. Progress covers all the files, by bytes.
+     *
+     * WHY keep the temp files on a network error: the encoder is 97% of the bytes. A retry
+     * skips a file already downloaded whole and resumes the `.part` of the one the error hit
+     * (#131). A cancel is a deliberate stop and deletes them, like [ResumableDownload] does.
      */
-    private suspend fun FlowCollector<DownloadProgress>.installArchive(info: ModelInfo, url: String, target: File) {
+    private suspend fun FlowCollector<DownloadProgress>.installFiles(info: ModelInfo, source: ModelSource.Files, target: File) {
+        val staging = modelManager.getStagingDir(info.key) ?: throw IOException("No staging dir for ${info.key}")
+        val temps = info.files.associateWith { File(staging.parentFile, "${info.key}.${it.name}.tmp") }
+        try {
+            var doneBytes = 0L
+            var lastPercent = -1
+            for ((file, temp) in temps) {
+                if (temp.length() != file.sizeBytes) download(source.urlOf(file), temp) { filePercent ->
+                    val percent = ((doneBytes + file.sizeBytes * filePercent / 100) * 100 / info.expectedSizeBytes).toInt()
+                    if (percent != lastPercent) {
+                        lastPercent = percent
+                        emit(DownloadProgress.Progress(percent))
+                    }
+                }
+                doneBytes += file.sizeBytes
+            }
+            installStaged(info, staging, target) {
+                temps.forEach { (file, temp) ->
+                    if (!temp.renameTo(File(staging, file.name))) throw IOException("Failed to move ${temp.name}")
+                }
+            }
+        } catch (e: CancellationException) {
+            temps.values.forEach { it.delete() }
+            throw e
+        }
+    }
+
+    /**
+     * Parakeet 110M: archive downloaded to `models/<key>.archive.tmp`, then extracted into the
+     * staging directory by [installStaged].
+     */
+    private suspend fun FlowCollector<DownloadProgress>.installArchive(info: ModelInfo, source: ModelSource.Archive, target: File) {
         val staging = modelManager.getStagingDir(info.key) ?: throw IOException("No staging dir for ${info.key}")
         val archive = File(staging.parentFile, "${info.key}.archive.tmp")
+        try {
+            download(source.url, archive)
+            emit(DownloadProgress.Extracting(0))
+            installStaged(info, staging, target) {
+                extractTarBz2(archive, staging, info)
+                archive.delete()
+            }
+        } finally {
+            archive.delete()
+        }
+    }
+
+    /**
+     * Fill the staging directory `models/<key>.part/` with [fill], verify it, then rename it to
+     * `models/<key>/`. Nothing is written inside `models/<key>/` before that rename.
+     */
+    private suspend fun FlowCollector<DownloadProgress>.installStaged(
+        info: ModelInfo,
+        staging: File,
+        target: File,
+        fill: suspend () -> Unit,
+    ) {
         val modelDir = target.parentFile ?: throw IOException("No model dir for ${info.key}")
         try {
-            download(url, archive)
-            emit(DownloadProgress.Extracting(0))
             staging.deleteRecursively()
             staging.mkdirs()
-            extractTarBz2(archive, staging, info)
-            archive.delete()
+            fill()
             emit(DownloadProgress.Verifying)
             verify(info) { ModelIntegrity.problemWithDirectory(staging, info.files) }
             // Only reached when getModelPath said the model is not installed: whatever is in
@@ -187,7 +246,6 @@ class ModelDownloader(
             if (!staging.renameTo(modelDir)) throw IOException("Failed to move ${staging.name} to ${modelDir.name}")
             emit(DownloadProgress.Complete(target.absolutePath))
         } finally {
-            archive.delete()
             staging.deleteRecursively()
         }
     }
@@ -203,12 +261,17 @@ class ModelDownloader(
     /**
      * Download [url] into [file]. Resumes from `<file>.part` left by an earlier network error
      * or stall (#131); see [ResumableDownload]. Callers only rely on [file] holding the whole
-     * body when this returns.
+     * body when this returns. [onProgress] gets the percent of this file; by default it is
+     * emitted as is.
      */
-    private suspend fun FlowCollector<DownloadProgress>.download(url: String, file: File) {
+    private suspend fun FlowCollector<DownloadProgress>.download(
+        url: String,
+        file: File,
+        onProgress: suspend (Int) -> Unit = { emit(DownloadProgress.Progress(it)) },
+    ) {
         val start = System.currentTimeMillis()
         file.delete()
-        resumableDownload.fetch(url, file) { percent -> emit(DownloadProgress.Progress(percent)) }
+        resumableDownload.fetch(url, file, onProgress)
         Timber.d("Download took %d ms for %s (%d bytes)", System.currentTimeMillis() - start, file.name, file.length())
     }
 
