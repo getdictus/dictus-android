@@ -1,6 +1,8 @@
 package dev.pivisolutions.dictus.whisper
 
+import android.os.Build
 import timber.log.Timber
+import java.io.File
 
 /**
  * JNI declarations for whisper.cpp native library.
@@ -10,42 +12,22 @@ import timber.log.Timber
  *
  * WHY multiple library variants: whisper.cpp builds optimized variants for
  * different ARM instruction sets. ARM v8.2a fp16 (whisper_v8fp16_va) is fastest
- * on modern devices like Pixel 4 (Cortex-A76). We try the best variant first
- * and fall back to the default if unavailable.
+ * on modern devices like Pixel 4 (Cortex-A76). selectWhisperLib picks the one
+ * the CPU can execute.
  */
 class WhisperLib {
     companion object {
         init {
-            // Load the best available variant: fp16 > vfpv4 > default
-            var loaded = false
+            val lib = selectWhisperLib(Build.SUPPORTED_ABIS[0], readCpuInfo())
+            System.loadLibrary(lib)
+            Timber.d("Loaded %s", lib)
+        }
 
-            // ARM v8.2a fp16 (Cortex-A76+ including Pixel 4)
-            if (!loaded) {
-                try {
-                    System.loadLibrary("whisper_v8fp16_va")
-                    Timber.d("Loaded whisper_v8fp16_va (ARM fp16)")
-                    loaded = true
-                } catch (e: UnsatisfiedLinkError) {
-                    Timber.d("whisper_v8fp16_va not available")
-                }
-            }
-
-            // ARMv7 NEON fallback
-            if (!loaded) {
-                try {
-                    System.loadLibrary("whisper_vfpv4")
-                    Timber.d("Loaded whisper_vfpv4 (ARMv7 NEON)")
-                    loaded = true
-                } catch (e: UnsatisfiedLinkError) {
-                    Timber.d("whisper_vfpv4 not available")
-                }
-            }
-
-            // Default fallback
-            if (!loaded) {
-                System.loadLibrary("whisper")
-                Timber.d("Loaded whisper (default)")
-            }
+        private fun readCpuInfo(): String? = try {
+            File("/proc/cpuinfo").readText()
+        } catch (e: Exception) {
+            Timber.d(e, "Couldn't read CPU info")
+            null
         }
 
         external fun initContext(modelPath: String): Long
