@@ -23,6 +23,9 @@ class TimberSetupTest {
     @Test
     fun `init with debug true plants DebugTree and FileLoggingTree`() {
         Timber.uprootAll()
+        // Already migrated: the purge marker line would go through DebugTree to android.util.Log,
+        // which plain JVM tests do not provide.
+        tmpDir.root.resolve(".privacy-log-v1").createNewFile()
         TimberSetup.init(isDebug = true, filesDir = tmpDir.root)
         // DebugTree + FileLoggingTree = 2 trees
         assertEquals(2, Timber.treeCount)
@@ -68,5 +71,30 @@ class TimberSetupTest {
         assertNull(TimberSetup.getLogFile())
         assertFalse(filesDir.resolve(".privacy-log-v1").exists())
         assertTrue(undeletableLog.exists())
+    }
+
+    @Test
+    fun `the purge leaves a marker line, written once`() {
+        val filesDir = tmpDir.newFolder("purge-marker")
+        filesDir.resolve("dictus.log").writeText("legacy\n")
+
+        TimberSetup.init(isDebug = false, filesDir = filesDir)
+        Timber.uprootAll()
+        TimberSetup.init(isDebug = false, filesDir = filesDir)
+
+        val lines = filesDir.resolve("dictus.log").readLines()
+        assertEquals(1, lines.count { it.contains("Privacy migration v1 purged the previous log") })
+        assertFalse(lines.any { it == "legacy" })
+    }
+
+    @Test
+    fun `the privacy purge also removes a rotated previous file`() {
+        val filesDir = tmpDir.newFolder("purge-previous")
+        val previous = filesDir.resolve("dictus.previous.log").apply { writeText("legacy\n") }
+
+        TimberSetup.init(isDebug = false, filesDir = filesDir)
+
+        assertFalse(previous.exists())
+        assertEquals(previous, TimberSetup.getPreviousLogFile())
     }
 }

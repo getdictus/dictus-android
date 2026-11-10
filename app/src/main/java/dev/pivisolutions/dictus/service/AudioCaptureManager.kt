@@ -5,8 +5,9 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioRecordingConfiguration
 import android.media.MediaRecorder
-import kotlinx.coroutines.CoroutineScope
+import dev.pivisolutions.dictus.core.audio.WaveformEnergy
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
@@ -14,14 +15,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.util.concurrent.Executor
-import kotlin.math.sqrt
 
 /**
  * Wraps the Android AudioRecord API to capture 16kHz mono Float32 audio.
  *
  * Audio samples accumulate in an in-memory buffer (ArrayList<Float>).
- * RMS energy is calculated per read chunk and stored in a rolling 30-entry
- * history for waveform visualization.
+ * Each read chunk also feeds [WaveformEnergy], the iOS waveform pipeline.
  *
  * WHY Float32 (ENCODING_PCM_FLOAT): whisper.cpp expects float input.
  * Capturing directly in float avoids a PCM_16BIT-to-float conversion step.
@@ -32,13 +31,19 @@ import kotlin.math.sqrt
  */
 class AudioCaptureManager(
     private val audioManager: AudioManager? = null,
-) {
+) : AudioCapture {
 
     companion object {
         private const val SAMPLE_RATE = RecordingDurationPolicy.SAMPLE_RATE_HZ
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
-        private const val MAX_ENERGY_HISTORY = 30
+
+        /**
+         * Samples per read: the iOS tap delivers 4096 frames at 48 kHz, so ~1365 samples
+         * once converted to 16 kHz. Reading the same amount keeps the waveform history
+         * scrolling at the iOS speed (6 buckets every ~85 ms).
+         */
+        internal const val READ_CHUNK_SAMPLES = 4096 * SAMPLE_RATE / 48_000
     }
 
     private var recorder: AudioRecord? = null
@@ -47,15 +52,15 @@ class AudioCaptureManager(
     private var recordingCallback: AudioManager.AudioRecordingCallback? = null
     private var failureMonitor: AudioCaptureFailureMonitor? = null
     private val samples = ArrayList<Float>()
-    private val energyHistory = ArrayDeque<Float>(MAX_ENERGY_HISTORY).apply {
-        // Pre-fill with zeros so the waveform renders all 30 bars immediately.
-        // Without this, bars appear to "slide in" from the left as the history fills up.
-        repeat(MAX_ENERGY_HISTORY) { addLast(0f) }
-    }
+    private val waveformEnergy = WaveformEnergy()
 
-    /** Callback invoked on each energy update with a normalized 0.0-1.0 value. */
-    var onEnergyUpdate: ((Float) -> Unit)? = null
-    /** Called on Main for Android silencing, or the capture dispatcher for read failures. */
+    override var onEnergyUpdate: (() -> Unit)? = null
+
+    /**
+     * Called once when a started capture fails: Android silenced this client (for example an
+     * incoming call) or a read returned an error. Runs on Main for silencing, or on the
+     * capture dispatcher for read failures. Never called after [stop] or [cancel].
+     */
     var onCaptureFailure: (() -> Unit)? = null
 
     /**
@@ -68,8 +73,9 @@ class AudioCaptureManager(
      * @param scope CoroutineScope tied to the service lifecycle. The read loop
      *              runs on Dispatchers.Default (background thread pool) so it
      *              doesn't block the main thread.
+     * @return false when the microphone could not be opened or did not start recording.
      */
-    fun start(scope: CoroutineScope): Boolean {
+    override fun start(scope: CoroutineScope): Boolean {
         stopping = false
         val minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
         if (minBufferSize <= 0) {
@@ -77,8 +83,9 @@ class AudioCaptureManager(
             return false
         }
 
-        // Double the minimum buffer to reduce the risk of buffer underruns
-        val bufferSize = minBufferSize * 2
+        // Room for two read chunks, and never less than twice the minimum, so a chunk
+        // being processed cannot overrun the recorder's buffer.
+        val bufferSize = maxOf(minBufferSize * 2, READ_CHUNK_SAMPLES * Float.SIZE_BYTES * 2)
 
         val rec = AudioRecord(
             MediaRecorder.AudioSource.MIC,
@@ -109,7 +116,7 @@ class AudioCaptureManager(
             }
             recordingCallback = callback
             // API 29+: observe this AudioRecord, without privileged access to other clients.
-            // Incoming calls can silence a client while reads continue returning zero samples.
+            // Incoming calls can silence a client while reads keep returning zero samples.
             rec.registerAudioRecordingCallback(Executor { command ->
                 scope.launch(Dispatchers.Main) { command.run() }
             }, callback)
@@ -121,6 +128,7 @@ class AudioCaptureManager(
                     "inputPreference=$routeResult, routedType=${rec.routedDevice?.type ?: "unknown"}",
             )
         } catch (failure: Exception) {
+            Timber.e(failure, "AudioRecord could not start")
             stopping = true
             unregisterRecordingCallback(rec)
             try {
@@ -128,18 +136,19 @@ class AudioCaptureManager(
             } finally {
                 recorder = null
             }
-            throw failure
+            return false
         }
 
         // Read loop on a background thread.
         // Each read produces a chunk of float samples. We accumulate them
-        // and compute RMS energy for the waveform display.
+        // and feed the waveform pipeline.
         captureJob = scope.launch(Dispatchers.Default) {
-            val readBuffer = FloatArray(minBufferSize / 4) // Float = 4 bytes
+            val readBuffer = FloatArray(READ_CHUNK_SAMPLES)
             try {
                 while (isActive) {
                     val read = recorder?.read(readBuffer, 0, readBuffer.size, AudioRecord.READ_BLOCKING) ?: break
                     if (read <= 0) {
+                        // A read error while nobody asked to stop is a capture failure.
                         if (!stopping && isActive) failureMonitor?.fail()
                         break
                     }
@@ -148,10 +157,8 @@ class AudioCaptureManager(
                             samples.add(readBuffer[i])
                         }
                     }
-                    val rms = calculateRmsEnergy(readBuffer, read)
-                    val normalized = normalizeEnergy(rms)
-                    addEnergyToHistory(normalized)
-                    onEnergyUpdate?.invoke(normalized)
+                    waveformEnergy.push(readBuffer, read)
+                    onEnergyUpdate?.invoke()
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -168,7 +175,7 @@ class AudioCaptureManager(
      *
      * @return FloatArray of all captured samples at 16kHz mono.
      */
-    fun stop(): FloatArray {
+    override fun stop(): FloatArray {
         stopping = true
         val job = captureJob
         val activeRecorder = recorder
@@ -186,14 +193,14 @@ class AudioCaptureManager(
             result = samples.toFloatArray()
             samples.clear()
         }
-        resetEnergyHistory()
+        waveformEnergy.reset()
         return result
     }
 
     /**
      * Cancel capturing and discard all audio data.
      */
-    fun cancel() {
+    override fun cancel() {
         stopping = true
         val job = captureJob
         val activeRecorder = recorder
@@ -208,7 +215,7 @@ class AudioCaptureManager(
                 activeRecorder?.release()
             } finally {
                 synchronized(samples) { samples.clear() }
-                resetEnergyHistory()
+                waveformEnergy.reset()
             }
         }
         Timber.d("AudioRecord cancelled, samples discarded")
@@ -225,79 +232,8 @@ class AudioCaptureManager(
         }
     }
 
-    /**
-     * Calculate the root-mean-square energy of a buffer of audio samples.
-     *
-     * RMS = sqrt( sum(sample^2) / count )
-     *
-     * This gives a single energy value representing the "loudness" of the chunk.
-     * Public for testability.
-     *
-     * @param buffer Array of float samples (typically -1.0 to 1.0).
-     * @param count Number of valid samples in the buffer (may be less than buffer.size).
-     * @return RMS energy value. Returns 0f if count is 0.
-     */
-    fun calculateRmsEnergy(buffer: FloatArray, count: Int): Float {
-        if (count == 0) return 0f
-        var sum = 0f
-        for (i in 0 until count) {
-            sum += buffer[i] * buffer[i]
-        }
-        return sqrt(sum / count)
-    }
-
-    /**
-     * Normalize a raw RMS energy value to the 0.0-1.0 range for display.
-     *
-     * Uses a power curve (sqrt) for better perceptual mapping: quiet speech
-     * still produces visible bar movement, while loud speech reaches full height.
-     * The 20x multiplier maps typical speech RMS (0.005-0.15) to ~0.3-1.0
-     * after the sqrt curve, giving responsive visual feedback.
-     *
-     * @param rms Raw RMS energy value.
-     * @return Normalized value in [0.0, 1.0].
-     */
-    fun normalizeEnergy(rms: Float): Float {
-        val amplified = (rms * 20f).coerceIn(0f, 1f)
-        return sqrt(amplified) // sqrt curve: boosts quiet sounds, compresses loud
-    }
-
-    /**
-     * Add a normalized energy value to the rolling history.
-     *
-     * The history maintains at most [MAX_ENERGY_HISTORY] (30) entries.
-     * When full, the oldest entry is dropped. This provides the data
-     * for the 30-bar waveform visualization.
-     */
-    fun addEnergyToHistory(energy: Float) {
-        synchronized(energyHistory) {
-            energyHistory.addLast(energy)
-            if (energyHistory.size > MAX_ENERGY_HISTORY) {
-                energyHistory.removeFirst()
-            }
-        }
-    }
-
-    /**
-     * Get a snapshot of the current energy history for waveform display.
-     *
-     * @return Immutable list of up to 30 normalized energy values.
-     */
-    fun getEnergyHistory(): List<Float> = synchronized(energyHistory) {
-        energyHistory.toList()
-    }
-
-    /**
-     * Reset energy history to 30 zero entries.
-     * Ensures the next recording starts with a full-width flat waveform
-     * instead of bars sliding in from the left.
-     */
-    private fun resetEnergyHistory() {
-        synchronized(energyHistory) {
-            energyHistory.clear()
-            repeat(MAX_ENERGY_HISTORY) { energyHistory.addLast(0f) }
-        }
-    }
+    /** The 30 waveform levels for the audio read so far (all zero before the first read). */
+    override fun getEnergyHistory(): List<Float> = waveformEnergy.snapshot()
 
     /**
      * Stop the recorder before waiting for the capture loop. AudioRecord.stop()
@@ -309,6 +245,7 @@ class AudioCaptureManager(
         try {
             stopRecorder()
         } catch (failure: Exception) {
+            // A recorder that cannot stop must not leave its read loop running.
             job?.cancel()
             throw failure
         } finally {

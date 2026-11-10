@@ -8,6 +8,7 @@ import dev.pivisolutions.dictus.ime.input.CorrectionContext
 import dev.pivisolutions.dictus.ime.input.CorrectionContextIdentity
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
@@ -203,13 +204,7 @@ class NativeTrieSuggestionEngine(
                     val language = KeyboardPreferenceResolver.language(
                         preferences[PreferenceKeys.KEYBOARD_LANGUAGE],
                     )
-                    RequestedActivation(
-                        language,
-                        KeyboardPreferenceResolver.layout(
-                            preferences[PreferenceKeys.KEYBOARD_LAYOUT],
-                            language,
-                        ),
-                    )
+                    RequestedActivation(language, KeyboardLayoutPreference.layout(preferences, language))
                 }
                 .distinctUntilChanged()
                 .collect(::requestActivation)
@@ -286,6 +281,7 @@ class NativeTrieSuggestionEngine(
     private data class NativeQuery(
         val isKnownWord: Boolean,
         val profileCorrection: AccentCollapseCandidateSelector.Selection?,
+        val contraction: String?,
         val completions: List<String>,
         val corrections: List<String>,
         val contextScores: Map<String, Int>,
@@ -308,7 +304,7 @@ class NativeTrieSuggestionEngine(
             live
         }
         val nativeQuery = if (live == null) {
-            NativeQuery(false, null, emptyList(), emptyList(), emptyMap(), null)
+            NativeQuery(false, null, null, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
                 val isKnownWord = live.handle.wordExists(input)
@@ -323,6 +319,32 @@ class NativeTrieSuggestionEngine(
                     } else {
                         null
                     }
+                }
+                // A missing apostrophe is an insertion, so the fuzzy corrector has no reason to
+                // prefer `c'est` over any other neighbour of `cest`. The expansion is exact —
+                // a declared prefix plus a word already in the dictionary — so it is resolved
+                // here and ranked above the fuzzy candidates.
+                val contraction = if (isKnownWord) {
+                    null
+                } else {
+                    ContractionExpander.expand(
+                        word = input,
+                        profile = live.profile,
+                        accentedForm = { suffix ->
+                            AccentCollapseCandidateSelector.select(
+                                input = suffix,
+                                profile = live.profile,
+                                inputKnown = false,
+                                maxRawFrequency = live.handle.maxFrequency(),
+                            ) { word ->
+                                if (live.handle.wordExists(word)) {
+                                    AccentCollapseCandidateSelector.WordFrequency(live.handle.frequency(word))
+                                } else {
+                                    null
+                                }
+                            }?.word
+                        },
+                    ) { word -> live.handle.wordExists(word) }
                 }
                 val completions = live.handle.complete(input, candidateLimit)
                 val corrections = live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit)
@@ -349,6 +371,7 @@ class NativeTrieSuggestionEngine(
                 NativeQuery(
                     isKnownWord,
                     profileCorrection,
+                    contraction,
                     completions,
                     corrections,
                     scores,
@@ -358,10 +381,12 @@ class NativeTrieSuggestionEngine(
                 releaseQuery()
             }
         }
-        val (isKnownWord, profileCorrection, completions, corrections, contextScores, contextIdentity) =
-            nativeQuery
+        val (
+            isKnownWord, profileCorrection, contraction, completions, corrections,
+            contextScores, contextIdentity,
+        ) = nativeQuery
         val nativeCandidates = rerank(
-            listOfNotNull(profileCorrection?.word) + completions + corrections,
+            listOfNotNull(profileCorrection?.word, contraction) + completions + corrections,
             contextScores,
         )
         if (nativeCandidates.isEmpty() && learned.isEmpty()) {
@@ -369,9 +394,11 @@ class NativeTrieSuggestionEngine(
         }
 
         val normalizedInput = input.canonicalLookupKey()
-        val primaryCorrection = profileCorrection?.word ?: rerank(corrections, contextScores).firstOrNull {
-            it.canonicalLookupKey() != normalizedInput
-        }
+        val primaryCorrection = profileCorrection?.word
+            ?: contraction
+            ?: rerank(corrections, contextScores).firstOrNull {
+                it.canonicalLookupKey() != normalizedInput
+            }
         val prefixInput = normalizedInput.stripAccents()
         val seen = mutableSetOf(normalizedInput)
         val learnedPrefixWords = learned.asSequence()
@@ -388,11 +415,15 @@ class NativeTrieSuggestionEngine(
             if (normalized in learnedKeys) learnedNative += word else normalNative += word
         }
 
+        // Candidates come back in dictionary case; the user's capitals must survive (#224).
+        val locale = live?.language?.let { Locale.forLanguageTag(it.code) } ?: Locale.ROOT
         return QueryResult(
             isKnownWord = isKnownWord,
             knownInputDominance = profileCorrection?.knownInputDominance == true,
-            primaryCorrection = primaryCorrection,
-            suggestions = (learnedPrefixWords + learnedNative + normalNative).take(maxResults),
+            primaryCorrection = primaryCorrection?.let { TypedCase.applyTo(it, input, locale) },
+            suggestions = (learnedPrefixWords + learnedNative + normalNative)
+                .take(maxResults)
+                .map { TypedCase.applyTo(it, input, locale) },
             contextIdentity = contextIdentity,
         )
     }

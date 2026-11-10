@@ -6,12 +6,16 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -67,8 +71,21 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `language defaults to auto`() = testScope.runTest {
+    fun `language defaults to follow keyboard`() = testScope.runTest {
+        assertEquals("follow", viewModel.language.value)
+    }
+
+    @Test
+    fun `setLanguage persists follow keyboard and auto apart`() = testScope.runTest {
+        viewModel.setLanguage("auto")
+        advanceUntilIdle()
         assertEquals("auto", viewModel.language.value)
+        assertEquals("auto", fakeDataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE])
+
+        viewModel.setLanguage("follow")
+        advanceUntilIdle()
+        assertEquals("follow", viewModel.language.value)
+        assertEquals("follow", fakeDataStore.data.first()[PreferenceKeys.TRANSCRIPTION_LANGUAGE])
     }
 
     @Test
@@ -76,6 +93,24 @@ class SettingsViewModelTest {
         viewModel.setLanguage("fr")
         advanceUntilIdle()
         assertEquals("fr", viewModel.language.value)
+    }
+
+    @Test
+    fun `setLanguage persists Spanish and German`() = testScope.runTest {
+        viewModel.setLanguage("es")
+        advanceUntilIdle()
+        assertEquals("es", viewModel.language.value)
+
+        viewModel.setLanguage("de")
+        advanceUntilIdle()
+        assertEquals("de", viewModel.language.value)
+    }
+
+    @Test
+    fun `unknown stored language is shown as follow keyboard`() = testScope.runTest {
+        viewModel.setLanguage("zz")
+        advanceUntilIdle()
+        assertEquals("follow", viewModel.language.value)
     }
 
     @Test
@@ -91,27 +126,35 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `keyboard language is independent from ASR and preserves explicit layout`() = testScope.runTest {
-        viewModel.setLanguage("auto")
-        viewModel.setKeyboardLayout("azerty")
-        viewModel.setKeyboardLanguage("en")
-        advanceUntilIdle()
+    fun `keyboard language is independent from ASR and keeps each language's layout`() =
+        testScope.runTest {
+            fakeDataStore.edit {
+                it[PreferenceKeys.KEYBOARD_LAYOUT] = "azerty"
+                it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true
+            }
+            viewModel.setLanguage("auto")
+            viewModel.setKeyboardLanguage("en")
+            advanceUntilIdle()
 
-        assertEquals("auto", viewModel.language.value)
-        assertEquals("en", viewModel.keyboardLanguage.value)
-        assertEquals("azerty", viewModel.keyboardLayout.value)
-    }
+            val preferences = fakeDataStore.data.first()
+            assertEquals("auto", viewModel.language.value)
+            assertEquals("en", viewModel.keyboardLanguage.value)
+            // French, active when the migration ran, keeps the AZERTY it was typing on.
+            assertEquals(
+                KeyboardLayout.AZERTY,
+                KeyboardLayoutPreference.explicitLayout(preferences, SupportedLanguage.FRENCH),
+            )
+            // English never had a layout, so it brings its own default instead of inheriting AZERTY.
+            assertEquals(KeyboardLayout.QWERTY, KeyboardLayoutPreference.activeLayout(preferences))
+            assertEquals("qwerty", preferences[PreferenceKeys.KEYBOARD_LAYOUT])
+        }
 
     @Test
-    fun `profile layout default follows keyboard language when layout is absent`() = testScope.runTest {
-        viewModel.setKeyboardLanguage("en")
-        advanceUntilIdle()
-        assertEquals("qwerty", viewModel.keyboardLayout.value)
-
+    fun `unknown keyboard language resolves to French on AZERTY`() = testScope.runTest {
         fakeDataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "unknown" }
         advanceUntilIdle()
         assertEquals("fr", viewModel.keyboardLanguage.value)
-        assertEquals("azerty", viewModel.keyboardLayout.value)
+        assertEquals(KeyboardLayout.AZERTY, KeyboardLayoutPreference.activeLayout(fakeDataStore.data.first()))
     }
 
     @Test

@@ -15,10 +15,27 @@ class PendingMicGate {
     var isPending: Boolean = false
         private set
 
+    /**
+     * The model the user selected, or null when the caller does not know it.
+     *
+     * WHY (#175): the engine keeps the previous model after a model switch until something
+     * loads the new one. Treating that Ready as ready started the recording on the old engine,
+     * and the transcription then loaded the new model under the preparation overlay.
+     */
+    var selectedModelKey: String? = null
+
+    /** Ready for this tap: the engine holds the selected model, or the selection is unknown. */
+    private fun SttEngineState.Ready.matchesSelection(): Boolean =
+        selectedModelKey == null || modelKey == selectedModelKey
+
     fun request(engineState: SttEngineState): MicGateCommand = when (engineState) {
-        is SttEngineState.Ready -> {
+        is SttEngineState.Ready -> if (engineState.matchesSelection()) {
             isPending = false
             MicGateCommand.START_RECORDING
+        } else {
+            // Load the selected model first, under the overlay, as from Cold.
+            isPending = true
+            MicGateCommand.PREWARM
         }
         SttEngineState.Cold -> {
             isPending = true
@@ -46,9 +63,12 @@ class PendingMicGate {
     fun engineChanged(engineState: SttEngineState): MicGateCommand {
         if (!isPending) return MicGateCommand.NONE
         return when (engineState) {
-            is SttEngineState.Ready -> {
+            is SttEngineState.Ready -> if (engineState.matchesSelection()) {
                 isPending = false
                 MicGateCommand.START_RECORDING
+            } else {
+                // The previous model is still loaded; the selected one has not started loading.
+                MicGateCommand.NONE
             }
             is SttEngineState.ModelMissing -> {
                 // A prewarm that discovers no model must not leave the tap queued: a later

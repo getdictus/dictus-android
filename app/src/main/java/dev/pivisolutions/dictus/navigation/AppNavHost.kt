@@ -1,5 +1,10 @@
 package dev.pivisolutions.dictus.navigation
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -22,36 +27,47 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.R
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.companion.settings.CompanionSettingsSection
 import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
+import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingDownloadNotice
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingLanguageScreen
 import dev.pivisolutions.dictus.recording.RecordingScreen
+import dev.pivisolutions.dictus.service.ModelInstaller
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.onboarding.OnboardingMicPermissionScreen
-import dev.pivisolutions.dictus.onboarding.OnboardingModeSelectionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModelDownloadScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingStep
 import dev.pivisolutions.dictus.onboarding.OnboardingSuccessScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingTestRecordingScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingViewModel
 import dev.pivisolutions.dictus.onboarding.OnboardingWelcomeScreen
+import dev.pivisolutions.dictus.ui.onboarding.OnboardingShell
 import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
 import dev.pivisolutions.dictus.ui.settings.DebugLogsScreen
 import dev.pivisolutions.dictus.ui.settings.LicencesScreen
 import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
+import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
 import kotlinx.coroutines.flow.map
 
 /**
@@ -77,6 +93,7 @@ import kotlinx.coroutines.flow.map
  * @param imeSelected Whether the Dictus keyboard is selected as the default input method.
  * @param onOpenKeyboardSettings Callback to open system keyboard settings.
  * @param onOpenAppSettings Callback to open app details settings.
+ * @param openModelsRequested Start on the Models tab: the keyboard's mic tap with no model (#247).
  */
 @Composable
 fun AppNavHost(
@@ -88,6 +105,7 @@ fun AppNavHost(
     onShowKeyboardPicker: () -> Unit,
     onOpenAppSettings: () -> Unit,
     openSettingsRequested: Boolean = false,
+    openModelsRequested: Boolean = false,
 ) {
     val hasCompletedOnboarding by dataStore.data
         .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
@@ -136,25 +154,31 @@ fun AppNavHost(
                 imeSelected = imeSelected,
                 onOpenKeyboardSettings = onOpenKeyboardSettings,
                 onOpenAppSettings = onOpenAppSettings,
+                startDestination = if (openModelsRequested) {
+                    AppDestination.Models.route
+                } else {
+                    AppDestination.Home.route
+                },
             )
         }
     }
 }
 
 /**
- * Full 7-step onboarding flow.
+ * Full onboarding flow, one [OnboardingStep] at a time inside the [OnboardingShell] (#196).
  *
  * Hosts an [OnboardingViewModel] via hiltViewModel() and switches between step screens
- * using a simple when(currentStep) expression. Each screen receives the ViewModel's
- * current state and delegates actions back via callbacks.
+ * using a simple when(step) expression. Each screen receives the ViewModel's
+ * current state and delegates actions back via callbacks. The shell draws the frame
+ * around them: back chevron, dashed progress bar, Skip.
  *
- * Step 6's "Commencer" tap calls viewModel.advanceStep(), which writes
+ * The completion step's "Commencer" tap calls viewModel.advanceStep(), which writes
  * HAS_COMPLETED_ONBOARDING=true to DataStore. AppNavHost's collectAsState() on that
  * key triggers recomposition and switches to MainTabsScreen automatically.
  *
- * WHY when(step) (not AnimatedContent or NavHost): The step count is small (6) and
- * the transitions are purely sequential. A simple when keeps the code easy to read and
- * avoids navigation graph complexity for a one-time, non-navigable flow.
+ * WHY when(step) (not NavHost): The step count is small and the transitions are purely
+ * sequential. A simple when keeps the code easy to read and avoids navigation graph
+ * complexity for a one-time flow. The shell slides the pages (AnimatedContent).
  *
  * IME state comes from MainActivity, which re-reads Android's system state after settings
  * and picker round trips. The system remains the source of truth across process recreation.
@@ -171,13 +195,10 @@ private fun OnboardingScreen(
 
     val currentStep by viewModel.currentStep.collectAsState()
     val micGranted by viewModel.micPermissionGranted.collectAsState()
-    val selectedLayout by viewModel.selectedLayout.collectAsState()
-    val downloadProgress by viewModel.downloadProgress.collectAsState()
-    val downloadComplete by viewModel.modelDownloadComplete.collectAsState()
-    val downloadError by viewModel.downloadError.collectAsState()
-    val isExtracting by viewModel.isExtracting.collectAsState()
-    val recommendedModel = viewModel.recommendedModelInfo
-    val modelSizeMb = recommendedModel.expectedSizeBytes / (1024 * 1024)
+    val preparation by viewModel.preparation.collectAsState()
+    val languageSetup by viewModel.languageSetup.collectAsState()
+    val downloadNotice by viewModel.downloadNotice.collectAsState()
+    val notificationRequest by viewModel.notificationRequest.collectAsState()
 
     var companionSetup by rememberSaveable { mutableStateOf(false) }
     var companionModels by rememberSaveable { mutableStateOf(false) }
@@ -191,7 +212,7 @@ private fun OnboardingScreen(
                 if (companionModels) companionModels = false else companionSetup = false
             }) { Text(stringResource(R.string.companion_back)) }
             if (companionModels) {
-                ModelsScreen()
+                ModelsScreen(dictationController = dictationController)
             } else {
                 companionSetupState.SaveableStateProvider("companion_setup") {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -206,47 +227,80 @@ private fun OnboardingScreen(
         return
     }
 
-    when (currentStep) {
-        1 -> OnboardingWelcomeScreen(
-            onNext = { viewModel.advanceStep() },
-            onCompanion = { companionSetup = true },
+    // The persisted step is still being read: the bare background, as AppNavHost does above.
+    val step = currentStep ?: run {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
         )
-        2 -> OnboardingMicPermissionScreen(
-            micGranted = micGranted,
-            onPermissionResult = { viewModel.setMicPermissionGranted(it) },
-            onNext = { viewModel.advanceStep() },
-        )
-        3 -> OnboardingKeyboardSetupScreen(
-            imeEnabled = imeEnabled,
-            imeSelected = imeSelected,
-            onOpenSettings = onOpenKeyboardSettings,
-            onOpenPicker = onShowKeyboardPicker,
-            onNext = { viewModel.advanceStep() },
-        )
-        4 -> OnboardingModeSelectionScreen(
-            selectedLayout = selectedLayout,
-            onSelectLayout = { viewModel.setLayout(it) },
-            onNext = { viewModel.advanceStep() },
-        )
-        5 -> OnboardingModelDownloadScreen(
-            modelName = recommendedModel.displayName,
-            modelSize = "~$modelSizeMb MB",
-            modelQualityLabel = recommendedModel.qualityLabel,
-            isExtracting = isExtracting,
-            downloadProgress = downloadProgress,
-            downloadComplete = downloadComplete,
-            downloadError = downloadError,
-            onStartDownload = { viewModel.startModelDownload() },
-            onRetry = { viewModel.retryDownload() },
-            onNext = { viewModel.advanceStep() },
-        )
-        6 -> OnboardingTestRecordingScreen(
-            dictationController = dictationController,
-            onNext = { viewModel.advanceStep() },
-        )
-        7 -> OnboardingSuccessScreen(
-            onComplete = { viewModel.advanceStep() },
-        )
+        return
+    }
+
+    OnboardingShell(
+        step = step,
+        onBack = { viewModel.goBack() },
+        onSkip = { viewModel.skipStep() },
+    ) { pageStep ->
+        // A page's moves only count while it is the step on screen (see advanceFrom).
+        val onNext = { viewModel.advanceFrom(pageStep) }
+        when (pageStep) {
+            OnboardingStep.Welcome -> OnboardingWelcomeScreen(
+                onNext = onNext,
+                // Keyboard-independent Companion setup; leaves the system keyboard unchanged.
+                onCompanion = { companionSetup = true },
+            )
+            // Read with the step, so it is set whenever the step is.
+            OnboardingStep.Language -> languageSetup?.let { setup ->
+                OnboardingLanguageScreen(
+                    setup = setup,
+                    model = viewModel.recommendedModelInfo,
+                    onLanguage = { viewModel.setKeyboardLanguage(it) },
+                    onLayout = { viewModel.setKeyboardLayout(it) },
+                    onContinue = { viewModel.confirmLanguage() },
+                )
+                if (downloadNotice) {
+                    OnboardingDownloadNotice(
+                        model = viewModel.recommendedModelInfo,
+                        requestNotifications = notificationRequest,
+                        onNotificationsRequested = { viewModel.notificationPermissionRequested() },
+                        onDismiss = { viewModel.dismissDownloadNotice() },
+                    )
+                }
+            }
+            OnboardingStep.Microphone -> OnboardingMicPermissionScreen(
+                micGranted = micGranted,
+                onPermissionResult = { viewModel.setMicPermissionGranted(it) },
+                onNext = onNext,
+                onDecline = { viewModel.skipStep() },
+            )
+            OnboardingStep.KeyboardSetup -> OnboardingKeyboardSetupScreen(
+                imeEnabled = imeEnabled,
+                imeSelected = imeSelected,
+                onOpenSettings = onOpenKeyboardSettings,
+                onOpenPicker = onShowKeyboardPicker,
+                onNext = onNext,
+            )
+            OnboardingStep.ModelPreparation -> OnboardingModelDownloadScreen(
+                preparation = preparation,
+                engine = dictationController?.engineState?.collectAsState()?.value,
+                onStart = { viewModel.startPreparation() },
+                onRetryInstall = { viewModel.retryDownload() },
+                onLoadEngine = { dictationController?.prewarmEngine() },
+                onNext = onNext,
+            )
+            OnboardingStep.FirstDictation -> OnboardingTestRecordingScreen(
+                isDictusKeyboard = imeSelected,
+                // Like iOS leaveFirstDictation: the test dictation must not greet the user on Home.
+                onNext = {
+                    LastTranscriptionStore.instance.clear()
+                    onNext()
+                },
+            )
+            OnboardingStep.Completion -> OnboardingSuccessScreen(
+                onComplete = onNext,
+            )
+        }
     }
 }
 
@@ -275,6 +329,13 @@ private fun MainTabsScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: AppDestination.Home.route
 
+    ActiveDictationRedirect(
+        dictationController = dictationController,
+        onRecordingScreen = currentRoute == AppDestination.Recording.route,
+    ) {
+        navController.navigate(AppDestination.Recording.route) { launchSingleTop = true }
+    }
+
     // Hide the bottom nav bar when on the Recording screen so it gets full-screen immersion.
     // WHY conditional (not AnimatedVisibility): simple show/hide is sufficient here; there
     // is no animation spec for the nav bar in the design.
@@ -283,6 +344,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.History.route &&
         currentRoute != AppDestination.Licences.route &&
         currentRoute != AppDestination.DebugLogs.route &&
+        currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
         !currentRoute.startsWith("sound_picker")
 
@@ -294,7 +356,8 @@ private fun MainTabsScreen(
                     currentRoute = currentRoute,
                     onNavigate = { destination ->
                         navController.navigate(destination.route) {
-                            popUpTo(AppDestination.Home.route) {
+                            // The graph's start, not Home: the Models launch starts elsewhere.
+                            popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }
                             launchSingleTop = true
@@ -313,27 +376,50 @@ private fun MainTabsScreen(
                 .padding(innerPadding),
         ) {
             composable(AppDestination.Home.route) {
+                val context = LocalContext.current
+                val modelInstaller = remember(context) { ModelInstaller(context.applicationContext) }
+                // A microphone declined in the onboarding, or revoked since, is asked for when the
+                // user starts a dictation (#220). After a refusal the toast says where to allow it.
+                val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    if (granted) {
+                        navController.navigate(AppDestination.Recording.route)
+                    } else {
+                        Toast.makeText(context, R.string.home_mic_refused, Toast.LENGTH_LONG).show()
+                    }
+                }
                 HomeScreen(
                     dataStore = dataStore,
                     onNewDictation = {
-                        navController.navigate(AppDestination.Recording.route)
+                        val micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED
+                        if (micGranted) {
+                            navController.navigate(AppDestination.Recording.route)
+                        } else {
+                            micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
                     },
                     onOpenHistory = {
                         navController.navigate(AppDestination.History.route) { launchSingleTop = true }
                     },
+                    installState = modelInstaller::state,
                 )
             }
-            composable(
-                route = AppDestination.History.route,
-                enterTransition = { slideInVertically(initialOffsetY = { it }) },
-                exitTransition = { slideOutVertically(targetOffsetY = { it }) },
-                popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
-                popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
-            ) {
-                HistoryRoute(onBack = { navController.popBackStack() })
+            // History is a Pro feature that has not shipped yet: while the flag is off the
+            // route is never registered, so no navigation can reach the screen even by
+            // mistake. The implementation stays compiled and unit-tested behind it.
+            if (PremiumFlags.HISTORY_VISIBLE) {
+                composable(
+                    route = AppDestination.History.route,
+                    enterTransition = { slideInVertically(initialOffsetY = { it }) },
+                    exitTransition = { slideOutVertically(targetOffsetY = { it }) },
+                    popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
+                    popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
+                ) {
+                    HistoryRoute(onBack = { navController.popBackStack() })
+                }
             }
             composable(AppDestination.Models.route) {
-                ModelsScreen()
+                ModelsScreen(dictationController = dictationController)
             }
             composable(AppDestination.Settings.route) {
                 SettingsScreen(
@@ -346,8 +432,13 @@ private fun MainTabsScreen(
                     onNavigateToSoundSettings = {
                         navController.navigate(AppDestination.SoundSettings.route)
                     },
-                    onNavigateToModels = {
-                        navController.navigate(AppDestination.Models.route)
+                    companionSection = {
+                        CompanionSettingsSection(
+                            onOpenModels = { navController.navigate(AppDestination.Models.route) },
+                        )
+                    },
+                    onNavigateToTranscriptionDebug = {
+                        navController.navigate(AppDestination.TranscriptionDebug.route)
                     },
                 )
             }
@@ -358,6 +449,11 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.DebugLogs.route) {
                 DebugLogsScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(AppDestination.TranscriptionDebug.route) {
+                TranscriptionDebugScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

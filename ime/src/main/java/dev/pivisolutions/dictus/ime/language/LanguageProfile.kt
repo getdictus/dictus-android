@@ -25,6 +25,14 @@ data class LanguageProfile(
 enum class KeyboardLayout(val persistedValue: String) {
     AZERTY("azerty"),
     QWERTY("qwerty"),
+    QWERTZ("qwertz"),
+    ;
+
+    companion object {
+        /** The layout stored as [persistedValue], or null for anything unreadable. */
+        fun fromPersistedValue(value: String?): KeyboardLayout? =
+            entries.firstOrNull { it.persistedValue == value }
+    }
 }
 
 data class CollapseRule(

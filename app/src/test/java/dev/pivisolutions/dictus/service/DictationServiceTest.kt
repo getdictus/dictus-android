@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.service
 
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,6 +27,7 @@ class DictationServiceTest {
     @Test
     fun `Recording state holds elapsed time and energy`() {
         val state = DictationState.Recording(
+            source = DictationSource.APP,
             elapsedMs = 3000L,
             energy = listOf(0.2f, 0.5f, 0.8f),
         )
@@ -40,13 +42,14 @@ class DictationServiceTest {
         assertTrue(currentState is DictationState.Idle)
 
         // Simulate start recording
-        currentState = DictationState.Recording(elapsedMs = 0L, energy = emptyList())
+        currentState = DictationState.Recording(source = DictationSource.APP,elapsedMs = 0L, energy = emptyList())
         assertTrue(currentState is DictationState.Recording)
     }
 
     @Test
     fun `state transitions from Recording back to Idle`() {
         var currentState: DictationState = DictationState.Recording(
+            source = DictationSource.APP,
             elapsedMs = 5000L,
             energy = listOf(0.3f, 0.6f),
         )
@@ -60,9 +63,9 @@ class DictationServiceTest {
     @Test
     fun `Recording state updates elapsed time correctly`() {
         val states = listOf(
-            DictationState.Recording(elapsedMs = 0L),
-            DictationState.Recording(elapsedMs = 1000L),
-            DictationState.Recording(elapsedMs = 2000L),
+            DictationState.Recording(source = DictationSource.APP,elapsedMs = 0L),
+            DictationState.Recording(source = DictationSource.APP,elapsedMs = 1000L),
+            DictationState.Recording(source = DictationSource.APP,elapsedMs = 2000L),
         )
         assertEquals(0L, states[0].elapsedMs)
         assertEquals(1000L, states[1].elapsedMs)

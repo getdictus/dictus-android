@@ -1,0 +1,28 @@
+name: PR Labeler
+
+# Applies path-based labels from .github/labeler.yml (e.g. needs-physical-test).
+#
+# WHY pull_request_target: on `pull_request`, PRs from forks get a read-only
+# token and cannot be labelled. `pull_request_target` runs in the base branch
+# context with a write token. This is safe here because the job never checks out
+# or runs PR code: labeler only reads the list of changed files through the API,
+# and reads its config from the base branch.
+on:
+  pull_request_target:
+    types: [ opened, synchronize, reopened ]
+    branches: [ develop, main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Label PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v7
+        with:
+          # Never remove labels: needs-physical-test can also be added by hand,
+          # and only Titus removes it once Pierre has validated on device.
+          sync-labels: false

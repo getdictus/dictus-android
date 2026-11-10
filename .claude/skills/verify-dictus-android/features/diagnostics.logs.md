@@ -1,0 +1,48 @@
+# Debug logs and diagnostics
+
+Réglages → À propos shows the version, the app's own log (without any dictated or typed text), an export of that log, the licences, GitHub, the privacy policy and the terms of use.
+
+- **ID:** `diagnostics.logs`
+- **Tier:** Gratuit
+- **Statut Android:** présent
+- **Screens:** `app.settings.debug-logs`, `app.settings.polish-debug`, `app.settings.licences`, `app.settings` — see [screens.md](screens.md)
+
+## Sub-features
+
+- `diagnostics.log-view`: « Debug Logs »: the log, with a menu to « Effacer » or « Copier ». — présent
+- `diagnostics.log-export`: « Exporter les logs de débogage »: a ZIP (`dictus-logs.zip`) through the share sheet. — présent
+- `diagnostics.app-group-check`: — Spécifique iOS.
+- `diagnostics.about`: « Version », « Licences », « GitHub », « Politique de confidentialité » and « Conditions d’utilisation » (EN « Privacy policy », « Terms of use »), which open getdictus.com/fr/privacy and /fr/terms, /en/ in English (#220; « Mentions légales » pointed to a dead page). — présent
+- `polish.debug` (iOS ID): « Transcription debug », opened by tapping « Version » five times quickly, in release builds too. One entry per dictation the engine returned text for, app (`<APP>`) or keyboard (`<KBD>`), kept 7 days in `files/polish_events.jsonl` with the dictated text in plain text; menu « Exporter le JSON… » (`dictus-polish-debug-<yyyyMMdd-HHmmss>.json`, the iOS schema, through the share sheet) and « Effacer ». — présent (#295)
+
+## How to get to it (user POV)
+
+1. Dictus → Réglages, scroll to À propos.
+2. « Debug Logs » to read; « Exporter les logs de débogage » to send.
+
+## Driving it with Argent
+
+Preconditions: Launch and Doctor OK.
+
+- **Scroll.** Réglages, `gesture-swipe` (0.5, 0.8) → (0.5, 0.2) twice. → `À propos`, `Version`, `Debug Logs` (`evidence.sh about`).
+- **Read the log.** Tap `Debug Logs`. → title `Debug Logs`, the menu `⋮`, log lines oldest first (`screen.sh app.settings.debug-logs`); `Retour`.
+- **Export (sheet only).** Tap `Exporter les logs de débogage`. → the share sheet `Partage de 1 fichier`, `dictus-logs.zip` (seen 2026-10-20); system back, never pick a destination.
+- **Transcription debug.** Tap `Version` five times quickly (`gesture-tap` with `clickCount: 5`). → title `Transcription debug`, `Résultats (N affichés)`, `Événements récents`, one row per dictation (`polish off`, the raw text, `<KBD>  none  stt=<model>  det=-  <ms>ms  <n>→<n>`); tap a row → `Événement de transcription` with `tx mode`, `keyboard`, `stt lang` (`(inert)` on Parakeet). Menu `Menu` → `Exporter le JSON…` opens the share sheet on `dictus-polish-debug-….json`: system back, never send. From the host: `adb shell run-as dev.pivisolutions.dictus cat files/polish_events.jsonl` (one JSON per line, `metrics.languageResolution.sttLanguageCode` is the language the engine got).
+- **Licences.** Tap `Licences`. → the list (`screen.sh app.settings.licences`); `Retour`.
+- **Proof.** The tree of each screen. The same log is readable from the host: `adb shell run-as dev.pivisolutions.dictus cat files/dictus.log`. The exported `dictus.log` inside the ZIP is that file with the context header on top; to pull it without a share target, `adb exec-out run-as dev.pivisolutions.dictus cat cache/dictus-logs.zip > dictus-logs.zip` after tapping export.
+
+## What the export contains (#112)
+
+- **Files**: `files/dictus.log` rotates past 2 MB into `files/dictus.previous.log` (one previous file only). The ZIP holds `dictus.previous.log` first (when it exists), then `dictus.log`.
+- **Header**, at the top of `dictus.log`, before `---`: export time and zone; app version, versionCode, build type, `rev <sha>@<branch>`; manufacturer, model, Android version and API, build id, ABI; total and available RAM; active model, engine, transcription language; keyboard enabled and default IME; `RECORD_AUDIO` and `POST_NOTIFICATIONS`; the retained window, from the oldest line of the previous file to the newest of the current one.
+- **Lines**: `2026-10-23T00:12:03.456+02:00 INFO    [IME] DictusImeService d=7f3a01: …` — zoned time, level, category (`LIFECYCLE`, `UI`, `IME`, `KEYBOARD`, `SERVICE`, `AUDIO`, `STT`, `MODEL`, `INSERT`, `APP`), calling class, and the dictation id while one is in flight.
+- **One keyboard dictation**, `grep 'd=<id>'`: `Mic tap` → `Mic gate: command=START_RECORDING` → `Recording requested: source=keyboard` → `DictationService started foreground` → `AudioRecord started` → `Recording stopped: samples=…, audioMs=…` → `confirmAndTranscribe: model=…, engine=…` → `Transcription started` / `Transcription finished: engine=…, durationMs=…, rawLength=…` → `Dictation tally: …` (a take with words) → `Transcription pipeline done` → `[INSERT] Dictation inserted: d=…, length=…, committed=…`. Lengths and timings only, never text.
+- **One in-app dictation, Stop to result (#145)**: every stage carries the `t+=` of the dictation, measured from the start request: `Stop tapped: surface=app` → `Recording stopped` → `confirmAndTranscribe: model=…` → `Transcription started` (inference start) → `Transcription finished: …, durationMs=…` (inference end) → `Transcription processed` (post-processing end, DEBUG) → `Transcription outcome` → `Dictation tally` → `Transcription history step done: retention=…` (`EPHEMERAL` while history is off: nothing is written) → `Transcription pipeline done` → `Dictation result shown: surface=app` (the screen has left « Transcription en cours… »). Stop to result = `t+` of the last line minus `t+` of the first.
+- **Dictation tally (#201)**, the debug readout of the words and audio seconds counted per local day for every user: after each take with words, app or keyboard, `[STT] DictationTranscriber d=…: Dictation tally: added audioSeconds=3; today words=22, audioSeconds=21, timeSavedSeconds=4`. Today's totals since local midnight, the iOS time-saved estimate (52.24 WPM) included; numbers only. From the host: `adb logcat -d -s DictationTranscriber:I | grep 'Dictation tally'` (debug build), or `adb shell "run-as dev.pivisolutions.dictus grep 'Dictation tally' files/dictus.log"`. In the app: Réglages → Debug Logs, among the other lines; no screen of its own yet.
+
+## Gotchas
+
+- Do not tap « Effacer » in the menu: it erases Pierre's log. The same goes for « Effacer » in Transcription debug: it erases his dictation journal.
+- The export opens the share sheet with Pierre's apps and accounts: prove the sheet opens, then system back; never send.
+- Coming back from Debug Logs restores Réglages at another scroll offset: re-read the frames before the next tap (a stale frame opened the export sheet once).
+- « GitHub », « Politique de confidentialité » and « Conditions d’utilisation » open the browser; the two legal pages in the interface language.

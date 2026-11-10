@@ -20,7 +20,7 @@ class InputConnectionAutocorrectEditorTest {
         val connection = StatefulConnection("say teh")
         val result = AutocorrectEditorTransaction.apply(connection.editor(), "teh", "the", true)
 
-        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 8)), result)
+        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), result)
         assertEquals("say the ", connection.text)
         assertTrue(connection.calls.contains("setComposingRegion(4,7)"))
         assertTrue(connection.calls.contains("commitText(the ,1)"))
@@ -55,6 +55,20 @@ class InputConnectionAutocorrectEditorTest {
             editor.attemptVerifiedReplacement(request(expected)),
         )
         assertEquals("teh", connection.text)
+        assertEquals("finishComposingText", connection.calls.last())
+    }
+
+    @Test
+    fun `accepted commit that still reads back the old text is indeterminate, not unchanged`() {
+        // An editor that applies a batch only when it ends (Compose) answers this way (#193).
+        val connection = StatefulConnection("teh", behavior = Behavior.ACCEPT_LATER)
+        val editor = connection.editor()
+        val expected = editor.snapshot()!!
+
+        assertEquals(
+            AutocorrectReplacementOutcome.IndeterminateMutation,
+            editor.attemptVerifiedReplacement(request(expected)),
+        )
         assertEquals("finishComposingText", connection.calls.last())
     }
 
@@ -149,7 +163,7 @@ class InputConnectionAutocorrectEditorTest {
 
         val result = AutocorrectEditorTransaction.apply(connection.editor(), "teh", "the", true)
 
-        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 5)), result)
+        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), result)
         assertEquals(" the ", connection.text)
     }
 
@@ -197,7 +211,7 @@ class InputConnectionAutocorrectEditorTest {
 
         val result = AutocorrectEditorTransaction.apply(connection.editor(), "teh", "the", true)
 
-        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 13)), result)
+        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), result)
         assertEquals("xxxx say the ", connection.text)
         assertTrue(connection.calls.contains("setComposingRegion(9,12)"))
     }
@@ -236,6 +250,7 @@ class InputConnectionAutocorrectEditorTest {
     private enum class Behavior {
         NORMAL,
         IGNORE,
+        ACCEPT_LATER,
         MUTATE_THEN_FALSE,
         MUTATE_THEN_THROW,
         WRONG_SELECTION,
@@ -337,6 +352,7 @@ class InputConnectionAutocorrectEditorTest {
             commitCount++
             calls += "commitText($replacement,$newCursorPosition)"
             if (behavior == Behavior.IGNORE || behavior == Behavior.CLEANUP_FALSE || behavior == Behavior.CLEANUP_THROW) return false
+            if (behavior == Behavior.ACCEPT_LATER) return true
             if (behavior == Behavior.COMPENSATION_IGNORED && commitCount == 2) return false
 
             val start = if (behavior == Behavior.CLAMPED && commitCount == 1) {

@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.permission.buildPermissionsToRequest
@@ -62,7 +63,7 @@ fun TestSurfaceScreen(
     // Permission launcher -- must be created during composition, not in a callback.
     val permissionLauncher = rememberPermissionState { granted ->
         if (granted) {
-            controller?.startRecording()
+            controller?.startRecording(DictationSource.APP)
         } else {
             scope.launch {
                 val result = snackbarHostState.showSnackbar(
@@ -110,7 +111,7 @@ fun TestSurfaceScreen(
                     ) == PackageManager.PERMISSION_GRANTED
 
                     if (hasPermission) {
-                        controller?.startRecording()
+                        controller?.startRecording(DictationSource.APP)
                     } else {
                         permissionLauncher.launch(buildPermissionsToRequest())
                     }

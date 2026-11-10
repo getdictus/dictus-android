@@ -7,21 +7,22 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.history.RoomTranscriptionHistoryRepository
 import dev.pivisolutions.dictus.history.TranscriptionHistoryDatabase
 import dev.pivisolutions.dictus.history.TranscriptionHistoryRepository
 import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
-import dev.pivisolutions.dictus.service.ModelDownloader
+import dev.pivisolutions.dictus.service.ModelInstaller
+import java.io.File
 import javax.inject.Singleton
 
 /**
  * Hilt module providing application-level singletons for model management.
  *
- * WHY singletons: ModelManager maintains model directory state and ModelDownloader
- * holds the OkHttp client (which manages connection pools). Both should be single
- * instances per process to avoid redundant file-system checks and connection pool
- * fragmentation.
+ * WHY singletons: ModelManager maintains model directory state and ModelInstaller
+ * fronts WorkManager, itself a process-wide singleton. The installs themselves run in
+ * ModelInstallWorker, which builds its own ModelDownloader.
  *
  * WHY not @Inject constructor on ModelManager: ModelManager takes a Context parameter.
  * Hilt cannot inject Context directly into a non-Android class constructor without a
@@ -38,8 +39,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideModelDownloader(modelManager: ModelManager): ModelDownloader =
-        ModelDownloader(modelManager)
+    fun provideModelInstaller(@ApplicationContext context: Context): ModelInstaller =
+        ModelInstaller(context)
 
     @Provides
     @Singleton
@@ -64,4 +65,10 @@ object AppModule {
     fun provideTranscriptionHistoryWriter(
         repository: TranscriptionHistoryRepository,
     ): TranscriptionHistoryWriter = TranscriptionHistoryWriter(repository)
+
+    /** One instance per process: its lock is what serializes the keyboard's and the app's writes. */
+    @Provides
+    @Singleton
+    fun provideTranscriptionDebugStore(@ApplicationContext context: Context): TranscriptionDebugStore =
+        TranscriptionDebugStore(File(context.filesDir, TranscriptionDebugStore.FILE_NAME))
 }

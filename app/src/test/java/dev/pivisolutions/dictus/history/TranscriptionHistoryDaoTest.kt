@@ -57,6 +57,16 @@ class TranscriptionHistoryDaoTest {
     }
 
     @Test
+    fun `history lists the last insertion first even with an earlier date`() = runBlocking {
+        val dao = database.transcriptionHistoryDao()
+        val firstId = dao.insert(entry("first", createdAt = 500))
+        val lastId = dao.insert(entry("last", createdAt = 100))
+
+        assertEquals(listOf(lastId, firstId), dao.getAll().map { it.id })
+        assertEquals(listOf(lastId, firstId), dao.observeAll().first().map { it.id })
+    }
+
+    @Test
     fun `file database survives reopen and supports deletion`() = runBlocking {
         database.close()
         val file = File(context.cacheDir, "history-reopen-${System.nanoTime()}.db")

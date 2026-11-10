@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "dev.pivisolutions.dictus.asr"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
@@ -24,4 +24,8 @@ android {
 dependencies {
     implementation(project(":core"))
     implementation(libs.timber)
+    implementation(libs.coroutines.android)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
 }

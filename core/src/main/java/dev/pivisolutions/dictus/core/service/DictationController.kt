@@ -30,8 +30,11 @@ interface DictationController {
     /** Warm the downloaded active model without starting audio or downloading data. */
     fun prewarmEngine()
 
-    /** Start recording via foreground service. */
-    fun startRecording()
+    /**
+     * Start recording via foreground service, for the surface [source].
+     * Returns false, and changes nothing, when [DictationStartGuard] refuses the start.
+     */
+    fun startRecording(source: DictationSource): Boolean
 
     /** Stop recording and return captured audio buffer. */
     fun stopRecording(): FloatArray
@@ -40,9 +43,10 @@ interface DictationController {
     fun cancelRecording()
 
     /**
-     * Stop recording, transcribe the audio, and return the processed text.
+     * Stop recording, transcribe the audio, and return what it produced.
      * Transitions: Recording -> Transcribing -> Idle.
-     * Returns the post-processed transcribed text, or null on failure.
+     * Returns the post-processed text, [TranscriptionOutcome.NoWordsDetected] when there is
+     * nothing to insert, or [TranscriptionOutcome.Failed].
      */
-    suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String?
+    suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome
 }

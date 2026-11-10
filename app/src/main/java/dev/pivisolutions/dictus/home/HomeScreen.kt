@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
@@ -29,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +42,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,39 +50,64 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
 import dev.pivisolutions.dictus.model.ModelCatalog
+import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
+import dev.pivisolutions.dictus.service.ModelInstallState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 
 /**
  * Home tab screen showing the Dictus logo, active model, and new dictation CTA.
  *
  * Layout matches iOS: centered waveform logo + "Dictus" wordmark, active model card,
- * and "Nouvelle dictée" button. Content is vertically centered.
+ * and "Nouvelle dictée" button. Content is vertically centered. While the active model
+ * is not on disk, a "download a model" card replaces the model card and the button is
+ * hidden, as iOS does (HomeView `modelStatusCard` and its `isModelReady` mic, #187).
  *
  * @param dataStore Application DataStore for reading active model preference.
  * @param onNewDictation Callback for the "Nouvelle dictée" CTA.
+ * @param onOpenHistory Callback for the history entry point (swipe up or tap the hint).
+ * @param historyEnabled Whether the history entry point exists at all. Defaults to the
+ *   premium flag; tests override it to exercise the gated behaviour both ways.
+ * @param isModelDownloaded Whether every file of a model is on disk. Defaults to
+ *   [ModelManager.isDownloaded]; tests answer it themselves instead of writing model files.
+ * @param installState A model's background install, as `ModelInstaller.state` reports it: each
+ *   change checks the disk again, so an install that ends while Home is on screen shows at once.
  */
 @Composable
 fun HomeScreen(
     dataStore: DataStore<Preferences>,
     onNewDictation: () -> Unit,
     onOpenHistory: () -> Unit = {},
+    historyEnabled: Boolean = PremiumFlags.HISTORY_VISIBLE,
+    isModelDownloaded: (modelKey: String) -> Boolean = rememberModelDownloadCheck(),
+    installState: (modelKey: String) -> Flow<ModelInstallState> = { emptyFlow() },
 ) {
-    val activeModelKey by dataStore.data
+    // null until DataStore answers, so the no-model card never flashes for a user whose
+    // active model is downloaded but is not the default one.
+    val storedModelKey by dataStore.data
         .map { it[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY }
-        .collectAsState(initial = ModelCatalog.DEFAULT_KEY)
-
-    val lastTranscription by dataStore.data
-        .map { LastTranscriptionStore.visibleText(it) }
         .collectAsState(initial = null)
+    val activeModelKey = storedModelKey ?: ModelCatalog.DEFAULT_KEY
+
+    val lastTranscription by LastTranscriptionStore.instance.text.collectAsState()
 
     val activeModel = ModelCatalog.findByKey(activeModelKey)
     val context = LocalContext.current
+    // Checked when Home is composed and whenever the active model's install moves, as iOS
+    // HomeView follows ModelManager's published state.
+    val activeInstall by remember(activeModelKey, installState) { installState(activeModelKey) }
+        .collectAsState(initial = null)
+    val modelReady = remember(storedModelKey, activeInstall, isModelDownloaded) {
+        storedModelKey?.let(isModelDownloaded) ?: true
+    }
     val historySwipeThresholdPx = with(LocalDensity.current) { 120.dp.toPx() }
 
     var upwardDrag = 0f
@@ -88,19 +116,25 @@ fun HomeScreen(
             .fillMaxSize()
             .testTag("home_screen")
             .background(MaterialTheme.colorScheme.background)
-            .pointerInput(onOpenHistory, historySwipeThresholdPx) {
-                detectVerticalDragGestures(
-                    onDragStart = { upwardDrag = 0f },
-                    onVerticalDrag = { change, amount ->
-                        if (amount < 0f) upwardDrag -= amount else upwardDrag = 0f
-                        change.consume()
-                    },
-                    onDragEnd = {
-                        if (upwardDrag > historySwipeThresholdPx) onOpenHistory()
-                        upwardDrag = 0f
-                    },
-                )
-            }
+            .then(
+                if (!historyEnabled) {
+                    Modifier
+                } else {
+                    Modifier.pointerInput(onOpenHistory, historySwipeThresholdPx) {
+                        detectVerticalDragGestures(
+                            onDragStart = { upwardDrag = 0f },
+                            onVerticalDrag = { change, amount ->
+                                if (amount < 0f) upwardDrag -= amount else upwardDrag = 0f
+                                change.consume()
+                            },
+                            onDragEnd = {
+                                if (upwardDrag > historySwipeThresholdPx) onOpenHistory()
+                                upwardDrag = 0f
+                            },
+                        )
+                    }
+                },
+            )
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -121,52 +155,56 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Active model card
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(R.string.home_active_model),
-                color = LocalDictusColors.current.textSecondary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column {
-                    Text(
-                        text = activeModel?.displayName ?: activeModelKey,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    if (activeModel != null) {
-                        val sizeMb = activeModel.expectedSizeBytes / 1_000_000
+        if (modelReady) {
+            // Active model card
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.home_active_model),
+                    color = LocalDictusColors.current.textSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column {
                         Text(
-                            text = "~$sizeMb Mo",
-                            color = LocalDictusColors.current.textSecondary,
-                            fontSize = 13.sp,
+                            text = activeModel?.displayName ?: activeModelKey,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (activeModel != null) {
+                            val sizeMb = activeModel.expectedSizeBytes / 1_000_000
+                            Text(
+                                text = "~$sizeMb Mo",
+                                color = LocalDictusColors.current.textSecondary,
+                                fontSize = 13.sp,
+                            )
+                        }
+                    }
+                    // Green check circle
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(DictusColors.Success),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "\u2713",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 }
-                // Green check circle
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(DictusColors.Success),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "\u2713",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
             }
+        } else {
+            NoModelCard()
         }
 
         // Last transcription card (only shown when a transcription exists)
@@ -211,61 +249,117 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Nouvelle dictée CTA: hidden without a model, as the iOS mic is (#187)
+        if (modelReady) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Nouvelle dictée CTA
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(DictusColors.Accent, DictusColors.AccentDark),
-                    )
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Button(
-                onClick = onNewDictation,
-                modifier = Modifier.fillMaxSize(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent,
-                ),
-                shape = RoundedCornerShape(14.dp),
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(DictusColors.Accent, DictusColors.AccentDark),
+                        )
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = stringResource(R.string.home_new_dictation),
-                    color = Color.White,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Button(
+                    onClick = onNewDictation,
+                    modifier = Modifier.fillMaxSize(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_new_dictation),
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Column(
-            modifier = Modifier
-                .clickable(
-                    onClickLabel = stringResource(R.string.home_history_hint),
-                    onClick = onOpenHistory,
+        if (historyEnabled) {
+            Column(
+                modifier = Modifier
+                    .clickable(
+                        onClickLabel = stringResource(R.string.home_history_hint),
+                        onClick = onOpenHistory,
+                    )
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = null,
+                    tint = DictusColors.Accent,
                 )
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                Text(
+                    text = stringResource(R.string.home_history_hint),
+                    color = LocalDictusColors.current.textSecondary,
+                    fontSize = 13.sp,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The iOS "no model" card (HomeView `modelStatusCard`, #187): it says where to go and
+ * has no button of its own, the Models tab is one tap away in the bottom bar.
+ */
+@Composable
+private fun NoModelCard() {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
-                contentDescription = null,
-                tint = DictusColors.Accent,
-            )
+            // SF Symbol arrow.down.circle.fill: a white arrow on a filled accent disc
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(DictusColors.Accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowDownward,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.home_history_hint),
+                text = stringResource(R.string.home_no_model_title),
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.home_no_model_body),
                 color = LocalDictusColors.current.textSecondary,
                 fontSize = 13.sp,
+                textAlign = TextAlign.Center,
             )
         }
     }
+}
+
+/** [ModelManager.isDownloaded], kept across recompositions. */
+@Composable
+private fun rememberModelDownloadCheck(): (String) -> Boolean {
+    val context = LocalContext.current
+    return remember(context) { ModelManager(context.applicationContext)::isDownloaded }
 }
 
 /**

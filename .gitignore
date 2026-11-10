@@ -2,6 +2,7 @@
 .tools/
 .gradle/
 build/
+.kotlin/
 !gradle/wrapper/gradle-wrapper.jar
 
 # Android
@@ -22,3 +23,10 @@ Thumbs.db
 *.jks
 *.keystore
 keystore.properties
+*.pepk
+*service-account*.json
+play-*.json
+
+# Asset builder download cache
+.cache/
+tools/__pycache__/

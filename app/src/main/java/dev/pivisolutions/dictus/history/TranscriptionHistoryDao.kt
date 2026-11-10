@@ -3,6 +3,7 @@ package dev.pivisolutions.dictus.history
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -10,12 +11,35 @@ interface TranscriptionHistoryDao {
     @Insert
     suspend fun insert(entry: TranscriptionHistoryEntry): Long
 
-    @Query("SELECT * FROM transcription_history ORDER BY createdAtEpochMillis DESC, id DESC")
+    /**
+     * Inserts [entry], then drops the earliest-inserted rows beyond [maxEntries], in one
+     * transaction. Eviction follows the auto-increment id, not the date, like iOS: a clock moved
+     * backwards must not evict the dictation just made.
+     */
+    @Transaction
+    suspend fun insertCapped(entry: TranscriptionHistoryEntry, maxEntries: Int): Long {
+        val id = insert(entry)
+        deleteBeyond(maxEntries)
+        return id
+    }
+
+    @Query(
+        "DELETE FROM transcription_history WHERE id NOT IN (" +
+            "SELECT id FROM transcription_history ORDER BY id DESC LIMIT :maxEntries)",
+    )
+    suspend fun deleteBeyond(maxEntries: Int): Int
+
+    // Last insertion first, like iOS TranscriptionHistoryStore.append (`records.insert(record, at: 0)`),
+    // and the same order the cap evicts in: a clock moved backwards must not bury a new dictation.
+    @Query("SELECT * FROM transcription_history ORDER BY id DESC")
     fun observeAll(): Flow<List<TranscriptionHistoryEntry>>
 
-    @Query("SELECT * FROM transcription_history ORDER BY createdAtEpochMillis DESC, id DESC")
+    @Query("SELECT * FROM transcription_history ORDER BY id DESC")
     suspend fun getAll(): List<TranscriptionHistoryEntry>
 
     @Query("DELETE FROM transcription_history WHERE id = :id")
     suspend fun deleteById(id: Long): Int
+
+    @Query("DELETE FROM transcription_history")
+    suspend fun deleteAll(): Int
 }

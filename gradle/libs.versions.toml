@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.1.10"
-agp = "8.7.3"
+agp = "8.9.1"
 compose-bom = "2025.03.00"
 hilt = "2.54"
 ksp = "2.1.10-1.0.31"
@@ -23,6 +23,7 @@ navigation = "2.8.9"
 hilt-navigation-compose = "1.2.0"
 appcompat = "1.7.0"
 room = "2.6.1"
+work = "2.10.1"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -54,12 +55,12 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-navigation-compose" }
-emoji2-emojipicker = { group = "androidx.emoji2", name = "emoji2-emojipicker", version = "1.5.0" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

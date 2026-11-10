@@ -1,8 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="mic_button_description">Microphone</string>
-    <string name="mic_button_loading_description">Microphone unavailable while speech recognition loads</string>
+    <!-- The disabled mic during an app dictation (#252). -->
+    <string name="mic_button_app_dictation_description">Microphone, dictation in progress in Dictus</string>
     <string name="ime_recording_listening">Listening\u2026</string>
+    <string name="ime_recording_cancel">Cancel dictation</string>
+    <string name="ime_recording_confirm">Finish dictation</string>
     <string name="ime_transcribing">Transcribing\u2026</string>
+    <!-- Over the disabled mic while a dictation started in the app runs (#248). -->
+    <string name="ime_app_dictation_in_progress">Dictation in progress in Dictus</string>
     <string name="ime_emoji_return_keyboard">ABC</string>
+    <!-- Emoji picker (#192): labels and categories, after iOS EmojiPickerView. -->
+    <string name="ime_emoji_search_placeholder">Search Emoji</string>
+    <string name="ime_emoji_search_open">Search emoji</string>
+    <string name="ime_emoji_search_clear">Clear search</string>
+    <string name="ime_emoji_no_results">No results</string>
+    <string name="ime_emoji_space">space</string>
+    <string name="ime_emoji_delete">Delete</string>
+    <string name="ime_emoji_category_recents">Recents</string>
+    <string name="ime_emoji_category_smileys">Smileys</string>
+    <string name="ime_emoji_category_people">People</string>
+    <string name="ime_emoji_category_animals">Animals &amp; Nature</string>
+    <string name="ime_emoji_category_food">Food &amp; Drink</string>
+    <string name="ime_emoji_category_activities">Activities</string>
+    <string name="ime_emoji_category_travel">Travel</string>
+    <string name="ime_emoji_category_objects">Objects</string>
+    <string name="ime_emoji_category_symbols">Symbols</string>
+    <string name="ime_emoji_category_flags">Flags</string>
+    <string name="ime_undo_dictation">Undo</string>
+    <string name="ime_undo_dictation_description">Undo dictation insertion</string>
+    <string name="ime_undo_autocorrect_description">Undo correction, restore “%1$s”</string>
+    <!-- Toolbar ☰ (#139): a tap still cycles the language and a hold opens Settings (actions below). -->
+    <string name="ime_menu_description">Keyboard menu</string>
+    <string name="ime_language_key_cycle_action">Cycle keyboard language</string>
+    <string name="ime_language_key_settings_action">Open Dictus Settings</string>
+    <!-- Recording panel globe: opens the system keyboard picker (#190). -->
+    <string name="ime_recording_switch_keyboard">Switch keyboard</string>
 </resources>

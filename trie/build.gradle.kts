@@ -3,23 +3,33 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-val dictusTestAbi = providers.gradleProperty("dictusTestAbi").orNull
-require(dictusTestAbi == null || dictusTestAbi == "x86_64") { "dictusTestAbi supports x86_64 only" }
-
 android {
     namespace = "dev.pivisolutions.dictus.trie"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
         ndk {
-            abiFilters += if (dictusTestAbi != null) listOf(dictusTestAbi) else listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
         externalNativeBuild {
             cmake {
-                arguments("-DCMAKE_BUILD_TYPE=Release")
+                // 16 KB LOAD segments on 64-bit ABIs, same as :whisper (#218).
+                arguments("-DCMAKE_BUILD_TYPE=Release", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+            }
+        }
+    }
+
+    // Opt-in x86_64 for debug builds (-Pdictus.emulatorAbi=true), same rule as
+    // :whisper. Release keeps arm64-v8a and armeabi-v7a only.
+    buildTypes {
+        debug {
+            if (providers.gradleProperty("dictus.emulatorAbi").orNull.toBoolean()) {
+                ndk {
+                    abiFilters += "x86_64"
+                }
             }
         }
     }

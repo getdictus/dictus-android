@@ -9,8 +9,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
+import dev.pivisolutions.dictus.ime.suggestion.PersonalDictionary
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import kotlinx.coroutines.Dispatchers
@@ -48,10 +51,10 @@ class SettingsViewModel @Inject constructor(
     private val modelManager: ModelManager,
 ) : ViewModel() {
 
-    /** Currently selected transcription language ("auto", "fr", or "en"). */
+    /** Currently selected transcription language, one of [TranscriptionLanguage.SUPPORTED]. */
     val language: StateFlow<String> = dataStore.data
-        .map { it[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto" }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, "auto")
+        .map { TranscriptionLanguage.resolve(it[PreferenceKeys.TRANSCRIPTION_LANGUAGE]) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TranscriptionLanguage.FOLLOW)
 
     /** Keyboard correction language, independent from transcription language. */
     val keyboardLanguage: StateFlow<String> = dataStore.data
@@ -90,23 +93,15 @@ class SettingsViewModel @Inject constructor(
         .map { it[PreferenceKeys.KEY_SOUNDS_ENABLED] ?: true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** Number of words the keyboard has learned, shown in the reset confirmation. */
+    val learnedWordCount: StateFlow<Int> = dataStore.data
+        .map { it[PreferenceKeys.PERSONAL_DICTIONARY]?.size ?: 0 }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
     /** Whether the audio dictation start/stop sound is enabled. */
     val soundEnabled: StateFlow<Boolean> = dataStore.data
         .map { it[PreferenceKeys.SOUND_ENABLED] ?: false }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    /** Currently selected keyboard layout key ("azerty" or "qwerty"). */
-    val keyboardLayout: StateFlow<String> = dataStore.data
-        .map { preferences ->
-            val language = KeyboardPreferenceResolver.language(
-                preferences[PreferenceKeys.KEYBOARD_LANGUAGE],
-            )
-            KeyboardPreferenceResolver.layout(
-                preferences[PreferenceKeys.KEYBOARD_LAYOUT],
-                language,
-            ).persistedValue
-        }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, "azerty")
 
     /**
      * List of model keys currently downloaded on disk.
@@ -127,11 +122,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** Persist keyboard language without changing ASR language or an explicit layout. */
+    /**
+     * Persist keyboard language without changing ASR language. The layout follows the
+     * language's own one (#134), as when the bar cycles it.
+     */
     fun setKeyboardLanguage(languageCode: String) {
         val resolved = KeyboardPreferenceResolver.language(languageCode)
         viewModelScope.launch {
-            dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = resolved.code }
+            dataStore.edit { KeyboardLayoutPreference.activate(it, resolved) }
         }
     }
 
@@ -149,6 +147,11 @@ class SettingsViewModel @Inject constructor(
                 prefs[PreferenceKeys.SUGGESTIONS_ENABLED] = !(prefs[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true)
             }
         }
+    }
+
+    /** Forget every word the keyboard learned; autocorrect applies to them again. */
+    fun resetLearnedWords() {
+        viewModelScope.launch { PersonalDictionary.clear(dataStore) }
     }
 
     /** Toggle automatic correction without changing suggestion-bar visibility. */
@@ -231,25 +234,6 @@ class SettingsViewModel @Inject constructor(
                     "cancel" -> prefs[PreferenceKeys.RECORD_CANCEL_SOUND] = soundName
                 }
             }
-        }
-    }
-
-    /** Persist the selected keyboard layout key to DataStore. */
-    fun setKeyboardLayout(layout: String) {
-        viewModelScope.launch {
-            dataStore.edit { it[PreferenceKeys.KEYBOARD_LAYOUT] = layout }
-        }
-    }
-
-    /** Default keyboard opening mode: "abc" (letters) or "123" (numbers). */
-    val keyboardMode: StateFlow<String> = dataStore.data
-        .map { it[PreferenceKeys.KEYBOARD_MODE] ?: "abc" }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, "abc")
-
-    /** Persist the selected keyboard mode to DataStore. */
-    fun setKeyboardMode(mode: String) {
-        viewModelScope.launch {
-            dataStore.edit { it[PreferenceKeys.KEYBOARD_MODE] = mode }
         }
     }
 

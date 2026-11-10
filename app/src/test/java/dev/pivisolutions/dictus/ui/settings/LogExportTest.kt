@@ -34,6 +34,7 @@ class LogExportTest {
 
     private lateinit var context: android.app.Application
     private lateinit var logFile: File
+    private val settings = LogExporter.DictationSettings(activeModel = "tiny", language = "fr")
 
     @Before
     fun setUp() {
@@ -52,7 +53,7 @@ class LogExportTest {
     @Test
     fun `exportLogs returns null when logFile does not exist`() {
         // createZip is called internally; it returns null if logFile missing
-        val result = LogExporter.createZip(context, logFile)
+        val result = LogExporter.createZip(context, logFile, settings)
         assertNull(result)
     }
 
@@ -60,7 +61,7 @@ class LogExportTest {
     fun `createZip creates ZIP file in cacheDir`() {
         logFile.writeText("2026-03-26 10:00:00.000 [D/Test] Hello\n")
 
-        val zipFile = LogExporter.createZip(context, logFile)
+        val zipFile = LogExporter.createZip(context, logFile, settings)
 
         assertNotNull("createZip should return a File", zipFile)
         assertTrue("ZIP file should exist in cacheDir", zipFile!!.exists())
@@ -74,7 +75,7 @@ class LogExportTest {
     fun `createZip ZIP contains entry named dictus dot log`() {
         logFile.writeText("2026-03-26 10:00:00.000 [D/Test] Hello\n")
 
-        val zipFile = LogExporter.createZip(context, logFile)
+        val zipFile = LogExporter.createZip(context, logFile, settings)
         assertNotNull("ZIP file must exist", zipFile)
 
         val entries = ZipFile(zipFile!!).use { zip ->
@@ -93,7 +94,7 @@ class LogExportTest {
         TimberSetup.init(isDebug = false, filesDir = context.filesDir)
         Timber.d(PrivacySafeLog.transcriptionProcessed(canary, "$canary."))
 
-        val zipFile = LogExporter.createZip(context, logFile)
+        val zipFile = LogExporter.createZip(context, logFile, settings)
         val exportedText = ZipFile(zipFile!!).use { zip ->
             zip.getInputStream(zip.getEntry("dictus.log")).bufferedReader().readText()
         }

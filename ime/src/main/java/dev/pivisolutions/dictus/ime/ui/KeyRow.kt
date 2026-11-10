@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.ime.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -15,7 +16,8 @@ import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
  * Renders a single horizontal row of keyboard keys.
  *
  * Each key receives a weight proportional to its widthMultiplier so that
- * wider keys (shift, space, delete) take up more horizontal space.
+ * wider keys (shift, space, delete) take up more horizontal space. A [KeyType.SPACER] only
+ * takes its share of the width: nothing is drawn there and a touch on it does nothing.
  */
 @Composable
 fun KeyRow(
@@ -26,7 +28,6 @@ fun KeyRow(
     onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     accentMap: Map<Char, List<Char>> = emptyMap(),
-    hapticsEnabled: Boolean = true,
     onKeySound: (KeyType) -> Unit = {},
     labelsVisible: Boolean = true,
     onTrackpadActiveChange: (Boolean) -> Unit = {},
@@ -42,6 +43,10 @@ fun KeyRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         keys.forEach { key ->
+            if (key.type == KeyType.SPACER) {
+                Spacer(modifier = Modifier.weight(key.widthMultiplier))
+                return@forEach
+            }
             val renderedKey = if (key.type == KeyType.ACCENT_ADAPTIVE) {
                 key.copy(
                     label = frenchAdaptiveKeyState.label,
@@ -80,7 +85,6 @@ fun KeyRow(
                 } else {
                     onAccentSelected
                 },
-                hapticsEnabled = hapticsEnabled,
                 onSound = onKeySound,
                 labelsVisible = labelsVisible,
                 onTrackpadActiveChange = onTrackpadActiveChange,

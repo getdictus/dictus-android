@@ -5,12 +5,16 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.input.AutoCapMode
+import dev.pivisolutions.dictus.ime.input.AutoCapitalization
 import dev.pivisolutions.dictus.ime.input.AutocorrectEditorSnapshot
 import dev.pivisolutions.dictus.ime.input.CorrectionContext
 import dev.pivisolutions.dictus.ime.input.CorrectionContextExtractor
 import dev.pivisolutions.dictus.ime.input.CorrectionLanguageIdentity
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import dev.pivisolutions.dictus.ime.language.cycleKeyboardLanguage
+import dev.pivisolutions.dictus.ime.model.ShiftState
 import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -84,6 +88,34 @@ class NativeTrieSuggestionEngineTest {
             )
         }
 
+    /** #134: the bar's language switch must bring that language's own layout, not the last one. */
+    @Test
+    fun `cycling from French to English opens English on its own layout`() = runTest(dispatcher) {
+        dataStore.edit {
+            it[PreferenceKeys.KEYBOARD_LANGUAGE] = "fr"
+            it[PreferenceKeys.KEYBOARD_LAYOUT] = "azerty"
+            it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true
+        }
+        val opener = FakeOpener(
+            mutableListOf(Result.success(FakeHandle()), Result.success(FakeHandle())),
+        )
+        val engine = createEngine(opener)
+        advanceUntilIdle()
+
+        cycleKeyboardLanguage(dataStore)
+        advanceUntilIdle()
+
+        assertEquals(SupportedLanguage.ENGLISH, engine.activation.value?.language)
+        assertEquals(KeyboardLayout.QWERTY, engine.activation.value?.layout)
+        assertEquals(
+            listOf(
+                OpenRequest("fr_spellcheck.dict", TrieKeyboardLayout.AZERTY),
+                OpenRequest("en_spellcheck.dict", TrieKeyboardLayout.QWERTY),
+            ),
+            opener.requests,
+        )
+    }
+
     @Test
     fun `Spanish activation publishes matching profile assets and QWERTY default atomically`() =
         runTest(dispatcher) {
@@ -104,7 +136,7 @@ class NativeTrieSuggestionEngineTest {
         }
 
     @Test
-    fun `German activation publishes matching profile assets and QWERTY default atomically`() =
+    fun `German activation publishes matching profile assets and QWERTZ default atomically`() =
         runTest(dispatcher) {
             dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "de" }
             val opener = FakeOpener(mutableListOf(Result.success(FakeHandle(hasNgram = true))))
@@ -113,11 +145,11 @@ class NativeTrieSuggestionEngineTest {
 
             val activation = requireNotNull(engine.activation.value)
             assertEquals(SupportedLanguage.GERMAN, activation.language)
-            assertEquals(KeyboardLayout.QWERTY, activation.layout)
+            assertEquals(KeyboardLayout.QWERTZ, activation.layout)
             assertEquals("de_spellcheck.dict", activation.profile.nativeDictionaryAssetName)
             assertTrue(activation.hasNgram)
             assertEquals(
-                OpenRequest("de_spellcheck.dict", TrieKeyboardLayout.QWERTY),
+                OpenRequest("de_spellcheck.dict", TrieKeyboardLayout.QWERTZ),
                 opener.requests.single(),
             )
         }
@@ -179,6 +211,10 @@ class NativeTrieSuggestionEngineTest {
                 runCurrent()
                 releaseStale.countDown()
                 assertTrue(allOpened.await(5, TimeUnit.SECONDS))
+                // allOpened fires inside open(), before the engine publishes or closes the handle
+                // it returned. Each activation is one non-suspending task on this single thread,
+                // so a task queued now runs only after the newest one has been published.
+                executor.submit {}.get(5, TimeUnit.SECONDS)
 
                 assertEquals(SupportedLanguage.FRENCH, engine.activation.value?.language)
                 assertEquals(listOf("bonne"), engine.getSuggestions("bo"))
@@ -209,6 +245,22 @@ class NativeTrieSuggestionEngineTest {
             assertEquals(listOf(6, 6), handle.requestedLimits)
             assertTrue(engine.getSuggestions("bon", 0).isEmpty())
         }
+
+    @Test
+    fun `learned suggestion disappears after the dictionary is cleared`() = runTest(dispatcher) {
+        val handle = FakeHandle(prefix = listOf("bonjour"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+        engine.personalDictionary.recordWordTyped("bonzai")
+        engine.personalDictionary.recordWordTyped("bonzai")
+        advanceUntilIdle()
+        assertEquals(listOf("bonzai", "bonjour"), engine.getSuggestions("bon"))
+
+        PersonalDictionary.clear(dataStore)
+        advanceUntilIdle()
+
+        assertEquals(listOf("bonjour"), engine.getSuggestions("bon"))
+    }
 
     @Test
     fun `canonical equivalent native exact result is filtered`() = runTest(dispatcher) {
@@ -270,6 +322,63 @@ class NativeTrieSuggestionEngineTest {
         assertTrue(!engine.suggestionResults.value.isKnownWord)
         assertEquals(null, engine.suggestionResults.value.primaryCorrection)
         assertEquals(listOf("hello", "help"), engine.suggestionResults.value.suggestions)
+    }
+
+    @Test
+    fun `correction and suggestions follow the typed word's case`() = runTest(dispatcher) {
+        // The dictionary stores lowercase words; the correction must not drop the typed capital.
+        val handle = FakeHandle(prefix = listOf("bonjoru"), fuzzy = listOf("bonjour", "bonsoir"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val cases = mapOf(
+            "Bonjoru" to listOf("Bonjour", "Bonsoir"),
+            "BONJORU" to listOf("BONJOUR", "BONSOIR"),
+            "bonjoru" to listOf("bonjour", "bonsoir"),
+        )
+        cases.forEach { (typed, expected) ->
+            requireNotNull(engine.requestSuggestions(typed))
+            advanceUntilIdle()
+            val result = engine.suggestionResults.value
+            assertEquals(typed, expected.first(), result.primaryCorrection)
+            assertEquals(typed, expected, result.suggestions.filter { it.lowercase() != "bonjoru" })
+        }
+    }
+
+    @Test
+    fun `autocap and manual shift type the same word and get the same capitalized correction`() =
+        runTest(dispatcher) {
+            val handle = FakeHandle(fuzzy = listOf("bonjour"))
+            val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+            advanceUntilIdle()
+
+            // Autocap: shift armed at the start of the field, as the service decides it.
+            val autoShift = ShiftState().afterAutoCapCheck(
+                AutoCapitalization.shouldCapitalize(AutoCapMode.SENTENCES, ""),
+            )
+            // Manual: the user taps shift mid-sentence.
+            val manualShift = ShiftState().afterShiftTap(isDoubleTap = false)
+
+            listOf(autoShift, manualShift).forEach { start ->
+                val typed = typeLetters(start, "bonjoru")
+                assertEquals("Bonjoru", typed)
+                requireNotNull(engine.requestSuggestions(typed))
+                advanceUntilIdle()
+                assertEquals("Bonjour", engine.suggestionResults.value.primaryCorrection)
+            }
+        }
+
+    /** Types [letters] through the shift logic of KeyboardScreen (one-shot shift, no autocap mid-word). */
+    private fun typeLetters(start: ShiftState, letters: String): String {
+        var state = start
+        return buildString {
+            letters.forEach { letter ->
+                append(if (state.isShifted) letter.uppercaseChar() else letter)
+                state = state.afterLetterTyped().afterAutoCapCheck(
+                    AutoCapitalization.shouldCapitalize(AutoCapMode.SENTENCES, this),
+                )
+            }
+        }
     }
 
     @Test

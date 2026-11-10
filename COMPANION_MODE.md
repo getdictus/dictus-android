@@ -74,7 +74,7 @@ Process death loses an uncopied, undismissed ephemeral result. A notification is
 
 ## Validation build variants
 
-Normal Gradle builds retain the repository's ARM native ABIs. An explicit `-PdictusTestAbi=x86_64` property builds the same Whisper and trie source for an x86 emulator; it creates no second speech pipeline or model manager. Use the normal ARM APK on a physical ARM phone. The emulator test ABI is not a physical-device compatibility claim.
+Normal Gradle builds retain the repository's ARM native ABIs. The upstream `-Pdictus.emulatorAbi=true` property adds x86_64 to debug builds of the same Whisper source for an x86 emulator; it creates no second speech pipeline or model manager. Use the normal ARM APK on a physical ARM phone. The emulator test ABI is not a physical-device compatibility claim.
 
 For a phone that already has a release installation, `-PdictusSideBySide=true` creates **Dictus Companion Test** with a separate application ID and data. It leaves the installed release untouched. Both the tile and Accessibility components use their actual class names, independently of the application ID.
 

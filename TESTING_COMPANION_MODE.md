@@ -55,13 +55,13 @@ JVM suites exercise policy and controller behavior. Instrumentation additionally
 | `NativeCursorInsertionTest`, `ServiceFocusRecoveryTest` | Actual Android set-text/selection, UTF-16, protection/rich rejection, actual service activation return and unrelated-focus invalidation. A separate test-application UID/process verifies cross-application selection replacement with the regular keyboard visible before activation. Its exported activity exists only in the instrumentation APK. |
 | `CompanionRecordingLifecycleTest`, `CompanionOverlayLifecycleTest` | Actual capture/cancel/shared ownership/default-IME preservation, notification Stop/Cancel delivery and SystemUI tile start/stop; real floating window, dragging, persistence, rotation and hiding. Consult the result table for execution status. |
 | `OfflineWhisperPipelineTest` | Opt-in native Tiny/JFK inference through the existing provider slot, reuse, explicit English and automatic language; requires local fixtures. |
-| `DictationSessionOwnershipTest` | Companion versus legacy exclusivity, pending starts, duplicate requests, stale tokens, transcription exclusivity, release waits for cleanup, retry after failed capture start, destruction. |
+| `DictationRecorderTest` | Upstream single-capture ownership, plus a microphone that fails to start leaving Idle. Companion/legacy exclusivity is now a main-thread lease in `DictationService` (replacing the former token class) and needs re-verification in the instrumentation suite. Former note: exclusivity, pending starts, duplicate requests, stale tokens, transcription exclusivity, release waits for cleanup, retry after failed capture start, destruction. |
 | `AudioCaptureManagerTest`, `RecordingDurationPolicyTest`, `SttProviderSlotTest` | Capture cleanup/final-read behavior and energy snapshots, short-clip policy, shared provider reuse/model replacement, serialized use, initialization failures, idle expiry and release. |
 
 From the repository root, after tool setup, run and capture results:
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest --tests "dev.pivisolutions.dictus.companion.*" --tests "dev.pivisolutions.dictus.service.DictationSessionOwnershipTest" --tests "dev.pivisolutions.dictus.service.AudioCaptureManagerTest" --tests "dev.pivisolutions.dictus.service.RecordingDurationPolicyTest" --tests "dev.pivisolutions.dictus.service.SttProviderSlotTest"
+.\gradlew.bat :app:testDebugUnitTest --tests "dev.pivisolutions.dictus.companion.*" --tests "dev.pivisolutions.dictus.service.DictationRecorderTest" --tests "dev.pivisolutions.dictus.service.AudioCaptureManagerTest" --tests "dev.pivisolutions.dictus.service.RecordingDurationPolicyTest" --tests "dev.pivisolutions.dictus.service.SttProviderSlotTest"
 .\gradlew.bat :app:assembleDebug
 .\gradlew.bat :app:testDebugUnitTest :core:testDebugUnitTest :ime:testDebugUnitTest :app:lintDebug
 ```
@@ -73,7 +73,7 @@ Use `./gradlew` on Unix. Preserve dependency/toolchain errors as blockers rather
 Use an unlocked API 35 Google APIs x86_64 emulator. Seed a locally downloaded Tiny model and the repository's JFK sample. The script checks transfer hashes and handles Windows binary-pipe limitations without root. On a physical ARM device, omit the test ABI property and use the normal build.
 
 ```powershell
-.\gradlew.bat -PdictusTestAbi=x86_64 :app:assembleDebug :app:assembleDebugAndroidTest
+.\gradlew.bat -Pdictus.emulatorAbi=true :app:assembleDebug :app:assembleDebugAndroidTest
 adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
 adb -s emulator-5554 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 python scripts/seed_companion_test_fixtures.py --serial emulator-5554 --model /path/to/ggml-tiny.bin --audio third_party/whisper.cpp/samples/jfk.wav

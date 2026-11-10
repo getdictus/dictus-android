@@ -19,7 +19,11 @@ object EditorEligibilityPolicy {
             variation == InputType.TYPE_TEXT_VARIATION_URI ||
             variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
             variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
-            variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+            variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD ||
+            // The variation search and list-filter fields use. AOSP LatinIME excludes it from
+            // suggestions for the same reason: what is typed there is a query, not prose, and
+            // correcting it silently changes what the user searched for.
+            variation == InputType.TYPE_TEXT_VARIATION_FILTER
         return EditorSessionPolicy(
             suggestionEligible = textClass && !noSuggestions && !sensitiveVariation,
             personalizedLearningAllowed =

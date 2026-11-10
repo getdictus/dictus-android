@@ -19,6 +19,7 @@ import androidx.test.rule.GrantPermissionRule
 import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.companion.insertion.InsertionHarnessActivity
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.service.DictationService
@@ -110,7 +111,7 @@ class CompanionRecordingLifecycleTest {
             val audio = context.getSystemService(AudioManager::class.java)
             await("active microphone") { audio.activeRecordingConfigurations.isNotEmpty() }
             instrument.runOnMainSync {
-                controller!!.startRecording() // A simultaneous legacy IME caller must be refused.
+                controller!!.startRecording(DictationSource.KEYBOARD) // A simultaneous legacy IME caller must be refused.
                 controller!!.cancelRecording()
             }
             assertEquals(CompanionPhase.RECORDING, coordinator.state.value.phase)

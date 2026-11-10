@@ -4,9 +4,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.database.ContentObserver
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
@@ -14,7 +17,6 @@ import android.widget.EditText
 import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,11 +32,9 @@ import dev.pivisolutions.dictus.core.service.DictationController
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.navigation.AppNavHost
-import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.service.DictationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -85,6 +85,17 @@ class MainActivity : AppCompatActivity() {
     private var restrictedSettingsLaunch = false
 
     /**
+     * Re-reads the IME status when the current keyboard changes while the app is on screen.
+     *
+     * WHY: the first dictation (#199) switches keyboards over its own field, with the picker,
+     * the navigation bar's switcher or a key of the other keyboard. None of them reliably
+     * brings a resume or a window focus change.
+     */
+    private val currentImeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) = checkImeStatus()
+    }
+
+    /**
      * ServiceConnection callback for DictationService binding.
      *
      * onServiceConnected receives the LocalBinder which gives direct access
@@ -109,6 +120,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        contentResolver.registerContentObserver(
+            Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD),
+            false,
+            currentImeObserver,
+        )
         restrictedSettingsLaunch = savedInstanceState?.getBoolean(
             STATE_RESTRICTED_SETTINGS_LAUNCH,
             false,
@@ -118,9 +134,6 @@ class MainActivity : AppCompatActivity() {
                     intent?.getStringExtra(AppLaunchContract.EXTRA_AUTHORIZATION),
                 )
             )
-        lifecycleScope.launch {
-            LastTranscriptionStore.enforceRetention(dataStore)
-        }
         setContent {
             // Read theme preference from DataStore and map to ThemeMode enum.
             // collectAsState with initial="dark" ensures the theme is applied immediately
@@ -156,6 +169,7 @@ class MainActivity : AppCompatActivity() {
                     onShowKeyboardPicker = { showKeyboardPicker() },
                     onOpenAppSettings = { openAppSettings() },
                     openSettingsRequested = restrictedSettingsLaunch,
+                    openModelsRequested = intent?.action == AppLaunchContract.ACTION_OPEN_MODELS,
                 )
             }
         }
@@ -178,6 +192,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        contentResolver.unregisterContentObserver(currentImeObserver)
         finishKeyboardPickerRequest()
         if (isBound) {
             unbindService(serviceConnection)

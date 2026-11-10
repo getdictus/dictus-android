@@ -1,9 +1,21 @@
 package dev.pivisolutions.dictus
 
 import android.app.Application
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.HiltAndroidApp
 import dev.pivisolutions.dictus.core.logging.TimberSetup
+import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.haptics.HapticHelper
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
+import dev.pivisolutions.dictus.ui.settings.LogExporter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
 /**
  * Main application entry point for Dictus.
@@ -14,9 +26,35 @@ import timber.log.Timber
  */
 @HiltAndroidApp
 class DictusApplication : Application() {
+
+    @Inject
+    lateinit var dataStore: DataStore<Preferences>
+
     override fun onCreate() {
         super.onCreate()
         TimberSetup.init(BuildConfig.DEBUG, filesDir)
-        Timber.d("Dictus application started")
+        // One banner per process (#112): the IME runs in this process too, so a keyboard-only
+        // session gets it as well, and a log read in isolation still names its build.
+        Timber.i(
+            "Session start: app=%s (%d) %s, rev=%s, pid=%d",
+            BuildConfig.VERSION_NAME,
+            BuildConfig.VERSION_CODE,
+            BuildConfig.BUILD_TYPE,
+            LogExporter.revision(),
+            android.os.Process.myPid(),
+        )
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        // Every Dictus vibration, keyboard and app, reads this mirror of the haptic setting
+        // (#246, #244). The IME runs in this process, so one collector serves both.
+        scope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
+                .collect { HapticHelper.isEnabled = it }
+        }
+        // Freeze the layout an updating install is already typing on before anything can move
+        // the active language (#134). The IME runs in this process, so this covers it too; the
+        // reads also resolve as if migrated, in case the keyboard reads before this lands.
+        scope.launch { KeyboardLayoutPreference.migrateIfNeeded(dataStore) }
+        scope.launch { RetiredPreferences.remove(dataStore) }
     }
 }

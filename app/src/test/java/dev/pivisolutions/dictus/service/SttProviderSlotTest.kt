@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.service
 
+import dev.pivisolutions.dictus.asr.ParakeetProvider
+import dev.pivisolutions.dictus.core.service.SttEngineState
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -15,11 +17,17 @@ import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
 import kotlin.reflect.KClass
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SttProviderSlotTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     @Test
     fun `provider is released after idle timeout`() = runTest {
@@ -34,7 +42,7 @@ class SttProviderSlotTest {
         advanceTimeBy(1L)
         runCurrent()
         assertEquals(1, provider.releaseCount)
-        assertEquals(dev.pivisolutions.dictus.core.service.SttEngineState.Cold, slot.state.value)
+        assertEquals(SttEngineState.Cold, slot.state.value)
     }
 
     @Test
@@ -165,6 +173,22 @@ class SttProviderSlotTest {
     }
 
     @Test
+    fun `parakeet without its native library publishes failed state instead of throwing`() = runTest {
+        // x86_64 emulator: sherpa-onnx ships no x86_64 library, so loading it throws.
+        val modelDir = tempFolder.newFolder("parakeet")
+        File(modelDir, "tokens.txt").writeText("")
+        val modelPath = File(modelDir, "model.int8.onnx").apply { writeText("") }.absolutePath
+        val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
+
+        val result = slot.getOrInitialize("parakeet-ctc-110m-int8", modelPath, ParakeetProvider::class) {
+            ParakeetProvider(createRecognizer = { throw UnsatisfiedLinkError("libsherpa-onnx-jni.so not found") })
+        }
+
+        assertNull(result)
+        assertEquals(SttEngineState.Failed("parakeet-ctc-110m-int8"), slot.state.value)
+    }
+
+    @Test
     fun `undownloaded model publishes model-missing state, not a failure`() = runTest {
         val slot = SttProviderSlot(backgroundScope, idleTimeoutMs = 60_000L)
         val provider = FakeWhisperProvider()
@@ -174,7 +198,7 @@ class SttProviderSlotTest {
 
         assertEquals(1, provider.releaseCount)
         assertEquals(
-            dev.pivisolutions.dictus.core.service.SttEngineState.ModelMissing("small-q5_1"),
+            SttEngineState.ModelMissing("small-q5_1"),
             slot.state.value,
         )
     }
@@ -189,7 +213,7 @@ class SttProviderSlotTest {
 
         assertEquals(1, provider.releaseCount)
         assertEquals(
-            dev.pivisolutions.dictus.core.service.SttEngineState.Failed("small-q5_1"),
+            SttEngineState.Failed("small-q5_1"),
             slot.state.value,
         )
     }
@@ -210,7 +234,7 @@ class SttProviderSlotTest {
         assertEquals(1, created.size)
         providers.forEach { assertSame(created.single(), it) }
         assertEquals(
-            dev.pivisolutions.dictus.core.service.SttEngineState.Ready("tiny"),
+            SttEngineState.Ready("tiny"),
             slot.state.value,
         )
     }

@@ -1,7 +1,6 @@
 package dev.pivisolutions.dictus.ime.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,15 +9,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import dev.pivisolutions.dictus.core.ui.LiveWaveform
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
@@ -33,15 +36,16 @@ import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 /**
  * Recording overlay that replaces the keyboard during active dictation.
  *
- * Total height matches KeyboardScreen (310.dp = 46.dp top + 264.dp content).
+ * Total height matches KeyboardScreen (316.dp = 52.dp top + 218.dp + 46.dp), so starting a
+ * recording never changes the keyboard's height (#139).
  * Layout follows the mockup (Keyboard Recording frame):
- * - Top row (46.dp): Cancel (X) left, Confirm (✓) right — outlined pills
- * - Center (218.dp): Waveform + timer + "En ecoute..."
- * - Bottom row (46.dp): Settings gear only (no mic pill during recording)
+ * - Top row (52.dp): Cancel (✕) left, Confirm (✓) right — glass pills
+ * - Center (218.dp): Waveform + timer + "En écoute…"
+ * - Bottom row (46.dp): switch-keyboard globe only (no mic pill during recording)
  *
- * The top row replaces the MicButtonRow's gear+mic with outlined pill
- * action buttons (matching iOS style), keeping the same height for
- * a seamless visual transition.
+ * The top row replaces the keyboard toolbar with the iOS RecordingOverlay `PillButton`s. Like
+ * iOS `RecordingOverlay.topBar` (10 + 36 + 6), its pills sit exactly where the toolbar's ☰ and
+ * mic pill sit, so neither moves when the recording starts.
  */
 @Composable
 fun RecordingScreen(
@@ -58,60 +62,34 @@ fun RecordingScreen(
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
-        // Top row (46.dp) — Cancel (X) left, Confirm (✓) right
-        // Pill-shaped outlined buttons matching the mic pill dimensions (56x40dp)
-        // Styled like iOS: outlined with no fill, icon color matches border
-        val pillShape = RoundedCornerShape(20.dp)
-
+        // Top row (52.dp) — Cancel (✕) left, Confirm (✓) right
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(RECORDING_TOP_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 8.dp, vertical = 3.dp),
+                .padding(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            // Cancel button (X) — outlined pill, subtle border
-            Box(
-                modifier = Modifier
-                    .width(56.dp)
-                    .height(40.dp)
-                    .clip(pillShape)
-                    .border(1.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), pillShape)
-                    .clickable {
-                        HapticHelper.performKeyHaptic(view)
-                        onCancel()
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "\u2715",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    fontSize = 16.sp,
-                )
-            }
-
-            // Confirm button (✓) — outlined pill, green border + icon
-            Box(
-                modifier = Modifier
-                    .width(56.dp)
-                    .height(40.dp)
-                    .clip(pillShape)
-                    .border(1.5.dp, DictusColors.Success, pillShape)
-                    .clickable {
-                        HapticHelper.performKeyHaptic(view)
-                        onConfirm()
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "\u2713",
-                    color = DictusColors.Success,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            GlassPillButton(
+                iconRes = R.drawable.ic_close,
+                contentDescription = stringResource(R.string.ime_recording_cancel),
+                tint = keyboardGlass().iconSecondary,
+                onClick = {
+                    HapticHelper.performKeyHaptic(view)
+                    onCancel()
+                },
+            )
+            GlassPillButton(
+                iconRes = R.drawable.ic_check,
+                contentDescription = stringResource(R.string.ime_recording_confirm),
+                tint = DictusColors.Success,
+                onClick = {
+                    HapticHelper.performKeyHaptic(view)
+                    onConfirm()
+                },
+            )
         }
 
         // Center area (218.dp) — waveform + timer + label
@@ -123,21 +101,25 @@ fun RecordingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            // Waveform visualization — fills most of the center
-            WaveformBars(
+            // Waveform visualization — fills most of the center.
+            // iOS RecordingOverlay: maxHeight 120 with 2 pt horizontal padding.
+            LiveWaveform(
                 energyLevels = energy,
+                logLabel = "keyboard",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(100.dp),
+                    .padding(horizontal = 2.dp)
+                    .height(120.dp),
             )
 
-            // Timer MM:SS
+            // Timer MM:SS — iOS RecordingOverlay: `timerFontSize` 20 (@ScaledMetric, so sp),
+            // medium weight, monospaced design so the digits do not shift as they tick.
             Text(
                 text = String.format("%02d:%02d", elapsedMs / 60000, (elapsedMs % 60000) / 1000),
                 color = LocalDictusColors.current.keyText,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                fontFamily = FontFamily.Monospace,
                 modifier = Modifier.padding(top = 16.dp),
             )
 
@@ -150,7 +132,8 @@ fun RecordingScreen(
             )
         }
 
-        // Bottom row (46.dp) — settings gear only, no mic pill during recording
+        // Bottom row (46.dp) — the switch-keyboard globe only, no mic pill during recording.
+        // iOS draws no control here: its globe is the system's, below the keyboard.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -170,8 +153,8 @@ fun RecordingScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_settings),
-                    contentDescription = "Settings",
+                    painter = painterResource(R.drawable.ic_globe),
+                    contentDescription = stringResource(R.string.ime_recording_switch_keyboard),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier
                         .width(20.dp)
@@ -179,5 +162,35 @@ fun RecordingScreen(
                 )
             }
         }
+    }
+}
+
+/** iOS `RecordingOverlay.topBar`: the keyboard toolbar's height, pills 10dp from the top. */
+internal val RECORDING_TOP_ROW_HEIGHT = 52.dp
+
+/** iOS RecordingOverlay `PillButton`: a 56x36 glass capsule around an 18 pt semibold glyph. */
+@Composable
+private fun GlassPillButton(
+    iconRes: Int,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .width(56.dp)
+            .height(36.dp)
+            .clip(CircleShape)
+            .keyboardGlass(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint = tint,
+            // 24dp draws a 14dp glyph, the size of SF xmark at 18 pt in the iOS captures.
+            modifier = Modifier.size(24.dp),
+        )
     }
 }

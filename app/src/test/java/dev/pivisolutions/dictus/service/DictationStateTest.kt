@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.service
 
+import dev.pivisolutions.dictus.core.service.DictationSource
 import dev.pivisolutions.dictus.core.service.DictationState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -18,21 +19,21 @@ class DictationStateTest {
 
     @Test
     fun `Recording has default values`() {
-        val recording = DictationState.Recording()
+        val recording = DictationState.Recording(DictationSource.APP)
         assertEquals(0L, recording.elapsedMs)
         assertTrue(recording.energy.isEmpty())
     }
 
     @Test
     fun `Recording with elapsed time`() {
-        val recording = DictationState.Recording(elapsedMs = 5000L)
+        val recording = DictationState.Recording(source = DictationSource.APP,elapsedMs = 5000L)
         assertEquals(5000L, recording.elapsedMs)
     }
 
     @Test
     fun `Recording with energy list`() {
         val energy = listOf(0.1f, 0.5f, 0.8f)
-        val recording = DictationState.Recording(energy = energy)
+        val recording = DictationState.Recording(source = DictationSource.APP,energy = energy)
         assertEquals(3, recording.energy.size)
         assertEquals(0.5f, recording.energy[1], 0.001f)
     }
@@ -45,7 +46,7 @@ class DictationStateTest {
 
     @Test
     fun `Recording is a DictationState`() {
-        val state: DictationState = DictationState.Recording()
+        val state: DictationState = DictationState.Recording(DictationSource.APP)
         assertNotNull(state)
     }
 }

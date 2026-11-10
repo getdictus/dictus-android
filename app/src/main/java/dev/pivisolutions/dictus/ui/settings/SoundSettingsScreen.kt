@@ -109,8 +109,17 @@ fun SoundSettingsScreen(
                 onValueChange = { viewModel.setSoundVolume(it) },
             )
         }
+        // Footer note, as under the iOS toggle: SoundPool plays on the sonification
+        // usage, which the system mutes in silent and vibrate modes.
+        Text(
+            text = stringResource(R.string.sound_settings_note),
+            color = LocalDictusColors.current.textSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.padding(start = 32.dp, end = 32.dp, top = 8.dp),
+        )
 
-        // ---------- SECTION: SONS ----------
+        // ---------- SECTION: SOUNDS BY EVENT ----------
         SoundSectionHeader(text = stringResource(R.string.sound_settings_section_sounds))
         SoundSettingsCard {
             SoundPickerRow(

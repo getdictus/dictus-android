@@ -6,11 +6,11 @@ import org.junit.Test
 
 class AutocorrectEditorTransactionTest {
     @Test
-    fun `exact token applies and immediate undo restores it`() {
+    fun `exact token applies and undo restores it before the space`() {
         val editor = FakeEditor("say teh")
 
         val applied = AutocorrectEditorTransaction.apply(editor, "teh", "the", true)
-        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 8)), applied)
+        assertEquals(AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), applied)
         assertEquals("say the ", editor.text)
         assertEquals(listOf("snapshot", "begin", "attempt(4,7,the )", "end"), editor.calls)
 
@@ -21,8 +21,8 @@ class AutocorrectEditorTransactionTest {
             true,
         )
         assertEquals(AutocorrectTransactionResult.Restored(), restored)
-        assertEquals("say teh", editor.text)
-        assertEquals(listOf("snapshot", "begin", "attempt(4,8,teh)", "end"), editor.calls)
+        assertEquals("say teh ", editor.text)
+        assertEquals(listOf("snapshot", "begin", "attempt(4,8,teh )", "end"), editor.calls)
     }
 
     @Test
@@ -84,7 +84,7 @@ class AutocorrectEditorTransactionTest {
         val applied = AutocorrectEditorTransaction.apply(editor, "café", "bistro", true)
 
         assertEquals(
-            AutocorrectTransactionResult.Applied(AutocorrectUndo(decomposed, "bistro", 7)),
+            AutocorrectTransactionResult.Applied(AutocorrectUndo(decomposed, "bistro")),
             applied,
         )
         assertEquals("bistro ", editor.text)
@@ -94,7 +94,7 @@ class AutocorrectEditorTransactionTest {
             true,
         )
         assertEquals(AutocorrectTransactionResult.Restored(), restored)
-        assertEquals(decomposed, editor.text)
+        assertEquals("$decomposed ", editor.text)
     }
 
     @Test
@@ -127,7 +127,7 @@ class AutocorrectEditorTransactionTest {
 
             val result = AutocorrectEditorTransaction.apply(editor, "teh", "the", true)
 
-            assertEquals(behavior.name, AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the", 4)), result)
+            assertEquals(behavior.name, AutocorrectTransactionResult.Applied(AutocorrectUndo("teh", "the")), result)
             assertEquals(behavior.name, "the ", editor.text)
         }
     }
@@ -170,7 +170,7 @@ class AutocorrectEditorTransactionTest {
 
         assertEquals(
             AutocorrectTransactionResult.Applied(
-                AutocorrectUndo("teh", "the", 4),
+                AutocorrectUndo("teh", "the"),
                 AutocorrectBatchCleanup.FAILED,
             ),
             result,

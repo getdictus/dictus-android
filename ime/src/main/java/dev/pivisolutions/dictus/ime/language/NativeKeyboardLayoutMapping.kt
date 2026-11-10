@@ -6,4 +6,5 @@ import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 fun KeyboardLayout.toNativeTrieLayout(): TrieKeyboardLayout = when (this) {
     KeyboardLayout.AZERTY -> TrieKeyboardLayout.AZERTY
     KeyboardLayout.QWERTY -> TrieKeyboardLayout.QWERTY
+    KeyboardLayout.QWERTZ -> TrieKeyboardLayout.QWERTZ
 }

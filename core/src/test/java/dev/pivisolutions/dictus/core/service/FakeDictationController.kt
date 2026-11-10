@@ -29,9 +29,10 @@ class FakeDictationController : DictationController {
         prewarmEngineCallCount++
     }
 
-    override fun startRecording() {
+    override fun startRecording(source: DictationSource): Boolean {
         startRecordingCallCount++
-        _state.value = DictationState.Recording(elapsedMs = 0L, energy = emptyList())
+        _state.value = DictationState.Recording(source, elapsedMs = 0L, energy = emptyList())
+        return true
     }
 
     override fun stopRecording(): FloatArray {
@@ -46,10 +47,11 @@ class FakeDictationController : DictationController {
     }
 
     var confirmAndTranscribeCallCount = 0; private set
-    var transcriptionResult: String? = "Fake transcription result. "
+    var transcriptionResult: TranscriptionOutcome =
+        TranscriptionOutcome.Text("Fake transcription result. ")
     var lastRetention: TranscriptionRetention? = null; private set
 
-    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? {
+    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
         confirmAndTranscribeCallCount++
         lastRetention = retention
         _state.value = DictationState.Transcribing

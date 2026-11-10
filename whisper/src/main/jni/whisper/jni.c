@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <android/log.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <sys/sysinfo.h>
 #include <string.h>
@@ -18,6 +19,38 @@ static inline int min(int a, int b) {
 
 static inline int max(int a, int b) {
     return (a > b) ? a : b;
+}
+
+// Polled by whisper_full after each encoder pass and each decoder step: true makes it
+// stop and return non-zero. An encoder pass under way runs to its end.
+static bool abort_requested(void *flag) {
+    return atomic_load((atomic_bool *) flag);
+}
+
+JNIEXPORT jlong JNICALL
+Java_dev_pivisolutions_dictus_whisper_WhisperLib_00024Companion_newAbortFlag(
+        JNIEnv *env, jobject thiz) {
+    UNUSED(env);
+    UNUSED(thiz);
+    atomic_bool *flag = malloc(sizeof(atomic_bool));
+    if (flag != NULL) atomic_init(flag, false);
+    return (jlong) flag;
+}
+
+JNIEXPORT void JNICALL
+Java_dev_pivisolutions_dictus_whisper_WhisperLib_00024Companion_setAbortFlag(
+        JNIEnv *env, jobject thiz, jlong flag_ptr, jboolean abort) {
+    UNUSED(env);
+    UNUSED(thiz);
+    atomic_store((atomic_bool *) flag_ptr, abort == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL
+Java_dev_pivisolutions_dictus_whisper_WhisperLib_00024Companion_freeAbortFlag(
+        JNIEnv *env, jobject thiz, jlong flag_ptr) {
+    UNUSED(env);
+    UNUSED(thiz);
+    free((atomic_bool *) flag_ptr);
 }
 
 JNIEXPORT jlong JNICALL
@@ -44,9 +77,9 @@ Java_dev_pivisolutions_dictus_whisper_WhisperLib_00024Companion_freeContext(
     whisper_free(context);
 }
 
-JNIEXPORT void JNICALL
+JNIEXPORT jint JNICALL
 Java_dev_pivisolutions_dictus_whisper_WhisperLib_00024Companion_fullTranscribe(
-        JNIEnv *env, jobject thiz, jlong context_ptr, jint num_threads,
+        JNIEnv *env, jobject thiz, jlong context_ptr, jlong abort_flag_ptr, jint num_threads,
         jfloatArray audio_data, jstring language_str) {
     UNUSED(thiz);
     struct whisper_context *context = (struct whisper_context *) context_ptr;
@@ -66,20 +99,24 @@ Java_dev_pivisolutions_dictus_whisper_WhisperLib_00024Companion_fullTranscribe(
     params.offset_ms        = 0;
     params.no_context       = true;
     params.single_segment   = false;
+    params.abort_callback   = abort_requested;
+    params.abort_callback_user_data = (void *) abort_flag_ptr;
 
     whisper_reset_timings(context);
 
     LOGI("About to run whisper_full with language='%s', threads=%d, samples=%d",
          language, num_threads, audio_data_length);
 
-    if (whisper_full(context, params, audio_data_arr, audio_data_length) != 0) {
-        LOGI("Failed to run the model");
+    const int result = whisper_full(context, params, audio_data_arr, audio_data_length);
+    if (result != 0) {
+        LOGI("whisper_full returned %d (aborted=%d)", result, abort_requested((void *) abort_flag_ptr));
     } else {
         whisper_print_timings(context);
     }
 
     (*env)->ReleaseStringUTFChars(env, language_str, language);
     (*env)->ReleaseFloatArrayElements(env, audio_data, audio_data_arr, JNI_ABORT);
+    return result;
 }
 
 JNIEXPORT jint JNICALL

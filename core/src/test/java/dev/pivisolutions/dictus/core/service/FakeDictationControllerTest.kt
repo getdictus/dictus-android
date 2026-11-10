@@ -34,7 +34,7 @@ class FakeDictationControllerTest {
 
     @Test
     fun `startRecording transitions to Recording`() {
-        controller.startRecording()
+        controller.startRecording(DictationSource.KEYBOARD)
 
         assertTrue(controller.state.value is DictationState.Recording)
         assertEquals(1, controller.startRecordingCallCount)
@@ -44,7 +44,7 @@ class FakeDictationControllerTest {
     fun `stopRecording transitions to Idle and returns result`() {
         val expected = floatArrayOf(0.1f, 0.2f, 0.3f)
         controller.stopRecordingResult = expected
-        controller.startRecording()
+        controller.startRecording(DictationSource.KEYBOARD)
 
         val result = controller.stopRecording()
 
@@ -55,7 +55,7 @@ class FakeDictationControllerTest {
 
     @Test
     fun `cancelRecording transitions to Idle`() {
-        controller.startRecording()
+        controller.startRecording(DictationSource.KEYBOARD)
         controller.cancelRecording()
 
         assertTrue(controller.state.value is DictationState.Idle)
@@ -64,7 +64,7 @@ class FakeDictationControllerTest {
 
     @Test
     fun `emitState sets arbitrary state`() {
-        val recording = DictationState.Recording(5000L, listOf(0.5f))
+        val recording = DictationState.Recording(DictationSource.APP, 5000L, listOf(0.5f))
         controller.emitState(recording)
 
         val state = controller.state.value

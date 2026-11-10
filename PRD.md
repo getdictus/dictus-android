@@ -29,7 +29,7 @@
 
 ## 1. Executive Summary
 
-Dictus Android is the Android port of the Dictus iOS app — a free, open-source voice dictation keyboard that runs 100% on-device. No server, no account, no subscription.
+Dictus Android is the Android port of the Dictus iOS app — a free, open-source voice dictation keyboard that runs 100% on-device. No server, no account. Dictation is free; Dictus Pro features are in development.
 
 The Android version aims for feature parity with the iOS v1.2 app while adapting to Android platform conventions (Material You design, IME framework, different IPC mechanisms).
 

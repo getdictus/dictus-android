@@ -9,14 +9,24 @@ interface TranscriptionHistoryRepository {
     suspend fun insert(entry: TranscriptionHistoryEntry): Long
     fun observeAll(): Flow<List<TranscriptionHistoryEntry>>
     suspend fun deleteById(id: Long): Boolean
+    suspend fun clear()
+
+    companion object {
+        /** iOS `TranscriptionHistoryStore.maxRecords`: the oldest entry falls off when the 201st arrives. */
+        const val MAX_ENTRIES = 200
+    }
 }
 
 class RoomTranscriptionHistoryRepository(
     private val dao: TranscriptionHistoryDao,
 ) : TranscriptionHistoryRepository {
-    override suspend fun insert(entry: TranscriptionHistoryEntry): Long = dao.insert(entry)
+    override suspend fun insert(entry: TranscriptionHistoryEntry): Long =
+        dao.insertCapped(entry, TranscriptionHistoryRepository.MAX_ENTRIES)
     override fun observeAll(): Flow<List<TranscriptionHistoryEntry>> = dao.observeAll()
     override suspend fun deleteById(id: Long): Boolean = dao.deleteById(id) == 1
+    override suspend fun clear() {
+        dao.deleteAll()
+    }
 }
 
 data class TranscriptionHistoryMetadata(

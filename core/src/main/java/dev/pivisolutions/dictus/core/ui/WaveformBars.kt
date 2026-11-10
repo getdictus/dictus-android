@@ -4,6 +4,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -20,7 +24,7 @@ import kotlin.math.abs
  * drawn on a single Canvas for optimal performance (single GPU draw call).
  *
  * Color scheme (matching iOS BrandWaveform.resolvedBarColor):
- *   - Center 40% of bars: brand blue (DictusColors.Accent)
+ *   - Center 40% of bars: brand blue (DictusColors.AccentHighlight, iOS dictusGradientStart)
  *   - Outer 60%: white with opacity decreasing toward edges
  *
  * Bar height formula (matching iOS):
@@ -43,6 +47,46 @@ fun WaveformBars(
     processingPhase: Double = 0.0,
 ) {
     val paddedLevels = padEnergy(energyLevels)
+    WaveformCanvas(
+        levels = { paddedLevels },
+        modifier = modifier,
+        isProcessing = isProcessing,
+        processingPhase = processingPhase,
+    )
+}
+
+/**
+ * Live microphone waveform: smooths [energyLevels] with its own [WaveformDriver]
+ * and draws the result. Every recording surface uses this one composable, so the
+ * keyboard, the recording screen and the onboarding test move identically.
+ *
+ * WHY the smoothed levels are read only inside the Canvas draw lambda: the driver
+ * publishes new levels on every display frame. Reading them in the draw phase
+ * redraws the bars without recomposing this composable or its parents (the IME
+ * root used to recompose at display rate).
+ *
+ * @param logLabel Surface name in the waveform heartbeat and stall logs.
+ */
+@Composable
+fun LiveWaveform(
+    energyLevels: List<Float>,
+    logLabel: String,
+    modifier: Modifier = Modifier,
+) {
+    val driver = remember(logLabel) { WaveformDriver(logLabel = logLabel) }
+    SideEffect { driver.update(energyLevels) }
+    LaunchedEffect(driver) { driver.runLoop() }
+    val levels = driver.displayLevels.collectAsState()
+    WaveformCanvas(levels = { levels.value }, modifier = modifier)
+}
+
+@Composable
+private fun WaveformCanvas(
+    levels: () -> List<Float>,
+    modifier: Modifier,
+    isProcessing: Boolean = false,
+    processingPhase: Double = 0.0,
+) {
     // Outer bar base color: white in dark theme, gray in light theme (matches iOS)
     val isDark = MaterialTheme.colorScheme.background == DictusColors.Background
     val outerBarBase = if (isDark) Color.White else Color(0xFF8E8E93)
@@ -56,12 +100,13 @@ fun WaveformBars(
         val minBarHeight = if (isProcessing) 4.dp.toPx() else 2.dp.toPx()
         val maxBarHeight = size.height
         val centerY = size.height / 2f
+        val currentLevels = if (isProcessing) emptyList() else levels()
 
         for (index in 0 until barCount) {
             val energy: Float = if (isProcessing) {
                 WaveformDriver.processingEnergy(index, processingPhase, barCount)
             } else {
-                paddedLevels.getOrElse(index) { 0f }
+                currentLevels.getOrElse(index) { 0f }
             }
 
             // iOS formula: max(minHeight + energy * (maxHeight - minHeight), minHeight)
@@ -114,9 +159,9 @@ internal fun barColor(index: Int, barCount: Int, outerBase: Color = Color.White)
     val center = (barCount - 1) / 2f
     val distanceFromCenter = abs(index - center) / center
 
-    // Inner 40%: solid brand blue
+    // Inner 40%: solid brand blue (iOS dictusGradientStart, #6BA3FF)
     if (distanceFromCenter < 0.4f) {
-        return DictusColors.Accent
+        return DictusColors.AccentHighlight
     }
 
     // Outer 60%: outerBase with opacity decreasing toward edges

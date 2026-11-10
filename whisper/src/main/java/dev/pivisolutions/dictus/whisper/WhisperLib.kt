@@ -50,7 +50,17 @@ class WhisperLib {
 
         external fun initContext(modelPath: String): Long
         external fun freeContext(contextPtr: Long)
-        external fun fullTranscribe(contextPtr: Long, numThreads: Int, audioData: FloatArray, language: String)
+        external fun newAbortFlag(): Long
+        external fun setAbortFlag(flagPtr: Long, abort: Boolean)
+        external fun freeAbortFlag(flagPtr: Long)
+        /** @return whisper_full's code: 0 on success, non-zero on failure or abort. */
+        external fun fullTranscribe(
+            contextPtr: Long,
+            abortFlagPtr: Long,
+            numThreads: Int,
+            audioData: FloatArray,
+            language: String,
+        ): Int
         external fun getTextSegmentCount(contextPtr: Long): Int
         external fun getTextSegment(contextPtr: Long, index: Int): String
         external fun getSystemInfo(): String

@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "dev.pivisolutions.dictus.ime"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
@@ -56,7 +56,6 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.savedstate)
     implementation(libs.core.ktx)
-    implementation(libs.emoji2.emojipicker)
 
     testImplementation(libs.junit)
     testImplementation(platform(libs.compose.bom))
@@ -65,5 +64,5 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
-    debugImplementation(libs.compose.ui.test.manifest)
+    testImplementation(libs.compose.ui.test.manifest)
 }

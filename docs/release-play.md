@@ -1,0 +1,143 @@
+# Releasing on Google Play
+
+A `v*` tag builds two signed files. CI only ever reaches the Play **internal** track; every promotion is a command Pierre runs by hand. Nothing here has been run against the real Play account yet (#219).
+
+| File | Signed with | Goes to |
+| --- | --- | --- |
+| `app-release.apk` | app signing key (`SIGNING_*`, the existing GitHub key) | public GitHub release |
+| `app-release.aab` | upload key (`UPLOAD_*`) | workflow artifact `play-bundle`, then Play internal track |
+
+Play checks the upload key, then re-signs what it delivers with the app signing key. Because that is the key of the GitHub APK, a GitHub install can take Play updates without a reinstall. Both files share the `versionCode` of `.github/scripts/derive-android-version.sh`.
+
+Never put a keystore, a `.pepk` or a service account JSON in the repo, and keep them out of any clone. `.gitignore` is a safety net, not a place to store them.
+
+## One-time setup (Pierre)
+
+Do these in order. Steps 1 and 2 come before the first tag pushed with this pipeline: without the `UPLOAD_*` secrets, the `bundle` job fails. The APK job does not depend on it, so the GitHub release is still published.
+
+### 1. Create the upload key
+
+Google requires RSA of 2048 bits or more. Answer the prompts; store the file and passwords in the password manager.
+
+```bash
+keytool -genkeypair -keystore ~/keys/dictus-upload.jks -alias upload \
+  -keyalg RSA -keysize 4096 -validity 10000
+keytool -export -rfc -keystore ~/keys/dictus-upload.jks -alias upload \
+  -file ~/keys/upload_certificate.pem
+```
+
+### 2. Add the GitHub secrets
+
+Repository secrets, next to `SIGNING_*`:
+
+| Secret | Value |
+| --- | --- |
+| `UPLOAD_KEYSTORE` | `base64 -w0 ~/keys/dictus-upload.jks` |
+| `UPLOAD_KEY_ALIAS` | `upload` |
+| `UPLOAD_KEY_PASSWORD` | the key password |
+| `UPLOAD_STORE_PASSWORD` | the keystore password |
+
+### 3. Hand the app signing key to Play
+
+In Play Console, create the app. When creating its first release, choose to use the existing key from a Java keystore. The Console gives `pepk.jar` and its encryption public key. Run the command it shows locally, outside any repo, with the existing GitHub release keystore; its shape is:
+
+```bash
+java -jar pepk.jar --keystore=<release.jks> --alias=<release alias> \
+  --output=output.zip --include-cert \
+  --rsa-aes-encryption --encryption-key-path=encryption_public_key.pem
+```
+
+Upload `output.zip` and `upload_certificate.pem` where the Console asks, then delete `output.zip`. Play never gives the app signing key back, so keep the original keystore safe.
+
+### 4. Send the first AAB by hand
+
+The Publishing API refuses an app with no build. Push the tag, download `play-bundle` from the workflow run, and upload `app-release.aab` to Internal testing in the Console. Fill in what the Console requires to roll that release out. The notes need the listing to offer `fr-FR` and `en-US`.
+
+The artifact is kept 30 days. On a public repo, any signed-in GitHub user can download it: it holds the same app as the public APK and no key.
+
+### 5. Create the service account
+
+Follow "Manual setup" in the [gplay README](https://github.com/tamtom/play-console-cli#authentication): a Google Cloud project with the Google Play Android Developer API enabled, a service account, a JSON key, then an invitation of its email in Play Console → Users and permissions. Give it this app only, with **testing-track permissions only**: no production release right.
+
+Keep the JSON outside any repo, for example in `~/.config/gplay/`.
+
+### 6. Create the protected environment
+
+In GitHub → Settings → Environments, create `play` with Pierre as required reviewer and deployment limited to `v*` tags. GitHub would otherwise create it unprotected on first use, so do this before step 7. Add the environment secret:
+
+| Secret | Value |
+| --- | --- |
+| `PLAY_SERVICE_ACCOUNT` | `base64 -w0 ~/.config/gplay/<file>.json` |
+
+### 7. Turn the upload on
+
+Add the repository variable `PLAY_INTERNAL_UPLOAD` = `true`. Until then the `play-internal` job is skipped. From now on each `v*` tag waits for Pierre's approval on the `play` environment, then uploads to internal.
+
+## Release notes
+
+Play limits a note to 500 characters, so the long GitHub release text does not fit. The notes come from the message of an annotated tag:
+
+```bash
+git tag -a v1.5.0 -F notes.txt
+```
+
+```text
+[fr-FR]
+Clavier plus rapide et corrections.
+[en-US]
+Faster keyboard and fixes.
+```
+
+With a lightweight tag, or a section missing or over 500 characters, CI warns and uses a generic line linking to the GitHub release.
+
+## Commands on Pierre's machine
+
+Install `gplay` v1.0.2, the version CI pins. Check the [`checksums.txt`](https://github.com/tamtom/play-console-cli/releases/tag/v1.0.2) of the release.
+
+```bash
+gplay auth login --service-account ~/.config/gplay/<file>.json
+gplay auth doctor
+gplay preflight --file app-release.aab
+```
+
+`preflight` is offline and needs no account.
+
+Promotion is never done by CI. It needs a service account with the matching right, which the one above does not have:
+
+```bash
+# internal → closed testing
+gplay promote --package dev.pivisolutions.dictus --from internal --to <closed track>
+
+# closed testing → production, at 10 %, once production access is granted
+gplay promote --package dev.pivisolutions.dictus --from <closed track> --to production --rollout 0.1
+```
+
+Google's [track reference](https://developers.google.com/android-publisher/tracks) does not fix the name of the closed track: it is `alpha` or a name chosen in the Console. List the real names first:
+
+```bash
+gplay edits create --package dev.pivisolutions.dictus
+gplay tracks list --package dev.pivisolutions.dictus --edit <id>
+```
+
+The same reference names the internal track `qa`, while `gplay` documents `internal`, the value CI uses. If the first automatic upload is refused for its track name, the `tracks list` output gives the one to set in `release.yml`.
+
+## Optional: gplay agent skills
+
+`gplay install-skills --preview` lists what would be installed (17 skills in `~/.agents/skills`) without writing anything. `gplay install-skills` installs them.
+
+## Mandatory closed test for a personal account
+
+A personal developer account cannot go to production straight after internal testing. [Google's rule](https://support.google.com/googleplay/android-developer/answer/14151465) is to run a closed test "with a minimum of 12 testers who have been opted in continuously for at least 14 days", on the **closed testing** track, before applying for production access in Play Console.
+
+The 14 days are consecutive: "If a tester opts out and opts back in later, the 14 days must be consecutive". A tester who leaves and comes back restarts their count, so keep a margin above 12 testers. Internal testing does not count.
+
+## Check after the first Play delivery
+
+Compare the certificate of the GitHub APK with the one Play delivers. Both must match the "App signing key" SHA-256 in Play Console (Protected with Play → Play Store protection → Manage Play app signing).
+
+```bash
+apksigner verify --print-certs app-release.apk | grep SHA-256
+adb shell pm path dev.pivisolutions.dictus   # phone installed from Play
+adb pull <base.apk path> play-base.apk
+apksigner verify --print-certs play-base.apk | grep SHA-256
+```

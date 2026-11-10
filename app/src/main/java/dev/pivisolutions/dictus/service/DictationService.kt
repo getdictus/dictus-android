@@ -1,14 +1,16 @@
 package dev.pivisolutions.dictus.service
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Intent
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.media.AudioManager
 import android.os.Binder
@@ -24,39 +26,43 @@ import dagger.hilt.components.SingletonComponent
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dev.pivisolutions.dictus.R
-import dev.pivisolutions.dictus.companion.CompanionActionReceiver
 import dev.pivisolutions.dictus.audio.DictationSoundPlayer
+import dev.pivisolutions.dictus.companion.CompanionActionReceiver
+import dev.pivisolutions.dictus.core.logging.DictationTrace
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
-import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
 import dev.pivisolutions.dictus.core.service.DictationController
+import dev.pivisolutions.dictus.core.service.DictationSource
+import dev.pivisolutions.dictus.core.service.DictationStartGuard
 import dev.pivisolutions.dictus.core.service.DictationState
 import dev.pivisolutions.dictus.core.service.SttEngineState
+import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
+import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
+import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import dev.pivisolutions.dictus.model.ModelCatalog
+import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.TranscriptionHistoryMetadata
 import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
+import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.async
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
 import dev.pivisolutions.dictus.asr.ParakeetProvider
-import dev.pivisolutions.dictus.core.whisper.TextPostProcessor
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelManager
 import timber.log.Timber
@@ -91,6 +97,7 @@ import timber.log.Timber
 interface DictationServiceEntryPoint {
     fun dataStore(): DataStore<Preferences>
     fun transcriptionHistoryWriter(): TranscriptionHistoryWriter
+    fun transcriptionDebugStore(): TranscriptionDebugStore
 }
 
 class DictationService : Service(), DictationController {
@@ -100,9 +107,7 @@ class DictationService : Service(), DictationController {
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
-        private const val TRANSCRIPTION_TIMEOUT_MS = 120_000L
         private const val ENGINE_IDLE_TIMEOUT_MS = 10 * 60 * 1_000L
-        private const val EXTRA_START_TOKEN = "dictation_start_token"
     }
 
     /**
@@ -128,6 +133,23 @@ class DictationService : Service(), DictationController {
     }
     private val modelManager by lazy { ModelManager(applicationContext) }
     private val modelDownloader by lazy { ModelDownloader(modelManager) }
+    private val transcriber by lazy {
+        DictationTranscriber(
+            ensureModel = { modelKey -> modelDownloader.ensureModelAvailable(modelKey) },
+            withProvider = { modelKey, modelPath, use -> withProviderForModel(modelKey, modelPath, use) },
+            wakeLock = transcriptionWakeLock,
+            lastTranscription = LastTranscriptionStore.instance,
+            recordTally = DictationTally(dataStore)::record,
+            recordDebugEntry = { entry -> withContext(Dispatchers.IO) { transcriptionDebugStore.append(entry) } },
+        )
+    }
+    private val transcriptionDebugStore: TranscriptionDebugStore by lazy {
+        EntryPointAccessors.fromApplication(
+            applicationContext,
+            DictationServiceEntryPoint::class.java,
+        ).transcriptionDebugStore()
+    }
+    private val transcriptionWakeLock by lazy { PowerManagerTranscriptionWakeLock(applicationContext) }
 
     /**
      * Local binder for same-process binding.
@@ -146,95 +168,20 @@ class DictationService : Service(), DictationController {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private var audioCaptureManager: AudioCaptureManager? = null
-    private var timerJob: Job? = null
     private var prewarmJob: Job? = null
-    private var elapsedMs: Long = 0L
-    private val ownership = DictationSessionOwnership()
-    private var transcriptionJob: Deferred<String?>? = null
-    private val _companionFailure = MutableStateFlow<String?>(null)
-    val companionFailure: StateFlow<String?> = _companionFailure.asStateFlow()
-    private var screenReceiverRegistered = false
-    private val screenReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_SCREEN_OFF && ownership.companionOwned) {
-                _companionFailure.value = "Dictation cancelled because the screen was locked"
-                releaseCompanion()
-            }
-        }
-    }
 
-    private fun requireMainThread() {
-        check(Looper.myLooper() == Looper.getMainLooper()) { "Dictation commands require Main" }
-    }
+    // The transcription of a take stopped without confirm (#248). It runs on cleanupScope so a
+    // service destroyed meanwhile does not cancel it; onDestroy waits for it before the release.
+    private var unconfirmedJob: Job? = null
 
-    /** Idempotent lease acquisition; refused while any session is pending or active. */
-    fun acquireCompanion(): Boolean {
-        requireMainThread()
-        return ownership.acquireCompanion()
-    }
+    // True between startRecording() and the ACTION_START it queues. startForegroundService()
+    // is asynchronous, so a cancel can land first; the start must then not open the mic.
+    // Only touched on the main thread (binder calls from UI and onStartCommand).
+    private var pendingStart = false
+    private var pendingSource = DictationSource.APP
 
-    fun releaseCompanion() {
-        requireMainThread()
-        if (!ownership.companionOwned) return
-        ownership.releaseCompanion()
-        cancelSession()
-    }
-
-    /** Call from the resumed activity: microphone promotion happens before returning. */
-    fun startCompanionRecording(): Boolean {
-        requireMainThread()
-        val token = ownership.requestStart(DictationSessionOwnership.Owner.COMPANION) ?: return false
-        _companionFailure.value = null
-        return promoteAndCapture(token, companion = true)
-    }
-
-    /** Audio is consumed once; a null result requires a new recording. Never persists history. */
-    suspend fun confirmCompanionAndTranscribe(): String? = withContext(Dispatchers.Main.immediate) {
-        confirmSession(DictationSessionOwnership.Owner.COMPANION, TranscriptionRetention.EPHEMERAL)
-    }
-
-    fun cancelCompanionRecording() {
-        requireMainThread()
-        if (ownership.permits(DictationSessionOwnership.Owner.COMPANION)) cancelSession()
-    }
-
-    private fun promoteAndCapture(token: Long, companion: Boolean): Boolean {
-        if (!ownership.acceptStart(token)) return false
-        return try {
-            createNotificationChannel()
-            ServiceCompat.startForeground(
-                this, NOTIFICATION_ID, buildNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
-            )
-            check(startAudioCapture()) { "Microphone capture could not start" }
-            if (companion) getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
-            true
-        } catch (failure: Exception) {
-            Timber.e(failure, "Unable to start dictation")
-            if (companion) _companionFailure.value = "Unable to start microphone recording"
-            finishSession(token)
-            false
-        }
-    }
-
-    private fun finishSession(token: Long) {
-        if (ownership.token != token) return
-        stopRecordingInternal(discard = true)
-        ownership.finish(token)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
-    private fun cancelSession() {
-        val token = ownership.token ?: return
-        val job = transcriptionJob
-        if (ownership.phase == DictationSessionOwnership.Phase.TRANSCRIBING && job != null) {
-            job.cancel()
-        } else {
-            finishSession(token)
-        }
-    }
+    // The surface of the take being recorded or transcribed: the debug log's writer (#295).
+    private var takeSource = DictationSource.APP
 
     // Sound feedback for recording lifecycle events.
     // Initialized in onCreate(); conditionally played based on SOUND_ENABLED preference.
@@ -251,6 +198,206 @@ class DictationService : Service(), DictationController {
     /** Observable state for the IME to collect. */
     override val state: StateFlow<DictationState> = _state.asStateFlow()
 
+    private val recorder = DictationRecorder(serviceScope, _state) {
+        AudioCaptureManager(getSystemService(AudioManager::class.java)).also { capture ->
+            capture.onCaptureFailure = { serviceScope.launch { onCaptureFailed(capture) } }
+        }
+    }
+
+    // ---------- Companion (keyboard-independent) dictation ----------
+    //
+    // WHY a lease: the keyboard/app path and Companion share one microphone and one engine.
+    // While Companion holds the lease, keyboard and app starts are refused, and Companion
+    // cannot take the lease while another dictation records, transcribes or is starting.
+    // All lease state is touched on the main thread only.
+    private var companionOwned = false
+    private var companionReleasing = false
+    private var companionJob: Job? = null
+    private val _companionFailure = MutableStateFlow<String?>(null)
+
+    /** Non-null once the live Companion capture failed or was stopped by the system. */
+    val companionFailure: StateFlow<String?> = _companionFailure.asStateFlow()
+
+    /**
+     * Companion transcriber: never downloads a model during a session, and keeps the text out
+     * of the debug log and of the Home screen's last transcription (Companion is ephemeral).
+     */
+    private val companionTranscriber by lazy {
+        DictationTranscriber(
+            ensureModel = { modelKey -> withContext(Dispatchers.IO) { modelManager.getModelPath(modelKey) } },
+            withProvider = { modelKey, modelPath, use -> withProviderForModel(modelKey, modelPath, use) },
+            wakeLock = transcriptionWakeLock,
+            lastTranscription = LastTranscriptionStore(),
+            recordTally = DictationTally(dataStore)::record,
+            recordDebugEntry = { },
+        )
+    }
+
+    private var screenReceiverRegistered = false
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF && companionOwned) {
+                _companionFailure.value = "Dictation cancelled because the screen was locked"
+                cancelCompanionRecording()
+                releaseCompanion()
+            }
+        }
+    }
+
+    private fun requireMainThread() {
+        check(Looper.myLooper() == Looper.getMainLooper()) { "Dictation commands require Main" }
+    }
+
+    /** Idempotent lease acquisition; refused while any other dictation is pending or active. */
+    fun acquireCompanion(): Boolean {
+        requireMainThread()
+        if (companionReleasing) return false
+        if (companionOwned) return true
+        if (recorder.isCapturing || !DictationStartGuard.canStartNewDictation(_state.value, pendingStart)) {
+            return false
+        }
+        companionOwned = true
+        return true
+    }
+
+    /** Release the lease. A transcription still running is cancelled before others may start. */
+    fun releaseCompanion() {
+        requireMainThread()
+        if (!companionOwned || companionReleasing) return
+        val job = companionJob
+        if (job?.isActive == true) {
+            companionReleasing = true
+            job.cancel()
+            serviceScope.launch {
+                job.join()
+                companionOwned = false
+                companionReleasing = false
+            }
+        } else {
+            if (recorder.isCapturing) endCompanionCapture()
+            companionOwned = false
+        }
+    }
+
+    /**
+     * Call from the resumed, visible activation activity: the microphone foreground promotion
+     * happens before this returns. False when the lease is missing or the microphone failed.
+     */
+    fun startCompanionRecording(): Boolean {
+        requireMainThread()
+        if (!companionOwned || companionReleasing || recorder.isCapturing || pendingStart ||
+            _state.value != DictationState.Idle
+        ) return false
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            _companionFailure.value = "Microphone permission missing"
+            return false
+        }
+        _companionFailure.value = null
+        return try {
+            createNotificationChannel()
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
+            )
+            takeSource = DictationSource.APP
+            check(recorder.start(DictationSource.APP)) { "Microphone capture could not start" }
+            if (soundEnabled) soundPlayer.playStart()
+            // Refresh the notification so it offers Stop now that the state is Recording.
+            getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
+            true
+        } catch (failure: Exception) {
+            Timber.e(failure, "Unable to start Companion dictation")
+            _companionFailure.value = "Unable to start microphone recording"
+            endCompanionCapture()
+            false
+        }
+    }
+
+    /**
+     * Stop the Companion capture and transcribe it with the downloaded model only.
+     * The audio is consumed once; null means no usable text and requires a new recording.
+     * Never written to history, the debug log or the last-transcription store.
+     */
+    suspend fun confirmCompanionAndTranscribe(): String? = withContext(Dispatchers.Main.immediate) {
+        if (!companionOwned || companionReleasing || !recorder.isCapturing) return@withContext null
+        val job = serviceScope.async(start = CoroutineStart.UNDISPATCHED) {
+            val samples = recorder.stop()
+            try {
+                companionTranscriber.rejectBeforeEngine(samples) ?: run {
+                    if (soundEnabled) soundPlayer.playStop()
+                    _state.value = DictationState.Transcribing
+                    getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
+                    transcribeCompanionTake(samples)
+                }
+            } finally {
+                finishTranscription()
+            }
+        }
+        companionJob = job
+        try {
+            (job.await() as? TranscriptionOutcome.Transcribed)?.text
+        } catch (cancelled: CancellationException) {
+            job.cancel()
+            throw cancelled
+        } finally {
+            if (companionJob === job) companionJob = null
+        }
+    }
+
+    /** Cancel the Companion capture or transcription, if any; the lease is kept. */
+    fun cancelCompanionRecording() {
+        requireMainThread()
+        if (!companionOwned) return
+        companionJob?.cancel()
+        if (recorder.isCapturing) {
+            if (soundEnabled) soundPlayer.playCancel()
+            endCompanionCapture()
+        }
+    }
+
+    private suspend fun transcribeCompanionTake(samples: FloatArray): TranscriptionOutcome {
+        return try {
+            val prefs = dataStore.data.first()
+            val activeModelKey = prefs[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY
+            val engineLanguage = DictationLanguage.engineLanguage(prefs)
+            val dictation = DictationContext.from(prefs, engineLanguage, DictationSource.APP)
+            companionTranscriber.transcribe(samples, activeModelKey, dictation)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (e: Exception) {
+            Timber.e(e, "Companion transcription failed")
+            TranscriptionOutcome.Failed
+        }
+    }
+
+    private fun endCompanionCapture() {
+        discardRecording()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        DictationTrace.end()
+    }
+
+    /** A live capture that Android silenced or that failed to read. */
+    private fun onCaptureFailed(capture: AudioCapture) {
+        if (!recorder.isCurrent(capture) || _state.value !is DictationState.Recording) return
+        if (companionOwned) {
+            Timber.w("Companion microphone capture failed")
+            _companionFailure.value = "Microphone recording failed"
+            cancelCompanionRecording()
+        } else {
+            // Keyboard/app dictation keeps its existing behaviour: the user stops it.
+            Timber.w("Microphone capture failed during keyboard/app dictation")
+        }
+    }
+
+    private val unconfirmedStop by lazy {
+        UnconfirmedStop(recorder, _state) { samples ->
+            transcriber.rejectBeforeEngine(samples) ?: transcribeTake(samples, TranscriptionRetention.PERSIST_HISTORY)
+        }
+    }
+
     /** Native engine readiness for IME/UI loading gates. */
     override val engineState: StateFlow<SttEngineState>
         get() = providerSlot.state
@@ -261,7 +408,8 @@ class DictationService : Service(), DictationController {
     }
 
     override fun prewarmEngine() {
-        if (ownership.companionOwned) return
+        // A Companion session loads its model when it transcribes.
+        if (companionOwned) return
         if (prewarmJob?.isActive == true) return
         prewarmJob = serviceScope.launch(Dispatchers.Default) { prewarmActiveModel() }
     }
@@ -273,6 +421,23 @@ class DictationService : Service(), DictationController {
         )
         screenReceiverRegistered = true
         soundPlayer = DictationSoundPlayer(applicationContext)
+
+        // Load a newly selected model right away, from the Models screen, Settings or onboarding,
+        // so it is ready before the next mic tap (#175, iOS ModelManager.selectModel). Without it
+        // the first dictation recorded on the previous model and loaded the new one while
+        // transcribing. drop(1): the current selection is the one onBind already prewarms.
+        serviceScope.launch {
+            dataStore.data
+                .map { it[PreferenceKeys.ACTIVE_MODEL] }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { modelKey ->
+                    // A prewarm still running loads the previous selection and would swallow this one.
+                    prewarmJob?.join()
+                    Timber.i("Active model changed to %s, prewarming", modelKey)
+                    prewarmEngine()
+                }
+        }
 
         // Load sounds with user-selected names from DataStore on first launch.
         // Subsequent preference changes are handled by the reactive observers below.
@@ -328,25 +493,60 @@ class DictationService : Service(), DictationController {
                 // CRITICAL: call startForeground() FIRST, before AudioRecord setup.
                 // Android gives us ~10 seconds after startForegroundService() to call
                 // startForeground(). AudioRecord init can be slow on some devices.
-                val request = if (intent.hasExtra(EXTRA_START_TOKEN)) {
-                    intent.getLongExtra(EXTRA_START_TOKEN, -1L)
-                } else {
-                    ownership.requestStart(DictationSessionOwnership.Owner.LEGACY)
+                createNotificationChannel()
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    buildNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
+                )
+                if (companionOwned || recorder.isCapturing || !DictationStartGuard.canStartNewDictation(_state.value)) {
+                    // Backstop (#237): a live dictation owns the microphone and the foreground.
+                    Timber.w("ACTION_START refused: state=%s", _state.value::class.simpleName)
+                    return START_NOT_STICKY
                 }
-                if (request != null && ownership.permits(DictationSessionOwnership.Owner.LEGACY)) {
-                    if (ownership.token == request && ownership.phase == DictationSessionOwnership.Phase.PENDING) {
-                        promoteAndCapture(request, companion = false)
-                    } else {
-                        acknowledgeStaleStart(startId)
-                    }
-                } else {
-                    acknowledgeStaleStart(startId)
+                if (!pendingStart) {
+                    // Cancelled before this start was delivered. startForeground() above is
+                    // still required after startForegroundService(), then nothing records.
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    Timber.d("DictationService dropped ACTION_START cancelled before delivery")
+                    DictationTrace.end()
+                    return START_NOT_STICKY
                 }
-                Timber.d("DictationService started foreground with ACTION_START")
+                pendingStart = false
+                takeSource = pendingSource
+                if (!recorder.start(pendingSource)) {
+                    // Existing keyboard/app behaviour is kept; only logged here.
+                    Timber.e("ACTION_START: microphone capture could not start")
+                }
+                if (soundEnabled) soundPlayer.playStart()
+                Timber.i(
+                    "DictationService started foreground with ACTION_START: source=%s, t+=%dms",
+                    pendingSource,
+                    DictationTrace.elapsedMs(),
+                )
             }
             ACTION_STOP -> {
-                cancelRecording()
+                // Companion takes are stopped through CompanionActionReceiver, never here,
+                // so they are not transcribed into history.
+                if (companionOwned) return START_NOT_STICKY
+                pendingStart = false
+                if (_state.value is DictationState.Transcribing) {
+                    // Stopping now would tear down the transcription that holds the take.
+                    Timber.i("ACTION_STOP ignored: transcription in progress")
+                    return START_NOT_STICKY
+                }
+                unconfirmedStop.stop(UnconfirmedStop.Reason.NOTIFICATION_STOP, cleanupScope, ::finishTranscription)?.let {
+                    unconfirmedJob = it
+                    if (soundEnabled) soundPlayer.playStop()
+                    return START_NOT_STICKY
+                }
+                discardRecording()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
                 Timber.d("DictationService stopped via ACTION_STOP")
+                DictationTrace.end()
             }
         }
         // START_NOT_STICKY: don't restart automatically if the system kills us.
@@ -354,42 +554,45 @@ class DictationService : Service(), DictationController {
         return START_NOT_STICKY
     }
 
-    // A cancelled queued FGS request still needs promotion before it can be stopped.
-    private fun acknowledgeStaleStart(startId: Int) {
-        try {
-            createNotificationChannel()
-            ServiceCompat.startForeground(
-                this, NOTIFICATION_ID, buildNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
-            )
-        } catch (failure: Exception) {
-            Timber.w(failure, "Unable to acknowledge obsolete foreground start")
-        }
-        if (ownership.token == null) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf(startId)
-        }
-    }
-
     /**
      * Start recording via foreground service promotion.
      *
      * Sends ACTION_START to self, which triggers onStartCommand to call
-     * startForeground() (required for microphone access) then startAudioCapture().
+     * startForeground() (required for microphone access) then starts the capture.
+     * Refused while a dictation records, transcribes or is still being started (#237).
      */
-    override fun startRecording() {
-        requireMainThread()
-        val token = ownership.requestStart(DictationSessionOwnership.Owner.LEGACY) ?: return
+    override fun startRecording(source: DictationSource): Boolean {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            // A microphone foreground service without the permission throws on Android 14+.
+            // The callers check it first; this keeps a declined or revoked microphone from
+            // crashing the app (#220).
+            Timber.w("Recording start refused: source=%s, RECORD_AUDIO not granted", source)
+            return false
+        }
+        if (companionOwned) {
+            Timber.w("Recording start refused: source=%s, Companion dictation owns the microphone", source)
+            return false
+        }
+        if (!DictationStartGuard.canStartNewDictation(_state.value, pendingStart)) {
+            Timber.w(
+                "Recording start refused: source=%s, state=%s, pendingStart=%b",
+                source,
+                _state.value::class.simpleName,
+                pendingStart,
+            )
+            return false
+        }
+        // Like iOS startDictation: the previous text must not pass for this dictation's (#245).
+        LastTranscriptionStore.instance.clear()
         val intent = Intent(this, DictationService::class.java).apply {
             action = ACTION_START
-            putExtra(EXTRA_START_TOKEN, token)
         }
-        try {
-            startForegroundService(intent)
-        } catch (failure: Exception) {
-            Timber.e(failure, "Unable to request foreground dictation")
-            finishSession(token)
-        }
+        pendingStart = true
+        pendingSource = source
+        val trace = DictationTrace.onRecordingRequested(fallbackSource = source.name.lowercase())
+        Timber.i("Recording requested: source=%s, t+=%dms", trace.source, DictationTrace.elapsedMs())
+        startForegroundService(intent)
+        return true
     }
 
     /**
@@ -401,21 +604,17 @@ class DictationService : Service(), DictationController {
      * @return FloatArray of captured audio samples, or empty array if not recording.
      */
     override fun stopRecording(): FloatArray {
-        requireMainThread()
-        if (!ownership.permits(DictationSessionOwnership.Owner.LEGACY) ||
-            ownership.phase == DictationSessionOwnership.Phase.TRANSCRIBING) return FloatArray(0)
-        val token = ownership.token ?: return FloatArray(0)
-        return try {
-            val samples = audioCaptureManager?.stop() ?: FloatArray(0)
-            audioCaptureManager = null
-            if (soundEnabled) soundPlayer.playStop()
-            samples
-        } catch (failure: Exception) {
-            Timber.e(failure, "Unable to stop dictation")
-            FloatArray(0)
-        } finally {
-            finishSession(token)
-        }
+        // A keyboard/app caller cannot stop the Companion take it does not own.
+        if (companionOwned) return FloatArray(0)
+        pendingStart = false
+        val samples = recorder.stop()
+        if (soundEnabled) soundPlayer.playStop()
+        _state.value = DictationState.Idle
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        Timber.d("Recording stopped, ${samples.size} samples captured")
+        DictationTrace.end()
+        return samples
     }
 
     /**
@@ -425,171 +624,115 @@ class DictationService : Service(), DictationController {
      * Returns to idle state without producing any audio output.
      */
     override fun cancelRecording() {
-        requireMainThread()
-        if (!ownership.permits(DictationSessionOwnership.Owner.LEGACY)) return
+        // A keyboard/app caller cannot cancel the Companion take it does not own.
+        if (companionOwned) return
+        pendingStart = false
         if (soundEnabled) soundPlayer.playCancel()
-        cancelSession()
+        discardRecording()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
         Timber.d("Recording cancelled, samples discarded")
+        DictationTrace.end()
     }
 
     /**
      * Stop recording, transcribe audio, and return processed text.
      *
      * Full pipeline: stop recording -> ensure model downloaded -> init engine ->
-     * transcribe with a bounded provider timeout -> post-process -> return text.
-     * Companion uses the same pipeline with downloaded models and ephemeral retention.
+     * transcribe within [TranscriptionTimeout] -> post-process -> return text.
+     *
+     * WHY a timeout: a stuck or very slow JNI call must not block the UI indefinitely. Both
+     * providers return at the timeout while their native call is still running (#158, #145);
+     * Whisper aborts its decode and keeps the segments decoded so far (#173, #179).
      */
-    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): String? =
-        withContext(Dispatchers.Main.immediate) {
-            confirmSession(DictationSessionOwnership.Owner.LEGACY, retention)
-        }
-
-    private suspend fun confirmSession(
-        owner: DictationSessionOwnership.Owner,
-        retention: TranscriptionRetention,
-    ): String? {
-        val token = ownership.beginTranscription(owner) ?: return null
-        _state.value = DictationState.Transcribing
-        val job = serviceScope.async(start = CoroutineStart.UNDISPATCHED) {
-            try {
-                if (ownership.companionOwned) {
-                    getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
-                }
-                transcribeCapturedAudio(retention, owner == DictationSessionOwnership.Owner.COMPANION)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (failure: Exception) {
-                Timber.e(failure, "Unable to transcribe captured audio")
-                null
-            } finally {
-                finishSession(token)
-            }
-        }
-        transcriptionJob = job
-        return try {
-            job.await()
-        } catch (cancelled: CancellationException) {
-            job.cancel()
-            throw cancelled
-        } finally {
-            if (transcriptionJob === job) transcriptionJob = null
-        }
-    }
-
-    private suspend fun transcribeCapturedAudio(
-        retention: TranscriptionRetention,
-        downloadedOnly: Boolean,
-    ): String? {
+    override suspend fun confirmAndTranscribe(retention: TranscriptionRetention): TranscriptionOutcome {
+        // The Companion take is ephemeral and only confirmCompanionAndTranscribe may consume it.
+        if (companionOwned) return TranscriptionOutcome.Failed
         // 1. Stop recording and get audio samples
-        val manager = audioCaptureManager
-        val samples = withContext(Dispatchers.IO) { manager?.stop() ?: FloatArray(0) }
-        timerJob?.cancel()
-        timerJob = null
-        elapsedMs = 0L
-        audioCaptureManager = null
+        pendingStart = false
+        val samples = recorder.stop()
 
-        if (samples.isEmpty()) {
-            Timber.w("confirmAndTranscribe: no audio samples captured")
-            return null
-        }
-
-        if (!RecordingDurationPolicy.canTranscribe(samples.size)) {
-            Timber.w(
-                "confirmAndTranscribe: clip too short (%d samples, minimum=%d)",
-                samples.size,
-                RecordingDurationPolicy.MINIMUM_SAMPLE_COUNT,
-            )
-            return null
+        transcriber.rejectBeforeEngine(samples)?.let { outcome ->
+            finishTranscription()
+            return outcome
         }
 
         // Play stop cue when audio capture ends and transcription begins.
         if (soundEnabled) soundPlayer.playStop()
 
-        Timber.d("confirmAndTranscribe: %d samples captured, transitioning to Transcribing", samples.size)
+        Timber.i(
+            "Recording stopped: samples=%d, audioMs=%d, t+=%dms, transitioning to Transcribing",
+            samples.size,
+            samples.size * 1_000L / RecordingDurationPolicy.SAMPLE_RATE_HZ,
+            DictationTrace.elapsedMs(),
+        )
         _state.value = DictationState.Transcribing
 
+        return try {
+            transcribeTake(samples, retention)
+        } finally {
+            finishTranscription()
+        }
+    }
+
+    /** Transcribes a take that passed rejectBeforeEngine; the caller owns the state and the foreground. */
+    private suspend fun transcribeTake(samples: FloatArray, retention: TranscriptionRetention): TranscriptionOutcome {
         return try {
             // 2. Read user preferences at transcription time so changes take effect
             //    without needing a service restart.
             val prefs = dataStore.data.first()
             val activeModelKey = prefs[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY
-            val languagePref = prefs[PreferenceKeys.TRANSCRIPTION_LANGUAGE] ?: "auto"
-            // whisper.cpp explicitly supports "auto"; do not turn auto-detection into French.
-            val whisperLanguage = languagePref
+            // "auto" is passed through: whisper.cpp detects the language itself. In follow
+            // mode this is the keyboard's language at the moment the take is transcribed.
+            val engineLanguage = DictationLanguage.engineLanguage(prefs)
 
-            Timber.d(
-                "confirmAndTranscribe: model=%s, language=%s",
+            Timber.i(
+                "confirmAndTranscribe: model=%s, engine=%s, language=%s, t+=%dms",
                 activeModelKey,
-                whisperLanguage,
+                ModelCatalog.findByKey(activeModelKey)?.provider ?: "UNKNOWN",
+                engineLanguage,
+                DictationTrace.elapsedMs(),
             )
 
-            // Legacy callers retain first-use downloads; Companion never starts a download.
-            val modelPath = if (downloadedOnly) modelManager.getModelPath(activeModelKey)
-                else modelDownloader.ensureModelAvailable(activeModelKey)
-            if (modelPath == null) {
-                Timber.e("Model not available, cannot transcribe")
-                return null
-            }
+            // 3. Download the model if needed, transcribe, post-process.
+            val dictation = DictationContext.from(prefs, engineLanguage, takeSource)
+            val outcome = transcriber.transcribe(samples, activeModelKey, dictation)
 
-            // 4. Initialize and use the selected provider/model under one ownership lock.
-            val rawText = transcribeWithProvider(
-                modelKey = activeModelKey,
-                modelPath = modelPath,
-                samples = samples,
-                language = whisperLanguage,
-            )
-
-            if (rawText == null) {
-                Timber.e("Provider initialization failed or transcription timed out")
-                return null
-            }
-
-            // 6. Post-process (trim + punctuation)
-            val processedText = TextPostProcessor.process(rawText)
-            Timber.d(PrivacySafeLog.transcriptionProcessed(rawText, processedText))
-
-            if (processedText.isNotEmpty()) {
+            // 4. Only a dictation with words reaches history.
+            if (outcome is TranscriptionOutcome.Transcribed) {
                 val model = ModelCatalog.findByKey(activeModelKey)
+                // Pro gate: callers still express the retention their context deserves,
+                // the flag only ever downgrades it (see PremiumFlags.HISTORY_VISIBLE).
+                val effectiveRetention = PremiumFlags.effectiveRetention(retention)
                 transcriptionHistoryWriter.persist(
-                    retention = retention,
-                    text = processedText,
+                    retention = effectiveRetention,
+                    text = outcome.text,
                     metadata = TranscriptionHistoryMetadata(
-                        requestedLanguage = languagePref,
+                        requestedLanguage = engineLanguage,
                         durationMillis = samples.size * 1_000L / RecordingDurationPolicy.SAMPLE_RATE_HZ,
                         modelKey = activeModelKey,
                         provider = model?.provider?.name ?: "UNKNOWN",
                     ),
                 )
+                // An EPHEMERAL retention skips the write: the line still marks the step (#145).
+                Timber.i("Transcription history step done: retention=%s, t+=%dms", effectiveRetention, DictationTrace.elapsedMs())
             }
-
-            if (processedText.isEmpty()) null else processedText
+            outcome
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (e: Exception) {
             Timber.e(e, "Transcription failed")
-            null
+            TranscriptionOutcome.Failed
         }
     }
 
-    /**
-     * Get or initialize the correct STT provider based on the active model's provider type.
-     *
-     * WHY dynamic dispatch: Phase 9 adds Parakeet as a second engine. The provider is
-     * determined by the active model's AiProvider enum, not a separate setting.
-     * Strict single-engine policy: if the provider type changes, release() the current
-     * one before initialize() on the new one — prevents OOM from dual engine loading.
-     */
-    private suspend fun transcribeWithProvider(
-        modelKey: String,
-        modelPath: String,
-        samples: FloatArray,
-        language: String,
-    ): String? {
-        return withProviderForModel(modelKey, modelPath) { provider ->
-            withTimeoutOrNull(TRANSCRIPTION_TIMEOUT_MS) {
-                provider.transcribe(samples, language)
-            }
-        }
+    /** Every confirmAndTranscribe exit: back to Idle and out of the foreground. */
+    private fun finishTranscription() {
+        _state.value = DictationState.Idle
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        Timber.i("Transcription pipeline done, t+=%dms", DictationTrace.elapsedMs())
+        DictationTrace.end()
     }
 
     /**
@@ -623,6 +766,14 @@ class DictationService : Service(), DictationController {
         }
     }
 
+    /**
+     * Run [block] on the initialized provider for the model's engine.
+     *
+     * WHY dynamic dispatch: Phase 9 adds Parakeet as a second engine. The provider is
+     * determined by the active model's AiProvider enum, not a separate setting.
+     * Strict single-engine policy: if the provider type changes, release() the current
+     * one before initialize() on the new one — prevents OOM from dual engine loading.
+     */
     private suspend fun <T> withProviderForModel(
         modelKey: String,
         modelPath: String,
@@ -634,90 +785,24 @@ class DictationService : Service(), DictationController {
             AiProvider.PARAKEET -> ParakeetProvider::class
         }
 
-        return withContext(Dispatchers.Default) {
-            providerSlot.withProvider(
-                requestedModelKey = modelKey,
-                modelPath = modelPath,
-                requiredProviderClass = neededProviderClass,
-                createProvider = {
-                    when (info.provider) {
-                        AiProvider.WHISPER -> WhisperProvider()
-                        AiProvider.PARAKEET -> ParakeetProvider()
-                    }
-                },
-                useProvider = block,
-            )
-        }
-    }
-
-    /**
-     * Internal helper to stop recording, optionally discarding samples.
-     */
-    private fun stopRecordingInternal(discard: Boolean) {
-        val manager = audioCaptureManager
-        audioCaptureManager = null
-        try {
-            if (discard) manager?.cancel() else manager?.stop()
-        } catch (failure: Exception) {
-            Timber.e(failure, "Unable to stop microphone capture")
-        }
-        timerJob?.cancel()
-        timerJob = null
-        elapsedMs = 0L
-        _state.value = DictationState.Idle
-    }
-
-    /**
-     * Initialize AudioCaptureManager and start the read loop + timer.
-     */
-    private fun startAudioCapture(): Boolean {
-        val manager = AudioCaptureManager(getSystemService(AudioManager::class.java))
-        audioCaptureManager = manager
-
-        manager.onCaptureFailure = {
-            serviceScope.launch {
-                if (audioCaptureManager === manager &&
-                    ownership.phase == DictationSessionOwnership.Phase.RECORDING) {
-                    if (ownership.companionOwned) _companionFailure.value = "Microphone recording failed"
-                    cancelSession()
+        return providerSlot.withProvider(
+            requestedModelKey = modelKey,
+            modelPath = modelPath,
+            requiredProviderClass = neededProviderClass,
+            createProvider = {
+                when (info.provider) {
+                    AiProvider.WHISPER -> WhisperProvider()
+                    AiProvider.PARAKEET -> ParakeetProvider()
                 }
-            }
-        }
+            },
+            useProvider = block,
+        )
+    }
 
-        // Energy updates come from the capture read loop (Dispatchers.Default).
-        // We update the state flow with the latest energy history each time.
-        manager.onEnergyUpdate = { _ ->
-            serviceScope.launch {
-                if (audioCaptureManager !== manager ||
-                    ownership.phase != DictationSessionOwnership.Phase.RECORDING) return@launch
-                _state.value = DictationState.Recording(
-                    elapsedMs = elapsedMs,
-                    energy = manager.getEnergyHistory(),
-                )
-            }
-        }
-
-        if (!manager.start(serviceScope)) return false
-
-        // Timer coroutine: increments elapsed time every second.
-        // Runs on Main dispatcher since it only updates the state flow.
-        elapsedMs = 0L
-        timerJob = serviceScope.launch {
-            while (isActive) {
-                delay(1000L)
-                elapsedMs += 1000L
-                _state.value = DictationState.Recording(
-                    elapsedMs = elapsedMs,
-                    energy = manager.getEnergyHistory(),
-                )
-            }
-        }
-
-        _state.value = DictationState.Recording(elapsedMs = 0L, energy = emptyList())
-
-        // Play start cue after transitioning to Recording state.
-        if (soundEnabled) soundPlayer.playStart()
-        return true
+    /** Discard the capture, if any, and reach Idle even when nothing was recording. */
+    private fun discardRecording() {
+        recorder.cancel()
+        _state.value = DictationState.Idle
     }
 
     /**
@@ -729,10 +814,10 @@ class DictationService : Service(), DictationController {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Dictus Recording",
+            getString(R.string.recording_notification_channel_name),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Active recording notification"
+            description = getString(R.string.recording_notification_channel_description)
             setShowBadge(false)
         }
         val manager = getSystemService(NotificationManager::class.java)
@@ -742,11 +827,11 @@ class DictationService : Service(), DictationController {
     /**
      * Build the foreground notification shown during recording.
      *
-     * Shows "Dictus - Recording" with a Stop action button.
+     * Shows "Dictus – Recording" with a Stop action button.
      * Body tap is a no-op (per user decision -- the IME is already visible).
      */
     private fun buildNotification(): Notification {
-        if (ownership.companionOwned) {
+        if (companionOwned) {
             val recording = state.value is DictationState.Recording
             fun actionIntent(action: String, requestCode: Int): PendingIntent = PendingIntent.getBroadcast(
                 this, requestCode,
@@ -775,40 +860,61 @@ class DictationService : Service(), DictationController {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Dictus - Recording")
+            .setContentTitle(getString(R.string.recording_notification_title))
             .setSmallIcon(R.drawable.ic_mic)
             .setOngoing(true)
-            .addAction(R.drawable.ic_stop, "Stop", stopPendingIntent)
+            .addAction(R.drawable.ic_stop, getString(R.string.recording_notification_stop), stopPendingIntent)
             .build()
     }
 
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && ownership.token == null) {
-            // An idle floating control is not a reason to keep a large native model under pressure.
-            prewarmJob?.cancel()
-            serviceScope.launch(Dispatchers.Default) { providerSlot.release() }
+    // Swiping Dictus away from Recents ends its dictation like the notification's Stop (#248).
+    // A keyboard dictation does not belong to the app's task and keeps running.
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // A Companion take belongs to the user's other app, not to Dictus's task.
+        if (companionOwned) {
+            super.onTaskRemoved(rootIntent)
+            return
         }
+        unconfirmedStop.stop(UnconfirmedStop.Reason.TASK_REMOVED, cleanupScope, ::finishTranscription)
+            ?.let { unconfirmedJob = it }
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
+        super.onDestroy()
         if (screenReceiverRegistered) {
             unregisterReceiver(screenReceiver)
             screenReceiverRegistered = false
         }
-        ownership.destroy()
-        transcriptionJob?.cancel()
-        stopRecordingInternal(discard = true)
+        // A Companion take is ephemeral: discard it rather than transcribe it into history.
+        if (companionOwned) {
+            _companionFailure.value = "Dictation service stopped"
+            companionJob?.cancel()
+            recorder.cancel()
+            _state.value = DictationState.Idle
+            companionOwned = false
+        }
         if (::soundPlayer.isInitialized) soundPlayer.release()
+        // The cancelled transcription releases it in its finally; this covers a lock left held.
+        transcriptionWakeLock.release()
+        // Torn down while an app dictation records (#248): its take is transcribed on cleanupScope,
+        // which outlives the service, before the engine is released. A take already transcribing
+        // after a stop without confirm is waited for the same way. A process kill still loses it.
+        val keptTake = unconfirmedStop.stop(UnconfirmedStop.Reason.SERVICE_DESTROYED, cleanupScope) {
+            _state.value = DictationState.Idle
+            DictationTrace.end()
+        } ?: unconfirmedJob
+        // Cancelling the scope alone would leave a live AudioRecord unreleased.
+        recorder.cancel()
         serviceScope.cancel()
         cleanupScope.launch {
             try {
+                keptTake?.join()
                 providerSlot.release()
             } finally {
                 cleanupScope.cancel()
             }
         }
         Timber.d("DictationService destroyed")
-        super.onDestroy()
     }
 }

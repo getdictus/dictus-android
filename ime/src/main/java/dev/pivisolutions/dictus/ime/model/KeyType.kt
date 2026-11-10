@@ -12,9 +12,10 @@ enum class KeyType {
     DELETE,
     SPACE,
     RETURN,
-    LAYER_SWITCH,       // ?123 / ABC / #+= -- switches between letter/number/symbol layers
+    LAYER_SWITCH,       // 123 / ABC / #+= -- switches between letter/number/symbol layers
     EMOJI,
     MIC,                // Placeholder, non-functional in Phase 1
     ACCENT_ADAPTIVE,    // Apostrophe key that adapts to show accent popup
     KEYBOARD_SWITCH,    // Globe/language icon to trigger system InputMethodPicker
+    SPACER,             // Empty gap (iOS `.spacer`): draws nothing, takes no touch
 }

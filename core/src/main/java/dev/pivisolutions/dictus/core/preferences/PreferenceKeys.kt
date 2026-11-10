@@ -26,7 +26,20 @@ object PreferenceKeys {
     val COMPANION_Y = floatPreferencesKey("companion_y")
 
     // --- Keyboard settings (Phase 1-2) ---
+    /**
+     * Legacy single layout ("azerty"/"qwerty"/"qwertz"). Since #134 the layout is per keyboard
+     * language ([KEYBOARD_LAYOUTS_BY_LANGUAGE]); this key is only read by the one-time migration
+     * and kept as a mirror of the active language's layout, so a rollback to an older build
+     * finds the shape the user is actually on.
+     */
     val KEYBOARD_LAYOUT = stringPreferencesKey("keyboard_layout")
+    /**
+     * Keyboard layout per keyboard language (#134), as "code=layout" entries ("de=qwertz").
+     * An entry is an explicit choice; a missing entry means the language follows its default
+     * layout. The key's presence, even as an empty set, marks the migration from
+     * [KEYBOARD_LAYOUT] as done. Read and written only through `KeyboardLayoutPreference`.
+     */
+    val KEYBOARD_LAYOUTS_BY_LANGUAGE = stringSetPreferencesKey("keyboard_layouts_by_language")
     /** Keyboard correction language. Deliberately independent from ASR language. */
     val KEYBOARD_LANGUAGE = stringPreferencesKey("keyboard_language")
 
@@ -36,6 +49,15 @@ object PreferenceKeys {
 
     // --- Onboarding (Phase 4) ---
     val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+
+    /** The onboarding step to resume at, by its stable name (`OnboardingStep.storedName`, #196). */
+    val ONBOARDING_STEP = stringPreferencesKey("onboarding_step")
+
+    /**
+     * True once the POST_NOTIFICATIONS prompt has been shown, granted or not (#308), so it is
+     * never shown twice. Survives an onboarding reset.
+     */
+    val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
 
     // --- Audio feedback settings (Phase 4 + Phase 5) ---
     val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
@@ -50,11 +72,12 @@ object PreferenceKeys {
     val THEME = stringPreferencesKey("theme")
 
     // --- Last transcription (Phase 4) ---
+    // Read by nothing since #245, which keeps Home's card in memory: only removed at app start.
     val LAST_TRANSCRIPTION = stringPreferencesKey("last_transcription")
     val LAST_TRANSCRIPTION_SAVED_AT = longPreferencesKey("last_transcription_saved_at")
 
     // --- Keyboard mode (Phase 5) ---
-    /** Default keyboard opening mode: "abc" (letters) or "123" (numbers). */
+    // Read by nothing since #288, which opens the keyboard on letters always: only removed at app start.
     val KEYBOARD_MODE = stringPreferencesKey("keyboard_mode")
 
     // --- Suggestions (Phase 8) ---
@@ -68,4 +91,8 @@ object PreferenceKeys {
     // --- Personal dictionary (Phase 8) ---
     /** Set of words the user has typed at least twice, persisted across restarts. */
     val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")
+
+    // --- Custom vocabulary (#203) ---
+    /** The user's vocabulary entries as one JSON array, written whole by `VocabularyStore`. */
+    val VOCABULARY_ENTRIES = stringPreferencesKey("vocabulary_entries")
 }
