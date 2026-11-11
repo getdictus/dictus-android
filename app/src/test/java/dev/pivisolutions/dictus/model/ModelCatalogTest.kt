@@ -172,23 +172,14 @@ class ModelCatalogTest {
         }
     }
 
-    // --- Precision and speed bars, measured on the Pixel 4 (issue #180) ---
+    // --- Speed bars, measured on the Pixel 4 (issue #180) ---
 
     @Test
-    fun `every catalog model has its bars from the measured rule`() {
+    fun `every catalog model has its speed bar from the measured rule`() {
         ModelCatalog.ALL.forEach { model ->
             assertTrue("${model.key} has no Pixel 4 measurement", model.key in ModelBars.PIXEL_4)
             assertEquals("${model.key} speed", ModelBars.speed(model.key), model.speed)
-            ModelBars.precision(model.key)?.let { assertEquals("${model.key} precision", it, model.precision) }
         }
-    }
-
-    @Test
-    fun `only Parakeet 0_6B v3 keeps a hand-set precision`() {
-        // Its long-French drift (#330) is a defect to fix, not a precision to show.
-        val notRated = ModelCatalog.ALL.map { it.key }.filter { ModelBars.precision(it) == null }
-
-        assertEquals(listOf("parakeet-tdt-0.6b-v3"), notRated)
     }
 
     @Test
@@ -210,9 +201,8 @@ class ModelCatalogTest {
 
     @Test
     fun `speed segments step down each time the wait doubles`() {
-        fun model(seconds: Double) = ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to seconds), 0, 1)
         val measured = listOf(1.0, 1.5, 1.6, 3.0, 3.1, 6.0, 6.1, 12.0, 12.1)
-            .associate { "m$it" to model(it) }
+            .associate { "m$it" to mapOf(ModelBars.Clip.FR_SHORT to it) }
 
         assertEquals(
             listOf(5, 5, 4, 4, 3, 3, 2, 2, 1),
@@ -223,26 +213,15 @@ class ModelCatalogTest {
     @Test
     fun `speed ratio is the geometric mean over the clips a model was measured on`() {
         val measured = mapOf(
-            "fast" to ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to 1.0, ModelBars.Clip.FR_LONG to 10.0), 0, 1),
+            "fast" to mapOf(ModelBars.Clip.FR_SHORT to 1.0, ModelBars.Clip.FR_LONG to 10.0),
             // 9x on one clip, 1x on the other: geometric mean 3 -> 4 segments (an arithmetic mean, 5, gives 3)
-            "mixed" to ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to 9.0, ModelBars.Clip.FR_LONG to 10.0), 0, 1),
+            "mixed" to mapOf(ModelBars.Clip.FR_SHORT to 9.0, ModelBars.Clip.FR_LONG to 10.0),
             // English only: compared with the fastest model on its own clip
-            "english" to ModelBars.Measurement(mapOf(ModelBars.Clip.EN_SHORT to 0.5), 0, 1),
+            "english" to mapOf(ModelBars.Clip.EN_SHORT to 0.5),
         )
 
         assertEquals(4, ModelBars.speedSegments("mixed", measured))
         assertEquals(5, ModelBars.speedSegments("english", measured))
-    }
-
-    @Test
-    fun `precision segments follow the pooled WER thresholds`() {
-        val measured = listOf(0, 5, 6, 10, 11, 20, 21, 35, 36)
-            .associate { "wer$it" to ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to 1.0), it, 100) }
-
-        assertEquals(
-            listOf(5, 5, 4, 4, 3, 3, 2, 2, 1),
-            measured.keys.map { ModelBars.precisionSegments(it, measured) },
-        )
     }
 
     // --- Supported languages (issue #133) ---

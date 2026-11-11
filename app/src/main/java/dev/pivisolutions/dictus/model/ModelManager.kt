@@ -33,7 +33,8 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param qualityLabelRes Short quality descriptor (e.g. "Fast"), as a string resource.
  * @param descriptionRes  Short description shown on the model card, as a string resource:
  *                        the catalog has no Context, the UI resolves it in its locale (#236).
- * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar, from [ModelBars] (#180).
+ * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar, hand-set until measured
+ *                        with a real voice (#180).
  * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar, from [ModelBars] (#180).
  * @param provider        Inference engine.
  * @param source          Where the files are downloaded from.
@@ -150,7 +151,7 @@ object ModelCatalog {
             source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_tiny,
-            precision = ModelBars.precision("tiny")!!,
+            precision = 0.4f,
             speed = ModelBars.speed("tiny"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
@@ -163,7 +164,7 @@ object ModelCatalog {
             source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_balanced,
             descriptionRes = R.string.model_description_base,
-            precision = ModelBars.precision("base")!!,
+            precision = 0.6f,
             speed = ModelBars.speed("base"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
@@ -176,7 +177,7 @@ object ModelCatalog {
             source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small,
-            precision = ModelBars.precision("small")!!,
+            precision = 0.9f,
             speed = ModelBars.speed("small"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
@@ -189,7 +190,7 @@ object ModelCatalog {
             source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small_q5,
-            precision = ModelBars.precision("small-q5_1")!!,
+            precision = 0.85f,
             speed = ModelBars.speed("small-q5_1"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
@@ -202,7 +203,7 @@ object ModelCatalog {
             source = ModelSource.Files(WHISPER_BASE_URL),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_medium,
-            precision = ModelBars.precision("medium-q5_0")!!,
+            precision = 0.9f,
             speed = ModelBars.speed("medium-q5_0"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
@@ -220,7 +221,7 @@ object ModelCatalog {
             source = ModelSource.Archive(PARAKEET_110M_ARCHIVE_URL),
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_parakeet_110m,
-            precision = ModelBars.precision("parakeet-ctc-110m-int8")!!,
+            precision = 0.75f,
             speed = ModelBars.speed("parakeet-ctc-110m-int8"),
             provider = AiProvider.PARAKEET,
             languages = ModelLanguages.ENGLISH,
@@ -240,8 +241,6 @@ object ModelCatalog {
             source = ModelSource.Files(PARAKEET_V3_BASE_URL),
             qualityLabelRes = R.string.model_quality_premium,
             descriptionRes = R.string.model_description_parakeet_v3,
-            // Hand-set, not rated from the measurement until the long-French drift is fixed and
-            // re-measured (#330, #180): see ModelBars.PIXEL_4.
             precision = 0.95f,
             speed = ModelBars.speed("parakeet-tdt-0.6b-v3"),
             provider = AiProvider.PARAKEET,

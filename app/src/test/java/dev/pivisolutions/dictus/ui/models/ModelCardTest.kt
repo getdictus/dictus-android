@@ -56,7 +56,7 @@ class ModelCardTest {
     }
 
     @Test
-    fun `model card fills as many segments as the measured rule gives`() {
+    fun `model card fills as many speed segments as the measured rule gives`() {
         // Parakeet 0.6B v3 was the visible bug of #180: 2/5 speed on the card.
         val key = "parakeet-tdt-0.6b-v3"
         val model = ModelCatalog.findByKey(key)!!
@@ -78,7 +78,7 @@ class ModelCardTest {
         val filled = SemanticsMatcher.expectValue(MetricSegmentFilled, true)
         composeTestRule.onAllNodes(hasTestTag("model_speed_segment") and filled)
             .assertCountEquals(SPEED_SEGMENTS_PARAKEET_V3)
-        // Precision stays hand-set (0.95) until the long-French drift is fixed (#330)
+        // Precision stays hand-set (0.95) until measured with a real voice
         composeTestRule.onAllNodes(hasTestTag("model_precision_segment") and filled)
             .assertCountEquals(5)
         assertEquals(SPEED_SEGMENTS_PARAKEET_V3, ModelBars.speedSegments(key))
