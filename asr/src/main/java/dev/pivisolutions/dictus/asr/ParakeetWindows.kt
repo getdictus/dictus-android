@@ -5,6 +5,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * Splits a long take into windows Parakeet decodes one by one, and stitches their text.
@@ -24,6 +25,11 @@ import kotlin.math.min
  * Words near a cut may be timed just before it by one window and just after it by the
  * next, so both keep them: a run of words that ends one side and starts the other with
  * the same text and overlapping times is the same speech, and is kept once.
+ *
+ * A window with speech can come back empty (#330: one en-long run on the Pixel lost a
+ * passage). It is decoded once more, on a fresh stream, over a window [MARGIN_S] wider on
+ * each side. Wider, not the same samples: sherpa-onnx decodes the same input to the same
+ * output, so a plain retry would come back empty again.
  *
  * Pure functions, no native call: unit tested without sherpa-onnx.
  */
@@ -48,6 +54,10 @@ internal object ParakeetWindows {
     // Longest run of words checked for a repeat at a cut; 2 s of overlap holds about 6.
     private const val MAX_SEAM_WORDS = 6
 
+    // RMS above which a window's kept stretch holds speech (-40 dBFS); below it, an empty
+    // result is right and is not decoded again.
+    private const val SPEECH_RMS = 0.01
+
     /**
      * A window of samples [start, end) to decode on its own. Its words starting in
      * [keepFrom, keepUntil) (sample indices of the take) go into the stitched text.
@@ -63,8 +73,29 @@ internal object ParakeetWindows {
         if (windows.size == 1) return decode(samples).text
         Timber.d("Parakeet decoding %d windows: %s", windows.size,
             windows.joinToString { "%.1f-%.1f s".format(it.start.toFloat() / SAMPLE_RATE, it.end.toFloat() / SAMPLE_RATE) })
-        val decodes = windows.map { decode(samples.copyOfRange(it.start, it.end)) }
-        return stitch(windows, decodes)
+        val decoded = windows.map { window ->
+            val result = decode(samples.copyOfRange(window.start, window.end))
+            if (result.text.isNotBlank() || !hasSpeech(samples, window)) return@map window to result
+            val wider = widened(window, samples.size)
+            Timber.w("Parakeet window %.1f-%.1f s came back empty, decoding %.1f-%.1f s once more",
+                window.start.toFloat() / SAMPLE_RATE, window.end.toFloat() / SAMPLE_RATE,
+                wider.start.toFloat() / SAMPLE_RATE, wider.end.toFloat() / SAMPLE_RATE)
+            wider to decode(samples.copyOfRange(wider.start, wider.end))
+        }
+        return stitch(decoded.map { it.first }, decoded.map { it.second })
+    }
+
+    /** [window] with [MARGIN_S] more context on each side; it keeps the same words. */
+    fun widened(window: Window, size: Int): Window {
+        val margin = (MARGIN_S * SAMPLE_RATE).toInt()
+        return window.copy(start = max(0, window.start - margin), end = min(size, window.end + margin))
+    }
+
+    /** Whether the stretch [window] keeps words from is louder than silence. */
+    fun hasSpeech(samples: FloatArray, window: Window): Boolean {
+        var energy = 0.0
+        for (i in window.keepFrom until window.keepUntil) energy += samples[i] * samples[i]
+        return sqrt(energy / (window.keepUntil - window.keepFrom)) >= SPEECH_RMS
     }
 
     /** The windows of a take of [samples]: one for a short take. */

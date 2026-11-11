@@ -156,6 +156,49 @@ class ParakeetWindowsTest {
     }
 
     @Test
+    fun `an empty window with speech is decoded once more, over a wider window`() {
+        val samples = take(40f)
+        val sizes = mutableListOf<Int>()
+        // The second window comes back empty the first time only.
+        val text = ParakeetWindows.transcribe(samples) { slice ->
+            sizes += slice.size
+            if (sizes.size == 2) ParakeetDecode("") else decode("mot${sizes.size}" to slice.size / 2f / SAMPLE_RATE)
+        }
+
+        val windows = ParakeetWindows.plan(samples)
+        assertEquals(windows.size + 1, sizes.size)
+        assertEquals(sizes[1] + 2 * SAMPLE_RATE, sizes[2])
+        assertEquals("mot1 mot3 mot4", text)
+    }
+
+    @Test
+    fun `a window that stays empty is decoded twice, not more`() {
+        val samples = take(40f)
+        var calls = 0
+        val text = ParakeetWindows.transcribe(samples) { slice ->
+            calls++
+            if (calls in 2..3) ParakeetDecode("") else decode("mot$calls" to slice.size / 2f / SAMPLE_RATE)
+        }
+
+        assertEquals(ParakeetWindows.plan(samples).size + 1, calls)
+        assertEquals("mot1 mot4", text)
+    }
+
+    @Test
+    fun `an empty window over silence is not decoded again`() {
+        // The middle window, between cuts at about 13.3 s and 26.7 s, is all silence.
+        val samples = take(40f, 13f to 27.5f)
+        var calls = 0
+        val text = ParakeetWindows.transcribe(samples) { slice ->
+            calls++
+            if (calls == 2) ParakeetDecode("") else decode("mot$calls" to slice.size / 2f / SAMPLE_RATE)
+        }
+
+        assertEquals(3, calls)
+        assertEquals("mot1 mot3", text)
+    }
+
+    @Test
     fun `one window returns the decoder's text untouched`() {
         val samples = take(5f)
         val decode = ParakeetDecode(" Bonjour.", listOf("▁Bonjour", "."), listOf(0.2f, 0.6f))
