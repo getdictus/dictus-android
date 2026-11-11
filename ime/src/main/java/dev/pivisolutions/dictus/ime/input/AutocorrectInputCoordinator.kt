@@ -51,6 +51,15 @@ enum class AutocorrectUndoResult {
  */
 data class AutocorrectUndoOffer(val original: String, val serial: Long)
 
+/** What [AutocorrectInputCoordinator.revertIfAddress] did before the key is written. */
+enum class AutocorrectAddressRevert {
+    /** No address, or the correction could not be put back: the editor is as it was. */
+    UNCHANGED,
+    RESTORED,
+    /** The editor may have changed: the key must not be written over an unknown state. */
+    INDETERMINATE,
+}
+
 /**
  * Session-bound, deterministic policy around [AutocorrectEditorTransaction].
  *
@@ -78,6 +87,11 @@ class AutocorrectInputCoordinator(
          * can be verified, and the offer falls back to closing at the next input but Backspace.
          */
         val tracksTyping: Boolean = true,
+        /**
+         * Absolute cursor offset right after the correction and its trailing text, read from the
+         * editor once the correction was applied; null when the editor does not tell it.
+         */
+        val cursorAfter: Int? = null,
     )
 
     private var session = 0L
@@ -242,6 +256,7 @@ class AutocorrectInputCoordinator(
                     personalizedLearningAllowed = personalizedLearningAllowed,
                     serial = ++undoSerial,
                     written = result.undo.trailing,
+                    cursorAfter = absoluteCursor(editor),
                 )
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.APPLIED
                 lastSpaceDetail = null
@@ -290,22 +305,32 @@ class AutocorrectInputCoordinator(
      * Puts back the word corrected at a punctuation mark when [text], about to be typed right
      * after that mark, makes the whole an email address or a URL (#332, iOS #919): `helene.` was
      * corrected to `Hélène.`, and the `b` of `helene.bethmont@gmail.com` reveals an address. Not a
-     * refusal of the correction by the user, so nothing is learned. Returns true when restored.
+     * refusal of the correction by the user, so nothing is learned.
+     *
+     * Only at the correction's own place: the undo matches the text before the cursor, so with the
+     * cursor after another `Hélène.` of the document it would rewrite that one. A cursor anywhere
+     * else, or an editor that does not tell where it is, drops the offer instead.
      */
-    fun revertIfAddress(editor: AutocorrectEditor, text: String): Boolean {
-        val pending = pendingUndo ?: return false
+    fun revertIfAddress(editor: AutocorrectEditor, text: String): AutocorrectAddressRevert {
+        val pending = pendingUndo ?: return AutocorrectAddressRevert.UNCHANGED
         val mark = pending.undo.trailing
         if (
             !AutocorrectTrigger.commitsWord(mark) || pending.written != mark ||
             !AddressLikeToken.matches(pending.undo.original + mark + text)
         ) {
-            return false
+            return AutocorrectAddressRevert.UNCHANGED
         }
         pendingUndo = null
         expectedSuggestion = null
         suggestionSnapshot = null
-        return AutocorrectEditorTransaction.undo(editor, pending.undo, identityEligible = true) is
-            AutocorrectTransactionResult.Restored
+        if (pending.cursorAfter == null || absoluteCursor(editor) != pending.cursorAfter) {
+            return AutocorrectAddressRevert.UNCHANGED
+        }
+        return when (AutocorrectEditorTransaction.undo(editor, pending.undo, identityEligible = true)) {
+            is AutocorrectTransactionResult.Restored -> AutocorrectAddressRevert.RESTORED
+            is AutocorrectTransactionResult.IndeterminateMutation -> AutocorrectAddressRevert.INDETERMINATE
+            else -> AutocorrectAddressRevert.UNCHANGED
+        }
     }
 
     /**
@@ -423,6 +448,15 @@ class AutocorrectInputCoordinator(
      * would refuse it as INVALID_TOKEN (#287). Any Unicode decimal digit, as iOS `decimalDigits`.
      */
     private fun hasDigit(word: String): Boolean = word.codePoints().anyMatch(Character::isDigit)
+
+    /** The editor's collapsed cursor as an absolute offset, or null when it cannot be read. */
+    private fun absoluteCursor(editor: AutocorrectEditor): Int? = try {
+        editor.snapshot()
+            ?.takeIf { it.selectionStart == it.selectionEnd && it.selectionStart >= 0 }
+            ?.let { it.startOffset + it.selectionStart }
+    } catch (_: RuntimeException) {
+        null
+    }
 
     /** Whether the [suffixLength] characters at the end of [text] start a word of their own. */
     private fun endsAtWordStart(text: CharSequence, suffixLength: Int): Boolean {
