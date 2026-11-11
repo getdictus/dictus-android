@@ -3,6 +3,8 @@ package dev.pivisolutions.dictus.ui.models
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -13,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import dev.pivisolutions.dictus.core.theme.DictusTheme
+import dev.pivisolutions.dictus.model.ModelBars
 import dev.pivisolutions.dictus.model.ModelCatalog
 import org.junit.Rule
 import org.junit.Test
@@ -50,6 +53,35 @@ class ModelCardTest {
         composeTestRule.onNodeWithText("Speed").assertIsDisplayed()
         composeTestRule.onAllNodesWithTag("model_precision_segment").assertCountEquals(5)
         composeTestRule.onAllNodesWithTag("model_speed_segment").assertCountEquals(5)
+    }
+
+    @Test
+    fun `model card fills as many speed segments as the measured rule gives`() {
+        // Parakeet 0.6B v3 was the visible bug of #180: 2/5 speed on the card.
+        val key = "parakeet-tdt-0.6b-v3"
+        val model = ModelCatalog.findByKey(key)!!
+
+        composeTestRule.setContent {
+            DictusTheme {
+                ModelCard(
+                    model = model,
+                    isDownloaded = true,
+                    isActive = false,
+                    canDelete = false,
+                    onDownload = {},
+                    onDelete = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        val filled = SemanticsMatcher.expectValue(MetricSegmentFilled, true)
+        composeTestRule.onAllNodes(hasTestTag("model_speed_segment") and filled)
+            .assertCountEquals(SPEED_SEGMENTS_PARAKEET_V3)
+        // Precision stays hand-set (0.95) until measured with a real voice
+        composeTestRule.onAllNodes(hasTestTag("model_precision_segment") and filled)
+            .assertCountEquals(5)
+        assertEquals(SPEED_SEGMENTS_PARAKEET_V3, ModelBars.speedSegments(key))
     }
 
     @Test
@@ -204,5 +236,10 @@ class ModelCardTest {
                 )
             }
         }
+    }
+
+    private companion object {
+        /** Measured on the Pixel 4 (ModelBars.PIXEL_4); the hand-set bar was 2. */
+        const val SPEED_SEGMENTS_PARAKEET_V3 = 4
     }
 }
