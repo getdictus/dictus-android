@@ -94,7 +94,7 @@ class AutocorrectNotAWordTest {
 
     @Test
     fun `a symbol glued to a word gets a plain space`() {
-        for (input in listOf("mot&", "mot#", "mot*", "mot%", "mot@", "mot/", "&mot")) {
+        for (input in listOf("mot&", "mot#", "mot*", "mot%", "mot/", "&mot")) {
             val coordinator = coordinatorOffering(input, "mot")
 
             assertEquals(input, AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(UntouchableEditor) {})
@@ -139,6 +139,17 @@ class AutocorrectNotAWordTest {
 
             assertEquals(input, AutocorrectSpaceResult.CORRECTED, coordinator.onSpace(editor) {})
             assertEquals("$correction ", editor.text)
+        }
+    }
+
+    @Test
+    fun `an address with an elision or a symbol in it is an address, not a symbol word`() {
+        // The address rule (#332) runs before the word shape: both refuse these, only one names them.
+        for (input in listOf("l'adresse.de@site.fr", "mot&co@site.fr", "https://x.fr/a#b")) {
+            val coordinator = coordinatorOffering(input, "mot")
+
+            assertEquals(input, AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(UntouchableEditor) {})
+            assertEquals(input, AutocorrectSpaceDiagnosis.ADDRESS, coordinator.lastSpaceDiagnosis)
         }
     }
 

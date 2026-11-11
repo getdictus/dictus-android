@@ -1198,6 +1198,9 @@ class DictusImeService : LifecycleInputMethodService() {
         } else {
             autoFullStop.clear()
             clearSuggestionState()
+            if (autocorrectCoordinator.revertIfAddress(InputConnectionAutocorrectEditor(inputConnection), text)) {
+                Timber.d("Autocorrect reverted: the word starts an address")
+            }
             val typed = inputConnection.commitText(text, 1)
             if (typed) autocorrectCoordinator.onTextTyped(text) else autocorrectCoordinator.onOtherInput()
             typed
