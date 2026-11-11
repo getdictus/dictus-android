@@ -33,8 +33,9 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param qualityLabelRes Short quality descriptor (e.g. "Fast"), as a string resource.
  * @param descriptionRes  Short description shown on the model card, as a string resource:
  *                        the catalog has no Context, the UI resolves it in its locale (#236).
- * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
- * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
+ * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar, hand-set until measured
+ *                        with a real voice (#180).
+ * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar, from [ModelBars] (#180).
  * @param provider        Inference engine.
  * @param source          Where the files are downloaded from.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
@@ -151,7 +152,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_tiny,
             precision = 0.4f,
-            speed = 1.0f,
+            speed = ModelBars.speed("tiny"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -164,7 +165,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_balanced,
             descriptionRes = R.string.model_description_base,
             precision = 0.6f,
-            speed = 0.7f,
+            speed = ModelBars.speed("base"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -177,7 +178,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small,
             precision = 0.9f,
-            speed = 0.35f,
+            speed = ModelBars.speed("small"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -190,7 +191,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small_q5,
             precision = 0.85f,
-            speed = 0.55f,
+            speed = ModelBars.speed("small-q5_1"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
         ),
@@ -203,7 +204,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_medium,
             precision = 0.9f,
-            speed = 0.3f,
+            speed = ModelBars.speed("medium-q5_0"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
         ),
@@ -221,7 +222,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_parakeet_110m,
             precision = 0.75f,
-            speed = 0.85f,
+            speed = ModelBars.speed("parakeet-ctc-110m-int8"),
             provider = AiProvider.PARAKEET,
             languages = ModelLanguages.ENGLISH,
             timeoutFactor = 0.6,
@@ -241,7 +242,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_premium,
             descriptionRes = R.string.model_description_parakeet_v3,
             precision = 0.95f,
-            speed = 0.40f,
+            speed = ModelBars.speed("parakeet-tdt-0.6b-v3"),
             provider = AiProvider.PARAKEET,
             isTransducer = true,
             minRamGb = BuildConfig.PARAKEET_MIN_RAM_GB,
