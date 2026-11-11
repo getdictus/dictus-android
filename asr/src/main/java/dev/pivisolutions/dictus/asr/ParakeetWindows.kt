@@ -21,7 +21,9 @@ import kotlin.math.min
  *
  * Stitching works on whole words and times, not on matching text: a window keeps the
  * words that start between its two cuts, and the margins only give the decoder context.
- * A word decoded on both sides of a cut (it starts right on it) is kept once.
+ * Words near a cut may be timed just before it by one window and just after it by the
+ * next, so both keep them: a run of words that ends one side and starts the other with
+ * the same text and overlapping times is the same speech, and is kept once.
  *
  * Pure functions, no native call: unit tested without sherpa-onnx.
  */
@@ -43,8 +45,8 @@ internal object ParakeetWindows {
     private const val FRAME = SAMPLE_RATE / 50
     private const val QUIET_FRAMES = 5
 
-    // Two equal words this close at a cut are the same word decoded by both windows.
-    private const val SAME_WORD_S = 0.5f
+    // Longest run of words checked for a repeat at a cut; 2 s of overlap holds about 6.
+    private const val MAX_SEAM_WORDS = 6
 
     /**
      * A window of samples [start, end) to decode on its own. Its words starting in
@@ -129,44 +131,61 @@ internal object ParakeetWindows {
             val offset = window.start.toFloat() / SAMPLE_RATE
             val from = window.keepFrom.toFloat() / SAMPLE_RATE
             val until = window.keepUntil.toFloat() / SAMPLE_RATE
+            val windowEnd = window.end.toFloat() / SAMPLE_RATE
             // Without a time per token the window cannot be trimmed to its cuts: keep its
             // whole text, which may repeat a word or two of the overlap rather than lose any.
             val words = if (decode.timestamps.size != decode.tokens.size) {
-                listOf(Word(decode.text.trim(), from)).filter { it.text.isNotEmpty() }
+                listOf(Word(decode.text.trim(), from, until)).filter { it.text.isNotEmpty() }
             } else {
-                words(decode).map { it.copy(time = it.time + offset) }.filter { it.time >= from && it.time < until }
+                words(decode).map { it.copy(time = it.time + offset, end = min(it.end + offset, windowEnd)) }
+                    .filter { it.time >= from && it.time < until }
             }
-            val previous = kept.lastOrNull()
-            val first = words.firstOrNull()
-            val duplicate = previous != null && first != null &&
-                first.time - previous.time < SAME_WORD_S && normalized(first.text) == normalized(previous.text)
-            kept += if (duplicate) words.drop(1) else words
+            kept += words.drop(repeatedAtSeam(kept, words))
         }
         return kept.joinToString(" ") { it.text }
     }
 
-    data class Word(val text: String, val time: Float)
+    /**
+     * How many of [next]'s first words repeat the end of [kept]: the longest run with the
+     * same text on both sides where [next]'s run starts before [kept]'s run ends, i.e. the
+     * same stretch of audio decoded by both windows. A word said twice starts after the
+     * first one ends, so it is kept.
+     */
+    fun repeatedAtSeam(kept: List<Word>, next: List<Word>): Int {
+        val last = kept.lastOrNull() ?: return 0
+        val first = next.firstOrNull() ?: return 0
+        if (first.time >= last.end) return 0
+        return (minOf(MAX_SEAM_WORDS, kept.size, next.size) downTo 1).firstOrNull { n ->
+            kept.takeLast(n).map { normalized(it.text) } == next.take(n).map { normalized(it.text) }
+        } ?: 0
+    }
+
+    /** A word, the time its first token starts and the time the next word starts. */
+    data class Word(val text: String, val time: Float, val end: Float)
 
     /**
      * The words of a decode with the start time of their first token. A token starting with
      * « ▁ » (SentencePiece) or a space opens a word; the others, punctuation included,
-     * continue the current one.
+     * continue the current one. A word ends where the next one starts; the last one, at
+     * infinity, since the end of the decoded audio is not known here.
      */
     fun words(decode: ParakeetDecode): List<Word> {
-        val words = mutableListOf<Word>()
+        val starts = mutableListOf<Pair<String, Float>>()
         var text = StringBuilder()
         var time = 0f
         decode.tokens.zip(decode.timestamps).forEach { (token, start) ->
             val piece = token.replace('▁', ' ')
             if (piece.startsWith(" ") && text.isNotBlank()) {
-                words += Word(text.toString().trim(), time)
+                starts += text.toString().trim() to time
                 text = StringBuilder()
             }
             if (text.isBlank()) time = start
             text.append(piece)
         }
-        if (text.isNotBlank()) words += Word(text.toString().trim(), time)
-        return words
+        if (text.isNotBlank()) starts += text.toString().trim() to time
+        return starts.mapIndexed { i, (word, start) ->
+            Word(word, start, starts.getOrNull(i + 1)?.second ?: Float.POSITIVE_INFINITY)
+        }
     }
 
     private fun normalized(word: String) = word.lowercase().filter { it.isLetterOrDigit() }

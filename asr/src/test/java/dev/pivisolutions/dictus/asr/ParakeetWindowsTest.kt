@@ -75,7 +75,7 @@ class ParakeetWindowsTest {
     }
 
     @Test
-    fun `tokens make whole words timed by their first token`() {
+    fun `tokens make whole words, from their first token to the next word`() {
         val decode = ParakeetDecode(
             text = " Bonjour, le monde.",
             tokens = listOf("▁Bon", "jour", ",", "▁le", " mon", "de", "."),
@@ -83,7 +83,7 @@ class ParakeetWindowsTest {
         )
 
         assertEquals(
-            listOf(Word("Bonjour,", 0.1f), Word("le", 0.8f), Word("monde.", 1.2f)),
+            listOf(Word("Bonjour,", 0.1f, 0.8f), Word("le", 0.8f, 1.2f), Word("monde.", 1.2f, Float.POSITIVE_INFINITY)),
             ParakeetWindows.words(decode),
         )
     }
@@ -106,23 +106,53 @@ class ParakeetWindowsTest {
         assertEquals("Il pleut ce matin à Paris et ailleurs", ParakeetWindows.stitch(windows, listOf(a, b)))
     }
 
+    // Two windows cut at 10 s; B starts at 9 s, so its token times are 9 s behind the take's.
+    private val seam = listOf(Window(0, 11 * SAMPLE_RATE, 0, 10 * SAMPLE_RATE), Window(9 * SAMPLE_RATE, 20 * SAMPLE_RATE, 10 * SAMPLE_RATE, 20 * SAMPLE_RATE))
+
+    private fun decode(vararg words: Pair<String, Float>) =
+        ParakeetDecode(words.joinToString(" ") { it.first }, words.map { "▁" + it.first }, words.map { it.second })
+
     @Test
     fun `a word decoded on both sides of a cut is kept once`() {
-        val windows = listOf(Window(0, 11 * SAMPLE_RATE, 0, 10 * SAMPLE_RATE), Window(9 * SAMPLE_RATE, 20 * SAMPLE_RATE, 10 * SAMPLE_RATE, 20 * SAMPLE_RATE))
         // « demain » starts right on the cut: A times it just before, B just after.
-        val a = ParakeetDecode("à demain", listOf("▁à", "▁demain"), listOf(9.5f, 9.95f))
-        val b = ParakeetDecode("Demain soir", listOf("▁Demain", "▁soir"), listOf(1.05f, 1.6f))
+        val a = decode("à" to 9.5f, "demain" to 9.95f, "soir" to 10.5f)
+        val b = decode("Demain" to 1.05f, "soir" to 1.6f)
 
-        assertEquals("à demain soir", ParakeetWindows.stitch(windows, listOf(a, b)))
+        assertEquals("à demain soir", ParakeetWindows.stitch(seam, listOf(a, b)))
+    }
+
+    @Test
+    fun `two words decoded on both sides of a cut are kept once`() {
+        // What the Spanish corpus clip gave (#330): « los recordatorios » written twice.
+        val a = decode("ahora" to 8.9f, "los" to 9.4f, "recordatorios" to 9.7f, "se" to 10.6f)
+        val b = decode("los" to 1.02f, "recordatorios" to 1.3f, "se" to 1.6f, "programan" to 1.8f)
+
+        assertEquals("ahora los recordatorios se programan", ParakeetWindows.stitch(seam, listOf(a, b)))
+    }
+
+    @Test
+    fun `three words decoded on both sides of a cut are kept once`() {
+        val a = decode("la" to 8.8f, "pull" to 9.1f, "request" to 9.4f, "hier" to 9.8f, "soir" to 10.6f)
+        val b = decode("pull" to 1.05f, "request" to 1.35f, "hier" to 1.7f, "soir" to 2.0f)
+
+        assertEquals("la pull request hier soir", ParakeetWindows.stitch(seam, listOf(a, b)))
     }
 
     @Test
     fun `a word said twice in a row is not merged`() {
-        val windows = listOf(Window(0, 11 * SAMPLE_RATE, 0, 10 * SAMPLE_RATE), Window(9 * SAMPLE_RATE, 20 * SAMPLE_RATE, 10 * SAMPLE_RATE, 20 * SAMPLE_RATE))
-        val a = ParakeetDecode("très", listOf("▁très"), listOf(9.2f))
-        val b = ParakeetDecode("très bien", listOf("▁très", "▁bien"), listOf(1.3f, 1.8f))
+        // A heard both « très »: the second one starts after the first ends, so B's is the second.
+        val a = decode("très" to 9.7f, "très" to 10.05f)
+        val b = decode("très" to 1.1f, "bien" to 1.5f)
 
-        assertEquals("très très bien", ParakeetWindows.stitch(windows, listOf(a, b)))
+        assertEquals("très très bien", ParakeetWindows.stitch(seam, listOf(a, b)))
+    }
+
+    @Test
+    fun `a word said twice with a pause is not merged`() {
+        val a = decode("très" to 9.2f, "très" to 10.3f)
+        val b = decode("très" to 1.3f, "bien" to 1.8f)
+
+        assertEquals("très très bien", ParakeetWindows.stitch(seam, listOf(a, b)))
     }
 
     @Test
