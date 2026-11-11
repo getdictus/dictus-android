@@ -17,7 +17,8 @@ import timber.log.Timber
  * Wraps the Android AudioRecord API to capture 16kHz mono Float32 audio.
  *
  * Audio samples accumulate in an in-memory buffer (ArrayList<Float>).
- * Each read chunk also feeds [WaveformEnergy], the iOS waveform pipeline.
+ * Each read chunk also feeds [WaveformEnergy], the iOS waveform pipeline, and [takeWriter]
+ * when the take is kept on disk (#251).
  *
  * WHY Float32 (ENCODING_PCM_FLOAT): whisper.cpp expects float input.
  * Capturing directly in float avoids a PCM_16BIT-to-float conversion step.
@@ -28,6 +29,7 @@ import timber.log.Timber
  */
 class AudioCaptureManager(
     private val audioManager: AudioManager? = null,
+    private val takeWriter: TakeWriter? = null,
 ) : AudioCapture {
 
     companion object {
@@ -103,6 +105,7 @@ class AudioCaptureManager(
             while (isActive) {
                 val read = recorder?.read(readBuffer, 0, readBuffer.size, AudioRecord.READ_BLOCKING) ?: break
                 if (read <= 0) break
+                takeWriter?.append(readBuffer, read)
                 synchronized(samples) {
                     for (i in 0 until read) {
                         samples.add(readBuffer[i])
@@ -126,6 +129,7 @@ class AudioCaptureManager(
         captureJob = null
         activeRecorder?.release()
         recorder = null
+        takeWriter?.close()
         Timber.d("AudioRecord stopped, captured ${samples.size} samples")
         val result: FloatArray
         synchronized(samples) {
@@ -147,6 +151,7 @@ class AudioCaptureManager(
         captureJob = null
         activeRecorder?.release()
         recorder = null
+        takeWriter?.close()
         synchronized(samples) {
             samples.clear()
         }
