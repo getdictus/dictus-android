@@ -141,7 +141,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `voice-notes.progress-activity` | N/A | iOS-only (N/A) | no |
 | `typing.suggestions` | Free | present | no |
 | `typing.autocorrect-on-space` | Free | present | no |
-| `typing.autocorrect-on-punctuation` | Free | present — `, . ; : ! ?` and Return, never `'` or `-`, as iOS #872 (#268) | no |
+| `typing.autocorrect-on-punctuation` | Free | present — `, . ; : ! ?` and Return, never `'` or `-`, as iOS #872 (#268); never inside an e-mail address or a URL (#332) | no |
 | `typing.undo-correction` | Free | partial — ⌫ right after the correction; no chip in the bar | no |
 | `typing.auto-full-stop` | Free | present — same rule as iOS `AutoFullStop`; ⌫ right after turns it back into one space (Android only); never in password fields | no |
 | `typing.accents` | Free | present — long press, accent strip | no |

@@ -29,6 +29,8 @@ enum class AutocorrectSpaceDiagnosis {
     NO_SUGGESTION_EVIDENCE,
     /** The word has a digit in it (`14h`, `3€`): never corrected, as iOS #74. */
     NOT_A_WORD,
+    /** The word is part of an email address or a URL (`a.b@c.fr`, `www.x.fr`), as iOS #919. */
+    ADDRESS,
     INPUT_ALREADY_KNOWN,
     INPUT_LEARNED,
     NO_CANDIDATE,
@@ -201,6 +203,7 @@ class AutocorrectInputCoordinator(
         val applicable = when {
             !identityEligible || offered == null -> null
             hasDigit(offered.input) -> null
+            AddressLikeToken.matches(offered.input) -> null
             offered.isKnownWord && !offered.knownInputDominance -> null
             offered.isLearnedWord -> null
             correction == null -> null
@@ -211,6 +214,7 @@ class AutocorrectInputCoordinator(
             lastSpaceDiagnosis = when {
                 !identityEligible || offered == null -> AutocorrectSpaceDiagnosis.NO_SUGGESTION_EVIDENCE
                 hasDigit(offered.input) -> AutocorrectSpaceDiagnosis.NOT_A_WORD
+                AddressLikeToken.matches(offered.input) -> AutocorrectSpaceDiagnosis.ADDRESS
                 offered.isKnownWord && !offered.knownInputDominance ->
                     AutocorrectSpaceDiagnosis.INPUT_ALREADY_KNOWN
                 offered.isLearnedWord -> AutocorrectSpaceDiagnosis.INPUT_LEARNED
@@ -280,6 +284,28 @@ class AutocorrectInputCoordinator(
         sendReturn()
         onTextTyped("\n")
         return result
+    }
+
+    /**
+     * Puts back the word corrected at a punctuation mark when [text], about to be typed right
+     * after that mark, makes the whole an email address or a URL (#332, iOS #919): `helene.` was
+     * corrected to `Hélène.`, and the `b` of `helene.bethmont@gmail.com` reveals an address. Not a
+     * refusal of the correction by the user, so nothing is learned. Returns true when restored.
+     */
+    fun revertIfAddress(editor: AutocorrectEditor, text: String): Boolean {
+        val pending = pendingUndo ?: return false
+        val mark = pending.undo.trailing
+        if (
+            !AutocorrectTrigger.commitsWord(mark) || pending.written != mark ||
+            !AddressLikeToken.matches(pending.undo.original + mark + text)
+        ) {
+            return false
+        }
+        pendingUndo = null
+        expectedSuggestion = null
+        suggestionSnapshot = null
+        return AutocorrectEditorTransaction.undo(editor, pending.undo, identityEligible = true) is
+            AutocorrectTransactionResult.Restored
     }
 
     /**
