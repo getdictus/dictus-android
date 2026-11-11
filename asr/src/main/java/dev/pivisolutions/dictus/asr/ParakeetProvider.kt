@@ -190,13 +190,22 @@ class ParakeetProvider(
      * For CTC models the language param is ignored (English-only).
      * For transducer v3 models, language is auto-detected from audio.
      *
+     * A take longer than [ParakeetWindows.MAX_SEGMENT_S] is decoded in overlapping windows
+     * cut on silences, each on a fresh stream, then stitched (#330, see [ParakeetWindows]).
+     *
      * @param samples FloatArray of 16kHz mono audio.
      * @param language BCP-47 language code (ignored — Parakeet auto-detects).
      * @return Raw transcribed text.
      */
     override suspend fun transcribe(samples: FloatArray, language: String): String = runNative {
         val r = recognizer ?: throw IllegalStateException("ParakeetProvider not initialized — call initialize() first")
-        r.transcribe(samples)
+        val windows = ParakeetWindows.plan(samples)
+        val decodes = windows.map { r.transcribe(samples.copyOfRange(it.start, it.end)) }
+        if (windows.size > 1) {
+            Timber.d("Parakeet decoded %d windows: %s", windows.size,
+                windows.joinToString { "%.1f-%.1f s".format(it.start.toFloat() / ParakeetWindows.SAMPLE_RATE, it.end.toFloat() / ParakeetWindows.SAMPLE_RATE) })
+        }
+        ParakeetWindows.stitch(windows, decodes)
     }
 
     /**
