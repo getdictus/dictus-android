@@ -199,13 +199,7 @@ class ParakeetProvider(
      */
     override suspend fun transcribe(samples: FloatArray, language: String): String = runNative {
         val r = recognizer ?: throw IllegalStateException("ParakeetProvider not initialized — call initialize() first")
-        val windows = ParakeetWindows.plan(samples)
-        val decodes = windows.map { r.transcribe(samples.copyOfRange(it.start, it.end)) }
-        if (windows.size > 1) {
-            Timber.d("Parakeet decoded %d windows: %s", windows.size,
-                windows.joinToString { "%.1f-%.1f s".format(it.start.toFloat() / ParakeetWindows.SAMPLE_RATE, it.end.toFloat() / ParakeetWindows.SAMPLE_RATE) })
-        }
-        ParakeetWindows.stitch(windows, decodes)
+        ParakeetWindows.transcribe(samples) { r.transcribe(it) }
     }
 
     /**

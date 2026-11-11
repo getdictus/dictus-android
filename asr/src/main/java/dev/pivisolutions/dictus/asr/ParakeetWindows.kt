@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.asr
 
+import timber.log.Timber
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
@@ -50,6 +51,19 @@ internal object ParakeetWindows {
      * [keepFrom, keepUntil) (sample indices of the take) go into the stitched text.
      */
     data class Window(val start: Int, val end: Int, val keepFrom: Int, val keepUntil: Int)
+
+    /**
+     * The text of a take of [samples]: decoded in one block when short, window by window
+     * otherwise, each window through [decode] (a fresh stream per call).
+     */
+    fun transcribe(samples: FloatArray, decode: (FloatArray) -> ParakeetDecode): String {
+        val windows = plan(samples)
+        if (windows.size == 1) return decode(samples).text
+        Timber.d("Parakeet decoding %d windows: %s", windows.size,
+            windows.joinToString { "%.1f-%.1f s".format(it.start.toFloat() / SAMPLE_RATE, it.end.toFloat() / SAMPLE_RATE) })
+        val decodes = windows.map { decode(samples.copyOfRange(it.start, it.end)) }
+        return stitch(windows, decodes)
+    }
 
     /** The windows of a take of [samples]: one for a short take. */
     fun plan(samples: FloatArray): List<Window> {
