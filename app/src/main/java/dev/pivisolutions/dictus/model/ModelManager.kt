@@ -33,8 +33,8 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param qualityLabelRes Short quality descriptor (e.g. "Fast"), as a string resource.
  * @param descriptionRes  Short description shown on the model card, as a string resource:
  *                        the catalog has no Context, the UI resolves it in its locale (#236).
- * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
- * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
+ * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar, from [ModelBars] (#180).
+ * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar, from [ModelBars] (#180).
  * @param provider        Download source and inference engine.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
  * @param languages       Spoken languages the model transcribes (issue #133).
@@ -125,8 +125,8 @@ object ModelCatalog {
             files = listOf(ModelFile("ggml-tiny.bin", 77_691_713L, "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21")),
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_tiny,
-            precision = 0.4f,
-            speed = 1.0f,
+            precision = ModelBars.precision("tiny")!!,
+            speed = ModelBars.speed("tiny"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -137,8 +137,8 @@ object ModelCatalog {
             files = listOf(ModelFile("ggml-base.bin", 147_951_465L, "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe")),
             qualityLabelRes = R.string.model_quality_balanced,
             descriptionRes = R.string.model_description_base,
-            precision = 0.6f,
-            speed = 0.7f,
+            precision = ModelBars.precision("base")!!,
+            speed = ModelBars.speed("base"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -149,8 +149,8 @@ object ModelCatalog {
             files = listOf(ModelFile("ggml-small.bin", 487_601_967L, "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b")),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small,
-            precision = 0.9f,
-            speed = 0.35f,
+            precision = ModelBars.precision("small")!!,
+            speed = ModelBars.speed("small"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -161,8 +161,8 @@ object ModelCatalog {
             files = listOf(ModelFile("ggml-small-q5_1.bin", 190_085_487L, "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb")),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small_q5,
-            precision = 0.85f,
-            speed = 0.55f,
+            precision = ModelBars.precision("small-q5_1")!!,
+            speed = ModelBars.speed("small-q5_1"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
         ),
@@ -173,8 +173,8 @@ object ModelCatalog {
             files = listOf(ModelFile("ggml-medium-q5_0.bin", 539_212_467L, "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f")),
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_medium,
-            precision = 0.9f,
-            speed = 0.3f,
+            precision = ModelBars.precision("medium-q5_0")!!,
+            speed = ModelBars.speed("medium-q5_0"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
         ),
@@ -190,8 +190,8 @@ object ModelCatalog {
             ),
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_parakeet_110m,
-            precision = 0.75f,
-            speed = 0.85f,
+            precision = ModelBars.precision("parakeet-ctc-110m-int8")!!,
+            speed = ModelBars.speed("parakeet-ctc-110m-int8"),
             provider = AiProvider.PARAKEET,
             languages = ModelLanguages.ENGLISH,
             timeoutFactor = 0.6,
@@ -209,8 +209,10 @@ object ModelCatalog {
             ),
             qualityLabelRes = R.string.model_quality_premium,
             descriptionRes = R.string.model_description_parakeet_v3,
+            // Hand-set, not rated from the measurement until the long-French drift is fixed and
+            // re-measured (#330, #180): see ModelBars.PIXEL_4.
             precision = 0.95f,
-            speed = 0.40f,
+            speed = ModelBars.speed("parakeet-tdt-0.6b-v3"),
             provider = AiProvider.PARAKEET,
             isTransducer = true,
             minRamGb = BuildConfig.PARAKEET_MIN_RAM_GB,

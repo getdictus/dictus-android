@@ -155,29 +155,77 @@ class ModelCatalogTest {
         }
     }
 
-    @Test
-    fun `whisper speed scores preserve expected device ordering`() {
-        val expectedFastestToSlowest = listOf(
-            "tiny",
-            "base",
-            "small-q5_1",
-            "small",
-            "medium-q5_0",
-        )
-        val actualFastestToSlowest = ModelCatalog.ALL
-            .filter { it.provider == AiProvider.WHISPER }
-            .sortedByDescending { it.speed }
-            .map { it.key }
+    // --- Precision and speed bars, measured on the Pixel 4 (issue #180) ---
 
-        assertEquals(expectedFastestToSlowest, actualFastestToSlowest)
+    @Test
+    fun `every catalog model has its bars from the measured rule`() {
+        ModelCatalog.ALL.forEach { model ->
+            assertTrue("${model.key} has no Pixel 4 measurement", model.key in ModelBars.PIXEL_4)
+            assertEquals("${model.key} speed", ModelBars.speed(model.key), model.speed)
+            ModelBars.precision(model.key)?.let { assertEquals("${model.key} precision", it, model.precision) }
+        }
     }
 
     @Test
-    fun `parakeet speed scores preserve expected device ordering`() {
-        val parakeet110m = ModelCatalog.findByKey("parakeet-ctc-110m-int8")!!
-        val parakeet600m = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!
+    fun `only Parakeet 0_6B v3 keeps a hand-set precision`() {
+        // Its long-French drift (#330) is a defect to fix, not a precision to show.
+        val notRated = ModelCatalog.ALL.map { it.key }.filter { ModelBars.precision(it) == null }
 
-        assertTrue(parakeet110m.speed > parakeet600m.speed)
+        assertEquals(listOf("parakeet-tdt-0.6b-v3"), notRated)
+    }
+
+    @Test
+    fun `Parakeet 0_6B v3 is at least as fast as Tiny`() {
+        // The bug of #180: hand-set to 2/5 speed while it was measured faster than every Whisper model.
+        val parakeetV3 = ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!
+        val tiny = ModelCatalog.findByKey("tiny")!!
+
+        assertTrue("v3 ${parakeetV3.speed} < tiny ${tiny.speed}", parakeetV3.speed >= tiny.speed)
+    }
+
+    @Test
+    fun `whisper speed bars follow model size`() {
+        val fastestToSlowest = listOf("tiny", "base", "small-q5_1", "small", "medium-q5_0")
+            .map { ModelCatalog.findByKey(it)!!.speed }
+
+        assertEquals(fastestToSlowest.sortedDescending(), fastestToSlowest)
+    }
+
+    @Test
+    fun `speed segments step down each time the wait doubles`() {
+        fun model(seconds: Double) = ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to seconds), 0, 1)
+        val measured = listOf(1.0, 1.5, 1.6, 3.0, 3.1, 6.0, 6.1, 12.0, 12.1)
+            .associate { "m$it" to model(it) }
+
+        assertEquals(
+            listOf(5, 5, 4, 4, 3, 3, 2, 2, 1),
+            measured.keys.map { ModelBars.speedSegments(it, measured) },
+        )
+    }
+
+    @Test
+    fun `speed ratio is the geometric mean over the clips a model was measured on`() {
+        val measured = mapOf(
+            "fast" to ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to 1.0, ModelBars.Clip.FR_LONG to 10.0), 0, 1),
+            // 9x on one clip, 1x on the other: geometric mean 3 -> 4 segments (an arithmetic mean, 5, gives 3)
+            "mixed" to ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to 9.0, ModelBars.Clip.FR_LONG to 10.0), 0, 1),
+            // English only: compared with the fastest model on its own clip
+            "english" to ModelBars.Measurement(mapOf(ModelBars.Clip.EN_SHORT to 0.5), 0, 1),
+        )
+
+        assertEquals(4, ModelBars.speedSegments("mixed", measured))
+        assertEquals(5, ModelBars.speedSegments("english", measured))
+    }
+
+    @Test
+    fun `precision segments follow the pooled WER thresholds`() {
+        val measured = listOf(0, 5, 6, 10, 11, 20, 21, 35, 36)
+            .associate { "wer$it" to ModelBars.Measurement(mapOf(ModelBars.Clip.FR_SHORT to 1.0), it, 100) }
+
+        assertEquals(
+            listOf(5, 5, 4, 4, 3, 3, 2, 2, 1),
+            measured.keys.map { ModelBars.precisionSegments(it, measured) },
+        )
     }
 
     // --- Supported languages (issue #133) ---

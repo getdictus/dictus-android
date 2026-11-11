@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -469,6 +472,13 @@ private fun LanguageSummaryRow(model: ModelInfo, onClick: (() -> Unit)?) {
 }
 
 /**
+ * True on a filled segment of a metric bar. Test-only semantics: accessibility services do not read
+ * a custom key, so TalkBack still announces nothing per segment.
+ */
+internal val MetricSegmentFilled = SemanticsPropertyKey<Boolean>("MetricSegmentFilled")
+private var SemanticsPropertyReceiver.metricSegmentFilled by MetricSegmentFilled
+
+/**
  * iOS-style segmented metric bar with 5 sub-bars.
  *
  * Matches iOS BrandWaveform model card design: each metric shows a label
@@ -510,6 +520,7 @@ private fun SegmentedMetricBar(
                 Box(
                     modifier = Modifier
                         .testTag(segmentTestTag)
+                        .semantics { metricSegmentFilled = i < filledCount }
                         .weight(1f)
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
