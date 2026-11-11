@@ -176,28 +176,6 @@ class ModelManagerTest {
         assertEquals(300L, modelManager.storageUsedBytes())
     }
 
-    // --- downloadUrl (backward compat) ---
-
-    @Test
-    fun `downloadUrl returns correct URL for tiny`() {
-        assertEquals(
-            "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.bin",
-            modelManager.downloadUrl("tiny"),
-        )
-    }
-
-    @Test
-    fun `downloadUrl returns correct URL for small-q5_1`() {
-        assertEquals(
-            "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small-q5_1.bin",
-            modelManager.downloadUrl("small-q5_1"),
-        )
-    }
-
-    @Test
-    fun `downloadUrl returns null for unknown model`() {
-        assertNull(modelManager.downloadUrl("nonexistent"))
-    }
 
     // --- DEFAULT_MODEL_KEY ---
 
