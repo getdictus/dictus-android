@@ -5,13 +5,14 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * A word with a digit in it is never autocorrected, at Space, a punctuation mark or Return (#287,
- * iOS #74 `DictusKeyboardBridge.handleSpace` and `autocorrectBeforeCursor`).
+ * A token that is not a word is never autocorrected, at Space, a punctuation mark or Return (#287).
+ * A digit (`14h`, iOS #74 `DictusKeyboardBridge.handleSpace` and `autocorrectBeforeCursor`), a
+ * symbol glued to a word (`mot&`) or an elision left open (`l'`).
  *
  * The transaction would refuse it anyway (INVALID_TOKEN): the guard keeps that wasted attempt out
  * of the editor and out of the refusal warnings.
  */
-class AutocorrectDigitTokenTest {
+class AutocorrectNotAWordTest {
 
     private fun coordinatorOffering(input: String, correction: String): AutocorrectInputCoordinator {
         val coordinator = AutocorrectInputCoordinator {}
@@ -89,6 +90,67 @@ class AutocorrectDigitTokenTest {
         assertEquals(AutocorrectSpaceResult.CORRECTED, coordinator.onSpace(editor) {})
         assertEquals("bonjour ", editor.text)
         assertEquals(AutocorrectSpaceDiagnosis.APPLIED, coordinator.lastSpaceDiagnosis)
+    }
+
+    @Test
+    fun `a symbol glued to a word gets a plain space`() {
+        for (input in listOf("mot&", "mot#", "mot*", "mot%", "mot@", "mot/", "&mot")) {
+            val coordinator = coordinatorOffering(input, "mot")
+
+            assertEquals(input, AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(UntouchableEditor) {})
+            assertEquals(input, AutocorrectSpaceDiagnosis.NOT_A_WORD, coordinator.lastSpaceDiagnosis)
+            assertNull(input, coordinator.lastSpaceDetail)
+        }
+    }
+
+    @Test
+    fun `a symbol word before a full stop is left as typed`() {
+        val coordinator = coordinatorOffering("mot&", "mot")
+
+        assertEquals(AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onWordEnd(UntouchableEditor, trailing = ".") {})
+        assertEquals(AutocorrectSpaceDiagnosis.NOT_A_WORD, coordinator.lastSpaceDiagnosis)
+    }
+
+    @Test
+    fun `an elision left open gets a plain space`() {
+        for ((input, correction) in listOf("l'" to "le", "qu'" to "que", "j’" to "je", "aujourd'" to "aujourd'hui")) {
+            val coordinator = coordinatorOffering(input, correction)
+
+            assertEquals(input, AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(UntouchableEditor) {})
+            assertEquals(input, AutocorrectSpaceDiagnosis.NOT_A_WORD, coordinator.lastSpaceDiagnosis)
+        }
+    }
+
+    @Test
+    fun `an elision left open before Return is left as typed and Return is sent`() {
+        val coordinator = coordinatorOffering("l'", "le")
+        var returns = 0
+
+        assertEquals(AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onReturn(UntouchableEditor) { returns++ })
+        assertEquals(1, returns)
+        assertEquals(AutocorrectSpaceDiagnosis.NOT_A_WORD, coordinator.lastSpaceDiagnosis)
+    }
+
+    @Test
+    fun `a misspelled word with an inner apostrophe is still corrected`() {
+        for ((input, correction) in listOf("aujourd'hiu" to "aujourd'hui", "l'ordinateu" to "l'ordinateur")) {
+            val editor = DocumentEditor(input)
+            val coordinator = coordinatorOffering(input, correction)
+
+            assertEquals(input, AutocorrectSpaceResult.CORRECTED, coordinator.onSpace(editor) {})
+            assertEquals("$correction ", editor.text)
+        }
+    }
+
+    @Test
+    fun `a candidate that is not a word is never offered to the editor`() {
+        // A dictionary entry with a digit or a symbol (hypothesis 3 of #287).
+        for (correction in listOf("mp3", "mot&", "l'")) {
+            val coordinator = coordinatorOffering("mpe", correction)
+
+            assertEquals(correction, AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(UntouchableEditor) {})
+            assertEquals(correction, AutocorrectSpaceDiagnosis.NO_CANDIDATE, coordinator.lastSpaceDiagnosis)
+        }
     }
 
     /** The guard runs before the transaction: any editor call is a failure. */
