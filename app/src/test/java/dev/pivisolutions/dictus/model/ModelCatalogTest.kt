@@ -80,19 +80,23 @@ class ModelCatalogTest {
         assertNull(ModelCatalog.findByKey("nonexistent"))
     }
 
-    @Test
-    fun `downloadUrl returns HuggingFace URL containing fileName`() {
-        val info = ModelCatalog.findByKey("tiny")!!
-        val url = ModelCatalog.downloadUrl(info)
-        assertTrue("URL should contain fileName", url.contains("ggml-tiny.bin"))
-        assertTrue("URL should be HuggingFace", url.contains("huggingface.co"))
+    /** URLs of a model downloaded file by file, in the order of its manifest. */
+    private fun urlsOf(key: String): List<String> {
+        val info = ModelCatalog.findByKey(key)!!
+        val source = info.source as ModelSource.Files
+        return info.files.map { source.urlOf(it) }
     }
 
     @Test
-    fun `downloadUrl for small-q5_1 contains correct filename`() {
-        val info = ModelCatalog.findByKey("small-q5_1")!!
-        val url = ModelCatalog.downloadUrl(info)
-        assertTrue(url.contains("ggml-small-q5_1.bin"))
+    fun `whisper models download their file from the pinned whisper_cpp revision`() {
+        assertEquals(
+            listOf("https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.bin"),
+            urlsOf("tiny"),
+        )
+        assertEquals(
+            listOf("https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small-q5_1.bin"),
+            urlsOf("small-q5_1"),
+        )
     }
 
     // --- Parakeet catalog tests ---
@@ -124,26 +128,39 @@ class ModelCatalogTest {
     }
 
     @Test
-    fun `downloadUrl returns valid URL for parakeet models`() {
-        val model = ModelCatalog.findByKey("parakeet-ctc-110m-int8")!!
-        val url = ModelCatalog.downloadUrl(model)
-        assertTrue(url.startsWith("https://"))
-        assertTrue(url.contains("sherpa-onnx") || url.contains("parakeet"))
+    fun `parakeet 0_6b v3 downloads each file from the pinned HuggingFace revision`() {
+        // The sherpa-onnx archive was republished on 2026-11-07 with other files (#325)
+        val base = "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/" +
+            "resolve/2bda32ec70b097a55adaa07d9a7173915b43cc78"
+        assertEquals(
+            listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt").map { "$base/$it" },
+            urlsOf("parakeet-tdt-0.6b-v3"),
+        )
     }
 
     @Test
-    fun `downloadUrl returns sherpa-onnx releases URL for all parakeet models`() {
-        ModelCatalog.ALL.filter { it.provider == AiProvider.PARAKEET }.forEach { model ->
-            val url = ModelCatalog.downloadUrl(model)
-            assertTrue(
-                "Parakeet model '${model.key}' URL should point to sherpa-onnx releases",
-                url.contains("github.com/k2-fsa/sherpa-onnx"),
-            )
-            assertTrue(
-                "Parakeet model '${model.key}' URL should be a tar.bz2 archive",
-                url.endsWith(".tar.bz2"),
-            )
-        }
+    fun `parakeet 0_6b v3 manifest is the files of the pinned revision`() {
+        // Sizes and LFS oids from the HuggingFace API at 2bda32ec; tokens.txt hashed (#325)
+        assertEquals(
+            listOf(
+                ModelFile("encoder.int8.onnx", 652_184_281L, "acfc2b4456377e15d04f0243af540b7fe7c992f8d898d751cf134c3a55fd2247"),
+                ModelFile("decoder.int8.onnx", 11_845_275L, "179e50c43d1a9de79c8a24149a2f9bac6eb5981823f2a2ed88d655b24248db4e"),
+                ModelFile("joiner.int8.onnx", 6_355_277L, "3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3"),
+                ModelFile("tokens.txt", 93_939L, "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"),
+            ),
+            ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!.files,
+        )
+    }
+
+    @Test
+    fun `parakeet 110m still installs from its sherpa-onnx release archive`() {
+        assertEquals(
+            ModelSource.Archive(
+                "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/" +
+                    "sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2",
+            ),
+            ModelCatalog.findByKey("parakeet-ctc-110m-int8")!!.source,
+        )
     }
 
     @Test
