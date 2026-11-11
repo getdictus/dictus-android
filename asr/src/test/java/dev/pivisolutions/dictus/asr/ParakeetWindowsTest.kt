@@ -75,7 +75,7 @@ class ParakeetWindowsTest {
     }
 
     @Test
-    fun `tokens make whole words, from their first token to the next word`() {
+    fun `tokens make whole words timed by their first token`() {
         val decode = ParakeetDecode(
             text = " Bonjour, le monde.",
             tokens = listOf("▁Bon", "jour", ",", "▁le", " mon", "de", "."),
@@ -83,7 +83,7 @@ class ParakeetWindowsTest {
         )
 
         assertEquals(
-            listOf(Word("Bonjour,", 0.1f, 0.8f), Word("le", 0.8f, 1.2f), Word("monde.", 1.2f, Float.POSITIVE_INFINITY)),
+            listOf(Word("Bonjour,", 0.1f), Word("le", 0.8f), Word("monde.", 1.2f)),
             ParakeetWindows.words(decode),
         )
     }
@@ -139,12 +139,30 @@ class ParakeetWindowsTest {
     }
 
     @Test
+    fun `a short word timed later by the next window is still kept once`() {
+        // The English corpus clip (#330): B times every word about 0.15 s later than A, more
+        // than « the » lasts, and A heard « retry » after the cut, not a second « the ».
+        val a = decode("and" to 9.8f, "the" to 9.96f, "retry" to 10.04f, "logic" to 10.52f)
+        val b = decode("the" to 1.11f, "retry" to 1.19f, "logic" to 1.75f)
+
+        assertEquals("and the retry logic", ParakeetWindows.stitch(seam, listOf(a, b)))
+    }
+
+    @Test
     fun `a word said twice in a row is not merged`() {
-        // A heard both « très »: the second one starts after the first ends, so B's is the second.
+        // A heard both « très », the second one after the cut: B's is that second one.
         val a = decode("très" to 9.7f, "très" to 10.05f)
         val b = decode("très" to 1.1f, "bien" to 1.5f)
 
         assertEquals("très très bien", ParakeetWindows.stitch(seam, listOf(a, b)))
+    }
+
+    @Test
+    fun `a run of words said twice is not merged`() {
+        val a = decode("on" to 9.3f, "y" to 9.45f, "va" to 9.6f, "on" to 10.1f, "y" to 10.25f, "va" to 10.4f)
+        val b = decode("on" to 1.2f, "y" to 1.35f, "va" to 1.5f, "demain" to 1.9f)
+
+        assertEquals("on y va on y va demain", ParakeetWindows.stitch(seam, listOf(a, b)))
     }
 
     @Test

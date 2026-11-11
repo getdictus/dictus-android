@@ -22,9 +22,11 @@ import kotlin.math.sqrt
  *
  * Stitching works on whole words and times, not on matching text: a window keeps the
  * words that start between its two cuts, and the margins only give the decoder context.
- * Words near a cut may be timed just before it by one window and just after it by the
- * next, so both keep them: a run of words that ends one side and starts the other with
- * the same text and overlapping times is the same speech, and is kept once.
+ * Two windows do not time a word the same way (about 0.15 s apart on the corpus), so a
+ * word near a cut can be kept by both. When the next window starts with the words the
+ * previous one kept last, inside the overlap, they are the same speech decoded twice and
+ * are kept once, unless the previous window also heard those words again after the cut:
+ * then they were said twice.
  *
  * A window with speech can come back empty (#330: one en-long run on the Pixel lost a
  * passage). It is decoded once more, on a fresh stream, over a window [MARGIN_S] wider on
@@ -158,65 +160,67 @@ internal object ParakeetWindows {
         require(windows.size == decodes.size) { "${windows.size} windows, ${decodes.size} decodes" }
         if (windows.size == 1) return decodes.single().text
         val kept = mutableListOf<Word>()
+        // What the previous window heard after its cut, and where its audio ended.
+        var heardAfterCut = emptyList<Word>()
+        var previousEnd = 0f
         windows.zip(decodes).forEach { (window, decode) ->
             val offset = window.start.toFloat() / SAMPLE_RATE
             val from = window.keepFrom.toFloat() / SAMPLE_RATE
             val until = window.keepUntil.toFloat() / SAMPLE_RATE
-            val windowEnd = window.end.toFloat() / SAMPLE_RATE
             // Without a time per token the window cannot be trimmed to its cuts: keep its
             // whole text, which may repeat a word or two of the overlap rather than lose any.
-            val words = if (decode.timestamps.size != decode.tokens.size) {
-                listOf(Word(decode.text.trim(), from, until)).filter { it.text.isNotEmpty() }
+            val all = if (decode.timestamps.size != decode.tokens.size) {
+                listOf(Word(decode.text.trim(), from)).filter { it.text.isNotEmpty() }
             } else {
-                words(decode).map { it.copy(time = it.time + offset, end = min(it.end + offset, windowEnd)) }
-                    .filter { it.time >= from && it.time < until }
+                words(decode).map { it.copy(time = it.time + offset) }
             }
-            kept += words.drop(repeatedAtSeam(kept, words))
+            val words = all.filter { it.time >= from && it.time < until }
+            kept += words.drop(repeatedAtSeam(kept, words, heardAfterCut, previousEnd))
+            heardAfterCut = all.filter { it.time >= until }
+            previousEnd = window.end.toFloat() / SAMPLE_RATE
         }
         return kept.joinToString(" ") { it.text }
     }
 
     /**
-     * How many of [next]'s first words repeat the end of [kept]: the longest run with the
-     * same text on both sides where [next]'s run starts before [kept]'s run ends, i.e. the
-     * same stretch of audio decoded by both windows. A word said twice starts after the
-     * first one ends, so it is kept.
+     * How many of [next]'s first words repeat the end of [kept] across a cut: the longest
+     * run (up to [MAX_SEAM_WORDS]) that [kept] ends with and [next] starts with, before
+     * [previousEnd] (so the previous window heard that audio too). Zero when the previous
+     * window heard the same run again after the cut ([heardAfterCut]): the words were said
+     * twice.
      */
-    fun repeatedAtSeam(kept: List<Word>, next: List<Word>): Int {
-        val last = kept.lastOrNull() ?: return 0
+    fun repeatedAtSeam(kept: List<Word>, next: List<Word>, heardAfterCut: List<Word>, previousEnd: Float): Int {
         val first = next.firstOrNull() ?: return 0
-        if (first.time >= last.end) return 0
+        if (kept.isEmpty() || first.time >= previousEnd) return 0
         return (minOf(MAX_SEAM_WORDS, kept.size, next.size) downTo 1).firstOrNull { n ->
-            kept.takeLast(n).map { normalized(it.text) } == next.take(n).map { normalized(it.text) }
+            val run = next.take(n).map { normalized(it.text) }
+            kept.takeLast(n).map { normalized(it.text) } == run && heardAfterCut.take(n).map { normalized(it.text) } != run
         } ?: 0
     }
 
-    /** A word, the time its first token starts and the time the next word starts. */
-    data class Word(val text: String, val time: Float, val end: Float)
+    /** A word and the time its first token starts. */
+    data class Word(val text: String, val time: Float)
 
     /**
      * The words of a decode with the start time of their first token. A token starting with
      * « ▁ » (SentencePiece) or a space opens a word; the others, punctuation included,
-     * continue the current one. A word ends where the next one starts; the last one, at
-     * infinity, since the end of the decoded audio is not known here.
+     * continue the current one.
      */
     fun words(decode: ParakeetDecode): List<Word> {
-        val starts = mutableListOf<Pair<String, Float>>()
+        val words = mutableListOf<Word>()
         var text = StringBuilder()
         var time = 0f
         decode.tokens.zip(decode.timestamps).forEach { (token, start) ->
             val piece = token.replace('▁', ' ')
             if (piece.startsWith(" ") && text.isNotBlank()) {
-                starts += text.toString().trim() to time
+                words += Word(text.toString().trim(), time)
                 text = StringBuilder()
             }
             if (text.isBlank()) time = start
             text.append(piece)
         }
-        if (text.isNotBlank()) starts += text.toString().trim() to time
-        return starts.mapIndexed { i, (word, start) ->
-            Word(word, start, starts.getOrNull(i + 1)?.second ?: Float.POSITIVE_INFINITY)
-        }
+        if (text.isNotBlank()) words += Word(text.toString().trim(), time)
+        return words
     }
 
     private fun normalized(word: String) = word.lowercase().filter { it.isLetterOrDigit() }
