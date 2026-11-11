@@ -9,12 +9,13 @@ package dev.pivisolutions.dictus.ime.input
  */
 object AddressLikeToken {
     private val separators = setOf('.', ':', '/', '_')
-    private val gluedMarks = setOf('/', '_', '@')
+    private val gluedMarks = setOf('/', '_', '@', '+', '-')
 
     fun matches(token: String): Boolean {
         if ('@' in token || "://" in token || token.startsWith("www.", ignoreCase = true)) return true
-        // `prenom.nom`, `john_doe`, `https:/`: a separator with a letter, a digit or `/ _ @` glued
-        // after it. Another mark after it (`Bonjour...`, `etc.,`) is still punctuation.
+        // `prenom.nom`, `john_doe`, `https:/`, `a.+tag`: a separator with a letter, a digit or
+        // `/ _ @ + -` glued after it. Another mark after it (`Bonjour...`, `etc.,`) is still
+        // punctuation.
         return (0 until token.length - 1).any { index ->
             token[index] in separators && token[index + 1].let { it.isLetterOrDigit() || it in gluedMarks }
         }

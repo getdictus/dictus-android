@@ -15,6 +15,8 @@ class AddressLikeTokenTest {
             "www.getdictus.com",
             "https://github.com/x",
             "prénom.nom@",
+            "helene.+tag@example.com",
+            "jean.-pierre@example.fr",
         ).forEach { address ->
             // Each prefix from the first glued character after a separator, as typed key by key.
             val firstGlued = address.indexOfFirst { it in ".:/_@" } + 2
