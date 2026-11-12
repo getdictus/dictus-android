@@ -10,7 +10,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.core.theme.ThemeMode
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
@@ -34,8 +33,8 @@ import timber.log.Timber
  * routes key press events to the appropriate InputConnection callbacks
  * provided by DictusImeService.
  *
- * Total height: 52.dp (toolbar) + [KEY_AREA_HEIGHT] (keys or emoji picker) = 316.dp, in every state
- * (#139): like iOS, no state changes the keyboard's height.
+ * Total height: 52.dp (toolbar) + the key area (keys or emoji picker), in every state (#139): like
+ * iOS, no state changes the keyboard's height. Both come from [LocalKeyboardSizing] (#127).
  *
  * The emoji picker state is hoisted to DictusImeService so that back key
  * dismissal can be handled via onKeyDown override (BackHandler does not work
@@ -149,7 +148,7 @@ fun KeyboardScreen(
                     onKeySound = onKeySound,
                 )
             } else {
-                // Keyboard area for 48.dp keys with existing row spacing.
+                // Four rows of LocalKeyboardSizing's height, plus the grid's 2 + 2 dp (#127).
                 KeyboardView(
                     layer = currentLayer,
                     isShifted = isShifted,
@@ -212,15 +211,12 @@ fun KeyboardScreen(
                         onFrenchAdaptiveVariant(accent)
                         shiftState = shiftState.afterLetterTyped()
                     },
-                    modifier = Modifier.height(KEY_AREA_HEIGHT),
+                    modifier = Modifier.height(LocalKeyboardSizing.current.keyAreaHeight),
                 )
             }
         }
     }
 }
-
-/** Height of the key grid, and of the emoji picker that takes its place under the toolbar. */
-internal val KEY_AREA_HEIGHT = 264.dp
 
 /**
  * Handles a key press based on its type.

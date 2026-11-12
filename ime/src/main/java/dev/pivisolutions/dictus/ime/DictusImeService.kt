@@ -11,13 +11,25 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
@@ -41,6 +53,8 @@ import dev.pivisolutions.dictus.ime.haptics.InsertHaptic
 import dev.pivisolutions.dictus.ime.suggestion.AndroidNativeTrieOpener
 import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
+import dev.pivisolutions.dictus.ime.ui.LocalKeyboardSizing
+import dev.pivisolutions.dictus.ime.ui.rememberKeyboardSizing
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
@@ -885,7 +899,16 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         }
 
+        // The keyboard's height follows the screen, and the labels the font size up to a cap (#127).
+        val sizing = rememberKeyboardSizing()
+        val density = LocalDensity.current
+        val labelDensity = remember(density, sizing.labelFontScale) {
+            Density(density.density, sizing.labelFontScale)
+        }
+
         // Nothing covers the keyboard while the model loads, fails or is missing (#247).
+        CompositionLocalProvider(LocalKeyboardSizing provides sizing, LocalDensity provides labelDensity) {
+        Column(modifier = Modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth()) {
             // An app dictation shows the keyboard, mic disabled, never its recording UI or ✓ (#248).
             when (if (appDictationActive) DictationState.Idle else dictationState) {
@@ -1091,6 +1114,20 @@ class DictusImeService : LifecycleInputMethodService() {
                 }
             }
             }
+        }
+        // The navigation bar draws over the bottom of the IME window: the keys stay above it, on
+        // the keyboard's colour (#127). With gestures the bar is a 24 dp handle, but Android 13+
+        // also draws the IME's ⌄ and ⌨ buttons there, reported as a 48 dp caption bar
+        // (InputMethodService NavigationBarController.getImeCaptionBarHeight).
+        DictusTheme(themeMode = themeMode) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars.union(WindowInsets.captionBar)),
+            )
+        }
+        }
         }
     }
 
