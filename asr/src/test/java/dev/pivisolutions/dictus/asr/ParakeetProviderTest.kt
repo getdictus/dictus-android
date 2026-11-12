@@ -20,6 +20,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
@@ -268,6 +269,28 @@ class ParakeetProviderTest {
         return provider
     }
 
+    @Test
+    fun `a long take is decoded window by window, each on its own decode`() = runTest {
+        val recognizer = FakeRecognizer()
+        val provider = readyProvider(recognizer)
+
+        // 60 s of silence: four windows of at most 15 s between cuts (#330).
+        provider.transcribe(FloatArray(60 * ParakeetWindows.SAMPLE_RATE), "fr")
+
+        assertEquals(4, recognizer.decodes.get())
+        assertTrue(recognizer.decodedSizes.all { it <= 17 * ParakeetWindows.SAMPLE_RATE })
+    }
+
+    @Test
+    fun `a short take is decoded in one block`() = runTest {
+        val recognizer = FakeRecognizer()
+        val provider = readyProvider(recognizer)
+        recognizer.nextResult = " Bonjour."
+
+        assertEquals(" Bonjour.", provider.transcribe(FloatArray(10 * ParakeetWindows.SAMPLE_RATE), "fr"))
+        assertEquals(listOf(10 * ParakeetWindows.SAMPLE_RATE), recognizer.decodedSizes)
+    }
+
     private suspend fun awaitCondition(condition: () -> Boolean) {
         withTimeoutOrNull(5_000) {
             while (!condition()) delay(10)
@@ -276,6 +299,7 @@ class ParakeetProviderTest {
 
     private class FakeRecognizer : ParakeetRecognizer {
         val decodes = AtomicInteger(0)
+        val decodedSizes = CopyOnWriteArrayList<Int>()
         val decodeStarted = CountDownLatch(1)
         private val unblock = CountDownLatch(1)
 
@@ -297,14 +321,15 @@ class ParakeetProviderTest {
             unblock.countDown()
         }
 
-        override fun transcribe(samples: FloatArray): String {
+        override fun transcribe(samples: FloatArray): ParakeetDecode {
             check(!released) { "decode after release" }
             decodes.incrementAndGet()
-            val result = blockedResult ?: return nextResult
+            decodedSizes += samples.size
+            val result = blockedResult ?: return ParakeetDecode(nextResult)
             blockedResult = null
             decodeStarted.countDown()
             unblock.await(10, TimeUnit.SECONDS)
-            return result
+            return ParakeetDecode(result)
         }
 
         override fun release() {

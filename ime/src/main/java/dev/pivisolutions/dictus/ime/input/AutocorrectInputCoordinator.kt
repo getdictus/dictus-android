@@ -27,7 +27,10 @@ enum class AutocorrectSpaceResult {
 enum class AutocorrectSpaceDiagnosis {
     APPLIED,
     NO_SUGGESTION_EVIDENCE,
-    /** The word has a digit in it (`14h`, `3€`): never corrected, as iOS #74. */
+    /**
+     * The token is not a word ([AutocorrectToken.isLetterToken]): a digit (`14h`, `3€`, as iOS
+     * #74), another symbol (`mot&`) or an elision left open (`l'`). Never corrected.
+     */
     NOT_A_WORD,
     /** The word is part of an email address or a URL (`a.b@c.fr`, `www.x.fr`), as iOS #919. */
     ADDRESS,
@@ -216,19 +219,19 @@ class AutocorrectInputCoordinator(
         val correction = offered?.primaryCorrection
         val applicable = when {
             !identityEligible || offered == null -> null
-            hasDigit(offered.input) -> null
             AddressLikeToken.matches(offered.input) -> null
+            !AutocorrectToken.isLetterToken(offered.input) -> null
             offered.isKnownWord && !offered.knownInputDominance -> null
             offered.isLearnedWord -> null
-            correction == null -> null
+            correction == null || !AutocorrectToken.isLetterToken(correction) -> null
             else -> offered to correction
         }
         if (applicable == null) {
             lastSpaceDetail = null
             lastSpaceDiagnosis = when {
                 !identityEligible || offered == null -> AutocorrectSpaceDiagnosis.NO_SUGGESTION_EVIDENCE
-                hasDigit(offered.input) -> AutocorrectSpaceDiagnosis.NOT_A_WORD
                 AddressLikeToken.matches(offered.input) -> AutocorrectSpaceDiagnosis.ADDRESS
+                !AutocorrectToken.isLetterToken(offered.input) -> AutocorrectSpaceDiagnosis.NOT_A_WORD
                 offered.isKnownWord && !offered.knownInputDominance ->
                     AutocorrectSpaceDiagnosis.INPUT_ALREADY_KNOWN
                 offered.isLearnedWord -> AutocorrectSpaceDiagnosis.INPUT_LEARNED
@@ -442,12 +445,6 @@ class AutocorrectInputCoordinator(
             else -> null
         }
     }
-
-    /**
-     * A word with a digit is never corrected (`14h`, `3€`, `h2o`), as iOS #74: the transaction
-     * would refuse it as INVALID_TOKEN (#287). Any Unicode decimal digit, as iOS `decimalDigits`.
-     */
-    private fun hasDigit(word: String): Boolean = word.codePoints().anyMatch(Character::isDigit)
 
     /** The editor's collapsed cursor as an absolute offset, or null when it cannot be read. */
     private fun absoluteCursor(editor: AutocorrectEditor): Int? = try {

@@ -61,6 +61,7 @@ import dev.pivisolutions.dictus.asr.ParakeetProvider
 import dev.pivisolutions.dictus.model.AiProvider
 import dev.pivisolutions.dictus.model.ModelManager
 import timber.log.Timber
+import java.io.File
 
 /**
  * Foreground service that manages audio recording for voice dictation.
@@ -193,12 +194,20 @@ class DictationService : Service(), DictationController {
     /** Observable state for the IME to collect. */
     override val state: StateFlow<DictationState> = _state.asStateFlow()
 
-    private val recorder = DictationRecorder(serviceScope, _state) {
-        AudioCaptureManager(getSystemService(AudioManager::class.java))
+    // The app take's audio on disk while it records and transcribes (#251).
+    private val takeFiles by lazy { TakeFiles(File(noBackupFilesDir, "takes")) }
+
+    // Only an app take goes to disk: a keyboard take's text is for its field, and a stop
+    // without confirm leaves it to the keyboard too.
+    private val recorder = DictationRecorder(serviceScope, _state) { source ->
+        AudioCaptureManager(
+            getSystemService(AudioManager::class.java),
+            if (source == DictationSource.APP) takeFiles.startLive() else null,
+        )
     }
 
     private val unconfirmedStop by lazy {
-        UnconfirmedStop(recorder, _state) { samples ->
+        UnconfirmedStop(recorder, _state, takeFiles) { samples ->
             transcriber.rejectBeforeEngine(samples) ?: transcribeTake(samples, TranscriptionRetention.PERSIST_HISTORY)
         }
     }
@@ -220,6 +229,10 @@ class DictationService : Service(), DictationController {
     override fun onCreate() {
         super.onCreate()
         soundPlayer = DictationSoundPlayer(applicationContext)
+
+        // A take whose process was killed while it recorded or transcribed (#251). Nothing records
+        // yet: onCreate runs before any binder call or start command reaches this instance.
+        unconfirmedStop.recoverOrphans(cleanupScope, ::finishTranscription)?.let { unconfirmedJob = it }
 
         // Load a newly selected model right away, from the Models screen, Settings or onboarding,
         // so it is ready before the next mic tap (#175, iOS ModelManager.selectModel). Without it
@@ -395,6 +408,8 @@ class DictationService : Service(), DictationController {
     override fun stopRecording(): FloatArray {
         pendingStart = false
         val samples = recorder.stop()
+        // The caller takes the samples: the service saves nothing of this take.
+        takeFiles.detachLive()?.delete()
         if (soundEnabled) soundPlayer.playStop()
         _state.value = DictationState.Idle
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -434,8 +449,12 @@ class DictationService : Service(), DictationController {
         // 1. Stop recording and get audio samples
         pendingStart = false
         val samples = recorder.stop()
+        // Deleted once the take is saved or rejected; kept when the transcription is cancelled
+        // or the process dies, for the next service start to pick it up (#251).
+        val takeFile = takeFiles.detachLive()
 
         transcriber.rejectBeforeEngine(samples)?.let { outcome ->
+            takeFile?.delete()
             finishTranscription()
             return outcome
         }
@@ -452,7 +471,7 @@ class DictationService : Service(), DictationController {
         _state.value = DictationState.Transcribing
 
         return try {
-            transcribeTake(samples, retention)
+            transcribeTake(samples, retention).also { takeFile?.delete() }
         } finally {
             finishTranscription()
         }
@@ -590,6 +609,7 @@ class DictationService : Service(), DictationController {
     /** Discard the capture, if any, and reach Idle even when nothing was recording. */
     private fun discardRecording() {
         recorder.cancel()
+        takeFiles.detachLive()?.delete()
         _state.value = DictationState.Idle
     }
 
@@ -652,7 +672,8 @@ class DictationService : Service(), DictationController {
         transcriptionWakeLock.release()
         // Torn down while an app dictation records (#248): its take is transcribed on cleanupScope,
         // which outlives the service, before the engine is released. A take already transcribing
-        // after a stop without confirm is waited for the same way. A process kill still loses it.
+        // after a stop without confirm is waited for the same way. A process kill leaves its file
+        // for the next start (#251).
         val keptTake = unconfirmedStop.stop(UnconfirmedStop.Reason.SERVICE_DESTROYED, cleanupScope) {
             _state.value = DictationState.Idle
             DictationTrace.end()

@@ -315,7 +315,7 @@ object AutocorrectEditorTransaction {
         identityEligible: Boolean,
     ): AutocorrectTransactionResult.Rejected? = when {
         !identityEligible -> rejected(AutocorrectRejection.STALE_IDENTITY)
-        !original.isLetterToken() || !correction.isLetterToken() -> rejected(AutocorrectRejection.INVALID_TOKEN)
+        !AutocorrectToken.isLetterToken(original) || !AutocorrectToken.isLetterToken(correction) -> rejected(AutocorrectRejection.INVALID_TOKEN)
         original == correction -> rejected(AutocorrectRejection.SAME_CORRECTION)
         else -> null
     }
@@ -334,7 +334,7 @@ object AutocorrectEditorTransaction {
         }
         if (!snapshot.hasProvenLeftTokenBoundary(start)) return null
         val editorToken = snapshot.text.substring(start, cursor)
-        if (!editorToken.isLetterToken() || editorToken.nfc() != expectedNfc) return null
+        if (!AutocorrectToken.isLetterToken(editorToken) || editorToken.nfc() != expectedNfc) return null
         return snapshot.match(editorToken, start, cursor)
     }
 
@@ -357,7 +357,7 @@ object AutocorrectEditorTransaction {
         }
         if (!snapshot.hasProvenLeftTokenBoundary(tokenStart)) return null
         val token = snapshot.text.substring(tokenStart, tokenEnd)
-        if (!token.isLetterToken() || token.nfc() != expectedCorrectionNfc) return null
+        if (!AutocorrectToken.isLetterToken(token) || token.nfc() != expectedCorrectionNfc) return null
         return snapshot.match(snapshot.text.substring(tokenStart, cursor), tokenStart, cursor)
     }
 
@@ -474,50 +474,6 @@ object AutocorrectEditorTransaction {
     private fun String.nfc(): String = Normalizer.normalize(this, Normalizer.Form.NFC)
 
     /**
-     * Whether a token is a shape autocorrect may replace.
-     *
-     * Letters and combining marks, plus an apostrophe or hyphen **between** them: never leading,
-     * never trailing, never doubled. French cannot be autocorrected without them — `c'est`,
-     * `j'ai`, `aujourd'hui`, `peut-être`, `rendez-vous` are ordinary words, and refusing the shape
-     * refused every correction whose input or candidate contained one, silently.
-     *
-     * The interior rule is what keeps the relaxation safe: `'` alone, `-word` and `word-` are
-     * still rejected, so a stray separator can never be mistaken for a word to replace.
-     */
-    private fun String.isLetterToken(): Boolean {
-        if (isEmpty()) return false
-        var sawLetter = false
-        var pendingSeparator = false
-        var index = 0
-        while (index < length) {
-            val codePoint = codePointAt(index)
-            when {
-                Character.isLetter(codePoint) -> {
-                    sawLetter = true
-                    pendingSeparator = false
-                }
-                codePoint.isCombiningMark() -> if (!sawLetter || pendingSeparator) return false
-                codePoint.isTokenSeparator() -> {
-                    if (!sawLetter || pendingSeparator) return false
-                    pendingSeparator = true
-                }
-                else -> return false
-            }
-            index += Character.charCount(codePoint)
-        }
-        return sawLetter && !pendingSeparator
-    }
-
-    /**
-     * Apostrophes and hyphens that join two halves of one word.
-     *
-     * Both apostrophe shapes are accepted because the editor holds whatever the host app or an
-     * earlier keyboard produced, while the dictionary is normalized to the straight one.
-     */
-    private fun Int.isTokenSeparator(): Boolean =
-        this == '\''.code || this == '\u2019'.code || this == '-'.code
-
-    /**
      * Whether a code point belongs to the token under the cursor, for boundary scanning.
      *
      * This must agree with how the service isolates the current word, which splits only on spaces
@@ -525,14 +481,7 @@ object AutocorrectEditorTransaction {
      * service had offered `l'ordinateur`, and the mismatch rejected the correction.
      */
     private fun Int.isTokenCodePoint(): Boolean =
-        Character.isLetter(this) || isCombiningMark() || isTokenSeparator()
-
-    private fun Int.isCombiningMark(): Boolean = when (Character.getType(this)) {
-        Character.NON_SPACING_MARK.toInt(),
-        Character.COMBINING_SPACING_MARK.toInt(),
-        Character.ENCLOSING_MARK.toInt(), -> true
-        else -> false
-    }
+        Character.isLetter(this) || AutocorrectToken.isCombiningMark(this) || AutocorrectToken.isSeparator(this)
 
     private fun rejected(reason: AutocorrectRejection) = AutocorrectTransactionResult.Rejected(reason)
 }
