@@ -396,7 +396,7 @@ fun KeyButton(
 
     Box(
         modifier = modifier
-            .height(48.dp)
+            .height(LocalKeyboardSizing.current.rowHeight)
             .padding(vertical = 2.dp)
             .onSizeChanged { keyWidthPx = it.width }
             .onGloballyPositioned { coordinates ->

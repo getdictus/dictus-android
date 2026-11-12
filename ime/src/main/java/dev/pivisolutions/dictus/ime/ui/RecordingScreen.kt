@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
@@ -36,11 +39,11 @@ import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 /**
  * Recording overlay that replaces the keyboard during active dictation.
  *
- * Total height matches KeyboardScreen (316.dp = 52.dp top + 218.dp + 46.dp), so starting a
- * recording never changes the keyboard's height (#139).
+ * Total height matches KeyboardScreen (52.dp top + centre + 46.dp = LocalKeyboardSizing's total), so
+ * starting a recording never changes the keyboard's height (#139, #127).
  * Layout follows the mockup (Keyboard Recording frame):
  * - Top row (52.dp): Cancel (✕) left, Confirm (✓) right — glass pills
- * - Center (218.dp): Waveform + timer + "En écoute…"
+ * - Center (the rest): Waveform + timer + "En écoute…"; the waveform gives up height first
  * - Bottom row (46.dp): switch-keyboard globe only (no mic pill during recording)
  *
  * The top row replaces the keyboard toolbar with the iOS RecordingOverlay `PillButton`s. Like
@@ -92,24 +95,27 @@ fun RecordingScreen(
             )
         }
 
-        // Center area (218.dp) — waveform + timer + label
+        // Center area — waveform + timer + label
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(218.dp)
+                .height(dictationCentreHeight())
                 .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             // Waveform visualization — fills most of the center.
-            // iOS RecordingOverlay: maxHeight 120 with 2 pt horizontal padding.
+            // iOS RecordingOverlay: maxHeight 120 with 2 pt horizontal padding. Shorter when the
+            // keyboard is (landscape, #127), so the timer and the label always fit.
             LiveWaveform(
                 energyLevels = energy,
                 logLabel = "keyboard",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 2.dp)
-                    .height(120.dp),
+                    .weight(1f, fill = false)
+                    .heightIn(max = 120.dp)
+                    .fillMaxHeight(),
             )
 
             // Timer MM:SS — iOS RecordingOverlay: `timerFontSize` 20 (@ScaledMetric, so sp),
@@ -137,7 +143,7 @@ fun RecordingScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(RECORDING_BOTTOM_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 8.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -167,6 +173,14 @@ fun RecordingScreen(
 
 /** iOS `RecordingOverlay.topBar`: the keyboard toolbar's height, pills 10dp from the top. */
 internal val RECORDING_TOP_ROW_HEIGHT = 52.dp
+
+/** The globe row under the recording and transcribing centre. */
+internal val RECORDING_BOTTOM_ROW_HEIGHT = 46.dp
+
+/** What the keyboard's height leaves between the top row and the globe row. */
+@Composable
+internal fun dictationCentreHeight(): Dp =
+    LocalKeyboardSizing.current.totalHeight - RECORDING_TOP_ROW_HEIGHT - RECORDING_BOTTOM_ROW_HEIGHT
 
 /** iOS RecordingOverlay `PillButton`: a 56x36 glass capsule around an 18 pt semibold glyph. */
 @Composable

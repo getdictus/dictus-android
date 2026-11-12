@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -134,9 +133,8 @@ fun EmojiPickerScreen(
         modifier = modifier
             .fillMaxWidth()
             // The key area under the toolbar, as iOS KeyboardRootView (#139).
-            .height(KEY_AREA_HEIGHT)
+            .height(LocalKeyboardSizing.current.keyAreaHeight)
             .background(MaterialTheme.colorScheme.surface)
-            .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(bottom = 8.dp),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth().weight(1f)) {

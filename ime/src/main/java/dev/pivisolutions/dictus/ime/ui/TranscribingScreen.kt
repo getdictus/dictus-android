@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,8 +39,8 @@ import dev.pivisolutions.dictus.core.ui.rememberTranscriptionFeedback
  * The WaveformDriver advances processingPhase each frame using the same
  * formula as iOS (link.duration / 2.0), producing smooth lateral wave motion.
  *
- * Total height: 316.dp (matching RecordingScreen and KeyboardScreen, #139)
- * Layout: empty top row (52.dp) + center with waveform + label (218.dp) + empty bottom row (46.dp)
+ * Total height: LocalKeyboardSizing's total (matching RecordingScreen and KeyboardScreen, #139, #127)
+ * Layout: empty top row (52.dp) + center with waveform + label + empty bottom row (46.dp)
  */
 @Composable
 fun TranscribingScreen(
@@ -70,11 +72,11 @@ fun TranscribingScreen(
                 .background(MaterialTheme.colorScheme.background),
         )
 
-        // Center (218.dp) — animated waveform bars + label
+        // Center — animated waveform bars + label
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(218.dp)
+                .height(dictationCentreHeight())
                 .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -87,7 +89,9 @@ fun TranscribingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 2.dp)
-                    .height(120.dp),
+                    .weight(1f, fill = false)
+                    .heightIn(max = 120.dp)
+                    .fillMaxHeight(),
                 isProcessing = true,
                 processingPhase = phase,
             )
@@ -121,7 +125,7 @@ fun TranscribingScreen(
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(RECORDING_BOTTOM_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background),
         )
     }
