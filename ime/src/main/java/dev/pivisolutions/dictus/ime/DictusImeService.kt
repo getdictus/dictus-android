@@ -461,6 +461,17 @@ class DictusImeService : LifecycleInputMethodService() {
         isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
+        refreshSuggestionsFromEditor()
+    }
+
+    /**
+     * Re-reads the word before the cursor and asks for its suggestions.
+     *
+     * WHY (#348): [onUpdateSelection] only fires when the selection moves. A rotation restarts
+     * the input (onStartInput clears the bar) with the cursor where it was, so the bar stayed
+     * empty until the next key. [onStartInputView] calls this too, to start from the editor.
+     */
+    private fun refreshSuggestionsFromEditor() {
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
             clearSuggestionState()
@@ -690,6 +701,8 @@ class DictusImeService : LifecycleInputMethodService() {
         refreshFrenchAdaptiveKeyState()
         // Start of a field, or the same field shown again: always decide afresh.
         refreshAutoCapitalization(force = true)
+        // onStartInput emptied the bar; a word already before the cursor gets its suggestions back.
+        refreshSuggestionsFromEditor()
         // WHY (#112): "did the user ever open the Dictus keyboard?" was unanswerable from an export.
         Timber.d("Keyboard shown: package=%s, restarting=%b", info?.packageName ?: "unknown", restarting)
     }
