@@ -47,6 +47,13 @@ jobs:
       - name: Assemble debug APK (includes license report via Gradle dependency)
         run: ./gradlew assembleDebug
 
+      # The default arm64 Whisper library runs on CPUs without FP16 (#321): it and the
+      # ggml libraries it loads must hold no ARMv8.1+ instruction (#322).
+      - name: Check default Whisper library is ARMv8.0 only
+        run: |
+          .github/scripts/test-check-arm64-baseline.sh
+          .github/scripts/check-arm64-baseline.sh app/build/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/arm64-v8a
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
