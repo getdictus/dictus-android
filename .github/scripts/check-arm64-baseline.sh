@@ -32,19 +32,25 @@ find_llvm_bin() {
 
 readonly llvm_bin="$(find_llvm_bin)"
 
+# A tool failing inside a process substitution or a $(...) would go unnoticed and read
+# as "no instruction found", so every tool's status is checked explicitly.
+work="$(mktemp -d)"
+trap 'rm -rf "${work:?}"' EXIT
+
 # Libraries the root library loads, itself included, that ship next to it. System
 # libraries (libc, liblog, libandroid...) are not in lib_dir and are not checked.
 loaded_libs() {
-    local queue=("$root_lib") seen=" " lib needed
+    local queue=("$root_lib") seen=" " lib needed dynamic
     while ((${#queue[@]})); do
         lib="${queue[0]}"
         queue=("${queue[@]:1}")
         [[ "$seen" == *" $lib "* ]] && continue
         seen+="$lib "
         echo "$lib"
-        while read -r needed; do
-            [[ -f "$lib_dir/$needed" ]] && queue+=("$needed")
-        done < <("$llvm_bin/llvm-readelf" --dynamic "$lib_dir/$lib" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p')
+        dynamic="$("$llvm_bin/llvm-readelf" --dynamic "$lib_dir/$lib")" || return 2
+        for needed in $(sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p' <<< "$dynamic"); do
+            if [[ -f "$lib_dir/$needed" ]]; then queue+=("$needed"); fi
+        done
     done
 }
 
@@ -60,7 +66,10 @@ disassemble() {
 # Prints "<function> <address> <instruction>" for every instruction beyond ARMv8.0.
 newer_than_v80() {
     local lib="$1"
-    paste <(disassemble "$lib" +v8a) <(disassemble "$lib" +all) |
+    disassemble "$lib" +v8a > "$work/v8a" || return 2
+    disassemble "$lib" +all > "$work/all" || return 2
+    [[ -s "$work/all" ]] || { echo "no instruction disassembled in $lib" >&2; return 2; }
+    paste "$work/v8a" "$work/all" |
         awk -F '\t' '
             $2 != $5 { print "disassemblies out of step at " $2 " / " $5 > "/dev/stderr"; exit 2 }
             $1 ~ /^__aarch64_/ { next }
@@ -70,9 +79,10 @@ newer_than_v80() {
 
 [[ -f "$lib_dir/$root_lib" ]] || { echo "$lib_dir/$root_lib not found" >&2; exit 2; }
 
+libs="$(loaded_libs)" || { echo "could not read the dependencies of $root_lib" >&2; exit 2; }
 status=0
-while read -r lib; do
-    found="$(newer_than_v80 "$lib_dir/$lib")"
+for lib in $libs; do
+    found="$(newer_than_v80 "$lib_dir/$lib")" || { echo "could not disassemble $lib" >&2; exit 2; }
     if [[ -n "$found" ]]; then
         count="$(wc -l <<< "$found")"
         echo "FAIL $lib: $count instruction(s) newer than ARMv8.0"
@@ -81,5 +91,5 @@ while read -r lib; do
     else
         echo "ok   $lib: ARMv8.0 only"
     fi
-done < <(loaded_libs)
+done
 exit "$status"
