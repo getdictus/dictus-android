@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -1112,14 +1114,16 @@ class DictusImeService : LifecycleInputMethodService() {
             }
             }
         }
-        // The navigation bar draws over the bottom of the IME window (gesture handle or three
-        // buttons): the keys stay above it, on the keyboard's colour (#127).
+        // The navigation bar draws over the bottom of the IME window: the keys stay above it, on
+        // the keyboard's colour (#127). With gestures the bar is a 24 dp handle, but Android 13+
+        // also draws the IME's ⌄ and ⌨ buttons there, reported as a 48 dp caption bar
+        // (InputMethodService NavigationBarController.getImeCaptionBarHeight).
         DictusTheme(themeMode = themeMode) {
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
-                    .windowInsetsBottomHeight(WindowInsets.navigationBars),
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars.union(WindowInsets.captionBar)),
             )
         }
         }
