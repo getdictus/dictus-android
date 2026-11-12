@@ -31,7 +31,8 @@ import org.robolectric.annotation.GraphicsMode
  * the field keeps two lines and the mic banner and « Passer » stay above the keyboard.
  *
  * Each page is the height the audit's emulator left between the onboarding's top row and the
- * keyboard. Android 11, as the large-font profile: below Android 15 the focused field counts
+ * keyboard, with the keyboard of the audit (before #127 sized it from the screen): the tighter
+ * case, about 90 dp shorter than today on the small phone. Android 11, as the large-font profile: below Android 15 the focused field counts
  * as the keyboard being up, which Robolectric cannot show.
  */
 @RunWith(RobolectricTestRunner::class)
