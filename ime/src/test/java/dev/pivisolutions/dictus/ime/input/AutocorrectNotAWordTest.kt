@@ -94,11 +94,14 @@ class AutocorrectNotAWordTest {
 
     @Test
     fun `a symbol glued to a word gets a plain space`() {
-        for (input in listOf("mot&", "mot#", "mot*", "mot%", "mot@", "mot/", "&mot")) {
+        // `mot@` starts an e-mail address: never corrected either, counted as ADDRESS (#332).
+        for ((input, diagnosis) in listOf("mot&", "mot#", "mot*", "mot%", "mot@", "mot/", "&mot").map {
+            it to if (it == "mot@") AutocorrectSpaceDiagnosis.ADDRESS else AutocorrectSpaceDiagnosis.NOT_A_WORD
+        }) {
             val coordinator = coordinatorOffering(input, "mot")
 
             assertEquals(input, AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(UntouchableEditor) {})
-            assertEquals(input, AutocorrectSpaceDiagnosis.NOT_A_WORD, coordinator.lastSpaceDiagnosis)
+            assertEquals(input, diagnosis, coordinator.lastSpaceDiagnosis)
             assertNull(input, coordinator.lastSpaceDetail)
         }
     }

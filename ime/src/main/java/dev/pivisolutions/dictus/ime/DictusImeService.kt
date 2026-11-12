@@ -49,6 +49,7 @@ import dev.pivisolutions.dictus.ime.input.AutoFullStop
 import dev.pivisolutions.dictus.ime.input.AutoFullStopInput
 import dev.pivisolutions.dictus.ime.input.AutoCapMode
 import dev.pivisolutions.dictus.ime.input.AutoCapSignal
+import dev.pivisolutions.dictus.ime.input.AutocorrectAddressRevert
 import dev.pivisolutions.dictus.ime.input.AutocorrectInputCoordinator
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.input.AutocorrectSuggestionSnapshot
@@ -1198,9 +1199,19 @@ class DictusImeService : LifecycleInputMethodService() {
         } else {
             autoFullStop.clear()
             clearSuggestionState()
-            val typed = inputConnection.commitText(text, 1)
-            if (typed) autocorrectCoordinator.onTextTyped(text) else autocorrectCoordinator.onOtherInput()
-            typed
+            val revert = autocorrectCoordinator.revertIfAddress(InputConnectionAutocorrectEditor(inputConnection), text)
+            if (revert != AutocorrectAddressRevert.UNCHANGED) {
+                Timber.d("Autocorrect revert before an address: %s", revert)
+            }
+            if (revert == AutocorrectAddressRevert.INDETERMINATE) {
+                // As after an indeterminate correction: nothing is written over an unknown state.
+                autocorrectCoordinator.onOtherInput()
+                false
+            } else {
+                val typed = inputConnection.commitText(text, 1)
+                if (typed) autocorrectCoordinator.onTextTyped(text) else autocorrectCoordinator.onOtherInput()
+                typed
+            }
         }
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
