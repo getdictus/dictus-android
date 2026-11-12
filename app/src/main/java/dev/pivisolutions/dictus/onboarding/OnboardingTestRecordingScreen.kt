@@ -21,14 +21,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Keyboard
@@ -57,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -64,6 +66,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
@@ -192,97 +195,111 @@ fun OnboardingTestRecordingScreen(
         onNext()
     }
 
-    Column(
+    FirstDictationLayout(
+        fieldMinHeight = PracticeFieldMinHeight,
         modifier = Modifier
             .fillMaxSize()
             .imePadding(),
-    ) {
-        OnboardingHeader(
-            title = stringResource(R.string.onboarding_first_dictation_title),
-            subtitle = stringResource(stage.instruction()),
-            modifier = Modifier
-                .padding(horizontal = OnboardingMetrics.horizontalPadding)
-                .padding(top = OnboardingMetrics.titleTopPadding, bottom = 20.dp),
-        )
-
-        PracticeField(
-            text = text,
-            onTextChange = { if (frozenStage == null) text = it },
-            placeholder = stringResource(
-                if (stage == FirstDictationStage.Opening || stage == FirstDictationStage.BeforeTap) {
-                    R.string.onboarding_first_dictation_placeholder_tap
-                } else {
-                    R.string.onboarding_first_dictation_placeholder_say
-                },
-            ),
-            isKeyboardUp = isKeyboardUp,
-            showsSuccess = isCompleted,
-            modifier = Modifier
-                .padding(horizontal = OnboardingMetrics.horizontalPadding)
-                // Takes what the hint and « Passer » leave.
-                .weight(1f)
-                .focusRequester(focusRequester)
-                .onFocusChanged { isFieldFocused = it.isFocused },
-        )
-
-        AnimatedContent(
-            targetState = stage,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            contentAlignment = Alignment.Center,
-            label = "first_dictation_hint",
-        ) { shownStage ->
-            Box(
+        header = {
+            // Gives way first on a short screen: it scrolls within what the field leaves,
+            // from its end, so the subtitle (what to do now) is the part still in sight.
+            OnboardingHeader(
+                title = stringResource(R.string.onboarding_first_dictation_title),
+                subtitle = stringResource(stage.instruction()),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = OnboardingMetrics.horizontalPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                when (shownStage) {
-                    FirstDictationStage.Opening, FirstDictationStage.BeforeTap -> Unit
-                    FirstDictationStage.OtherKeyboard -> FirstDictationBanner(
-                        leadingIcon = Icons.Default.Keyboard,
-                        text = stringResource(R.string.onboarding_first_dictation_banner_choose),
-                        trailingIcon = null,
-                        onClick = {
-                            // The field is the served editor, so the picker opens over it.
-                            context.getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
-                        },
-                        modifier = Modifier.padding(top = 14.dp),
-                    )
-                    FirstDictationStage.DictusKeyboard -> FirstDictationBanner(
-                        leadingIcon = Icons.Default.Mic,
-                        text = stringResource(R.string.onboarding_first_dictation_banner_mic),
-                        // The Dictus mic is at the right of the keyboard's toolbar.
-                        trailingIcon = Icons.Default.SouthEast,
-                        onClick = null,
-                        modifier = Modifier.padding(top = 14.dp),
-                    )
+                    .verticalScroll(rememberScrollState(), reverseScrolling = true)
+                    .padding(horizontal = OnboardingMetrics.horizontalPadding)
+                    .padding(top = OnboardingMetrics.titleTopPadding, bottom = 20.dp),
+            )
+        },
+        field = {
+            PracticeField(
+                text = text,
+                onTextChange = { if (frozenStage == null) text = it },
+                placeholder = stringResource(
+                    if (stage == FirstDictationStage.Opening || stage == FirstDictationStage.BeforeTap) {
+                        R.string.onboarding_first_dictation_placeholder_tap
+                    } else {
+                        R.string.onboarding_first_dictation_placeholder_say
+                    },
+                ),
+                isKeyboardUp = isKeyboardUp,
+                showsSuccess = isCompleted,
+                modifier = Modifier
+                    .padding(horizontal = OnboardingMetrics.horizontalPadding)
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { isFieldFocused = it.isFocused },
+            )
+        },
+        bottom = {
+            Column {
+                FirstDictationHint(stage = stage)
+
+                // « Passer », as on every skippable step, and « Continuer » next to it when
+                // Dictus is never detected (iOS #845).
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = OnboardingMetrics.skipRowSpacing)
+                        .padding(bottom = OnboardingMetrics.buttonBottomPadding),
+                ) {
+                    OnboardingSkipRow()
+                    if (showsContinue) {
+                        Text(
+                            text = stringResource(R.string.onboarding_first_dictation_continue),
+                            color = DictusColors.Accent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = OnboardingMetrics.horizontalPadding)
+                                .clip(CircleShape)
+                                .clickable(role = Role.Button) { if (frozenStage == null) leave() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
                 }
             }
-        }
+        },
+    )
+}
 
-        // « Passer », as on every skippable step, and « Continuer » next to it when Dictus is
-        // never detected (iOS #845).
+/** The hint above « Passer »: nothing, the keyboard picker button, or the mic banner. */
+@Composable
+private fun FirstDictationHint(stage: FirstDictationStage) {
+    val context = LocalContext.current
+    AnimatedContent(
+        targetState = stage,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        contentAlignment = Alignment.Center,
+        label = "first_dictation_hint",
+    ) { shownStage ->
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = OnboardingMetrics.skipRowSpacing)
-                .padding(bottom = OnboardingMetrics.buttonBottomPadding),
+                .padding(horizontal = OnboardingMetrics.horizontalPadding),
+            contentAlignment = Alignment.Center,
         ) {
-            OnboardingSkipRow()
-            if (showsContinue) {
-                Text(
-                    text = stringResource(R.string.onboarding_first_dictation_continue),
-                    color = DictusColors.Accent,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = OnboardingMetrics.horizontalPadding)
-                        .clip(CircleShape)
-                        .clickable(role = Role.Button) { if (frozenStage == null) leave() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+            when (shownStage) {
+                FirstDictationStage.Opening, FirstDictationStage.BeforeTap -> Unit
+                FirstDictationStage.OtherKeyboard -> FirstDictationBanner(
+                    leadingIcon = Icons.Default.Keyboard,
+                    text = stringResource(R.string.onboarding_first_dictation_banner_choose),
+                    trailingIcon = null,
+                    onClick = {
+                        // The field is the served editor, so the picker opens over it.
+                        context.getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
+                    },
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+                FirstDictationStage.DictusKeyboard -> FirstDictationBanner(
+                    leadingIcon = Icons.Default.Mic,
+                    text = stringResource(R.string.onboarding_first_dictation_banner_mic),
+                    // The Dictus mic is at the right of the keyboard's toolbar.
+                    trailingIcon = Icons.Default.SouthEast,
+                    onClick = null,
+                    modifier = Modifier.padding(top = 14.dp),
                 )
             }
         }
@@ -296,6 +313,15 @@ private fun FirstDictationStage.instruction(): Int = when (this) {
     FirstDictationStage.OtherKeyboard -> R.string.onboarding_first_dictation_other_keyboard
     FirstDictationStage.DictusKeyboard -> R.string.onboarding_first_dictation_dictus_keyboard
 }
+
+const val FIRST_DICTATION_FIELD_TAG = "onboarding.firstDictation.field"
+
+private val PracticeFieldLineHeight = 22.sp
+private val PracticeFieldPadding = 16.dp
+
+/** Two lines of text and the padding around them, in sp so a large font gets a taller field. */
+private val PracticeFieldMinHeight: Dp
+    @Composable get() = with(LocalDensity.current) { PracticeFieldLineHeight.toDp() * 2 } + PracticeFieldPadding * 2
 
 /**
  * The real text field, on a card outlined in blue while the keyboard is up, and in green with
@@ -322,7 +348,6 @@ private fun PracticeField(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 60.dp)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
             .border(if (showsSuccess) 2.dp else if (isKeyboardUp) 1.5.dp else 1.dp, borderColor, shape),
@@ -330,19 +355,19 @@ private fun PracticeField(
         BasicTextField(
             value = text,
             onValueChange = onTextChange,
-            textStyle = TextStyle(color = onBackground, fontSize = 17.sp, lineHeight = 22.sp),
+            textStyle = TextStyle(color = onBackground, fontSize = 17.sp, lineHeight = PracticeFieldLineHeight),
             cursorBrush = SolidColor(DictusColors.Accent),
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .testTag("onboarding.firstDictation.field"),
+                .padding(PracticeFieldPadding)
+                .testTag(FIRST_DICTATION_FIELD_TAG),
             decorationBox = { inner ->
                 if (text.isEmpty()) {
                     Text(
                         text = placeholder,
                         color = LocalDictusColors.current.textSecondary,
                         fontSize = 17.sp,
-                        lineHeight = 22.sp,
+                        lineHeight = PracticeFieldLineHeight,
                     )
                 }
                 inner()
