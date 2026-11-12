@@ -11,6 +11,17 @@ android {
         minSdk = 29
     }
 
+    // sherpa-onnx's x86_64 libraries, for debug builds that opt in with
+    // -Pdictus.emulatorAbi=true (same rule as :whisper and :trie), so Parakeet runs on an
+    // x86_64 emulator. Phone, CI and release builds ship arm64-v8a and armeabi-v7a only.
+    sourceSets {
+        getByName("debug") {
+            if (providers.gradleProperty("dictus.emulatorAbi").orNull.toBoolean()) {
+                jniLibs.srcDir("src/emulator/jniLibs")
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
