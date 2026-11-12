@@ -91,8 +91,8 @@ class AutocorrectInputCoordinator(
          */
         val tracksTyping: Boolean = true,
         /**
-         * Absolute cursor offset right after the correction and its trailing text, read from the
-         * editor once the correction was applied; null when the editor does not tell it.
+         * Absolute cursor offset right after the correction and its trailing text; null when
+         * neither the editor nor its selection updates tell where the correction is.
          */
         val cursorAfter: Int? = null,
     )
@@ -111,6 +111,13 @@ class AutocorrectInputCoordinator(
             if (undoOffer != before) onUndoOfferChanged(undoOffer)
         }
     private var undoSerial = 0L
+
+    /**
+     * The collapsed cursor the editor last reported through [onEditorSelectionChanged], or null.
+     * Editors with no extracted text (Compose fields, #285) give no snapshot, so this is the only
+     * place they say where the cursor is.
+     */
+    private var reportedCursor: Int? = null
 
     /** The undo chip to show, or null. */
     val undoOffer: AutocorrectUndoOffer?
@@ -259,7 +266,10 @@ class AutocorrectInputCoordinator(
                     personalizedLearningAllowed = personalizedLearningAllowed,
                     serial = ++undoSerial,
                     written = result.undo.trailing,
-                    cursorAfter = absoluteCursor(editor),
+                    // The cursor before the correction sat at the end of the typed word.
+                    cursorAfter = absoluteCursor(editor) ?: reportedCursor?.let {
+                        it - result.undo.original.length + result.undo.correction.length + trailing.length
+                    },
                 )
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.APPLIED
                 lastSpaceDetail = null
@@ -312,7 +322,8 @@ class AutocorrectInputCoordinator(
      *
      * Only at the correction's own place: the undo matches the text before the cursor, so with the
      * cursor after another `Hélène.` of the document it would rewrite that one. A cursor anywhere
-     * else, or an editor that does not tell where it is, drops the offer instead.
+     * else, or an editor that does not tell where it is, drops the offer instead. An editor with
+     * no extracted text is located by the selection it reports (#332: Simple Notes on the Pixel).
      */
     fun revertIfAddress(editor: AutocorrectEditor, text: String): AutocorrectAddressRevert {
         val pending = pendingUndo ?: return AutocorrectAddressRevert.UNCHANGED
@@ -326,7 +337,7 @@ class AutocorrectInputCoordinator(
         pendingUndo = null
         expectedSuggestion = null
         suggestionSnapshot = null
-        if (pending.cursorAfter == null || absoluteCursor(editor) != pending.cursorAfter) {
+        if (pending.cursorAfter == null || (absoluteCursor(editor) ?: reportedCursor) != pending.cursorAfter) {
             return AutocorrectAddressRevert.UNCHANGED
         }
         return when (AutocorrectEditorTransaction.undo(editor, pending.undo, identityEligible = true)) {
@@ -428,6 +439,7 @@ class AutocorrectInputCoordinator(
     ) {
         expectedSuggestion = null
         suggestionSnapshot = null
+        reportedCursor = newSelectionStart.takeIf { it >= 0 && it == newSelectionEnd }
         val pending = pendingUndo ?: return
         if (newSelectionStart != newSelectionEnd) {
             pendingUndo = null
@@ -462,6 +474,7 @@ class AutocorrectInputCoordinator(
     }
 
     private fun clearTransientState() {
+        reportedCursor = null
         expectedSuggestion = null
         suggestionSnapshot = null
         pendingUndo = null
