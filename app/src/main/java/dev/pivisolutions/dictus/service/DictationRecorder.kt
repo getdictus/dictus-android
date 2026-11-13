@@ -13,6 +13,8 @@ import kotlinx.coroutines.launch
 interface AudioCapture {
     /** Called after each read chunk, once the waveform levels include it. */
     var onEnergyUpdate: (() -> Unit)?
+    /** Called once, from the read loop, after [SilenceWatch.WINDOW_MS] of silence in a row (#251). */
+    var onLongSilence: (() -> Unit)?
     fun start(scope: CoroutineScope)
     fun stop(): FloatArray
     fun cancel()
@@ -28,10 +30,14 @@ interface AudioCapture {
  * first, and a capture's callbacks and timer write only while it is the current one.
  *
  * [start], [stop] and [cancel] run on the main thread. Energy callbacks arrive from the read loop.
+ *
+ * @param onLongSilence runs on [scope] when the live capture has heard nothing for
+ * [SilenceWatch.WINDOW_MS], a dictation probably forgotten (#251).
  */
 class DictationRecorder(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<DictationState>,
+    private val onLongSilence: () -> Unit = {},
     private val newCapture: (DictationSource) -> AudioCapture,
 ) {
     @Volatile
@@ -53,6 +59,10 @@ class DictationRecorder(
             if (current === capture) {
                 state.value = DictationState.Recording(source, elapsedMs, capture.getEnergyHistory())
             }
+        }
+        // Posted from the read loop: the capture may have been stopped or replaced meanwhile.
+        capture.onLongSilence = {
+            scope.launch { if (current === capture) onLongSilence() }
         }
         capture.start(scope)
         timerJob = scope.launch {

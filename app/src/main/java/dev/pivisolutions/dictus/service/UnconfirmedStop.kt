@@ -14,7 +14,8 @@ import java.io.IOException
 
 /**
  * Ends an app dictation the user did not confirm with ✓ (#248): the notification's Stop, the app
- * swiped away from Recents, the service torn down while it records.
+ * swiped away from Recents, the service torn down while it records, and a dictation forgotten in
+ * the background, after [SilenceWatch.WINDOW_MS] of silence (#251).
  *
  * WHY: those stops used to discard the take, 15 s of speech on a screen lock among them. Like iOS,
  * where every stop but the cancel goes through `DictationCoordinator.stopDictation`, only ✕
@@ -39,6 +40,7 @@ internal class UnconfirmedStop(
         TASK_REMOVED("task_removed"),
         SERVICE_DESTROYED("service_destroyed"),
         ORPHAN_TAKE("orphan_take"),
+        LONG_SILENCE("long_silence"),
     }
 
     /**
@@ -50,7 +52,9 @@ internal class UnconfirmedStop(
     fun stop(reason: Reason, scope: CoroutineScope, onDone: () -> Unit): Job? {
         val source = (state.value as? DictationState.Recording)?.source
         if (!recorder.isCapturing || source != DictationSource.APP) return null
-        val samples = recorder.stop()
+        val captured = recorder.stop()
+        // A forgotten take ends on minutes of silence, which only the transcription would see.
+        val samples = if (reason == Reason.LONG_SILENCE) SilenceWatch.withoutSilentTail(captured) else captured
         val takeFile = takes.detachLive()
         state.value = DictationState.Transcribing
         logStart(reason, samples)

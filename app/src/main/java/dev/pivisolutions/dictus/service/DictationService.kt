@@ -199,7 +199,7 @@ class DictationService : Service(), DictationController {
 
     // Only an app take goes to disk: a keyboard take's text is for its field, and a stop
     // without confirm leaves it to the keyboard too.
-    private val recorder = DictationRecorder(serviceScope, _state) { source ->
+    private val recorder = DictationRecorder(serviceScope, _state, ::stopForgottenDictation) { source ->
         AudioCaptureManager(
             getSystemService(AudioManager::class.java),
             if (source == DictationSource.APP) takeFiles.startLive() else null,
@@ -209,6 +209,15 @@ class DictationService : Service(), DictationController {
     private val unconfirmedStop by lazy {
         UnconfirmedStop(recorder, _state, takeFiles) { samples ->
             transcriber.rejectBeforeEngine(samples) ?: transcribeTake(samples, TranscriptionRetention.PERSIST_HISTORY)
+        }
+    }
+
+    // A dictation forgotten in the background keeps the microphone until stopped (#251): after a
+    // long silence an app take ends like the notification's Stop. A keyboard take is left running.
+    private fun stopForgottenDictation() {
+        unconfirmedStop.stop(UnconfirmedStop.Reason.LONG_SILENCE, cleanupScope, ::finishTranscription)?.let {
+            unconfirmedJob = it
+            if (soundEnabled) soundPlayer.playStop()
         }
     }
 

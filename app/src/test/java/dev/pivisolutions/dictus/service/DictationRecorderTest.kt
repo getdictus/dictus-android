@@ -21,6 +21,7 @@ class DictationRecorderTest {
 
     private class FakeCapture(private val samples: FloatArray = floatArrayOf(0.1f, 0.2f)) : AudioCapture {
         override var onEnergyUpdate: (() -> Unit)? = null
+        override var onLongSilence: (() -> Unit)? = null
         var started = false
         var stopped = false
         var cancelled = false
@@ -48,8 +49,10 @@ class DictationRecorderTest {
     private val state = MutableStateFlow<DictationState>(DictationState.Idle)
     private val captures = mutableListOf<FakeCapture>()
 
+    private var longSilences = 0
+
     private fun recorder(scope: CoroutineScope) =
-        DictationRecorder(scope, state) { FakeCapture().also { captures += it } }
+        DictationRecorder(scope, state, { longSilences++ }) { FakeCapture().also { captures += it } }
 
     @Test
     fun `a second start releases the first capture instead of orphaning it`() = runTest(StandardTestDispatcher()) {
@@ -113,6 +116,33 @@ class DictationRecorderTest {
 
         // A second stop, the keyboard's ✓ after the app's stop in the issue, finds nothing.
         assertEquals(0, recorder.stop().size)
+    }
+
+    @Test
+    fun `a long silence of the live capture reaches the service`() = runTest(StandardTestDispatcher()) {
+        val recorder = recorder(backgroundScope)
+        recorder.start(DictationSource.APP)
+
+        captures[0].onLongSilence!!.invoke()
+        runCurrent()
+
+        assertEquals(1, longSilences)
+    }
+
+    @Test
+    fun `a long silence from a replaced or stopped capture is ignored`() = runTest(StandardTestDispatcher()) {
+        val recorder = recorder(backgroundScope)
+        recorder.start(DictationSource.APP)
+        val first = captures[0]
+        recorder.start(DictationSource.APP)
+        val second = captures[1]
+        recorder.stop()
+
+        first.onLongSilence!!.invoke()
+        second.onLongSilence!!.invoke()
+        runCurrent()
+
+        assertEquals(0, longSilences)
     }
 
     @Test
