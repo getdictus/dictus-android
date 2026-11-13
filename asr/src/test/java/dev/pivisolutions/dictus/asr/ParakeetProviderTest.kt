@@ -111,6 +111,44 @@ class ParakeetProviderTest {
         provider.initialize(ctcModelPath())
     }
 
+    private fun transducerModelPath(): String {
+        val dir = tempFolder.newFolder()
+        listOf("tokens.txt", "decoder.int8.onnx", "joiner.int8.onnx").forEach { File(dir, it).writeText("") }
+        return File(dir, "encoder.int8.onnx").apply { writeText("") }.absolutePath
+    }
+
+    @Test
+    fun `recognizer runs with the ONNX Runtime CPU memory arena off`() = runTest {
+        // #326: with the arena on, a decode's buffers stay reserved after it returns.
+        for (modelPath in listOf(ctcModelPath(), transducerModelPath())) {
+            val configs = mutableListOf<OfflineRecognizerConfig>()
+            val provider = provider(createRecognizer = { configs += it; FakeRecognizer() })
+
+            assertTrue(provider.initialize(modelPath))
+
+            val providerString = configs.single().modelConfig.provider
+            assertTrue(providerString, providerString.startsWith("cpu:"))
+            val file = File(providerString.removePrefix("cpu:"))
+            assertEquals("EnableCpuMemArena=0\n", file.readText())
+            // Next to the model directory, never inside it: a model directory holds only its catalog files.
+            assertEquals(File(modelPath).parentFile.parentFile, file.parentFile)
+            provider.release()
+        }
+    }
+
+    @Test
+    fun `unwritable session config keeps the arena instead of a provider path that ends the process`() = runTest {
+        // sherpa-onnx _Exit()s on a config path that does not open: never hand it one.
+        val modelPath = ctcModelPath()
+        File(File(modelPath).parentFile.parentFile, "onnxruntime-session.cfg").mkdir()
+        val configs = mutableListOf<OfflineRecognizerConfig>()
+        val provider = provider(createRecognizer = { configs += it; FakeRecognizer() })
+
+        assertTrue(provider.initialize(modelPath))
+
+        assertEquals("cpu", configs.single().modelConfig.provider)
+    }
+
     @Test
     fun `native calls run off the caller thread`() = runTest {
         val caller = Thread.currentThread()
