@@ -7,6 +7,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onParent
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
@@ -49,6 +50,18 @@ class KeyboardHeightTest {
         // The bottom row's labels sit in the middle of the fourth row.
         val label = composeRule.onNodeWithText("123").getUnclippedBoundsInRoot()
         assertDp("fourth row centre", 52.dp + 2.dp + sizing.rowHeight * 3.5f, (label.top + label.bottom) / 2)
+    }
+
+    // #346: the old 264 dp key area held 196 dp of keys and left 68 dp of blank band under the
+    // space row. Only the grid's 2 dp and the key's 2 dp margin may sit below it; the IME adds the
+    // navigation bar inset under the keyboard.
+    @Test fun `the space row ends the keyboard`() {
+        assertNoBandUnderSpaceRow()
+    }
+
+    @Test fun `in landscape the space row ends the keyboard`() {
+        sizing = landscape
+        assertNoBandUnderSpaceRow()
     }
 
     // The Pixel 4 report (#127): in landscape the old 316 dp left 77 dp of the screen to the app.
@@ -136,6 +149,14 @@ class KeyboardHeightTest {
                 onMicTap = {},
             )
         }
+    }
+
+    private fun assertNoBandUnderSpaceRow() {
+        content { KeyboardScreen({}, {}, onSendReturn = {}) }
+
+        // The label's parent is the key's visible capsule, inside its 2 dp vertical margin.
+        val space = composeRule.onNodeWithText("espace").onParent().getUnclippedBoundsInRoot()
+        assertDp("band under the space row", 4.dp, rootHeight() - space.bottom)
     }
 
     private fun bounds(description: String): DpRect =
