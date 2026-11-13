@@ -236,7 +236,7 @@ Release the lock after `emu kill`, also when install or verification failed (kil
 Release never contains x86_64 whisper/trie, with or without the property.
 
 - **Use Tiny.** whisper on x86_64 is built for SSE4.2 only (the emulator CPU lacks AVX2/FMA): Tiny takes ~12 s for 3 s of audio; Small Q5 ~75 s.
-- **Parakeet is unavailable on the emulator.** sherpa-onnx (`:asr`) ships arm64-v8a and armeabi-v7a only. Activating a Parakeet model there must end in a failed engine (log `ParakeetProvider: sherpa-onnx native library unavailable on x86_64`), never in a crash. Test Parakeet on the Pixel.
+- **Parakeet on the emulator needs `tools/fetch-sherpa-onnx-x86_64.sh` first** (#338). It puts sherpa-onnx's x86_64 libraries in `asr/src/emulator/jniLibs/` (not in git, sha256-checked), which the `-Pdictus.emulatorAbi=true` build then packages. Without them the build warns, and activating a Parakeet model ends in a failed engine (log `ParakeetProvider: sherpa-onnx native library unavailable on x86_64`), never in a crash. The 2 GB emulator is below Parakeet's RAM gate: add `-Pdictus.parakeetMinRamGb=1` (debug only). Transcription time, real voice and memory are still for the Pixel.
 
 ### Dictation from a WAV clip (virtual microphone)
 

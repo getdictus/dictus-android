@@ -16,10 +16,10 @@ Archive: [`sherpa-onnx-v2.0.1-android.tar.bz2`](https://github.com/k2-fsa/sherpa
 | `asr/src/main/jniLibs/arm64-v8a/libsherpa-onnx-jni.so` | 4,609,320 | `5db8f89f12b2c900a98c9e01e00c475c59db35e9437a62e36e27839ec48b5575` |
 | `asr/src/main/jniLibs/armeabi-v7a/libonnxruntime.so` | 15,359,592 | `7a8f17a707e52e0ac3a026be319272876d9eae61f4bb19585292772d785f7744` |
 | `asr/src/main/jniLibs/armeabi-v7a/libsherpa-onnx-jni.so` | 3,381,796 | `d45f377249d5c3191b91de6ba6edffcd83e4cf7e109bc523b212db341581c2a8` |
-| `asr/src/emulator/jniLibs/x86_64/libonnxruntime.so` | 25,581,120 | `087e84297cad64acb823c3d901d6e0cc934e91add7cdb20da802cd1c0bea5c3e` |
-| `asr/src/emulator/jniLibs/x86_64/libsherpa-onnx-jni.so` | 5,053,592 | `878d61116f244131263eec24297ef05bf508d02bccdede2a4e3ad3202bbdaa48` |
+| `asr/src/emulator/jniLibs/x86_64/libonnxruntime.so` (not in git) | 25,581,120 | `087e84297cad64acb823c3d901d6e0cc934e91add7cdb20da802cd1c0bea5c3e` |
+| `asr/src/emulator/jniLibs/x86_64/libsherpa-onnx-jni.so` (not in git) | 5,053,592 | `878d61116f244131263eec24297ef05bf508d02bccdede2a4e3ad3202bbdaa48` |
 
-The 64-bit libraries have 16 KB LOAD segments (`checkDebugApkNativeAlignment`). The x86_64 pair is packaged only in debug builds made with `-Pdictus.emulatorAbi=true` (see `asr/build.gradle.kts`).
+The 64-bit libraries have 16 KB LOAD segments (`checkDebugApkNativeAlignment`). The x86_64 pair is not committed: `tools/fetch-sherpa-onnx-x86_64.sh` downloads the archive, checks it and the two files against these sha256, and writes them there. It is packaged only in debug builds made with `-Pdictus.emulatorAbi=true` (see `asr/build.gradle.kts`).
 
 ## Kotlin API
 
@@ -41,4 +41,4 @@ for lib in libonnxruntime libsherpa-onnx-jni; do cmp jniLibs/x86_64/$lib.so "$RE
 
 ## Upgrading
 
-Take the libraries and the Kotlin files from the same release, update the tables above, and compare Parakeet's output on the shared voice corpus (`getdictus/dictus-test-voices`) before and after, as #338 did.
+Take the libraries and the Kotlin files from the same release, update the tables above and the version and sha256 in `tools/fetch-sherpa-onnx-x86_64.sh`, and compare Parakeet's output on the shared voice corpus (`getdictus/dictus-test-voices`) before and after, as #338 did.
