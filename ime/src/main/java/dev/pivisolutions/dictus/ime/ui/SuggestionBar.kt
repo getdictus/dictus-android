@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -33,6 +36,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -107,15 +111,11 @@ fun SuggestionBar(
                     contentAlignment = Alignment.Center,
                 ) {
                     if (text.isNotEmpty()) {
-                        Text(
+                        SuggestionText(
                             text = text,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontSize = 14.sp,
                             fontWeight = if (
                                 undoOffer == null && mode == SuggestionPresentationMode.COMPLETION && index == 1
                             ) FontWeight.Bold else FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -124,6 +124,66 @@ fun SuggestionBar(
         }
     }
 }
+
+/**
+ * A suggestion on one line. With a large font, a word too wide for its slot is drawn smaller,
+ * down to its size at the default font, before it is cut with « … » (#350): the slots are a third
+ * of the bar each, and at 1.3× « Bonjours » became « Bonjou… » on a 341 dp screen. LatinIME
+ * likewise squeezes a suggestion (`MIN_TEXT_XSCALE`) before it ellipsizes it.
+ */
+@Composable
+private fun SuggestionText(text: String, fontWeight: FontWeight) {
+    val style = LocalTextStyle.current.copy(
+        color = MaterialTheme.colorScheme.onBackground,
+        fontSize = SUGGESTION_FONT_SIZE,
+        fontWeight = fontWeight,
+    )
+    val measurer = rememberTextMeasurer()
+    val fontScale = LocalDensity.current.fontScale
+    BoxWithConstraints(contentAlignment = Alignment.Center) {
+        val available = constraints.maxWidth
+        val scale = remember(text, style, measurer, available, fontScale) {
+            suggestionTextScale(available, fontScale) { scale ->
+                measurer.measure(
+                    text,
+                    style.copy(fontSize = SUGGESTION_FONT_SIZE * scale),
+                    maxLines = 1,
+                    softWrap = false,
+                ).size.width
+            }
+        }
+        Text(
+            text = text,
+            style = style.copy(fontSize = SUGGESTION_FONT_SIZE * scale),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * The size factor of a suggestion in a slot [available] px wide, given its width at a factor
+ * ([widthAt]): 1 when it fits, otherwise the largest factor that fits, but never below its size
+ * at the default font (1 / [fontScale]); past that floor the text is ellipsized. At the default
+ * font it is always 1 (#350).
+ *
+ * Text width does not scale exactly with the font size (glyph positions are rounded), so each
+ * candidate is measured rather than derived from the full-size width.
+ */
+internal fun suggestionTextScale(available: Int, fontScale: Float, widthAt: (Float) -> Int): Float {
+    val floor = minOf(1f, 1f / fontScale)
+    val fullWidth = widthAt(1f)
+    if (fullWidth <= available || floor >= 1f) return 1f
+    var scale = maxOf(floor, available.toFloat() / fullWidth)
+    while (scale > floor && widthAt(scale) > available) {
+        scale = maxOf(floor, scale - SCALE_STEP)
+    }
+    return scale
+}
+
+private const val SCALE_STEP = 0.02f
+
+private val SUGGESTION_FONT_SIZE = 14.sp
 
 @Composable
 private fun SlotDivider() {
