@@ -110,6 +110,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import timber.log.Timber
 
 /**
@@ -205,6 +206,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private var editorSelEnd = -1
     // The keyboard's view, measured by the fullscreen decision (#355).
     private var keyboardView: View? = null
+    private var lastFullscreenDecision: String? = null
 
     // Whether the built-in suggestion bar is enabled. Observed from DataStore
     // so the user can toggle it in settings without restarting the IME.
@@ -728,14 +730,12 @@ class DictusImeService : LifecycleInputMethodService() {
     /** Dictus decides when it goes fullscreen (#355): see [usesFullscreenMode]. */
     override fun onEvaluateFullscreenMode(): Boolean {
         val systemDefault = super.onEvaluateFullscreenMode()
-        val imeOptions = currentInputEditorInfo?.imeOptions ?: 0
         val room = roomAboveKeyboardDp()
-        val fullscreen = usesFullscreenMode(systemDefault, imeOptions, room)
-        if (fullscreen != isFullscreenMode) {
-            Timber.d(
-                "Fullscreen mode: %b (system default %b, imeOptions=0x%08x, %.0f dp above the keyboard)",
-                fullscreen, systemDefault, imeOptions, room,
-            )
+        val fullscreen = usesFullscreenMode(systemDefault, room)
+        val decision = "Fullscreen mode: $fullscreen (system default $systemDefault, ${room.roundToInt()} dp above the keyboard)"
+        if (decision != lastFullscreenDecision) {
+            lastFullscreenDecision = decision
+            Timber.d(decision)
         }
         return fullscreen
     }
