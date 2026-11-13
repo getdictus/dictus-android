@@ -29,7 +29,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * With the largest font and display size, every Settings label stays readable on whole lines
  * (#350, defect V3 of the #339 audit): « Langue » was cut into « La / n » next to « Suivre la
- * langue du clavier », « Version » squeezed to a stroke next to the version number.
+ * langue du clavier », « Version » squeezed to a stroke next to the version number. From font
+ * scale 2.0 the label goes above its value (#359).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30], qualifiers = "fr-w411dp-h914dp-420dpi")
@@ -55,6 +56,30 @@ class SettingsLargeFontTest {
         (LABELS + VALUES).forEach { assertWhole(it) }
         // The version is one identifier: it may wrap anywhere, but stays whole.
         assertWhole(VERSION, wordBreaks = false)
+    }
+
+    @Test
+    fun `with font scale 2_0 on a 341 dp screen no label or value is cut`() {
+        // Android 14+'s largest font in its UI: « Automatique » was cut into « Automati / que » (#359).
+        setSettings(width = 341.dp, fontScale = 2f)
+
+        (LABELS + VALUES).forEach { assertWhole(it) }
+        assertWhole(VERSION, wordBreaks = false)
+    }
+
+    @Test
+    fun `with font scale 5_0 on a 341 dp screen every value keeps the row's width`() {
+        // The AVD's largest font, adb only: a label word wider than the row left the value ~0 dp,
+        // « Suivre la langue du clavier » invisible, « Sombre » one letter per line (#359).
+        setSettings(width = 341.dp, fontScale = 5f)
+
+        (VALUES + VERSION).forEach {
+            val layout = layout(it)
+            assertFalse("« $it » is clipped by its row's height", layout.didOverflowHeight)
+            // A row is 277 dp wide inside its card, less the menu's 18 dp icon. Words wider than
+            // that still break: nothing narrower than the row is left to give them.
+            assertTrue("« $it » is squeezed", layout.size.width >= (250 * DENSITY).toInt())
+        }
     }
 
     @Test
@@ -104,6 +129,8 @@ class SettingsLargeFontTest {
     }
 
     private companion object {
+        // 420dpi, from the qualifiers.
+        const val DENSITY = 420 / 160f
         val LABELS = listOf(
             "Langue", "Langue du clavier", "Retour haptique", "Sons du clavier", "Sons", "Suggestions",
             "Correction automatique", "Réinitialiser les mots appris", "Thème", "Langue de l'interface", "Version", "GitHub",
