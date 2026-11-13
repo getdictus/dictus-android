@@ -426,7 +426,9 @@ fun OnboardingPage(
             // Shrunk only if that spares the scroll: a page that scrolls anyway keeps it whole.
             val fillMax = if (room >= fillMinHeight.roundToPx()) room else Constraints.Infinity
             val fillPlaceable = fills.singleOrNull()?.measure(loose.copy(maxHeight = fillMax))
-            layout(constraints.maxWidth, contentPlaceable.height + (fillPlaceable?.height ?: 0)) {
+            // At least the scroll's minimum, as the column was: a smaller page is centred in it.
+            val height = (contentPlaceable.height + (fillPlaceable?.height ?: 0)).coerceAtLeast(constraints.minHeight)
+            layout(constraints.maxWidth, height) {
                 contentPlaceable.place(0, 0)
                 fillPlaceable?.place(0, contentPlaceable.height)
             }

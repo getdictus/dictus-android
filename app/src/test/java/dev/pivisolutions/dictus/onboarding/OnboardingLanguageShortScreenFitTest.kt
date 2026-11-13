@@ -8,6 +8,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
@@ -58,6 +59,15 @@ class OnboardingLanguageShortScreenFitTest {
 
         // 0.8 of the keyboard, as before #358, and 4 dp above and below it.
         assertEquals(FULL_PREVIEW_HEIGHT.value, preview.bottom.value - preview.top.value, 0.5f)
+    }
+
+    @Test
+    fun `with the room for it the page starts at the top, as before`() {
+        setPage(height = 900.dp)
+        val title = composeTestRule.onNodeWithText("Votre langue").getUnclippedBoundsInRoot()
+
+        // The top row (8 + 32 dp), then the title's 32 dp: a page shorter than the window stays up.
+        assertEquals(72f, title.top.value, 0.5f)
     }
 
     private fun setPage(height: Dp): Pair<DpRect, DpRect> {
