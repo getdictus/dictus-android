@@ -132,7 +132,6 @@ class ParakeetProviderTest {
             assertEquals("EnableCpuMemArena=0\n", file.readText())
             // Next to the model directory, never inside it: a model directory holds only its catalog files.
             assertEquals(File(modelPath).parentFile.parentFile, file.parentFile)
-            provider.release()
         }
     }
 
