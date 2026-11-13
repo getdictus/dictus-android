@@ -43,8 +43,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -143,6 +146,7 @@ fun OnboardingShell(
     page: @Composable (OnboardingStep) -> Unit,
 ) {
     BackHandler(enabled = step.stepBack != null, onBack = onBack)
+    val topBarFold = remember { OnboardingTopBarFold() }
 
     Box(
         modifier = Modifier
@@ -150,11 +154,13 @@ fun OnboardingShell(
             .background(MaterialTheme.colorScheme.background),
     ) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-            OnboardingTopBar(
-                step = step,
-                onBack = if (step.stepBack != null) onBack else null,
-                modifier = Modifier.padding(top = OnboardingMetrics.topBarTopPadding),
-            )
+            if (!topBarFold.isFolded) {
+                OnboardingTopBar(
+                    step = step,
+                    onBack = if (step.stepBack != null) onBack else null,
+                    modifier = Modifier.padding(top = OnboardingMetrics.topBarTopPadding),
+                )
+            }
 
             AnimatedContent(
                 targetState = step,
@@ -176,7 +182,10 @@ fun OnboardingShell(
                 // act on the step that replaced it.
                 val leaving = transition.targetState == EnterExitState.PostExit
                 Box(modifier = if (leaving) Modifier.consumeAllTouches() else Modifier) {
-                    CompositionLocalProvider(LocalOnboardingSkip provides skip) {
+                    CompositionLocalProvider(
+                        LocalOnboardingSkip provides skip,
+                        LocalOnboardingTopBarFold provides topBarFold,
+                    ) {
                         page(pageStep)
                     }
                 }
@@ -210,6 +219,19 @@ private fun OnboardingStep.skipLabel(): Int =
     if (this == OnboardingStep.Microphone) R.string.onboarding_mic_permission_not_now else R.string.onboarding_skip
 
 val LocalOnboardingSkip = staticCompositionLocalOf<OnboardingSkipAction?> { null }
+
+/**
+ * Lets a page take the top row's height when the window is too short for both (#355): the
+ * first dictation with the keyboard up on a phone in landscape. The page folds the row while
+ * it needs the room, and unfolds it before it leaves.
+ */
+@Stable
+class OnboardingTopBarFold {
+    var isFolded by mutableStateOf(false)
+}
+
+/** Null outside the shell (previews, tests of a page alone): the page then has no row to fold. */
+val LocalOnboardingTopBarFold = staticCompositionLocalOf<OnboardingTopBarFold?> { null }
 
 // ---------------------------------------------------------------------------
 // Top row and progress bar
