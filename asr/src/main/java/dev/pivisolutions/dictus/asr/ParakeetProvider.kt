@@ -124,6 +124,7 @@ class ParakeetProvider(
         val dir = File(modelDir)
         val encoderFile = dir.listFiles()?.firstOrNull { it.name.startsWith("encoder") && it.name.endsWith(".onnx") }
         val isTransducer = encoderFile != null
+        val provider = cpuProviderWithoutArena(dir.parentFile)
 
         val modelConfig = if (isTransducer) {
             val decoderFile = dir.listFiles()?.firstOrNull { it.name.startsWith("decoder") && it.name.endsWith(".onnx") }
@@ -140,7 +141,7 @@ class ParakeetProvider(
                 ),
                 tokens = tokensPath,
                 numThreads = 2,
-                provider = "cpu",
+                provider = provider,
                 modelType = "nemo_transducer",
             )
         } else {
@@ -148,7 +149,7 @@ class ParakeetProvider(
                 nemo = OfflineNemoEncDecCtcModelConfig(model = modelPath),
                 tokens = tokensPath,
                 numThreads = 2,
-                provider = "cpu",
+                provider = provider,
             )
         }
 
@@ -166,8 +167,8 @@ class ParakeetProvider(
             Timber.e(e, "ParakeetProvider: initialization failed for %s", modelPath)
             false
         } catch (e: LinkageError) {
-            // sherpa-onnx ships arm64-v8a and armeabi-v7a only. On an x86_64 device or
-            // emulator the first load throws UnsatisfiedLinkError, and every later
+            // sherpa-onnx ships arm64-v8a and armeabi-v7a only (x86_64 in emulator debug
+            // builds). On any other ABI the first load throws UnsatisfiedLinkError, and every later
             // attempt NoClassDefFoundError (the class init already failed). Any other
             // LinkageError (NoSuchMethodError, ExceptionInInitializerError...) means the
             // library loaded but its JNI does not match, e.g. after a sherpa-onnx upgrade.
@@ -181,6 +182,32 @@ class ParakeetProvider(
                     Timber.e(e, "Parakeet native init failed: %s: %s", e.javaClass.simpleName, e.message)
             }
             false
+        }
+    }
+
+    /**
+     * The provider string that turns ONNX Runtime's CPU memory arena off for this recognizer.
+     *
+     * WHY (#326): with the arena on, every buffer a decode allocates stays reserved for the
+     * session after the decode returns, so the process keeps its peak memory until the model
+     * is released (10 min idle). Measured in #324 at 4 GB of RAM, that left little room for the
+     * other apps. With the arena off, a decode's buffers go back when it ends, and the model
+     * stays loaded for the next take. Same text on the whole test corpus.
+     *
+     * sherpa-onnx (from 1.12.39) reads session options from a key=value file named after the
+     * provider, `cpu:<path>`. A path that does not open ends the process (`_Exit`) inside
+     * sherpa-onnx, so the file is written and read back first; if that fails the recognizer
+     * keeps the arena rather than risk the app.
+     */
+    private fun cpuProviderWithoutArena(configDir: File?): String {
+        val file = File(configDir, SESSION_CONFIG_FILE)
+        return try {
+            file.writeText(SESSION_CONFIG)
+            check(file.readText() == SESSION_CONFIG) { "read back differs" }
+            "cpu:${file.absolutePath}"
+        } catch (e: Exception) {
+            Timber.w(e, "Parakeet: no session config at %s, ONNX Runtime keeps its memory arena", file)
+            "cpu"
         }
     }
 
@@ -283,6 +310,11 @@ class ParakeetProvider(
         const val RELEASE_GRACE_MS = 10_000L
 
         val LEAKED_PROVIDERS = AtomicInteger(0)
+
+        // Written next to the model directories (models/), not inside one: a model
+        // directory holds exactly its catalog files.
+        const val SESSION_CONFIG_FILE = "onnxruntime-session.cfg"
+        const val SESSION_CONFIG = "EnableCpuMemArena=0\n"
 
         // States of a native call.
         private const val QUEUED = 0
