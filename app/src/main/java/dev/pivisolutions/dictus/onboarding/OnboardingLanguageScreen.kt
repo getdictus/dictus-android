@@ -92,6 +92,9 @@ fun OnboardingLanguageScreen(
                 onClick = onContinue,
             )
         },
+        // A short screen shrinks the preview so that it ends above « Continuer » (#358).
+        fill = { LayoutPreview(setup = setup) },
+        fillMinHeight = PREVIEW_MIN_HEIGHT,
     ) {
         LanguageCard(language = setup.language, onLanguage = onLanguage)
 
@@ -105,8 +108,6 @@ fun OnboardingLanguageScreen(
 
         // Above the preview, as on iOS, so it stays above the fold on a small screen.
         ModelLine(model = model, modifier = Modifier.padding(top = 12.dp, bottom = 24.dp))
-
-        LayoutPreview(setup = setup)
     }
 }
 
@@ -269,6 +270,10 @@ internal const val LANGUAGE_PREVIEW_TAG = "onboarding_language_preview"
  * Pixel 4 and the last row ran under « Continuer ». [PREVIEW_SCALE] brings the keys near
  * iOS's preview (40 pt, `LanguageSetupPage.swift`); the keyboard is laid out at the width
  * divided by the scale, so once scaled it still fills the width.
+ *
+ * WHY SMALLER STILL ON A SHORT SCREEN (#358): on a 360x800 dp phone the last row ran under
+ * « Continuer » again. The page gives the preview the height left above the button, and it
+ * scales down into it, to [PREVIEW_MIN_HEIGHT]. A screen with less room scrolls, as before.
  */
 @Composable
 private fun LayoutPreview(setup: LanguageSetup) {
@@ -289,11 +294,18 @@ private fun LayoutPreview(setup: LanguageSetup) {
             .padding(vertical = 4.dp)
             .layout { measurable, constraints ->
                 val width = constraints.maxWidth
-                val keyboard = measurable.measure(Constraints.fixedWidth((width / PREVIEW_SCALE).roundToInt()))
-                layout(width, (keyboard.height * PREVIEW_SCALE).roundToInt()) {
+                // Below the full size when the page leaves less (#358): laid out wider, so it still fills the width.
+                val fullHeight = measurable.maxIntrinsicHeight((width / PREVIEW_SCALE).roundToInt())
+                val scale = if (constraints.hasBoundedHeight && fullHeight > 0) {
+                    (constraints.maxHeight.toFloat() / fullHeight).coerceAtMost(PREVIEW_SCALE)
+                } else {
+                    PREVIEW_SCALE
+                }
+                val keyboard = measurable.measure(Constraints.fixedWidth((width / scale).roundToInt()))
+                layout(width, (keyboard.height * scale).roundToInt().coerceAtMost(constraints.maxHeight)) {
                     keyboard.placeWithLayer(0, 0) {
-                        scaleX = PREVIEW_SCALE
-                        scaleY = PREVIEW_SCALE
+                        scaleX = scale
+                        scaleY = scale
                         transformOrigin = TransformOrigin(0f, 0f)
                     }
                 }
@@ -312,3 +324,6 @@ private fun LayoutPreview(setup: LanguageSetup) {
 
 /** The preview's size against the keyboard's own: 48 dp keys drawn 38 dp tall. */
 private const val PREVIEW_SCALE = 0.8f
+
+/** The smallest the preview gets on a short screen, keys about 25 dp tall; with less room, the page scrolls. */
+private val PREVIEW_MIN_HEIGHT = 120.dp
