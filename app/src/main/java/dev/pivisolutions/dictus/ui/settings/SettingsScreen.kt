@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -391,28 +392,20 @@ private fun SettingMenuRow(
     // An unknown stored value shows the first option, the default each row falls back to.
     val selectedLabel = options.firstOrNull { it.first == selected }?.second ?: options.first().second
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable { expanded = true }
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable { expanded = true },
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
         Box {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // fill = false: the value keeps its width, and wraps only when the row is short (#350).
                 Text(
                     text = selectedLabel,
                     color = DictusColors.Accent,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 Icon(
                     imageVector = Icons.Default.UnfoldMore,
@@ -457,25 +450,13 @@ private fun SettingInfoRow(
     value: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
+    SettingRow(label = { SettingLabel(label) }, modifier = modifier) {
         Text(
             text = value,
             color = LocalDictusColors.current.textSecondary,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.End,
         )
     }
 }
@@ -489,21 +470,10 @@ private fun SettingToggleRow(
     checked: Boolean,
     onToggle: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable(onClick = onToggle),
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
         DictusToggle(checked = checked, onToggle = onToggle)
     }
 }
@@ -517,22 +487,10 @@ private fun SettingActionRow(
     onClick: () -> Unit,
     labelColor: Color = MaterialTheme.colorScheme.onBackground,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = labelColor,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
-    }
+    SettingRow(
+        label = { SettingLabel(label, color = labelColor) },
+        modifier = Modifier.clickable(onClick = onClick),
+    )
 }
 
 /**
@@ -543,26 +501,11 @@ private fun SettingNavRow(
     label: String,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable(onClick = onClick),
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalDictusColors.current.textSecondary,
-        )
+        SettingChevron()
     }
 }
 
@@ -575,30 +518,34 @@ private fun SettingLinkRow(
     url: String,
     context: android.content.Context,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
-            }
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        },
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalDictusColors.current.textSecondary,
-        )
+        SettingChevron()
     }
+}
+
+@Composable
+private fun SettingLabel(text: String, color: Color = MaterialTheme.colorScheme.onBackground) {
+    Text(
+        text = text,
+        color = color,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Normal,
+    )
+}
+
+@Composable
+private fun SettingChevron() {
+    Icon(
+        imageVector = Icons.Default.ChevronRight,
+        contentDescription = null,
+        tint = LocalDictusColors.current.textSecondary,
+    )
 }
 
 /**
