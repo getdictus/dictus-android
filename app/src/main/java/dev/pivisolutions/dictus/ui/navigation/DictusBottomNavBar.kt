@@ -7,9 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.tappableElement
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -55,16 +60,27 @@ import dev.pivisolutions.dictus.navigation.AppDestination
  * WHY filled pill indicator: Replaces the small 8dp dot with a translucent filled pill
  * behind the active tab for improved visibility and iOS visual parity.
  *
+ * WHY tappableElement insets (#343): targetSdk 36 makes the window edge-to-edge from
+ * Android 15, so the bar has to keep clear of the system navigation bar itself. The
+ * tappable-element insets cover the 3-button bar (at the bottom, or on the side in
+ * landscape) and are zero for the gesture handle, which the bar may overlap: gesture
+ * navigation keeps the same look. Before Android 15 the window fits the system bars and
+ * these insets are zero.
+ *
  * @param currentRoute The current navigation route string used to highlight the active tab.
  * @param onNavigate Callback invoked when the user taps a tab.
+ * @param windowInsets System insets the bar keeps clear of.
  */
 @Composable
 fun DictusBottomNavBar(
     currentRoute: String,
     onNavigate: (AppDestination) -> Unit,
+    windowInsets: WindowInsets = WindowInsets.tappableElement
+        .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
 ) {
     Box(
         modifier = Modifier
+            .windowInsetsPadding(windowInsets)
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 8.dp)
             .height(80.dp)
