@@ -204,8 +204,6 @@ class DictusImeService : LifecycleInputMethodService() {
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
-    // The keyboard's view, measured by the fullscreen decision (#355).
-    private var keyboardView: View? = null
     private var lastFullscreenDecision: String? = null
 
     // Whether the built-in suggestion bar is enabled. Observed from DataStore
@@ -719,9 +717,8 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     override fun onCreateInputView(): View = super.onCreateInputView().also { view ->
-        keyboardView = view
-        // The first decision after a rotation runs before the new keyboard is laid out; decide
-        // again once its real height is known.
+        // The first decision after a rotation can read the insets of the old orientation;
+        // decide again once the new keyboard is laid out with its own.
         view.addOnLayoutChangeListener { v, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top != oldBottom - oldTop) v.post { updateFullscreenMode() }
         }
@@ -743,27 +740,37 @@ class DictusImeService : LifecycleInputMethodService() {
     /**
      * The screen's height between the status bar and the top of the keyboard, in dp.
      *
-     * The keyboard is the laid-out input view (keys and the navigation bar band under them).
-     * Before its first layout in this orientation, the height [keyboardSizing] gives it plus the
-     * band, as the keyboard composable computes them.
+     * The keyboard is the height [keyboardSizing] gives it, as the keyboard composable computes
+     * it, plus the navigation bar band under the keys from the IME window's insets. Not the
+     * laid-out view: in fullscreen it loses the band, which would undo the decision it led to.
      */
     private fun roomAboveKeyboardDp(): Float {
         val density = resources.displayMetrics.density
         val insets = window?.window?.decorView?.rootWindowInsets
             ?.let { WindowInsetsCompat.toWindowInsetsCompat(it) }
-        val top = insets?.getInsets(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout())?.top ?: 0
-        val laidOut = keyboardView?.takeIf { it.isLaidOut && it.height > 0 }?.height
-        val keyboardPx = laidOut?.toFloat() ?: run {
-            val configuration = resources.configuration
-            val sizing = keyboardSizing(
-                screenWidthDp = configuration.screenWidthDp.toFloat(),
-                screenHeightDp = configuration.screenHeightDp.toFloat(),
-                fontScale = configuration.fontScale,
-            )
-            val band = insets?.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.captionBar())?.bottom ?: 0
-            sizing.totalHeightDp * density + band
-        }
-        return (screenHeightPx() - top - keyboardPx) / density
+        val top = maxOf(
+            insets?.getInsets(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout())?.top ?: 0,
+            statusBarOfDisplayPx(),
+        )
+        val band = insets?.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.captionBar())?.bottom ?: 0
+        val configuration = resources.configuration
+        val sizing = keyboardSizing(
+            screenWidthDp = configuration.screenWidthDp.toFloat(),
+            screenHeightDp = configuration.screenHeightDp.toFloat(),
+            fontScale = configuration.fontScale,
+        )
+        return (screenHeightPx() - top - band) / density - sizing.totalHeightDp
+    }
+
+    /**
+     * The status bar's height from the display's metrics. The IME window's own insets leave it
+     * out on Android 11 (the window starts under it), which counted it as room for the app.
+     */
+    private fun statusBarOfDisplayPx(): Int {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return 0
+        return getSystemService(WindowManager::class.java).currentWindowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.displayCutout())
+            .top
     }
 
     private fun screenHeightPx(): Int {
