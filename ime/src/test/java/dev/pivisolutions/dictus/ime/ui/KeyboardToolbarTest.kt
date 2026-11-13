@@ -1,6 +1,12 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
@@ -145,5 +151,24 @@ class KeyboardToolbarTest {
                 )
             }
         }
+    }
+
+    // #358: the halo drawn around the pill came 3dp from the edge, against ☰'s 8dp on the other side.
+    @Test fun `the mic halo keeps the menu's margin to the bar's edge`() {
+        composeRule.setContent {
+            DictusTheme {
+                Box(modifier = Modifier.width(411.dp)) {
+                    KeyboardToolbar(onCycleLanguage = {}, onOpenSettings = {})
+                }
+            }
+        }
+
+        val bar = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val mic = composeRule.onNodeWithContentDescription("Microphone").getUnclippedBoundsInRoot()
+        val menu = composeRule.onNodeWithContentDescription("Keyboard menu").getUnclippedBoundsInRoot()
+
+        val haloToEdge = bar.right - (mic.right + MIC_HALO_OUTSET)
+        assertEquals(8f, menu.left.value, 0.01f)
+        assertEquals(menu.left.value, haloToEdge.value, 0.01f)
     }
 }
