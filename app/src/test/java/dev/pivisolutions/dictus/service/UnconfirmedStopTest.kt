@@ -34,6 +34,7 @@ class UnconfirmedStopTest {
 
     private class FakeCapture(private val samples: FloatArray) : AudioCapture {
         override var onEnergyUpdate: (() -> Unit)? = null
+        override var onLongSilence: (() -> Unit)? = null
         var stopped = false
         var cancelled = false
         override fun start(scope: CoroutineScope) = Unit
@@ -45,7 +46,7 @@ class UnconfirmedStopTest {
     }
 
     private val state = MutableStateFlow<DictationState>(DictationState.Idle)
-    private val capture = FakeCapture(take)
+    private var capture = FakeCapture(take)
     private var transcribed: FloatArray? = null
     private var stateWhileTranscribing: DictationState? = null
     private var doneCount = 0
@@ -144,6 +145,34 @@ class UnconfirmedStopTest {
 
         assertEquals(1, takes.orphans().size)
         assertEquals(1, doneCount)
+    }
+
+    @Test
+    fun `a forgotten dictation is transcribed without its silent tail, then its file deleted`() = runTest {
+        // 3 s of speech, then the silence that ended the dictation.
+        val speech = FloatArray(3 * RecordingDurationPolicy.SAMPLE_RATE_HZ) { if (it % 2 == 0) 0.2f else -0.2f }
+        capture = FakeCapture(speech + FloatArray(SilenceWatch.WINDOW_SAMPLES.toInt()))
+        val (recorder, stop) = unconfirmedStop(TranscriptionOutcome.Text("kept text"))
+        recorder.start(DictationSource.APP)
+
+        stop.stop(UnconfirmedStop.Reason.LONG_SILENCE, this) { doneCount++ }!!.join()
+
+        val sent = transcribed!!
+        assertArrayEquals(speech, sent.copyOf(speech.size), 0f)
+        assertTrue(sent.size <= speech.size + 2 * RecordingDurationPolicy.SAMPLE_RATE_HZ)
+        assertEquals(DictationState.Transcribing, stateWhileTranscribing)
+        assertEquals(emptyList<Any>(), takes.orphans())
+        assertEquals(1, doneCount)
+    }
+
+    @Test
+    fun `a forgotten keyboard dictation is left running`() = runTest {
+        val (recorder, stop) = unconfirmedStop(TranscriptionOutcome.Text("keyboard text"))
+        recorder.start(DictationSource.KEYBOARD)
+
+        assertNull(stop.stop(UnconfirmedStop.Reason.LONG_SILENCE, this) { doneCount++ })
+        assertTrue(recorder.isCapturing)
+        assertNull(transcribed)
     }
 
     @Test
