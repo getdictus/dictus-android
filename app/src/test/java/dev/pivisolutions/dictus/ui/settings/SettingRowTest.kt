@@ -1,9 +1,11 @@
 package dev.pivisolutions.dictus.ui.settings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** How a Settings row shares its width between the label and the trailing value (#350). */
+/** How a Settings row shares its width between the label and the trailing value (#350, #359). */
 class SettingRowTest {
 
     @Test
@@ -37,5 +39,25 @@ class SettingRowTest {
     @Test
     fun `a label word wider than the row leaves the value no width`() {
         assertEquals(0, trailingWidth(available = 300, label = 350, labelWord = 320, trailing = 80, trailingWord = 80))
+    }
+
+    @Test
+    fun `the label stays beside the value while both longest words fit`() {
+        // « Langue » next to « Suivre la langue du clavier » at font scale 1.3: the value wraps beside it.
+        assertFalse(stacksLabel(available = 300, labelWord = 70, trailingWord = 80))
+        assertFalse(stacksLabel(available = 300, labelWord = 150, trailingWord = 150))
+    }
+
+    @Test
+    fun `the label goes above the value when both longest words do not fit side by side`() {
+        // « Langue de l'interface » next to « Automatique ⇕ » at font scale 2.0.
+        assertTrue(stacksLabel(available = 300, labelWord = 140, trailingWord = 170))
+        // A label word wider than the row, « haptique » at font scale 5.0.
+        assertTrue(stacksLabel(available = 300, labelWord = 320, trailingWord = 51))
+    }
+
+    @Test
+    fun `a row without a value never stacks`() {
+        assertFalse(stacksLabel(available = 300, labelWord = 320, trailingWord = 0))
     }
 }
