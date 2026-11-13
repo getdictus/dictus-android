@@ -110,7 +110,8 @@ class KeyboardHeightTest {
     }
 
     // iOS RecordingOverlay.topBar: 10 + 36 + 6, so the pills do not move when recording starts.
-    // Both bars put their pills 10dp from the top and 8dp from the sides.
+    // Both bars put their pills 10dp from the top and 8dp from the sides, the mic's halo
+    // counted on the right (#358).
     @Test fun `toolbar pills sit 10dp from the top and 8dp from the sides`() {
         content { KeyboardScreen({}, {}, onSendReturn = {}) }
         val width = composeRule.onRoot().getUnclippedBoundsInRoot().right
@@ -118,7 +119,7 @@ class KeyboardHeightTest {
         val mic = bounds("Microphone")
         assertDp("mic top", 10.dp, mic.top)
         assertDp("mic height", 36.dp, mic.bottom - mic.top)
-        assertDp("mic right", width - 8.dp, mic.right)
+        assertDp("mic right", width - 8.dp - MIC_HALO_OUTSET, mic.right)
         // ☰'s node is its 44dp touch target, centred on the 36dp capsule.
         val menu = bounds("Keyboard menu")
         assertDp("menu centre", 28.dp, (menu.top + menu.bottom) / 2)
@@ -132,7 +133,7 @@ class KeyboardHeightTest {
         val confirm = bounds("Finish dictation")
         assertDp("confirm top", 10.dp, confirm.top)
         assertDp("confirm height", 36.dp, confirm.bottom - confirm.top)
-        assertDp("confirm right", width - 8.dp, confirm.right)
+        assertDp("confirm right", width - 8.dp - MIC_HALO_OUTSET, confirm.right)
         val cancel = bounds("Cancel dictation")
         assertDp("cancel centre", 28.dp, (cancel.top + cancel.bottom) / 2)
         assertDp("cancel left", 8.dp, cancel.left)
