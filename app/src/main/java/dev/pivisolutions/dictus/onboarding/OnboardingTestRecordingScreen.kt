@@ -57,6 +57,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -68,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -324,6 +326,18 @@ private val PracticeFieldMinHeight: Dp
     @Composable get() = with(LocalDensity.current) { PracticeFieldLineHeight.toDp() * 2 } + PracticeFieldPadding * 2
 
 /**
+ * The field's padding inside its card. Given less than two lines (a phone in landscape, #355),
+ * the top and bottom padding give way so one whole line stays in the card.
+ */
+private fun Modifier.practiceFieldPadding(): Modifier = layout { measurable, constraints ->
+    val horizontal = PracticeFieldPadding.roundToPx()
+    val vertical = ((constraints.maxHeight - PracticeFieldLineHeight.roundToPx()) / 2)
+        .coerceIn(0, PracticeFieldPadding.roundToPx())
+    val placeable = measurable.measure(constraints.offset(-2 * horizontal, -2 * vertical))
+    layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(horizontal, vertical) }
+}
+
+/**
  * The real text field, on a card outlined in blue while the keyboard is up, and in green with
  * a check once the text has landed (iOS `field` and `successCue`).
  */
@@ -359,7 +373,7 @@ private fun PracticeField(
             cursorBrush = SolidColor(DictusColors.Accent),
             modifier = Modifier
                 .fillMaxSize()
-                .padding(PracticeFieldPadding)
+                .practiceFieldPadding()
                 .testTag(FIRST_DICTATION_FIELD_TAG),
             decorationBox = { inner ->
                 if (text.isEmpty()) {
