@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ContentCopy
@@ -34,16 +35,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.core.DataStore
@@ -109,32 +114,20 @@ fun HomeScreen(
         storedModelKey?.let(isModelDownloaded) ?: true
     }
     val historySwipeThresholdPx = with(LocalDensity.current) { 120.dp.toPx() }
+    val historySwipe = remember(onOpenHistory, historySwipeThresholdPx) {
+        HistorySwipeConnection(historySwipeThresholdPx, onOpenHistory)
+    }
 
-    var upwardDrag = 0f
+    // Scrolls when the content is taller than the screen (phone in landscape, #347). The
+    // scroll keeps the screen height as the column's minimum, so the weighted spacers
+    // still centre the content whenever it fits.
     Column(
         modifier = Modifier
             .fillMaxSize()
             .testTag("home_screen")
             .background(MaterialTheme.colorScheme.background)
-            .then(
-                if (!historyEnabled) {
-                    Modifier
-                } else {
-                    Modifier.pointerInput(onOpenHistory, historySwipeThresholdPx) {
-                        detectVerticalDragGestures(
-                            onDragStart = { upwardDrag = 0f },
-                            onVerticalDrag = { change, amount ->
-                                if (amount < 0f) upwardDrag -= amount else upwardDrag = 0f
-                                change.consume()
-                            },
-                            onDragEnd = {
-                                if (upwardDrag > historySwipeThresholdPx) onOpenHistory()
-                                upwardDrag = 0f
-                            },
-                        )
-                    }
-                },
-            )
+            .then(if (historyEnabled) Modifier.nestedScroll(historySwipe) else Modifier)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -307,6 +300,29 @@ fun HomeScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * Opens history on an upward swipe the content does not take: anywhere when it fits the
+ * screen, past the bottom once it has scrolled there. Any downward movement starts over.
+ */
+private class HistorySwipeConnection(
+    private val thresholdPx: Float,
+    private val onOpenHistory: () -> Unit,
+) : NestedScrollConnection {
+    private var upwardDrag = 0f
+
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+        if (source != NestedScrollSource.UserInput) return Offset.Zero
+        if (consumed.y + available.y > 0f) upwardDrag = 0f else upwardDrag -= available.y
+        return Offset.Zero
+    }
+
+    override suspend fun onPreFling(available: Velocity): Velocity {
+        if (upwardDrag > thresholdPx) onOpenHistory()
+        upwardDrag = 0f
+        return Velocity.Zero
     }
 }
 
