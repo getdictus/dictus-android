@@ -6,10 +6,14 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.util.DisplayMetrics
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.core.view.WindowInsetsCompat
 import dagger.hilt.android.EntryPointAccessors
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
@@ -54,6 +59,8 @@ import dev.pivisolutions.dictus.ime.suggestion.AndroidNativeTrieOpener
 import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.LocalKeyboardSizing
+import dev.pivisolutions.dictus.ime.ui.keyboardSizing
+import dev.pivisolutions.dictus.ime.ui.usesFullscreenMode
 import dev.pivisolutions.dictus.ime.ui.rememberKeyboardSizing
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
@@ -103,6 +110,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import timber.log.Timber
 
 /**
@@ -196,6 +204,7 @@ class DictusImeService : LifecycleInputMethodService() {
     // Latest editor selection, -1 when unknown. Used to predict where a dictation leaves the caret.
     private var editorSelStart = -1
     private var editorSelEnd = -1
+    private var lastFullscreenDecision: String? = null
 
     // Whether the built-in suggestion bar is enabled. Observed from DataStore
     // so the user can toggle it in settings without restarting the IME.
@@ -461,6 +470,17 @@ class DictusImeService : LifecycleInputMethodService() {
         isEditorSelectionCollapsed = newSelStart >= 0 && newSelStart == newSelEnd
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
+        refreshSuggestionsFromEditor()
+    }
+
+    /**
+     * Re-reads the word before the cursor and asks for its suggestions.
+     *
+     * WHY (#348): [onUpdateSelection] only fires when the selection moves. A rotation restarts
+     * the input (onStartInput clears the bar) with the cursor where it was, so the bar stayed
+     * empty until the next key. [onStartInputView] calls this too, to start from the editor.
+     */
+    private fun refreshSuggestionsFromEditor() {
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
             clearSuggestionState()
@@ -690,8 +710,77 @@ class DictusImeService : LifecycleInputMethodService() {
         refreshFrenchAdaptiveKeyState()
         // Start of a field, or the same field shown again: always decide afresh.
         refreshAutoCapitalization(force = true)
+        // onStartInput emptied the bar; a word already before the cursor gets its suggestions back.
+        refreshSuggestionsFromEditor()
         // WHY (#112): "did the user ever open the Dictus keyboard?" was unanswerable from an export.
         Timber.d("Keyboard shown: package=%s, restarting=%b", info?.packageName ?: "unknown", restarting)
+    }
+
+    override fun onCreateInputView(): View = super.onCreateInputView().also { view ->
+        // The first decision after a rotation can read the insets of the old orientation;
+        // decide again once the new keyboard is laid out with its own.
+        view.addOnLayoutChangeListener { v, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) v.post { updateFullscreenMode() }
+        }
+    }
+
+    /** Dictus decides when it goes fullscreen (#355): see [usesFullscreenMode]. */
+    override fun onEvaluateFullscreenMode(): Boolean {
+        val systemDefault = super.onEvaluateFullscreenMode()
+        val room = roomAboveKeyboardDp()
+        val fullscreen = usesFullscreenMode(systemDefault, room)
+        val decision = "Fullscreen mode: $fullscreen (system default $systemDefault, ${room.roundToInt()} dp above the keyboard)"
+        if (decision != lastFullscreenDecision) {
+            lastFullscreenDecision = decision
+            Timber.d(decision)
+        }
+        return fullscreen
+    }
+
+    /**
+     * The screen's height between the status bar and the top of the keyboard, in dp.
+     *
+     * The keyboard is the height [keyboardSizing] gives it, as the keyboard composable computes
+     * it, plus the navigation bar band under the keys from the IME window's insets. Not the
+     * laid-out view: in fullscreen it loses the band, which would undo the decision it led to.
+     */
+    private fun roomAboveKeyboardDp(): Float {
+        val density = resources.displayMetrics.density
+        val insets = window?.window?.decorView?.rootWindowInsets
+            ?.let { WindowInsetsCompat.toWindowInsetsCompat(it) }
+        val top = maxOf(
+            insets?.getInsets(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout())?.top ?: 0,
+            statusBarOfDisplayPx(),
+        )
+        val band = insets?.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.captionBar())?.bottom ?: 0
+        val configuration = resources.configuration
+        val sizing = keyboardSizing(
+            screenWidthDp = configuration.screenWidthDp.toFloat(),
+            screenHeightDp = configuration.screenHeightDp.toFloat(),
+            fontScale = configuration.fontScale,
+        )
+        return (screenHeightPx() - top - band) / density - sizing.totalHeightDp
+    }
+
+    /**
+     * The status bar's height from the display's metrics. The IME window's own insets leave it
+     * out on Android 11 (the window starts under it), which counted it as room for the app.
+     */
+    private fun statusBarOfDisplayPx(): Int {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return 0
+        return getSystemService(WindowManager::class.java).currentWindowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.displayCutout())
+            .top
+    }
+
+    private fun screenHeightPx(): Int {
+        val windowManager = getSystemService(WindowManager::class.java)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            windowManager.currentWindowMetrics.bounds.height()
+        } else {
+            @Suppress("DEPRECATION") // The only full-screen size on Android 10.
+            DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }.heightPixels
+        }
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
