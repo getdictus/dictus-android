@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.dp
  * never pushed below half the row or its longest word, and the label always keeps room for its
  * own longest word; whatever does not fit wraps on more lines, and the row grows from its 56 dp
  * to hold them instead of clipping them.
+ *
+ * When even the two longest words cannot sit side by side (font scale 2.0 and above), the label
+ * goes above the value: the label on the full width, the value under it on the right (#359).
  */
 @Composable
 internal fun SettingRow(
@@ -39,6 +42,20 @@ internal fun SettingRow(
         // The longest words, so neither side breaks inside one ("Automatiqu / e").
         val labelWord = labelMeasurables.maxOfOrNull { it.minIntrinsicWidth(Constraints.Infinity) } ?: 0
         val trailingWord = trailingMeasurables.maxOfOrNull { it.minIntrinsicWidth(Constraints.Infinity) } ?: 0
+        if (stacksLabel(width, labelWord, trailingWord)) {
+            val labelPlaceables = labelMeasurables.map { it.measure(Constraints(maxWidth = width)) }
+            // Its natural width, wrapping only past the row's.
+            val stackedMax = minOf(trailingNatural, width)
+            val trailingPlaceables = trailingMeasurables.map { it.measure(Constraints(maxWidth = stackedMax)) }
+            val labelHeight = labelPlaceables.maxOfOrNull { it.height } ?: 0
+            val trailingTop = labelHeight + StackGap.roundToPx()
+            val contentHeight = trailingTop + (trailingPlaceables.maxOfOrNull { it.height } ?: 0)
+            val height = contentHeight.coerceIn(constraints.minHeight, constraints.maxHeight)
+            return@Layout layout(width, height) {
+                labelPlaceables.forEach { it.place(0, 0) }
+                trailingPlaceables.forEach { it.place(width - it.width, trailingTop) }
+            }
+        }
         val trailingMax = trailingWidth(width, labelWidth, labelWord, trailingNatural, trailingWord)
 
         val trailingPlaceables = trailingMeasurables.map { it.measure(Constraints(maxWidth = trailingMax)) }
@@ -54,6 +71,18 @@ internal fun SettingRow(
         }
     }
 }
+
+/** Space between a label and the value stacked under it (#359). */
+private val StackGap = 4.dp
+
+/**
+ * Whether a Settings row puts its label above its trailing value: when the label's longest word
+ * ([labelWord]) and the value's ([trailingWord]) do not fit side by side in [available], one of
+ * them would break inside a word, « Automati / que » at font scale 2.0 (#359). A row without a
+ * value never stacks.
+ */
+internal fun stacksLabel(available: Int, labelWord: Int, trailingWord: Int): Boolean =
+    trailingWord > 0 && labelWord + trailingWord > available
 
 /**
  * Width of a Settings row's trailing value: its natural [trailing] width while the label's
