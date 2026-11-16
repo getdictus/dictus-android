@@ -1,10 +1,14 @@
 package dev.pivisolutions.dictus.ime.input
 
+import android.view.KeyEvent
 import android.view.inputmethod.InputConnection
 import java.lang.reflect.Proxy
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class BackspacePolicyTest {
     @Test
     fun `first ten deletion commands stay character-wise`() {
@@ -103,6 +107,40 @@ class BackspacePolicyTest {
 
         assertEquals(1, deletePrecedingWord(inputConnection))
         assertEquals(listOf(DeletionCall("deleteSurroundingTextInCodePoints", 1, 0)), calls)
+    }
+
+    @Test
+    fun `backspace deletes in an editor that ignores deleteSurroundingText (#369)`() {
+        val editor = KeyOnlyEditor("Bonjour")
+
+        deletePrecedingCodePoint(editor.connection)
+
+        assertEquals("Bonjou", editor.text.toString())
+    }
+
+    /**
+     * An editor such as Google Docs (#369): it acknowledges deleteSurroundingText calls without
+     * applying them and handles only DEL key events, like a hardware keyboard.
+     */
+    private class KeyOnlyEditor(initial: String) {
+        val text = StringBuilder(initial)
+        val connection: InputConnection = Proxy.newProxyInstance(
+            InputConnection::class.java.classLoader,
+            arrayOf(InputConnection::class.java),
+        ) { _, method, args ->
+            when (method.name) {
+                "getTextBeforeCursor" -> text.toString()
+                "deleteSurroundingText", "deleteSurroundingTextInCodePoints" -> true
+                "sendKeyEvent" -> {
+                    val event = args!![0] as KeyEvent
+                    if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DEL && text.isNotEmpty()) {
+                        text.setLength(text.length - 1)
+                    }
+                    true
+                }
+                else -> null
+            }
+        } as InputConnection
     }
 
     private data class DeletionCall(val method: String, val before: Int, val after: Int)
