@@ -65,13 +65,14 @@ fun RecordingScreen(
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
-        // Top row (52.dp) — Cancel (✕) left, Confirm (✓) right
+        // Top row (52.dp) — Cancel (✕) left, Confirm (✓) right. ✓ takes the mic's place, which
+        // leaves its halo's 5dp before the bar's end (#358), as iOS's 17 pt trailing inset.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(RECORDING_TOP_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 6.dp),
+                .padding(start = 8.dp, end = 8.dp + MIC_HALO_OUTSET, top = 10.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {

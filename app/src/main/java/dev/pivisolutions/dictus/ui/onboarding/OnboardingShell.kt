@@ -46,6 +46,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.Layout
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -368,30 +373,65 @@ private val RemainingSegmentDark = Color(0xFF232D40)
  * the button, under its shadow, on a Pixel 4. Outside the scroll, the cut edge stays 16 dp
  * above the button, and a page that fits looks the same as on iOS.
  *
+ * WHY A FILL (#358): a page can hand its last element apart, to be measured with the height
+ * left above the button as its maximum. The language step's keyboard preview shrinks into it
+ * on a short screen instead of being cut by « Continuer ». Where even [fillMinHeight] does not
+ * fit, it keeps its own height and the page scrolls as before.
+ *
  * @param bottom the primary button, or nothing on a step without one.
+ * @param fill drawn under [content], with the height left above the button as its maximum.
+ * @param fillMinHeight the least height worth shrinking [fill] to; with less left, it is not bounded.
  */
 @Composable
 fun OnboardingPage(
     title: String,
     subtitle: String? = null,
     bottom: @Composable ColumnScope.() -> Unit,
+    fill: (@Composable () -> Unit)? = null,
+    fillMinHeight: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    var pageHeight by remember { mutableIntStateOf(0) }
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(
+        Layout(
+            contents = listOf(
+                {
+                    Column {
+                        OnboardingHeader(
+                            title = title,
+                            subtitle = subtitle,
+                            modifier = Modifier.padding(top = OnboardingMetrics.titleTopPadding, bottom = 24.dp),
+                        )
+                        content()
+                    }
+                },
+                { fill?.invoke() },
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(bottom = OnboardingMetrics.contentBottomGap)
+                // The scroll below hands the content an unbounded height: read the page's first.
+                .layout { measurable, constraints ->
+                    pageHeight = constraints.maxHeight
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = OnboardingMetrics.horizontalPadding),
-        ) {
-            OnboardingHeader(
-                title = title,
-                subtitle = subtitle,
-                modifier = Modifier.padding(top = OnboardingMetrics.titleTopPadding, bottom = 24.dp),
-            )
-            content()
+        ) { (contents, fills), constraints ->
+            val loose = constraints.copy(minHeight = 0)
+            val contentPlaceable = contents.single().measure(loose)
+            val room = pageHeight - contentPlaceable.height
+            // Shrunk only if that spares the scroll: a page that scrolls anyway keeps it whole.
+            val fillMax = if (room >= fillMinHeight.roundToPx()) room else Constraints.Infinity
+            val fillPlaceable = fills.singleOrNull()?.measure(loose.copy(maxHeight = fillMax))
+            // At least the scroll's minimum, as the column was: a smaller page is centred in it.
+            val height = (contentPlaceable.height + (fillPlaceable?.height ?: 0)).coerceAtLeast(constraints.minHeight)
+            layout(constraints.maxWidth, height) {
+                contentPlaceable.place(0, 0)
+                fillPlaceable?.place(0, contentPlaceable.height)
+            }
         }
         OnboardingBottomBlock(bottom)
     }

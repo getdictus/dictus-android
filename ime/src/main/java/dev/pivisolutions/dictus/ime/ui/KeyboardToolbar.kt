@@ -76,6 +76,7 @@ import kotlin.math.PI
  * stays on the space bar.
  * Mic pill ported from iOS `AnimatedMicButton(isPill: true, animatesIdleGlow: false)` (#239):
  * a 56x36 capsule inside the 66x46 `DictusHalo` glass ring, which stays still in the keyboard.
+ * The ring sits 8dp from the bar's end, as ☰ does from its start (#358).
  *
  * Press motion ported from iOS `AnimatedMicButton` (#24). Recording and transcribing replace
  * this row with their own screens, so the pill only adds the press feedback.
@@ -244,9 +245,12 @@ fun KeyboardToolbar(
             ToolbarCentreSlot.Empty -> Spacer(modifier = Modifier.weight(1f))
         }
 
-        // Mic pill (right): the halo draws 5dp around it, inside the bar's 52dp and 8dp end padding.
+        // Mic pill (right): the halo draws 5dp around it, inside the bar's 52dp. iOS counts the
+        // ring in the button's frame; here it is drawn outside the pill, so the end padding makes
+        // room for it and the ring keeps ☰'s 8dp to the edge (#358), instead of 3dp.
         Box(
             modifier = Modifier
+                .padding(end = MIC_HALO_OUTSET)
                 .width(56.dp)
                 .height(36.dp)
                 .graphicsLayer {
@@ -259,7 +263,7 @@ fun KeyboardToolbar(
                 .drawBehind {
                     // Stroke inside the 66x46 ring so it stays clear of the bar's edges and the keys.
                     val stroke = haloStrokeWidth.toPx()
-                    val inset = 5.dp.toPx() - stroke / 2
+                    val inset = MIC_HALO_OUTSET.toPx() - stroke / 2
                     val halo = CircleShape.createOutline(
                         Size(size.width + 2 * inset, size.height + 2 * inset),
                         layoutDirection,
@@ -374,6 +378,9 @@ private fun RowScope.DictationNoticeText(@StringRes text: Int) {
 
 // iOS ToolbarView.toolbarHeight.
 private val TOOLBAR_HEIGHT = 52.dp
+
+// How far the mic's halo reaches past the pill: the 66x46 ring around the 56x36 pill.
+internal val MIC_HALO_OUTSET = 5.dp
 
 // iOS GlassPressStyle(pressedScale: 0.88, pressedOpacity: 0.85) as AnimatedMicButton uses it.
 private const val MIC_PRESSED_SCALE = 0.88f
