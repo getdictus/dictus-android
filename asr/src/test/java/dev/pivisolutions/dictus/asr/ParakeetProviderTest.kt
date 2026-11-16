@@ -60,7 +60,7 @@ class ParakeetProviderTest {
 
     @Test
     fun `missing sherpa-onnx native library fails initialization without throwing`() = runTest {
-        // What an x86_64 emulator does: no libsherpa-onnx-jni.so for its ABI.
+        // What an x86_64 emulator does without -Pdictus.emulatorAbi: no libsherpa-onnx-jni.so for its ABI.
         val provider = provider(
             createRecognizer = { throw UnsatisfiedLinkError("dlopen failed: library \"libsherpa-onnx-jni.so\" not found") },
         )

@@ -33,3 +33,6 @@ tools/__pycache__/
 # Play listing renderer
 tools/play-listing/node_modules/
 tools/play-listing/.icons/
+
+# sherpa-onnx x86_64 libraries for the emulator, fetched by tools/fetch-sherpa-onnx-x86_64.sh
+asr/src/emulator/jniLibs/

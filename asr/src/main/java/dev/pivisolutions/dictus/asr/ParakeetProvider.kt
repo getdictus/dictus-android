@@ -166,8 +166,8 @@ class ParakeetProvider(
             Timber.e(e, "ParakeetProvider: initialization failed for %s", modelPath)
             false
         } catch (e: LinkageError) {
-            // sherpa-onnx ships arm64-v8a and armeabi-v7a only. On an x86_64 device or
-            // emulator the first load throws UnsatisfiedLinkError, and every later
+            // sherpa-onnx ships arm64-v8a and armeabi-v7a only (x86_64 in emulator debug
+            // builds). On any other ABI the first load throws UnsatisfiedLinkError, and every later
             // attempt NoClassDefFoundError (the class init already failed). Any other
             // LinkageError (NoSuchMethodError, ExceptionInInitializerError...) means the
             // library loaded but its JNI does not match, e.g. after a sherpa-onnx upgrade.
