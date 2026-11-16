@@ -1,12 +1,12 @@
 [fr-FR]
 • Les longues dictées avec Parakeet sont transcrites en entier, et Parakeet garde moins de mémoire entre deux dictées.
-• Une dictée n'est plus perdue si Android ferme l'app en cours de dictée.
+• Une dictée faite dans l'app n'est plus perdue si Android ferme l'app.
 • Clavier : hauteur adaptée à l'écran, une seule barre comme sur iOS, annulation d'une autocorrection, disposition par langue, pas d'autocorrection dans les e-mails et les URL.
 • Nouvel onboarding : choix de la langue, première dictée guidée.
 • Affichage corrigé en paysage, petit écran et grande police.
 [en-US]
 • Long Parakeet dictations are transcribed in full, and Parakeet holds less memory between dictations.
-• A dictation is no longer lost if Android closes the app mid-dictation.
+• A dictation made in the app is no longer lost if Android closes the app.
 • Keyboard: height fitted to the screen, a single bar as on iOS, undo for an autocorrection, a layout per language, no autocorrection in e-mail addresses and URLs.
 • New onboarding: pick your language, guided first dictation.
 • Display fixed in landscape, on small screens and with a large font.
