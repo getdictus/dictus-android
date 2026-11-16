@@ -1,1 +1,5 @@
-First Dictus release on Google Play: a dictation keyboard that transcribes your voice on your phone, even with no connection.
+• Long Parakeet dictations are transcribed in full, and Parakeet holds less memory between dictations.
+• A dictation is no longer lost if Android closes the app mid-dictation.
+• Keyboard: height fitted to the screen, a single bar as on iOS, undo for an autocorrection, a layout per language, no autocorrection in e-mail addresses and URLs.
+• New onboarding: pick your language, guided first dictation.
+• Display fixed in landscape, on small screens and with a large font.

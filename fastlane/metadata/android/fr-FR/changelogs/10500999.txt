@@ -1,1 +1,5 @@
-Première version de Dictus sur Google Play : un clavier de dictée qui transcrit votre voix sur votre téléphone, même sans connexion.
+• Les longues dictées avec Parakeet sont transcrites en entier, et Parakeet garde moins de mémoire entre deux dictées.
+• Une dictée n'est plus perdue si Android ferme l'app en cours de dictée.
+• Clavier : hauteur adaptée à l'écran, une seule barre comme sur iOS, annulation d'une autocorrection, disposition par langue, pas d'autocorrection dans les e-mails et les URL.
+• Nouvel onboarding : choix de la langue, première dictée guidée.
+• Affichage corrigé en paysage, petit écran et grande police.
