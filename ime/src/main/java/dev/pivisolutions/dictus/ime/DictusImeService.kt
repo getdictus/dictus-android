@@ -1389,10 +1389,17 @@ class DictusImeService : LifecycleInputMethodService() {
             if (revert == AutocorrectAddressRevert.INDETERMINATE) {
                 // As after an indeterminate correction: nothing is written over an unknown state.
                 autocorrectCoordinator.onOtherInput()
+                // Nor does any selection update follow to ask for completions.
+                _completionPending.value = false
                 false
             } else {
                 val typed = inputConnection.commitText(text, 1)
-                if (typed) autocorrectCoordinator.onTextTyped(text) else autocorrectCoordinator.onOtherInput()
+                if (typed) {
+                    autocorrectCoordinator.onTextTyped(text)
+                } else {
+                    autocorrectCoordinator.onOtherInput()
+                    _completionPending.value = false
+                }
                 typed
             }
         }
