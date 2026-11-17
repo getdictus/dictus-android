@@ -20,7 +20,6 @@ object DictusColors {
     // --- Semantic state colors ---
     val Recording = Color(0xFFEF4444)
     val Destructive = Color(0xFFEF4444) // Semantic alias for Recording
-    val SmartMode = Color(0xFF8B5CF6)
     val Success = Color(0xFF22C55E)
     val SuccessDark = Color(0xFF16A34A)
     val SuccessSubtle = Color(0x3322C55E) // #22C55E at 20% opacity
