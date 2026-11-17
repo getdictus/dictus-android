@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -62,7 +63,10 @@ import dev.pivisolutions.dictus.ime.ui.LocalKeyboardSizing
 import dev.pivisolutions.dictus.ime.ui.keyboardSizing
 import dev.pivisolutions.dictus.ime.ui.usesFullscreenMode
 import dev.pivisolutions.dictus.ime.ui.rememberKeyboardSizing
+import dev.pivisolutions.dictus.ime.ui.SuggestionBarTrace
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
+import dev.pivisolutions.dictus.ime.ui.SuggestionTrace
+import dev.pivisolutions.dictus.ime.ui.ToolbarCentreSlot
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.AutoCapitalization
@@ -232,6 +236,8 @@ class DictusImeService : LifecycleInputMethodService() {
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     private val _suggestionMode = MutableStateFlow(SuggestionPresentationMode.COMPLETION)
     private var latestSuggestionRequestId: Long? = null
+    // Candidate count and empty-row reason behind the suggestion bar's dictus.log line.
+    private val _suggestionTrace = MutableStateFlow(SuggestionTrace.Initial)
     private var correctionSessionId = 0L
     // Rolling autocorrect tally. Autocorrect is silent by design, so a report of "it never
     // corrects" used to leave nothing behind; one line per Space would drown the 1 MB buffer in
@@ -395,6 +401,19 @@ class DictusImeService : LifecycleInputMethodService() {
                     } else {
                         emptyList()
                     }
+                    _suggestionTrace.value = SuggestionTrace(
+                        computed = result.suggestions.size,
+                        reason = if (_suggestionsEnabled.value) null else "suggestions off",
+                    )
+                } else if (result.requestId == latestSuggestionRequestId) {
+                    _suggestionTrace.value = SuggestionTrace(
+                        computed = result.suggestions.size,
+                        reason = when {
+                            !correctionContextCurrent -> "context changed"
+                            result.mode == NativeTrieSuggestionEngine.SuggestionMode.COMPLETION -> "word changed"
+                            else -> "prediction outdated"
+                        },
+                    )
                 }
             }
         }
@@ -483,7 +502,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun refreshSuggestionsFromEditor() {
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
-            clearSuggestionState()
+            clearSuggestionState(reason = "editor not eligible")
             return
         }
         val ic = currentInputConnection ?: return
@@ -500,13 +519,14 @@ class DictusImeService : LifecycleInputMethodService() {
         if (shouldRequestSuggestions() && currentWord.isNotEmpty()) {
             requestSuggestionsForCurrentWord()
         } else {
-            clearSuggestionState()
+            clearSuggestionState(reason = if (currentWord.isEmpty()) "no word" else "suggestions off")
         }
     }
 
     /** Starts a request-identified lookup and immediately invalidates the previous snapshot. */
     private fun requestSuggestionsForCurrentWord() {
         _suggestions.value = emptyList()
+        _suggestionTrace.value = SuggestionTrace(computed = null, reason = "pending")
         _suggestionMode.value = SuggestionPresentationMode.COMPLETION
         val activation = dictionaryEngine.activation.value
         val context = activation?.takeIf { it.hasNgram && _suggestionsEnabled.value }?.let {
@@ -560,10 +580,12 @@ class DictusImeService : LifecycleInputMethodService() {
         _suggestionMode.value = SuggestionPresentationMode.PREDICTION
         latestSuggestionRequestId = token.requestId
         _predictionToken.value = token
+        _suggestionTrace.value = SuggestionTrace(computed = null, reason = "pending")
         autocorrectCoordinator.suggestionRequested(null, "")
     }
 
-    private fun clearSuggestionState() {
+    private fun clearSuggestionState(reason: String = "cleared") {
+        _suggestionTrace.value = SuggestionTrace(computed = null, reason = reason)
         dictionaryEngine.invalidateSuggestions()
         predictionCoordinator.invalidate()
         latestSuggestionRequestId = null
@@ -899,6 +921,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val dictationNoticeMessage by dictationNotice.message.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
+        val suggestionTrace by _suggestionTrace.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
         val autoCapSignal by _autoCapSignal.collectAsState()
         val keyboardSession by _keyboardSession.collectAsState()
@@ -1002,6 +1025,22 @@ class DictusImeService : LifecycleInputMethodService() {
             // An app dictation shows the keyboard, mic disabled, never its recording UI or ✓ (#248).
             when (if (appDictationActive) DictationState.Idle else dictationState) {
             is DictationState.Idle -> {
+                val barLine = SuggestionBarTrace.line(
+                    slot = ToolbarCentreSlot.resolve(
+                        notice = dictationNoticeMessage,
+                        appDictationInProgress = appDictationActive,
+                        offersDictationUndo = isDictationUndoAvailable,
+                        hasSuggestions = ToolbarCentreSlot.hasSuggestions(suggestions, autocorrectUndo),
+                    ),
+                    trace = suggestionTrace,
+                    mode = suggestionMode,
+                    currentWord = currentWord,
+                    suggestions = suggestions,
+                    undoOffer = autocorrectUndo,
+                )
+                // Logged from what the composition receives, so a bar that the service filled
+                // but the screen never showed tells itself apart from one never filled.
+                LaunchedEffect(barLine, suggestions) { Timber.d(barLine) }
                 KeyboardScreen(
                     onCommitText = { text -> commitText(text) },
                     onDeleteBackward = { deleteBackward() },
@@ -1324,7 +1363,7 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         } else {
             autoFullStop.clear()
-            clearSuggestionState()
+            clearSuggestionState(reason = "typing")
             val revert = autocorrectCoordinator.revertIfAddress(InputConnectionAutocorrectEditor(inputConnection), text)
             if (revert != AutocorrectAddressRevert.UNCHANGED) {
                 Timber.d("Autocorrect revert before an address: %s", revert)
