@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,6 +63,7 @@ import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.service.ModelInstallState
+import dev.pivisolutions.dictus.ui.DictusLogo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
@@ -133,8 +133,10 @@ fun HomeScreen(
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
-        // Waveform logo (3 bars matching the app icon)
-        DictusWaveformLogo()
+        // The app icon's three bars, as tall as iOS HomeView's DictusLogo(height: 60). Side bars
+        // white in the dark theme, grey in the light one (iOS and WaveformBars).
+        val isDark = MaterialTheme.colorScheme.background == DictusColors.Background
+        DictusLogo(height = 60.dp, sideBarColor = if (isDark) Color.White else Color(0xFF8E8E93))
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -376,57 +378,4 @@ private fun NoModelCard() {
 private fun rememberModelDownloadCheck(): (String) -> Boolean {
     val context = LocalContext.current
     return remember(context) { ModelManager(context.applicationContext)::isDownloaded }
-}
-
-/**
- * Dictus waveform logo — 3 rounded vertical bars matching the app icon.
- *
- * Bar proportions from the brand kit: short left (opacity 0.45),
- * tall center (accent gradient), medium right (opacity 0.65).
- */
-@Composable
-private fun DictusWaveformLogo(
-    modifier: Modifier = Modifier,
-) {
-    // Outer bar base color: white in dark theme, gray in light theme (matches iOS & WaveformBars)
-    val isDark = MaterialTheme.colorScheme.background == DictusColors.Background
-    val outerBarBase = if (isDark) Color.White else Color(0xFF8E8E93)
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Bar 1 — short left
-        Box(
-            modifier = Modifier
-                .width(12.dp)
-                .height(32.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(outerBarBase.copy(alpha = 0.45f)),
-        )
-        // Bar 2 — tall center (accent gradient)
-        Box(
-            modifier = Modifier
-                .width(12.dp)
-                .height(64.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            DictusColors.AccentHighlight, // #6BA3FF
-                            Color(0xFF2563EB),
-                        ),
-                    )
-                ),
-        )
-        // Bar 3 — medium right
-        Box(
-            modifier = Modifier
-                .width(12.dp)
-                .height(44.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(outerBarBase.copy(alpha = 0.65f)),
-        )
-    }
 }
