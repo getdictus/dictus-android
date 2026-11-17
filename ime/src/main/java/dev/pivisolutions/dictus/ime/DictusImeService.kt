@@ -92,8 +92,8 @@ import dev.pivisolutions.dictus.ime.input.ImeServicePrivacyPolicy
 import dev.pivisolutions.dictus.ime.input.ImeTranscriptionRetentionSession
 import dev.pivisolutions.dictus.ime.input.KeyboardDictationOwnership
 import dev.pivisolutions.dictus.ime.input.PersonalizedLearningEntryPoint
-import dev.pivisolutions.dictus.ime.input.deletePrecedingCodePoint
 import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
+import dev.pivisolutions.dictus.ime.input.sendBackspaceKey
 import dev.pivisolutions.dictus.ime.input.moveCursorBy
 import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.applyFrenchAdaptiveVariant
@@ -1393,7 +1393,7 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     /**
-     * Deletes one character before the cursor. It never reverts an autocorrection (#276, iOS
+     * Deletes one character before the cursor, or the selection. It never reverts an autocorrection (#276, iOS
      * `handleBackspace`): the undo chip of the suggestion bar does.
      */
     fun deleteBackward() {
@@ -1402,8 +1402,11 @@ class DictusImeService : LifecycleInputMethodService() {
         clearSuggestionState()
         if (autoFullStop.onBackspace(inputConnection, isEditorSelectionCollapsed)) {
             autocorrectCoordinator.onOtherInput()
+            Timber.d("Backspace: full stop undone")
         } else {
-            autocorrectCoordinator.onBackspace { deletePrecedingCodePoint(inputConnection) }
+            var accepted = false
+            autocorrectCoordinator.onBackspace { accepted = sendBackspaceKey(inputConnection) }
+            Timber.d("Backspace: DEL key accepted=%b selectionCollapsed=%b", accepted, isEditorSelectionCollapsed)
         }
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
@@ -1436,7 +1439,7 @@ class DictusImeService : LifecycleInputMethodService() {
         autoFullStop.clear()
         autocorrectCoordinator.onOtherInput()
         clearSuggestionState()
-        deletePrecedingWord(inputConnection)
+        Timber.d("Backspace repeat: %s", deletePrecedingWord(inputConnection))
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
     }

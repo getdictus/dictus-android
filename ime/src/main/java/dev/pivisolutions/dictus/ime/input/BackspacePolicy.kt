@@ -1,5 +1,8 @@
 package dev.pivisolutions.dictus.ime.input
 
+import android.os.SystemClock
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
 import android.view.inputmethod.InputConnection
 
 enum class BackspaceDeletion {
@@ -36,20 +39,40 @@ fun precedingWordChunkLength(textBeforeCursor: CharSequence): Int {
     return textBeforeCursor.length - start
 }
 
-/** Deletes one Unicode code point before the cursor. */
-fun deletePrecedingCodePoint(inputConnection: InputConnection): Boolean =
-    inputConnection.deleteSurroundingTextInCodePoints(1, 0)
+/**
+ * Sends a DEL key press, as a hardware keyboard would. Some editors acknowledge
+ * deleteSurroundingText without applying it (Google Docs, #369), while every editor handles
+ * DEL, and the editor itself decides what one character is (emoji, combined characters) and
+ * deletes a selection whole. Returns whether the editor accepted both events.
+ */
+fun sendBackspaceKey(inputConnection: InputConnection): Boolean {
+    val time = SystemClock.uptimeMillis()
+    return listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP).all { action ->
+        inputConnection.sendKeyEvent(
+            KeyEvent(
+                time, time, action, KeyEvent.KEYCODE_DEL, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE,
+            ),
+        )
+    }
+}
 
-/** Deletes one preceding token, falling back to one Unicode code point when editor context is unavailable. */
-fun deletePrecedingWord(inputConnection: InputConnection): Int {
+/** What [deletePrecedingWord] did, for the debug log. */
+sealed interface WordDeletion {
+    data class Token(val codePoints: Int, val accepted: Boolean) : WordDeletion
+
+    /** No token before the cursor, or no editor context: one DEL key press instead. */
+    data class Key(val accepted: Boolean) : WordDeletion
+}
+
+/** Deletes one preceding token, falling back to one DEL key press when editor context is unavailable. */
+fun deletePrecedingWord(inputConnection: InputConnection): WordDeletion {
     val context = inputConnection.getTextBeforeCursor(1024, 0)
     val chunkLength = context?.let(::precedingWordChunkLength)?.takeIf { it > 0 }
     if (context == null || chunkLength == null) {
-        deletePrecedingCodePoint(inputConnection)
-        return 1
+        return WordDeletion.Key(sendBackspaceKey(inputConnection))
     }
     val chunkStart = context.length - chunkLength
     val codePointCount = Character.codePointCount(context, chunkStart, context.length)
-    inputConnection.deleteSurroundingTextInCodePoints(codePointCount, 0)
-    return codePointCount
+    return WordDeletion.Token(codePointCount, inputConnection.deleteSurroundingTextInCodePoints(codePointCount, 0))
 }
