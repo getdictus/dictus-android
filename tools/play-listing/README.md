@@ -1,14 +1,17 @@
 # Google Play listing images
 
-Generates the phone screenshots, the feature graphic and the icon under `fastlane/metadata/android/<locale>/images/` (#221). The texts next to them are written by hand.
+Generates the phone screenshots, the feature graphic and the icon under `fastlane/metadata/android/<locale>/images/` (#221), and the legacy launcher PNGs `app/src/main/res/mipmap-*/ic_launcher.png`. The texts next to them are written by hand.
 
 ```bash
 npm ci && npx playwright install chromium && ./fetch-icons.sh   # once
 node render.mjs --proofs /tmp/planche                           # every locale, plus one review board per locale
 node render.mjs --ribbon tiles --proofs /tmp/planche            # neutral tiles instead of the app logos
+node render.mjs --only icon                                     # the icon and the legacy launcher PNGs only
 ```
 
 The ribbon of slides 1 and 2 shows real app logos, like iOS. They are third-party trademarks: `.icons/` stays out of git, and Google may refuse them on a listing. `--ribbon tiles` is the way back.
+
+The icon has no drawing of its own: it is the adaptive launcher icon (`app/src/main/res/drawable/ic_launcher_{background,foreground}.xml`), cut to the 72 dp a launcher shows. That square is the iOS tile (`assets/brand/appicon-dark.svg` in `getdictus/dictus-ios`, 80 units), so a change to the launcher icon reaches the listing with `--only icon` (#376).
 
 `template.html` is the Google Play counterpart of the iOS slides v16-B (`assets/appstore/screenshots.html` in `getdictus/dictus-ios`, read at `3dca1cf`). Its header lists what differs from iOS and why. `art/` holds that repo's `art/v16-B/hero.png` (`hero-en-US.png`) and `hero-fr-FR.png`, unchanged. The Android camera bar is drawn over the art by the template.
 

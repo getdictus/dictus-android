@@ -5,36 +5,36 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Android Adaptive Icon foreground: waveform bars centered in 108x108 safe zone -->
-    <!-- Safe zone is 66x66 centered (21dp inset on each side) -->
-    <!-- Original 80x80 viewport scaled to fit in safe zone: scale=0.825, offset=21 -->
+    <!-- The iOS app icon's bars (assets/brand/appicon-dark.svg in getdictus/dictus-ios, 80 x 80
+         units). A launcher shows the middle 72 dp of the 108 dp layers, so that square is the iOS
+         tile: x' = 18 + 0.9 x, y' = 18 + 0.9 y. Bars 9 wide, 18 / 42 / 27 tall, 7.5 apart, with
+         round ends; the drawing (42 x 42 units, 37.8 dp) stays well inside the 66 dp safe zone. -->
 
-    <!-- Bar 1 (short left): 18pt height -->
+    <!-- Bar 1 (short left): x 19, y 31, 9 x 18 -->
     <path
-        android:pathData="M36.68,46.58 C36.68,44.1,38.4,42.58,40.43,42.58 L40.43,42.58 C42.45,42.58,44.18,44.1,44.18,46.58 L44.18,57.43 C44.18,59.91,42.45,61.43,40.43,61.43 L40.43,61.43 C38.4,61.43,36.68,59.91,36.68,57.43 Z"
+        android:pathData="M35.1,49.95 A4.05,4.05 0 0,1 43.2,49.95 L43.2,58.05 A4.05,4.05 0 0,1 35.1,58.05 Z"
         android:fillColor="#FFFFFF"
         android:fillAlpha="0.45"/>
 
-    <!-- Bar 2 (tall center): 42pt height -->
+    <!-- Bar 2 (tall center): x 35.5, y 19, 9 x 42 -->
     <path
-        android:pathData="M50.29,36.68 C50.29,34.2,52.01,32.68,54.04,32.68 L54.04,32.68 C56.06,32.68,57.79,34.2,57.79,36.68 L57.79,71.33 C57.79,73.81,56.06,75.33,54.04,75.33 L54.04,75.33 C52.01,75.33,50.29,73.81,50.29,71.33 Z"
-        android:fillAlpha="1.0">
+        android:pathData="M49.95,39.15 A4.05,4.05 0 0,1 58.05,39.15 L58.05,68.85 A4.05,4.05 0 0,1 49.95,68.85 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
-                android:startX="50.29"
-                android:startY="32.68"
-                android:endX="57.79"
-                android:endY="75.33">
+                android:startX="49.95"
+                android:startY="35.1"
+                android:endX="58.05"
+                android:endY="72.9">
                 <item android:offset="0.0" android:color="#FF6BA3FF"/>
                 <item android:offset="1.0" android:color="#FF2563EB"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Bar 3 (medium right): 27pt height -->
+    <!-- Bar 3 (medium right): x 52, y 26, 9 x 27 -->
     <path
-        android:pathData="M63.9,42.45 C63.9,39.97,65.63,38.45,67.65,38.45 L67.65,38.45 C69.68,38.45,71.4,39.97,71.4,42.45 L71.4,64.73 C71.4,67.2,69.68,68.73,67.65,68.73 L67.65,68.73 C65.63,68.73,63.9,67.2,63.9,64.73 Z"
+        android:pathData="M64.8,45.45 A4.05,4.05 0 0,1 72.9,45.45 L72.9,61.65 A4.05,4.05 0 0,1 64.8,61.65 Z"
         android:fillColor="#FFFFFF"
         android:fillAlpha="0.65"/>
 

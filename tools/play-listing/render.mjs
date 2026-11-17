@@ -2,8 +2,10 @@
 //
 //   npm ci && npx playwright install chromium && ./fetch-icons.sh   once
 //   node render.mjs [--proofs <dir>] [--ribbon tiles]   every locale, plus one review board per locale in <dir>
+//   node render.mjs --only icon                         the Play icon and the legacy launcher PNGs only
 //
 // The icon is drawn from the app's own adaptive icon vectors, cut to the 72 dp a launcher shows.
+// The same drawing gives the legacy mipmap-*/ic_launcher.png.
 import { chromium } from "playwright";
 import sharp from "sharp";
 import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
@@ -18,7 +20,9 @@ const SHOT_W = 1440, SHOT_H = 2560, PANEL_W = 1320;
 const option = (name) => (process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : null);
 const proofs = option("--proofs");
 const ribbon = option("--ribbon") ?? "logos";
-if (ribbon === "logos" && !existsSync(join(HERE, ".icons"))) throw new Error("App icons missing: run ./fetch-icons.sh");
+const only = option("--only");
+if (only && only !== "icon") throw new Error(`Unknown --only ${only}: the only one is icon`);
+if (!only && ribbon === "logos" && !existsSync(join(HERE, ".icons"))) throw new Error("App icons missing: run ./fetch-icons.sh");
 
 // Play wants 24-bit images: no alpha channel.
 const opaque = (buffer) => sharp(buffer).flatten({ background: "#ffffff" }).removeAlpha().png({ compressionLevel: 9 });
@@ -54,23 +58,70 @@ async function featureGraphic(browser, locale, file) {
   await page.close();
 }
 
-async function icon(browser, file) {
-  const drawable = (name) => readFileSync(join(REPO, "app/src/main/res/drawable", name), "utf8");
-  const paths = [...drawable("ic_launcher_foreground.xml").matchAll(/android:pathData="([^"]+)"/g)].map((m) => m[1]);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="18 18 72 72">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0D2040"/><stop offset="1" stop-color="#071020"/></linearGradient>
-      <linearGradient id="bar" x1="50.29" y1="32.68" x2="57.79" y2="75.33" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6BA3FF"/><stop offset="1" stop-color="#2563EB"/></linearGradient>
-    </defs>
-    <rect width="108" height="108" fill="url(#bg)"/>
-    <path d="${paths[0]}" fill="#fff" fill-opacity="0.45"/>
-    <path d="${paths[1]}" fill="url(#bar)"/>
-    <path d="${paths[2]}" fill="#fff" fill-opacity="0.65"/>
+// An Android colour (#RRGGBB or #AARRGGBB) as an SVG colour and opacity.
+function androidColor(value) {
+  const hex = value.slice(1);
+  return hex.length === 8 ? { color: `#${hex.slice(2)}`, opacity: parseInt(hex.slice(0, 2), 16) / 255 } : { color: `#${hex}`, opacity: 1 };
+}
+
+// The paths of a vector drawable as SVG, with their solid or linear gradient fills. Reading the
+// launcher's own layers keeps the listing icon in step with the app: no coordinate is copied.
+function vectorToSvg(name) {
+  const xml = readFileSync(join(REPO, "app/src/main/res/drawable", name), "utf8");
+  const attr = (source, key) => source.match(new RegExp(`android:${key}="([^"]+)"`))?.[1];
+  const defs = [];
+  const paths = [...xml.matchAll(/<path\b([^>]*?)(?:\/>|>([\s\S]*?)<\/path>)/g)].map(([, attrs, body = ""], i) => {
+    const alpha = attr(attrs, "fillAlpha") ?? "1";
+    const solid = attr(attrs, "fillColor");
+    if (solid) {
+      const { color, opacity } = androidColor(solid);
+      return `<path d="${attr(attrs, "pathData")}" fill="${color}" fill-opacity="${opacity * alpha}"/>`;
+    }
+    const gradient = body.match(/<gradient\b([^>]*)>([\s\S]*?)<\/gradient>/);
+    if (!gradient || attr(gradient[1], "type") !== "linear") throw new Error(`${name}: path ${i} has no solid or linear fill`);
+    const id = `${name.replace(".xml", "")}-${i}`;
+    const stops = [...gradient[2].matchAll(/<item\b([^>]*)\/>/g)].map(([, item]) => {
+      const { color, opacity } = androidColor(attr(item, "color"));
+      return `<stop offset="${attr(item, "offset")}" stop-color="${color}" stop-opacity="${opacity}"/>`;
+    });
+    const g = gradient[1];
+    defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${attr(g, "startX")}" y1="${attr(g, "startY")}" x2="${attr(g, "endX")}" y2="${attr(g, "endY")}">${stops.join("")}</linearGradient>`);
+    return `<path d="${attr(attrs, "pathData")}" fill="url(#${id})" fill-opacity="${alpha}"/>`;
+  });
+  return { defs: defs.join(""), paths: paths.join("") };
+}
+
+// The adaptive icon as a launcher shows it: the middle 72 dp of the 108 dp layers. That square
+// is the iOS tile (80 units in `assets/brand/appicon-dark.svg`), so `clipRadius` 16.2 is its
+// 18-unit corner (22.5 % of the side).
+async function renderIcon(browser, size, { clipRadius = 0 } = {}) {
+  const layers = ["ic_launcher_background.xml", "ic_launcher_foreground.xml"].map(vectorToSvg);
+  const clip = clipRadius ? `<clipPath id="tile"><rect x="18" y="18" width="72" height="72" rx="${clipRadius}"/></clipPath>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="18 18 72 72">
+    <defs>${clip}${layers.map((l) => l.defs).join("")}</defs>
+    <g${clipRadius ? ' clip-path="url(#tile)"' : ""}>${layers.map((l) => l.paths).join("")}</g>
   </svg>`;
-  const page = await browser.newPage({ viewport: { width: 512, height: 512 } });
-  await page.setContent(`<!doctype html><body style="margin:0">${svg}</body>`);
-  await opaque(await page.screenshot()).toFile(file);
+  const page = await browser.newPage({ viewport: { width: size, height: size } });
+  await page.setContent(`<!doctype html><body style="margin:0;background:transparent">${svg}</body>`);
+  const png = await page.screenshot({ omitBackground: true });
   await page.close();
+  return png;
+}
+
+// The Play icon: full bleed and square, Google applies its own mask.
+async function icon(browser, file) {
+  await opaque(await renderIcon(browser, 512)).toFile(file);
+}
+
+// The launcher icon of Android 7.1 and older, where adaptive icons do not exist: the iOS tile,
+// corners transparent. minSdk 29 never shows them; they are kept in step for completeness.
+const LEGACY_LAUNCHER = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
+async function legacyLauncherIcons(browser) {
+  for (const [density, size] of Object.entries(LEGACY_LAUNCHER)) {
+    const file = join(REPO, `app/src/main/res/mipmap-${density}/ic_launcher.png`);
+    await sharp(await renderIcon(browser, size, { clipRadius: 16.2 })).png({ compressionLevel: 9 }).toFile(file);
+    console.log(`${file.slice(REPO.length + 1)} ${size}x${size}`);
+  }
 }
 
 async function board(files, feature, iconFile, out) {
@@ -85,7 +136,14 @@ async function board(files, feature, iconFile, out) {
 }
 
 const browser = await chromium.launch({ headless: true });
+if (only === "icon") {
+  for (const locale of LOCALES) await icon(browser, join(METADATA, locale, "images", "icon.png"));
+  await legacyLauncherIcons(browser);
+  await browser.close();
+  process.exit(0);
+}
 if (proofs) mkdirSync(proofs, { recursive: true });
+await legacyLauncherIcons(browser);
 for (const locale of LOCALES) {
   const images = join(METADATA, locale, "images");
   const phone = join(images, "phoneScreenshots");
