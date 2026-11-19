@@ -8,7 +8,7 @@
 // Needs Node 22.18+ (it imports TypeScript). The emulator reaches it at
 // http://10.0.2.2:<port>/api/feedback; build with -Pdictus.feedbackEndpoint=<that URL>.
 // Switch what the next POSTs get with GET /__mode/<ok|429|429-bare|502|503>.
-// Each valid report is appended to record.jsonl with the log replaced by its size and first line.
+// Each valid report is appended to record.jsonl with the log replaced by its size and first two lines (title, export time).
 import { appendFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
@@ -65,7 +65,7 @@ createServer(async (req, res) => {
     try { parsed = JSON.parse(body.toString("utf8")); } catch {}
     received = parsed && {
       ...parsed,
-      log: parsed.log === undefined ? undefined : { bytes: Buffer.byteLength(parsed.log), firstLine: parsed.log.split("\n")[0] },
+      log: parsed.log === undefined ? undefined : { bytes: Buffer.byteLength(parsed.log), head: parsed.log.split("\n").slice(0, 2) },
     };
     response = await handleFeedbackPost(
       new Request(`http://localhost${req.url}`, { method: "POST", headers: req.headers, body }),
