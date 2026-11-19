@@ -1,0 +1,22 @@
+Parlez au lieu de taper. Dictus est un clavier qui écrit ce que vous dites : touchez le micro, parlez, et vos mots s’affichent dans n’importe quelle app. La reconnaissance vocale tourne sur votre téléphone, même sans connexion, une fois le modèle téléchargé.
+
+DICTEZ DANS TOUTES VOS APPS
+
+Messages, e-mails, notes : partout où vous pouvez écrire, Dictus est à portée de doigt. Parlez naturellement, et le texte arrive là où se trouve votre curseur.
+
+UN VRAI CLAVIER DANS VOTRE LANGUE
+
+Dictus est un clavier complet, pas seulement un bouton micro. Dispositions AZERTY, QWERTY et QWERTZ, avec correction automatique et suggestions en français, en anglais, en allemand et en espagnol. Tapez quand vous voulez, parlez quand vous préférez.
+
+MÊME SANS RÉSEAU
+
+Dictez en avion, dans le métro, partout. Les modèles sont sur votre téléphone : téléchargez-en un une fois, puis utilisez-le hors ligne, du plus compact et rapide au plus précis. Whisper reconnaît près de 100 langues, avec une qualité qui varie selon la langue. Parakeet 0.6B en transcrit 25 européennes et reconnaît celle que vous parlez ; il demande 6 Go de RAM ou plus. Dictus indique les langues de chaque modèle.
+
+VOTRE VOIX RESTE SUR VOTRE TÉLÉPHONE
+
+Le micro sert seulement pendant une dictée que vous lancez, et la transcription se fait sur l’appareil : Dictus n’envoie ni votre voix ni vos textes. Pas de compte, pas de publicité, pas de pistage, aucune statistique envoyée. Le réseau sert uniquement à télécharger les modèles vocaux.
+
+Dictus est open source (licence MIT). Chacun peut lire le code et vérifier ces engagements de confidentialité : github.com/getdictus/dictus-android
+
+Conditions d’utilisation : https://getdictus.com/fr/terms
+Dictus ne collecte aucune donnée. Politique de confidentialité : https://getdictus.com/fr/privacy

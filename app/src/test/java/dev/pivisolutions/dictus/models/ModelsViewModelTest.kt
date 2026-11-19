@@ -126,7 +126,7 @@ class ModelsViewModelTest {
         // #188: one model carries it, the one onboarding installs on this phone
         val recommendedOn = { gib: Double -> viewModelWithRam(gib).models.value.filter { it.isRecommended }.map { it.info.key } }
 
-        assertEquals(listOf("small-q5_1"), recommendedOn(3.6))
+        assertEquals(listOf("base"), recommendedOn(3.6))
         assertEquals(listOf("parakeet-tdt-0.6b-v3"), recommendedOn(5.3))
     }
 
@@ -165,6 +165,34 @@ class ModelsViewModelTest {
     @Test
     fun `requestSetActiveModel does NOT show dialog for parakeet when language is en`() = testScope.runTest {
         fakeDataStore.edit { it[PreferenceKeys.TRANSCRIPTION_LANGUAGE] = "en" }
+        advanceUntilIdle()
+
+        viewModel.requestSetActiveModel("parakeet-ctc-110m-int8")
+        advanceUntilIdle()
+
+        assertNull(viewModel.showParakeetLanguageDialog.value)
+    }
+
+    @Test
+    fun `requestSetActiveModel shows dialog for parakeet when following the French keyboard`() = testScope.runTest {
+        fakeDataStore.edit {
+            it[PreferenceKeys.TRANSCRIPTION_LANGUAGE] = "follow"
+            it[PreferenceKeys.KEYBOARD_LANGUAGE] = "fr"
+        }
+        advanceUntilIdle()
+
+        viewModel.requestSetActiveModel("parakeet-ctc-110m-int8")
+        advanceUntilIdle()
+
+        assertEquals("parakeet-ctc-110m-int8", viewModel.showParakeetLanguageDialog.value)
+    }
+
+    @Test
+    fun `requestSetActiveModel does NOT show dialog for parakeet when following the English keyboard`() = testScope.runTest {
+        fakeDataStore.edit {
+            it[PreferenceKeys.TRANSCRIPTION_LANGUAGE] = "follow"
+            it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en"
+        }
         advanceUntilIdle()
 
         viewModel.requestSetActiveModel("parakeet-ctc-110m-int8")

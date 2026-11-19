@@ -73,6 +73,9 @@ class InputConnectionAutocorrectEditor(
         }
     }
 
+    override fun tailMatches(expected: String): Boolean? =
+        textBeforeCursor()?.let { matchingTailLength(it, expected) != null }
+
     private fun restoredOrIndeterminate(
         after: String,
         original: String,

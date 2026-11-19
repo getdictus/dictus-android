@@ -2,6 +2,7 @@ package dev.pivisolutions.dictus.ime.input
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -93,7 +94,7 @@ class AutocorrectInputCoordinatorTest {
     }
 
     @Test
-    fun `runtime disable invalidates correction evidence and immediate undo`() {
+    fun `runtime disable invalidates correction evidence and the undo offer`() {
         val coordinator = AutocorrectInputCoordinator {}
         val editor = FakeEditor(tokenSnapshot("helo"))
         coordinator.startSession()
@@ -108,27 +109,9 @@ class AutocorrectInputCoordinatorTest {
         publishEligible(coordinator)
         coordinator.onSpace(editor) {}
         coordinator.setRuntimeEnabled(false)
-        var deletes = 0
-        assertEquals(AutocorrectBackspaceResult.PLAIN_DELETE, coordinator.onBackspace(editor) { deletes++ })
-        assertEquals(1, deletes)
-    }
 
-    @Test
-    fun `immediate backspace restores original and learns synchronously`() {
-        val learned = mutableListOf<String>()
-        val coordinator = AutocorrectInputCoordinator(learned::add)
-        val editor = FakeEditor(tokenSnapshot("helo"))
-        coordinator.startSession()
-        publishEligible(coordinator)
-        coordinator.onSpace(editor) { error("must not insert a second space") }
-        var ordinaryDeletes = 0
-
-        val result = coordinator.onBackspace(editor) { ordinaryDeletes++ }
-
-        assertEquals(AutocorrectBackspaceResult.UNDONE, result)
-        assertEquals("helo", editor.snapshotValue.text)
-        assertEquals(listOf("helo"), learned)
-        assertEquals(0, ordinaryDeletes)
+        assertNull(coordinator.undoOffer)
+        assertEquals(AutocorrectUndoResult.REFUSED, coordinator.onUndoTapped(editor))
     }
 
     @Test
@@ -140,30 +123,17 @@ class AutocorrectInputCoordinatorTest {
         publishEligible(coordinator)
         coordinator.onSpace(editor) {}
 
-        assertEquals(AutocorrectBackspaceResult.UNDONE, coordinator.onBackspace(editor) {})
-        assertEquals("helo", editor.snapshotValue.text)
+        assertEquals(AutocorrectUndoResult.RESTORED, coordinator.onUndoTapped(editor))
+        assertEquals("helo ", editor.snapshotValue.text)
         assertTrue(learned.isEmpty())
-    }
-
-    @Test
-    fun `only first backspace can undo`() {
-        val coordinator = AutocorrectInputCoordinator {}
-        val editor = FakeEditor(tokenSnapshot("helo"))
-        coordinator.startSession()
-        publishEligible(coordinator)
-        coordinator.onSpace(editor) {}
-        coordinator.onBackspace(editor) {}
-        var ordinaryDeletes = 0
-
-        assertEquals(AutocorrectBackspaceResult.PLAIN_DELETE, coordinator.onBackspace(editor) { ordinaryDeletes++ })
-        assertEquals(1, ordinaryDeletes)
     }
 
     @Test
     fun `other input unrelated editor change and session boundaries invalidate undo`() {
         val invalidators: List<(AutocorrectInputCoordinator) -> Unit> = listOf(
             { it.onOtherInput() },
-            { it.onEditorSelectionChanged(99, 99) },
+            { it.onEditorSelectionChanged(99, 99) { "something else" } },
+            { it.onEditorSelectionChanged(3, 6) { "hello " } },
             { it.finishSession() },
             { it.startSession() },
         )
@@ -173,17 +143,17 @@ class AutocorrectInputCoordinatorTest {
             coordinator.startSession()
             publishEligible(coordinator)
             coordinator.onSpace(editor) {}
-            coordinator.onEditorSelectionChanged(6, 6)
+            coordinator.onEditorSelectionChanged(6, 6) { "hello " }
             invalidate(coordinator)
-            var ordinaryDeletes = 0
 
-            assertEquals(AutocorrectBackspaceResult.PLAIN_DELETE, coordinator.onBackspace(editor) { ordinaryDeletes++ })
-            assertEquals(1, ordinaryDeletes)
+            assertNull(coordinator.undoOffer)
+            assertEquals(AutocorrectUndoResult.REFUSED, coordinator.onUndoTapped(editor))
+            assertEquals("hello ", editor.snapshotValue.text)
         }
     }
 
     @Test
-    fun `zero one or duplicate matching replacement selection callbacks preserve immediate undo`() {
+    fun `zero one or duplicate selection callbacks over the corrected text preserve the undo`() {
         listOf(0, 1, 3).forEach { callbackCount ->
             val learned = mutableListOf<String>()
             val coordinator = AutocorrectInputCoordinator(learned::add)
@@ -192,19 +162,19 @@ class AutocorrectInputCoordinatorTest {
             publishEligible(coordinator)
             coordinator.onSpace(editor) {}
 
-            repeat(callbackCount) { coordinator.onEditorSelectionChanged(6, 6) }
+            repeat(callbackCount) { coordinator.onEditorSelectionChanged(6, 6) { "hello " } }
 
             assertEquals(
                 "callbackCount=$callbackCount",
-                AutocorrectBackspaceResult.UNDONE,
-                coordinator.onBackspace(editor) {},
+                AutocorrectUndoResult.RESTORED,
+                coordinator.onUndoTapped(editor),
             )
             assertEquals(listOf("helo"), learned)
         }
     }
 
     @Test
-    fun `first nonmatching selection callback invalidates undo even after matching duplicates`() {
+    fun `a selection callback over text that no longer ends with the correction withdraws the undo`() {
         val learned = mutableListOf<String>()
         val coordinator = AutocorrectInputCoordinator(learned::add)
         val editor = FakeEditor(tokenSnapshot("helo"))
@@ -212,14 +182,12 @@ class AutocorrectInputCoordinatorTest {
         publishEligible(coordinator)
         coordinator.onSpace(editor) {}
 
-        coordinator.onEditorSelectionChanged(6, 6)
-        coordinator.onEditorSelectionChanged(6, 6)
-        coordinator.onEditorSelectionChanged(5, 5)
-        coordinator.onEditorSelectionChanged(6, 6)
-        var deletes = 0
+        coordinator.onEditorSelectionChanged(6, 6) { "hello " }
+        coordinator.onEditorSelectionChanged(2, 2) { "he" }
+        coordinator.onEditorSelectionChanged(6, 6) { "hello " }
 
-        assertEquals(AutocorrectBackspaceResult.PLAIN_DELETE, coordinator.onBackspace(editor) { deletes++ })
-        assertEquals(1, deletes)
+        assertNull(coordinator.undoOffer)
+        assertEquals(AutocorrectUndoResult.REFUSED, coordinator.onUndoTapped(editor))
         assertTrue(learned.isEmpty())
     }
 
@@ -249,7 +217,7 @@ class AutocorrectInputCoordinatorTest {
     }
 
     @Test
-    fun `failed undo never learns and indeterminate undo does not issue ordinary delete`() {
+    fun `failed undo never learns and indeterminate undo is reported`() {
         val learned = mutableListOf<String>()
         val coordinator = AutocorrectInputCoordinator(learned::add)
         val editor = FakeEditor(tokenSnapshot("helo"))
@@ -257,11 +225,10 @@ class AutocorrectInputCoordinatorTest {
         publishEligible(coordinator)
         coordinator.onSpace(editor) {}
         editor.forcedOutcome = AutocorrectReplacementOutcome.IndeterminateMutation
-        var deletes = 0
 
-        assertEquals(AutocorrectBackspaceResult.INDETERMINATE, coordinator.onBackspace(editor) { deletes++ })
-        assertEquals(0, deletes)
+        assertEquals(AutocorrectUndoResult.INDETERMINATE, coordinator.onUndoTapped(editor))
         assertTrue(learned.isEmpty())
+        assertNull(coordinator.undoOffer)
     }
 
     private fun publishEligible(coordinator: AutocorrectInputCoordinator) {

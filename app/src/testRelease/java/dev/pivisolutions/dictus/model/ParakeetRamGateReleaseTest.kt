@@ -14,7 +14,7 @@ class ParakeetRamGateReleaseTest {
     @Test
     fun `release keeps the 6 GB Parakeet gate`() {
         assertEquals(6, ModelCatalog.findByKey("parakeet-tdt-0.6b-v3")!!.minRamGb)
-        assertEquals("parakeet-tdt-0.6b-v3", ModelCatalog.recommendedModelKey(gib(5.34)))
-        assertEquals("small-q5_1", ModelCatalog.recommendedModelKey(gib(4.6)))
+        assertEquals("parakeet-tdt-0.6b-v3", ModelCatalog.recommendedModelKey(gib(5.34), SocClass.CURRENT))
+        assertEquals("base", ModelCatalog.recommendedModelKey(gib(4.6), SocClass.CURRENT))
     }
 }

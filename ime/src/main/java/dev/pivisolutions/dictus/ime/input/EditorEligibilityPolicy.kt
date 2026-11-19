@@ -12,7 +12,10 @@ data class EditorSessionPolicy(
 object EditorEligibilityPolicy {
     fun resolve(inputType: Int, imeOptions: Int): EditorSessionPolicy {
         val textClass = inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_CLASS_TEXT
-        val noSuggestions = inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0
+        // An explicit AUTO_CORRECT request wins over NO_SUGGESTIONS: Google Keep declares both
+        // (0x000ac001) and expects its notes corrected, as iOS does unless autocorrection is off.
+        val noSuggestions = inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0 &&
+            inputType and InputType.TYPE_TEXT_FLAG_AUTO_CORRECT == 0
         val variation = inputType and InputType.TYPE_MASK_VARIATION
         val sensitiveVariation = variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS ||
             variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||

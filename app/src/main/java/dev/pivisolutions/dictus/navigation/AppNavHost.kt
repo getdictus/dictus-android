@@ -1,5 +1,10 @@
 package dev.pivisolutions.dictus.navigation
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -10,7 +15,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -19,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
@@ -26,17 +35,20 @@ import dev.pivisolutions.dictus.home.HomeScreen
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingDownloadNotice
 import dev.pivisolutions.dictus.onboarding.OnboardingKeyboardSetupScreen
+import dev.pivisolutions.dictus.onboarding.OnboardingLanguageScreen
 import dev.pivisolutions.dictus.recording.RecordingScreen
+import dev.pivisolutions.dictus.service.ModelInstaller
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
 import dev.pivisolutions.dictus.onboarding.OnboardingMicPermissionScreen
-import dev.pivisolutions.dictus.onboarding.OnboardingModeSelectionScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingModelDownloadScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingStep
 import dev.pivisolutions.dictus.onboarding.OnboardingSuccessScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingTestRecordingScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingViewModel
 import dev.pivisolutions.dictus.onboarding.OnboardingWelcomeScreen
+import dev.pivisolutions.dictus.permission.KeyboardMicRequest
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingShell
 import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
 import dev.pivisolutions.dictus.ui.settings.DebugLogsScreen
@@ -44,6 +56,7 @@ import dev.pivisolutions.dictus.ui.settings.LicencesScreen
 import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
+import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
 import kotlinx.coroutines.flow.map
 
 /**
@@ -70,6 +83,7 @@ import kotlinx.coroutines.flow.map
  * @param onOpenKeyboardSettings Callback to open system keyboard settings.
  * @param onOpenAppSettings Callback to open app details settings.
  * @param openModelsRequested Start on the Models tab: the keyboard's mic tap with no model (#247).
+ * @param microphoneRequested Ask for the microphone on Home: the keyboard's refused-mic notice (#307).
  */
 @Composable
 fun AppNavHost(
@@ -82,6 +96,7 @@ fun AppNavHost(
     onOpenAppSettings: () -> Unit,
     openSettingsRequested: Boolean = false,
     openModelsRequested: Boolean = false,
+    microphoneRequested: Boolean = false,
 ) {
     val hasCompletedOnboarding by dataStore.data
         .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
@@ -135,6 +150,7 @@ fun AppNavHost(
                 } else {
                     AppDestination.Home.route
                 },
+                microphoneRequested = microphoneRequested,
             )
         }
     }
@@ -171,8 +187,10 @@ private fun OnboardingScreen(
 
     val currentStep by viewModel.currentStep.collectAsState()
     val micGranted by viewModel.micPermissionGranted.collectAsState()
-    val selectedLayout by viewModel.selectedLayout.collectAsState()
     val preparation by viewModel.preparation.collectAsState()
+    val languageSetup by viewModel.languageSetup.collectAsState()
+    val downloadNotice by viewModel.downloadNotice.collectAsState()
+    val notificationRequest by viewModel.notificationRequest.collectAsState()
 
     // The persisted step is still being read: the bare background, as AppNavHost does above.
     val step = currentStep ?: run {
@@ -195,21 +213,35 @@ private fun OnboardingScreen(
             OnboardingStep.Welcome -> OnboardingWelcomeScreen(
                 onNext = onNext,
             )
+            // Read with the step, so it is set whenever the step is.
+            OnboardingStep.Language -> languageSetup?.let { setup ->
+                OnboardingLanguageScreen(
+                    setup = setup,
+                    model = viewModel.recommendedModelInfo,
+                    onLanguage = { viewModel.setKeyboardLanguage(it) },
+                    onLayout = { viewModel.setKeyboardLayout(it) },
+                    onContinue = { viewModel.confirmLanguage() },
+                )
+                if (downloadNotice) {
+                    OnboardingDownloadNotice(
+                        model = viewModel.recommendedModelInfo,
+                        requestNotifications = notificationRequest,
+                        onNotificationsRequested = { viewModel.notificationPermissionRequested() },
+                        onDismiss = { viewModel.dismissDownloadNotice() },
+                    )
+                }
+            }
             OnboardingStep.Microphone -> OnboardingMicPermissionScreen(
                 micGranted = micGranted,
                 onPermissionResult = { viewModel.setMicPermissionGranted(it) },
                 onNext = onNext,
+                onDecline = { viewModel.skipStep() },
             )
             OnboardingStep.KeyboardSetup -> OnboardingKeyboardSetupScreen(
                 imeEnabled = imeEnabled,
                 imeSelected = imeSelected,
                 onOpenSettings = onOpenKeyboardSettings,
                 onOpenPicker = onShowKeyboardPicker,
-                onNext = onNext,
-            )
-            OnboardingStep.KeyboardLayout -> OnboardingModeSelectionScreen(
-                selectedLayout = selectedLayout,
-                onSelectLayout = { viewModel.setLayout(it) },
                 onNext = onNext,
             )
             OnboardingStep.ModelPreparation -> OnboardingModelDownloadScreen(
@@ -221,7 +253,7 @@ private fun OnboardingScreen(
                 onNext = onNext,
             )
             OnboardingStep.FirstDictation -> OnboardingTestRecordingScreen(
-                dictationController = dictationController,
+                isDictusKeyboard = imeSelected,
                 // Like iOS leaveFirstDictation: the test dictation must not greet the user on Home.
                 onNext = {
                     LastTranscriptionStore.instance.clear()
@@ -255,6 +287,7 @@ private fun MainTabsScreen(
     onOpenAppSettings: () -> Unit,
     startDestination: String = AppDestination.Home.route,
     showMainNavigation: Boolean = true,
+    microphoneRequested: Boolean = false,
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -275,6 +308,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.History.route &&
         currentRoute != AppDestination.Licences.route &&
         currentRoute != AppDestination.DebugLogs.route &&
+        currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
         !currentRoute.startsWith("sound_picker")
 
@@ -306,14 +340,33 @@ private fun MainTabsScreen(
                 .padding(innerPadding),
         ) {
             composable(AppDestination.Home.route) {
+                val context = LocalContext.current
+                val modelInstaller = remember(context) { ModelInstaller(context.applicationContext) }
+                if (microphoneRequested) KeyboardMicRequest(onOpenAppSettings)
+                // A microphone declined in the onboarding, or revoked since, is asked for when the
+                // user starts a dictation (#220). After a refusal the toast says where to allow it.
+                val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    if (granted) {
+                        navController.navigate(AppDestination.Recording.route)
+                    } else {
+                        Toast.makeText(context, R.string.home_mic_refused, Toast.LENGTH_LONG).show()
+                    }
+                }
                 HomeScreen(
                     dataStore = dataStore,
                     onNewDictation = {
-                        navController.navigate(AppDestination.Recording.route)
+                        val micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED
+                        if (micGranted) {
+                            navController.navigate(AppDestination.Recording.route)
+                        } else {
+                            micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
                     },
                     onOpenHistory = {
                         navController.navigate(AppDestination.History.route) { launchSingleTop = true }
                     },
+                    installState = modelInstaller::state,
                 )
             }
             // History is a Pro feature that has not shipped yet: while the flag is off the
@@ -344,6 +397,9 @@ private fun MainTabsScreen(
                     onNavigateToSoundSettings = {
                         navController.navigate(AppDestination.SoundSettings.route)
                     },
+                    onNavigateToTranscriptionDebug = {
+                        navController.navigate(AppDestination.TranscriptionDebug.route)
+                    },
                 )
             }
             composable(AppDestination.Licences.route) {
@@ -353,6 +409,11 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.DebugLogs.route) {
                 DebugLogsScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(AppDestination.TranscriptionDebug.route) {
+                TranscriptionDebugScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

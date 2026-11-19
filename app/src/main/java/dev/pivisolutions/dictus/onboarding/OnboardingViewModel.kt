@@ -1,19 +1,29 @@
 package dev.pivisolutions.dictus.onboarding
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.res.Resources
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelInfo
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.models.ModelPreparationTarget
+import dev.pivisolutions.dictus.permission.shouldRequestNotificationPermission
 import dev.pivisolutions.dictus.service.ModelInstallState
 import dev.pivisolutions.dictus.service.ModelInstaller
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,15 +37,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.IOException
+import java.util.Locale
 import javax.inject.Inject
 
 /**
  * ViewModel for the onboarding flow ([OnboardingStep]).
  *
  * Manages state transitions between onboarding steps with validation guards:
- * - Microphone: user must grant RECORD_AUDIO permission
+ * - Language: confirming saves the keyboard language and layout and starts the model install;
+ *   when that starts a download, a notice says so before the flow moves on (#304), and on
+ *   Android 13+ asks for notifications the first time (#308)
  * - Keyboard setup: user must enable the Dictus IME
- * - Model preparation: model install must complete before advancing
+ * - Model preparation: model install must complete before advancing; passed over when the
+ *   model is already on disk
+ * - Microphone: user must grant RECORD_AUDIO permission; passed over when already granted
  * - Completion: tapping "Commencer" writes HAS_COMPLETED_ONBOARDING=true to DataStore
  *
  * WHY ViewModel (not stateless composable): Onboarding state survives configuration changes
@@ -54,13 +69,13 @@ import javax.inject.Inject
  * showing the mic permission prompt. The flag only mirrors the system's permission, which
  * the microphone step re-reads on entry, so it needs no more than that.
  *
- * WHY regular MutableStateFlow for selectedLayout: transient, the layout can be re-chosen.
- * The install state needs no saving either: WorkManager keeps it across process death.
+ * The install state needs no saving: WorkManager keeps it across process death.
  *
- * WHY active model at step 5 but onboarding completion at step 7: The test recording in step 6
- * must use the exact recommended model that step 5 downloaded. Selecting that model when the
- * download completes makes it available to DictationService without prematurely marking the
- * onboarding flow complete; HAS_COMPLETED_ONBOARDING is still written only on the success screen.
+ * WHY active model at the model preparation but onboarding completion at the last step: the
+ * first dictation must use the exact recommended model the preparation installed. Selecting
+ * that model when the download completes makes it available to DictationService without
+ * prematurely marking the onboarding flow complete; HAS_COMPLETED_ONBOARDING is still written
+ * only on the success screen.
  *
  * @param context Application context for device capability checks (RAM-based model recommendation).
  * @param dataStore Application-scoped DataStore for persistent onboarding state.
@@ -68,23 +83,77 @@ import javax.inject.Inject
  * @param modelManager Says whether the recommended model's files are already on disk.
  * @param savedStateHandle Hilt auto-provides this for @HiltViewModel; persists the mic flag
  *   across process death caused by the mic permission dialog.
+ * @param systemLocales the phone's languages in order of preference, which the language step
+ *   opens on. The system's, not the app's: the app may run in another language.
  */
 @HiltViewModel
-class OnboardingViewModel @Inject constructor(
-    @ApplicationContext context: Context,
+class OnboardingViewModel(
+    @ApplicationContext private val context: Context,
     private val dataStore: DataStore<Preferences>,
     private val modelInstaller: ModelInstaller,
     private val modelManager: ModelManager,
     private val savedStateHandle: SavedStateHandle,
+    private val systemLocales: List<Locale>,
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        dataStore: DataStore<Preferences>,
+        modelInstaller: ModelInstaller,
+        modelManager: ModelManager,
+        savedStateHandle: SavedStateHandle,
+    ) : this(context, dataStore, modelInstaller, modelManager, savedStateHandle, systemLocales())
+
 
     // --- Recommended model based on device RAM ---
 
-    /** Stable key for the recommended model (e.g. "parakeet-tdt-0.6b-v3" or "small-q5_1"). */
+    /** Stable key for the recommended model (e.g. "parakeet-tdt-0.6b-v3" or "base"). */
     val recommendedKey: String = ModelCatalog.recommendedModelKey(context)
 
     /** Full ModelInfo for the recommended model, used by the UI to display name/size/quality. */
     val recommendedModelInfo: ModelInfo = ModelCatalog.findByKey(recommendedKey)!!
+
+    // --- Language step (#198) ---
+
+    /** The stored preferences as read at start, for the layout each keyboard language has. */
+    private var storedPreferences: Preferences = emptyPreferences()
+
+    private val _languageSetup = MutableStateFlow<LanguageSetup?>(null)
+
+    /**
+     * The language step's choices, null until the stored preferences have been read.
+     *
+     * WHY HELD HERE (iOS's draft, #700): the step's back returns to the intro, and the page
+     * reopens on the choices the user left rather than on the system's language again.
+     * Nothing is written before « Continuer ».
+     */
+    val languageSetup: StateFlow<LanguageSetup?> = _languageSetup.asStateFlow()
+
+    private val _downloadNotice = MutableStateFlow(false)
+
+    /**
+     * True while the language step's notice is up: « Continuer » has just started the
+     * recommended model's download (#304, iOS `keepOpenWarningModel`). Not shown when the
+     * model is on disk, an install already runs, or the last one failed.
+     *
+     * WHY: the download is several hundred MB and starts without any other sign. A line
+     * of text on the page is not read; a dialog at the moment it starts is.
+     */
+    val downloadNotice: StateFlow<Boolean> = _downloadNotice.asStateFlow()
+
+    private val _notificationRequest = MutableStateFlow(false)
+
+    /**
+     * True while the notice's button is to open the POST_NOTIFICATIONS prompt (#308): set with
+     * [downloadNotice] when [shouldRequestNotificationPermission] says so.
+     *
+     * WHY AT THE NOTICE (Android's guidance: ask in context): the install's notification is
+     * what the permission shows, and it is there the moment the user allows it. The
+     * microphone step stays a disclosure of the microphone alone (#220), and comes after the
+     * download.
+     */
+    val notificationRequest: StateFlow<Boolean> = _notificationRequest.asStateFlow()
 
     // --- Step state machine (DataStore-backed, #196) ---
 
@@ -101,15 +170,17 @@ class OnboardingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val stored = try {
-                dataStore.data.first()[PreferenceKeys.ONBOARDING_STEP]
+            val preferences = try {
+                dataStore.data.first()
             } catch (e: IOException) {
                 // An unreadable store starts at the welcome screen rather than crashing.
                 Timber.w(e, "Cannot read the onboarding step")
-                null
+                emptyPreferences()
             }
+            storedPreferences = preferences
+            _languageSetup.compareAndSet(null, LanguageSetup.prefilled(systemLocales, ::storedLayout))
             // A step change made before the read finished wins over the stored step.
-            _currentStep.compareAndSet(null, OnboardingStep.resumed(stored))
+            _currentStep.compareAndSet(null, OnboardingStep.resumed(preferences[PreferenceKeys.ONBOARDING_STEP]))
         }
     }
 
@@ -119,13 +190,6 @@ class OnboardingViewModel @Inject constructor(
     val micPermissionGranted: StateFlow<Boolean> =
         savedStateHandle.getStateFlow("micPermissionGranted", false)
 
-
-    // --- Keyboard layout selection (transient — user can re-select after process death) ---
-
-    private val _selectedLayout = MutableStateFlow("azerty")
-
-    /** The keyboard layout chosen by the user. Defaults to "azerty". */
-    val selectedLayout: StateFlow<String> = _selectedLayout.asStateFlow()
 
     // --- Model install (owned by WorkManager, observed here) ---
 
@@ -149,7 +213,7 @@ class OnboardingViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ModelInstallState.Idle)
 
-    /** What step 5's preparation screen draws (#181). */
+    /** What the model preparation step draws (#181). */
     val preparation: StateFlow<ModelPreparationTarget> = combine(installState, _awaitingInstall) { install, awaiting ->
         ModelPreparationTarget(
             info = recommendedModelInfo,
@@ -165,21 +229,94 @@ class OnboardingViewModel @Inject constructor(
 
     // --- Public actions ---
 
+    /** The language step's « Changer » list: [language], on the layout it already has. */
+    fun setKeyboardLanguage(language: SupportedLanguage) {
+        _languageSetup.value = _languageSetup.value?.withLanguage(language, ::storedLayout)
+    }
+
+    /** The language step's layout segment. */
+    fun setKeyboardLayout(layout: KeyboardLayout) {
+        _languageSetup.value = _languageSetup.value?.copy(layout = layout)
+    }
+
+    /**
+     * The language step's « Continuer »: saves the keyboard language and layout, starts the
+     * recommended model's install in the background, and moves on (#198). When a download
+     * has just started, [downloadNotice] goes up instead and its button moves on (#304).
+     *
+     * WHY THE INSTALL STARTS HERE (as iOS's language step): the model downloads while the
+     * user finishes the setup, so the preparation step often finds it done.
+     * [startPreparation] is idempotent, and the preparation step calls it again.
+     */
+    fun confirmLanguage() {
+        if (currentStep.value != OnboardingStep.Language || confirming) return
+        val setup = languageSetup.value ?: return
+        viewModelScope.launch {
+            try {
+                dataStore.edit { setup.applyTo(it) }
+            } catch (e: IOException) {
+                // The keyboard keeps its current language; Settings can still change it.
+                Timber.w(e, "Cannot save the keyboard language")
+            }
+        }
+        confirming = true
+        viewModelScope.launch {
+            if (prepareRecommendedModel()) {
+                _notificationRequest.value = notificationRequestDue()
+                _downloadNotice.value = true
+            } else {
+                advanceFrom(OnboardingStep.Language)
+            }
+            confirming = false
+        }
+    }
+
+    /**
+     * A « Continuer » is being handled. WHY: a second tap before the first one's checks end
+     * found the download running and moved the flow on, and the notice, with the notification
+     * prompt, then went up on a step that does not draw it. Once up, the notice covers the button.
+     */
+    private var confirming = false
+
+    /**
+     * The notice's « J'ai compris »: closes it and moves on. The download keeps running.
+     *
+     * WHY advanceFrom: a second « Continuer » tapped before the first one's check finished
+     * may already have moved the flow on; the notice must not move it a second step.
+     */
+    fun dismissDownloadNotice() {
+        _downloadNotice.value = false
+        advanceFrom(OnboardingStep.Language)
+    }
+
+    /**
+     * The notice's button is opening the POST_NOTIFICATIONS prompt: records it, so no later
+     * notice asks again, whatever the answer. The prompt's answer then calls
+     * [dismissDownloadNotice].
+     */
+    fun notificationPermissionRequested() {
+        _notificationRequest.value = false
+        viewModelScope.launch {
+            try {
+                dataStore.edit { prefs -> prefs[PreferenceKeys.NOTIFICATION_PERMISSION_ASKED] = true }
+            } catch (e: IOException) {
+                // Only a later notice would ask again.
+                Timber.w(e, "Cannot save the notification prompt")
+            }
+        }
+    }
+
     /** Grant or revoke microphone permission state. Persisted via SavedStateHandle. */
     fun setMicPermissionGranted(granted: Boolean) {
         savedStateHandle["micPermissionGranted"] = granted
     }
 
 
-    /** Change the selected keyboard layout preference. */
-    fun setLayout(layout: String) {
-        _selectedLayout.value = layout
-    }
-
     /**
      * Advance to the next onboarding step, respecting validation guards:
      * - Model preparation: blocked until model download completes.
      * - Completion: triggers DataStore persistence and completes onboarding.
+     * The steps with nothing left to ask are passed over ([satisfiedSteps]).
      */
     fun advanceStep() {
         val step = currentStep.value ?: return
@@ -187,7 +324,7 @@ class OnboardingViewModel @Inject constructor(
             // Block: install not complete
             step == OnboardingStep.ModelPreparation && installState.value !is ModelInstallState.Done && !modelManager.isDownloaded(recommendedKey) -> return
             step == OnboardingStep.Completion -> completeOnboarding()
-            else -> step.next?.let { show(it) }
+            else -> step.next(satisfiedSteps())?.let { show(it) }
         }
     }
 
@@ -214,32 +351,42 @@ class OnboardingViewModel @Inject constructor(
 
     /**
      * The shell's « Passer », on the steps that offer it ([OnboardingStep.isSkippable]):
-     * moves on as the step's own button would. On the first dictation that is the
-     * completion screen, as a finished dictation goes.
+     * moves on to [OnboardingStep.afterSkip]. On the first dictation that is the completion
+     * screen, as a finished dictation goes; from a microphone left off, too (#220).
      */
     fun skipStep() {
         val step = currentStep.value ?: return
         if (!step.isSkippable) return
-        step.next?.let { show(it) }
+        step.afterSkip(satisfiedSteps())?.let { show(it) }
     }
 
     /**
-     * Step 5 opened: start the install unless one runs, failed or already finished (#181).
+     * The model preparation opened: start the install unless one runs, failed or already finished (#181).
      *
      * WHY no « Télécharger » tap: like iOS, the step is the preparation screen and the download
      * starts with it. A failure is not retried here: the screen shows it with « Réessayer ».
      * Reads WorkManager's state itself: [installState] starts as Idle before WorkManager answers.
      */
     fun startPreparation() {
-        viewModelScope.launch {
-            if (modelManager.isDownloaded(recommendedKey)) {
-                // Installed outside this run's WorkManager history: select it so the engine loads it.
-                dataStore.edit { prefs -> prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey }
-                return@launch
-            }
-            val state = modelInstaller.state(recommendedKey).first()
-            if (!state.isInProgress && state != ModelInstallState.Failed) startModelDownload()
+        viewModelScope.launch { prepareRecommendedModel() }
+    }
+
+    /**
+     * [startPreparation]'s work.
+     *
+     * @return true when this call started a download, as iOS `startDownloadIfNeeded`
+     *   returns whether bytes are now being transferred: what [downloadNotice] is about.
+     */
+    private suspend fun prepareRecommendedModel(): Boolean {
+        if (modelManager.isDownloaded(recommendedKey)) {
+            // Installed outside this run's WorkManager history: select it so the engine loads it.
+            dataStore.edit { prefs -> prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey }
+            return false
         }
+        val state = modelInstaller.state(recommendedKey).first()
+        if (state.isInProgress || state == ModelInstallState.Failed) return false
+        startModelDownload()
+        return true
     }
 
     /**
@@ -258,6 +405,39 @@ class OnboardingViewModel @Inject constructor(
 
     // --- Private ---
 
+    /** Whether the notice about to go up asks for notifications ([shouldRequestNotificationPermission]). */
+    private suspend fun notificationRequestDue(): Boolean {
+        val asked = try {
+            dataStore.data.first()[PreferenceKeys.NOTIFICATION_PERMISSION_ASKED] == true
+        } catch (e: IOException) {
+            Timber.w(e, "Cannot read the notification prompt flag")
+            false
+        }
+        // Below API 33 the permission is unknown and reads as denied; the SDK check answers there.
+        @Suppress("InlinedApi")
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        return shouldRequestNotificationPermission(Build.VERSION.SDK_INT, granted, asked)
+    }
+
+    /** The layout [language] types on, as stored before the onboarding started. */
+    private fun storedLayout(language: SupportedLanguage): KeyboardLayout =
+        KeyboardLayoutPreference.layout(storedPreferences, language)
+
+    /**
+     * The steps with nothing left to ask, which [OnboardingStep.next] passes over (#200), read
+     * when the flow moves on, as iOS's `satisfiedSteps`:
+     * - the model preparation once the model's files are on disk. The language step's
+     *   [startPreparation] has already selected it then, so the engine loads it.
+     * - the microphone once RECORD_AUDIO is granted. A denied one is still shown.
+     */
+    private fun satisfiedSteps(): Set<OnboardingStep> = buildSet {
+        if (modelManager.isDownloaded(recommendedKey)) add(OnboardingStep.ModelPreparation)
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            add(OnboardingStep.Microphone)
+        }
+    }
+
     /** Puts [step] on screen and records it as the step to resume at. */
     private fun show(step: OnboardingStep) {
         _currentStep.value = step
@@ -272,7 +452,10 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Persist the selected layout, active model, and onboarding completion flag to DataStore.
+     * Persist the active model and onboarding completion flag to DataStore.
+     *
+     * No layout since #134: each keyboard language follows its own default until the user picks
+     * one, as on iOS.
      *
      * Called when the user taps "Commencer" on the completion step. The DataStore write causes
      * AppNavHost to recompose and switch from the onboarding flow to the main tab layout.
@@ -283,11 +466,16 @@ class OnboardingViewModel @Inject constructor(
     private fun completeOnboarding() {
         viewModelScope.launch {
             dataStore.edit { prefs ->
-                prefs[PreferenceKeys.KEYBOARD_LAYOUT] = _selectedLayout.value
                 prefs[PreferenceKeys.ACTIVE_MODEL] = recommendedKey
                 prefs[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.Welcome.storedName
                 prefs[PreferenceKeys.HAS_COMPLETED_ONBOARDING] = true
             }
         }
     }
+}
+
+/** The phone's languages in order of preference, whatever language the app itself runs in. */
+private fun systemLocales(): List<Locale> {
+    val locales = Resources.getSystem().configuration.locales
+    return List(locales.size()) { locales[it] }
 }

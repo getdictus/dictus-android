@@ -44,7 +44,7 @@ adb -s 99071FFAZ00EBN logcat -G 16M     # per buffer; check with: adb -s 99071FF
 
 The size holds until the phone reboots: run it again after a reboot.
 
-**4. Out of reach.** Pierre has no phone more recent than the Pixel 4. `small` and `medium-q5_0` cannot be validated on the phones they are meant for. A PR that changes them says "not tested on a recent phone". `parakeet-tdt-0.6b-v3` is not in this tier: it is gated at 6 GB of RAM, like iOS (#148), so it runs on the 6 GB Pixel 4 and is measured in tier 2. Onboarding installs Parakeet v3 from 6 GB of RAM (so on the Pixel 4) and Small Q5 below 6 GB (`ModelCatalog.recommendedModelKey`); a phone below 6 GB sees `Nécessite 6 Go de RAM ou plus` on Parakeet 0.6B in Modèles; `DEFAULT_KEY` (`tiny`) is only a fallback when no model is active.
+**4. Out of reach.** Pierre has no phone more recent than the Pixel 4. `small` and `medium-q5_0` cannot be validated on the phones they are meant for. A PR that changes them says "not tested on a recent phone". `parakeet-tdt-0.6b-v3` is not in this tier: it is gated at 6 GB of RAM, like iOS (#148), so it runs on the 6 GB Pixel 4 and is measured in tier 2. Onboarding installs Parakeet v3 from 6 GB of RAM (so on the Pixel 4) and, below 6 GB, Base, or Tiny on a CPU without ARMv8.2 `fphp` (`ModelCatalog.recommendedModelKey`, `SocClass`, #309); a phone below 6 GB sees `Nécessite 6 Go de RAM ou plus` on Parakeet 0.6B in Modèles; `DEFAULT_KEY` (`tiny`) is only a fallback when no model is active.
 
 ## Launch
 
@@ -116,14 +116,14 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | --- | --- |
 | Bottom tabs | `Accueil`, `Modèles`, `Réglages` |
 | Accueil | `Modèle actif`, the model name (`Small Q5`), `Nouvelle dictée`; `Dernière transcription` + `Copier` only after a dictation |
-| In-app recording | `Retour`, the timer `0:06`, `Arrêter`, `Toucher pour arrêter`; then `Transcription en cours…`, `Résultat` + `Copier` |
+| In-app recording | `Retour`, the timer `0:06`, `Arrêter`, `Toucher pour arrêter`; then `Transcription en cours…`, its timer `0:12`, past the threshold `Modèle lent : essayez un modèle plus léger dans Modèles` (log `Slow transcription hint shown`, #309), `Résultat` + `Copier` |
 | Modèles | `Téléchargés`, `Disponibles`, card names `Tiny` `Base` `Small` `Small Q5` `Medium` `Parakeet 110M` `Parakeet 0.6B`, badges `WK` / `NV`, `Actif`, `Télécharger`, `Anglais uniquement`, `Nécessite 6 Go de RAM ou plus` (below 6 GB only), `Stockage utilisé : …` |
-| Réglages | `Réglages` (title), `Transcription`, `Langue / Automatique`, `Clavier`, `Langue du clavier / …`, `ABC` / `123` (segment), `Disposition du clavier / AZERTY`, `Retour haptique`, `Sons du clavier`, `Sons`, `Suggestions`, `Correction automatique`, `Réinitialiser les mots appris`, `Apparence`, `Thème / Sombre`, `Langue de l'interface / Automatique`, `À propos`, `Version`, `GitHub`, `Mentions légales`, `Licences`, `Debug Logs`, `Exporter les logs de débogage` |
+| Réglages | `Réglages` (title), `Transcription`, `Langue / Automatique`, `Clavier`, `Langue du clavier / …`, `ABC` / `123` (segment), `Retour haptique`, `Sons du clavier`, `Sons`, `Suggestions`, `Correction automatique`, `Réinitialiser les mots appris`, `Apparence`, `Thème / Sombre`, `Langue de l'interface / Automatique`, `À propos`, `Version`, `GitHub`, `Politique de confidentialité`, `Conditions d’utilisation`, `Licences`, `Debug Logs`, `Exporter les logs de débogage` |
 | Picker menus | options anchored to the row, the current one with ✓; system back dismisses without choosing |
 | Sons | `Retour`, `GÉNÉRAL`, `Activer les sons`, `Volume`, `Les sons respectent le mode silencieux du téléphone.`, `SONS PAR ÉVÉNEMENT`, `Début / Electronic 01F`, `Fin / …`, `Annuler / …` (`[disabled]` while « Activer les sons » is off); in a list `Electronic 01F / Sélectionné` |
-| Onboarding (code only, not seen) | `Commencer`, `Autoriser le micro`, `Continuer`, `Ouvrir les paramètres`, `Sélectionner Dictus`, `ABC` / `123`, `Télécharger`, `Réessayer` |
+| Onboarding (code only, not seen) | `Commencer`, `Autoriser le micro`, `Pas maintenant`, `Continuer`, `Ouvrir les paramètres`, `Sélectionner Dictus`, `ABC` / `123`, `Télécharger`, `Réessayer` |
 
-**The Dictus keyboard is fully in Argent's tree** (its own `ComposeView` at the bottom of the screen, above the app's nodes): each key is a `StaticText` with its label (`a`…`m`, `⇧`, `'`, `⌫`, `?123`, `😊`, `espace`, `retour`; `Leertaste` / `Eingabe` when the keyboard language is DE), the language code is `Langue du clavier FR` (tap cycles FR→EN→ES→DE, long-press opens Dictus Réglages without tabs), the mic is `Microphone` (always enabled, #247), suggestions are three `View`s labelled with the words. While recording: `Annuler la dictée` (✕, cancel), `Terminer la dictée` (✓, insert), glass pills with icons (#239), the timer `00:05`, `En écoute…`, `Réglages` (opens the system keyboard picker). The emoji page uses androidx resource-ids `dev.pivisolutions.dictus:id/emoji_picker_header` / `emoji_picker_body`, category names (`UTILISÉS RÉCEMMENT`…), then `ABC` and `⌫`. Tap the centre of a key's frame.
+**The Dictus keyboard is fully in Argent's tree** (its own `ComposeView` at the bottom of the screen, above the app's nodes): each key is a `StaticText` with its label (`a`…`m`, `⇧`, `'`, `⌫`, `123`, `😊`, `espace`, `retour` (an ↵ icon on screen, the word is its label, #280); `Leertaste` / `Eingabe` when the keyboard language is DE), the single top bar (#139) holds ☰ `Menu du clavier` on the left (tap cycles the keyboard language FR→EN→ES→DE, which the space bar shows; long-press opens Dictus Réglages without tabs) and the mic `Microphone` on the right (always enabled, #247); in between, by priority, a grey notice, the undo pill `Annuler l’insertion de la dictée`, or the suggestions as three `View`s labelled with the words, each of which takes ☰'s place. While recording: `Annuler la dictée` (✕, cancel), `Terminer la dictée` (✓, insert), glass pills with icons (#239), the timer `00:05`, `En écoute…`, `Réglages` (opens the system keyboard picker). The emoji page (#192) shows the category name in capitals, the emoji as `View "😀"`, and the bar `ABC`, `Rechercher un emoji`, the category buttons by name (`Récents`, `Smileys`, `Personnes`…) and `Effacer`; its search mode adds `Effacer la recherche` and the mini keys (`a`…`z`, `⌫`, `espace`). Tap the centre of a key's frame.
 
 **The tree can lag.** `describe` returned with an action sometimes shows the screen *before* the action (seen after taps on Sons, after scrolling Modèles, after a sub-screen's back). Give the step `delayMs: 1000` in `run-sequence`, or call `describe` again, and compare with the screenshot before tapping. Returning from a sub-screen can restore Réglages at a different scroll offset: re-read the frames, never reuse old ones.
 
@@ -136,7 +136,7 @@ CLI equivalent: `argent run describe --udid 99071FFAZ00EBN`.
 | Recording started (keyboard mic or Nouvelle dictée) | `DictationService started foreground with ACTION_START` |
 | ✕ in the keyboard | `Recording cancelled, samples discarded` (service), between `AudioRecord cancelled, samples discarded` and the IME's `Recording cancelled` |
 | ✓ in the keyboard | `Recording stopped: samples=\d+`, then `Transcription finished: engine=`, then `Dictation inserted: d=\w+, length=\d+, committed=true` (never the text) |
-| Undo chip | `Dictation undone: length=\d+` or `Dictation undo refused` |
+| Undo pill (« Annuler ») | `Dictation undone: length=\d+` or `Dictation undo refused` |
 | Model warm-up | `Engine prewarm complete for model=…` / `Engine prewarm skipped` |
 
 ```bash
@@ -236,7 +236,7 @@ Release the lock after `emu kill`, also when install or verification failed (kil
 Release never contains x86_64 whisper/trie, with or without the property.
 
 - **Use Tiny.** whisper on x86_64 is built for SSE4.2 only (the emulator CPU lacks AVX2/FMA): Tiny takes ~12 s for 3 s of audio; Small Q5 ~75 s.
-- **Parakeet is unavailable on the emulator.** sherpa-onnx (`:asr`) ships arm64-v8a and armeabi-v7a only. Activating a Parakeet model there must end in a failed engine (log `ParakeetProvider: sherpa-onnx native library unavailable on x86_64`), never in a crash. Test Parakeet on the Pixel.
+- **Parakeet on the emulator needs `tools/fetch-sherpa-onnx-x86_64.sh` first** (#338). It puts sherpa-onnx's x86_64 libraries in `asr/src/emulator/jniLibs/` (not in git, sha256-checked), which the `-Pdictus.emulatorAbi=true` build then packages. Without them the build warns, and activating a Parakeet model ends in a failed engine (log `ParakeetProvider: sherpa-onnx native library unavailable on x86_64`), never in a crash. The 2 GB emulator is below Parakeet's RAM gate: add `-Pdictus.parakeetMinRamGb=1` (debug only). Transcription time, real voice and memory are still for the Pixel.
 
 ### Dictation from a WAV clip (virtual microphone)
 
@@ -318,4 +318,4 @@ All executable, run from the repository root; all read `helpers/env.sh` (overrid
 
 **A PR that adds or changes a screen or a user-facing feature MUST update `features/` and `features/screens.md` in the same PR.** Reuse the IDs of the iOS map (`getdictus/dictus-ios`, `.claude/skills/verify-dictus-ios/features/`) for the same feature or screen, and set the Android status (present, partial, absent, iOS-only). A feature that exists only on Android gets a new ID marked *Android-only*. Run `/maintain-verification-skill` from pstack (see `CLAUDE.md`) for a full pass over the map; a user has to invoke it.
 
-TODO sync after dictus-ios #762 merges: it adds four screen IDs, `kbd.transcribing`, `kbd.dictation-undo`, `kbd.numbers` and `kbd.symbols`. Add them to the "All IDs" table of `features/README.md` and to `features/screens.md` with their Android status, then update the totals.
+TODO sync after dictus-ios #762 merges: it adds four screen IDs, `kbd.transcribing`, `kbd.dictation-undo`, `kbd.numbers` and `kbd.symbols`; the last two are in the map since #264. Add the other two to the "All IDs" table of `features/README.md` and to `features/screens.md` with their Android status, then update the totals.

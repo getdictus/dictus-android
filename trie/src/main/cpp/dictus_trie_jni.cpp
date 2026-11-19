@@ -150,21 +150,28 @@ Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeLoad(
     return loaded ? JNI_TRUE : JNI_FALSE;
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeSetLayout(
-    JNIEnv*,
+extern "C" JNIEXPORT jboolean JNICALL
+Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeSetProximityTable(
+    JNIEnv* env,
     jobject,
     jlong handle,
-    jint layout
+    jcharArray characters,
+    jfloatArray distances
 ) {
     Engine* engine = fromHandle(handle);
-    if (engine == nullptr) return;
-    if (layout == 0) {
-        engine->proximity.buildAZERTY();
-    } else {
-        engine->proximity.buildQWERTY();
-    }
+    if (engine == nullptr || characters == nullptr || distances == nullptr) return JNI_FALSE;
+    const jsize count = env->GetArrayLength(characters);
+    if (count <= 0 || env->GetArrayLength(distances) != count * count) return JNI_FALSE;
+
+    std::vector<jchar> keys(static_cast<size_t>(count));
+    std::vector<jfloat> costs(static_cast<size_t>(count) * static_cast<size_t>(count));
+    env->GetCharArrayRegion(characters, 0, count, keys.data());
+    env->GetFloatArrayRegion(distances, 0, count * count, costs.data());
+    if (env->ExceptionCheck()) return JNI_FALSE;
+
+    if (!engine->proximity.setTable(keys.data(), count, costs.data())) return JNI_FALSE;
     engine->scorer.setProximityMap(&engine->proximity);
+    return JNI_TRUE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

@@ -9,18 +9,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * The line the suggestion bar shows after a dictation that inserted nothing: "No words
- * detected" (#153) or "The dictation failed" (#182). Without it the user cannot tell either
- * from a dictation that never ran.
+ * The line the keyboard toolbar shows after a dictation that inserted nothing: "No words
+ * detected" (#153) or "The dictation failed" (#182), or after a mic tap without the microphone
+ * permission (#307). Without it the user cannot tell any of them from a dictation that never ran.
  *
  * Mirrors the iOS keyboard toolbar (ToolbarView.swift, iOS #313): a plain grey line, not an
- * alarm, gone after [DISPLAY_DURATION_MS] (iOS StatusMessageLifetime.displayDuration). Anything
+ * alarm, gone after [Message.durationMs] (iOS StatusMessageLifetime.displayDuration). Anything
  * that changes the field withdraws it earlier, through [DictationFeedback.withdraw].
  */
 class DictationNotice(private val scope: CoroutineScope) {
 
-    /** [AppDictationInProgress] is not shown through [show]: it stays while the app dictates (#248). */
-    enum class Message { NoWordsDetected, Failed, AppDictationInProgress }
+    enum class Message(val durationMs: Long) {
+        NoWordsDetected(DISPLAY_DURATION_MS),
+        Failed(DISPLAY_DURATION_MS),
+        MicrophoneRefused(ACTION_DISPLAY_DURATION_MS),
+    }
 
     private val _message = MutableStateFlow<Message?>(null)
 
@@ -33,7 +36,7 @@ class DictationNotice(private val scope: CoroutineScope) {
         hideJob?.cancel()
         _message.value = message
         hideJob = scope.launch {
-            delay(DISPLAY_DURATION_MS)
+            delay(message.durationMs)
             _message.value = null
         }
     }
@@ -46,5 +49,8 @@ class DictationNotice(private val scope: CoroutineScope) {
 
     companion object {
         const val DISPLAY_DURATION_MS = 3_000L
+
+        /** Long enough to read the line and reach its button, which three seconds is not. */
+        const val ACTION_DISPLAY_DURATION_MS = 8_000L
     }
 }

@@ -43,6 +43,9 @@ sealed class AppDestination(val route: String) {
     /** Debug Logs viewer — navigated from Settings > À propos > Debug Logs. */
     data object DebugLogs : AppDestination("debug_logs")
 
+    /** Hidden transcription debug log (#295) — five taps on Settings > À propos > Version. */
+    data object TranscriptionDebug : AppDestination("transcription_debug")
+
     /** Sound settings — volume slider, start/stop/cancel sound pickers. */
     data object SoundSettings : AppDestination("sound_settings")
 

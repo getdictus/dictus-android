@@ -6,9 +6,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -20,6 +22,9 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * The store's contract, after iOS `VocabularyStore` (#203), on a real DataStore file.
@@ -32,16 +37,34 @@ class VocabularyStoreTest {
     val folder = TemporaryFolder()
 
     private val scopes = mutableListOf<CoroutineScope>()
+    private val threads = mutableListOf<ExecutorService>()
 
+    /** Each store runs on a thread of its own, so [closeAll] can wait for it to let go of its file. */
     private fun dataStore(file: File = File(folder.root, "prefs.preferences_pb")): DataStore<Preferences> {
-        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob()).also { scopes += it }
+        val thread = Executors.newSingleThreadExecutor().also { threads += it }
+        val scope = CoroutineScope(thread.asCoroutineDispatcher() + SupervisorJob()).also { scopes += it }
         return PreferenceDataStoreFactory.create(scope = scope, produceFile = { file })
     }
 
-    @After
-    fun tearDown() {
-        scopes.forEach { it.cancel() }
+    /**
+     * Close every store and return once each has released its file (#313). DataStore
+     * releases it in a completion handler of the scope's job, run by whichever thread ends
+     * the job's last child, and a second store on the same file throws until then. A bare
+     * `cancel()` returns while a child is still finishing, and `join()` can return just
+     * before the handler runs, so the test also waits for the store's thread to go idle.
+     */
+    private suspend fun closeAll() {
+        scopes.forEach { it.coroutineContext.job.cancelAndJoin() }
+        threads.forEach {
+            it.shutdown()
+            check(it.awaitTermination(5, TimeUnit.SECONDS)) { "a DataStore thread did not stop" }
+        }
+        scopes.clear()
+        threads.clear()
     }
+
+    @After
+    fun tearDown() = runBlocking { closeAll() }
 
     private fun entry(term: String, vararg variants: String) =
         requireNotNull(VocabularyEntry.create(term, variants.toList()))
@@ -56,7 +79,7 @@ class VocabularyStoreTest {
         assertTrue(store.add(second))
         assertEquals(listOf(second, first), store.loadEntries())
 
-        scopes.forEach { it.cancel() }
+        closeAll()
         val reopened = VocabularyStore(dataStore(file), isEntitled = { true })
         assertEquals(listOf(second, first), reopened.loadEntries())
     }

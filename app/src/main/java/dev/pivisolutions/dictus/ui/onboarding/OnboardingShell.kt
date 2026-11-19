@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.ui.onboarding
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.animateColorAsState
@@ -42,8 +43,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.Layout
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,6 +114,9 @@ object OnboardingMetrics {
     /** Gap between the top of the safe area and the top row. */
     val topBarTopPadding = 8.dp
 
+    /** Gap between a page's content and its primary button, as iOS's page bottom padding. */
+    val contentBottomGap = 16.dp
+
     /** Gap between the primary button and the Skip row under it. */
     val skipRowSpacing = 12.dp
 }
@@ -139,6 +151,7 @@ fun OnboardingShell(
     page: @Composable (OnboardingStep) -> Unit,
 ) {
     BackHandler(enabled = step.stepBack != null, onBack = onBack)
+    val topBarFold = remember { OnboardingTopBarFold() }
 
     Box(
         modifier = Modifier
@@ -146,11 +159,13 @@ fun OnboardingShell(
             .background(MaterialTheme.colorScheme.background),
     ) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-            OnboardingTopBar(
-                step = step,
-                onBack = if (step.stepBack != null) onBack else null,
-                modifier = Modifier.padding(top = OnboardingMetrics.topBarTopPadding),
-            )
+            if (!topBarFold.isFolded) {
+                OnboardingTopBar(
+                    step = step,
+                    onBack = if (step.stepBack != null) onBack else null,
+                    modifier = Modifier.padding(top = OnboardingMetrics.topBarTopPadding),
+                )
+            }
 
             AnimatedContent(
                 targetState = step,
@@ -163,12 +178,19 @@ fun OnboardingShell(
                 },
                 label = "onboarding_page",
             ) { pageStep ->
-                val skip = if (pageStep.isSkippable) OnboardingSkipAction(onSkip) else null
+                val skip = if (pageStep.isSkippable) {
+                    OnboardingSkipAction(stringResource(pageStep.skipLabel()), onSkip)
+                } else {
+                    null
+                }
                 // The page sliding away takes no more taps: a second tap on its button would
                 // act on the step that replaced it.
                 val leaving = transition.targetState == EnterExitState.PostExit
                 Box(modifier = if (leaving) Modifier.consumeAllTouches() else Modifier) {
-                    CompositionLocalProvider(LocalOnboardingSkip provides skip) {
+                    CompositionLocalProvider(
+                        LocalOnboardingSkip provides skip,
+                        LocalOnboardingTopBarFold provides topBarFold,
+                    ) {
                         page(pageStep)
                     }
                 }
@@ -194,9 +216,27 @@ private fun Modifier.consumeAllTouches(): Modifier = pointerInput(Unit) {
  * the row is drawn by the page, several composables down. Passing it through every step
  * screen would make each carry a parameter only the shell reads.
  */
-class OnboardingSkipAction(val perform: () -> Unit)
+class OnboardingSkipAction(val label: String, val perform: () -> Unit)
+
+/** The microphone's Skip declines it, and says so (#220); elsewhere it reads « Passer ». */
+@StringRes
+private fun OnboardingStep.skipLabel(): Int =
+    if (this == OnboardingStep.Microphone) R.string.onboarding_mic_permission_not_now else R.string.onboarding_skip
 
 val LocalOnboardingSkip = staticCompositionLocalOf<OnboardingSkipAction?> { null }
+
+/**
+ * Lets a page take the top row's height when the window is too short for both (#355): the
+ * first dictation with the keyboard up on a phone in landscape. The page folds the row while
+ * it needs the room, and unfolds it before it leaves.
+ */
+@Stable
+class OnboardingTopBarFold {
+    var isFolded by mutableStateOf(false)
+}
+
+/** Null outside the shell (previews, tests of a page alone): the page then has no row to fold. */
+val LocalOnboardingTopBarFold = staticCompositionLocalOf<OnboardingTopBarFold?> { null }
 
 // ---------------------------------------------------------------------------
 // Top row and progress bar
@@ -327,30 +367,71 @@ private val RemainingSegmentDark = Color(0xFF232D40)
  * scroll that only moves when the content overflows keeps the button reachable and costs
  * nothing where everything fits.
  *
+ * WHY THE 16 DP GAP SITS OUTSIDE THE SCROLL (#198): iOS puts it at the end of the scrolled
+ * content (`OnboardingShell.swift`, `.padding(.bottom, 16)`), so it only shows once the
+ * page is scrolled to its end. Content taller than the screen was then cut flush against
+ * the button, under its shadow, on a Pixel 4. Outside the scroll, the cut edge stays 16 dp
+ * above the button, and a page that fits looks the same as on iOS.
+ *
+ * WHY A FILL (#358): a page can hand its last element apart, to be measured with the height
+ * left above the button as its maximum. The language step's keyboard preview shrinks into it
+ * on a short screen instead of being cut by « Continuer ». Where even [fillMinHeight] does not
+ * fit, it keeps its own height and the page scrolls as before.
+ *
  * @param bottom the primary button, or nothing on a step without one.
+ * @param fill drawn under [content], with the height left above the button as its maximum.
+ * @param fillMinHeight the least height worth shrinking [fill] to; with less left, it is not bounded.
  */
 @Composable
 fun OnboardingPage(
     title: String,
     subtitle: String? = null,
     bottom: @Composable ColumnScope.() -> Unit,
+    fill: (@Composable () -> Unit)? = null,
+    fillMinHeight: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    var pageHeight by remember { mutableIntStateOf(0) }
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(
+        Layout(
+            contents = listOf(
+                {
+                    Column {
+                        OnboardingHeader(
+                            title = title,
+                            subtitle = subtitle,
+                            modifier = Modifier.padding(top = OnboardingMetrics.titleTopPadding, bottom = 24.dp),
+                        )
+                        content()
+                    }
+                },
+                { fill?.invoke() },
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .padding(bottom = OnboardingMetrics.contentBottomGap)
+                // The scroll below hands the content an unbounded height: read the page's first.
+                .layout { measurable, constraints ->
+                    pageHeight = constraints.maxHeight
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                }
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = OnboardingMetrics.horizontalPadding)
-                .padding(bottom = 16.dp),
-        ) {
-            OnboardingHeader(
-                title = title,
-                subtitle = subtitle,
-                modifier = Modifier.padding(top = OnboardingMetrics.titleTopPadding, bottom = 24.dp),
-            )
-            content()
+                .padding(horizontal = OnboardingMetrics.horizontalPadding),
+        ) { (contents, fills), constraints ->
+            val loose = constraints.copy(minHeight = 0)
+            val contentPlaceable = contents.single().measure(loose)
+            val room = pageHeight - contentPlaceable.height
+            // Shrunk only if that spares the scroll: a page that scrolls anyway keeps it whole.
+            val fillMax = if (room >= fillMinHeight.roundToPx()) room else Constraints.Infinity
+            val fillPlaceable = fills.singleOrNull()?.measure(loose.copy(maxHeight = fillMax))
+            // At least the scroll's minimum, as the column was: a smaller page is centred in it.
+            val height = (contentPlaceable.height + (fillPlaceable?.height ?: 0)).coerceAtLeast(constraints.minHeight)
+            layout(constraints.maxWidth, height) {
+                contentPlaceable.place(0, 0)
+                fillPlaceable?.place(0, contentPlaceable.height)
+            }
         }
         OnboardingBottomBlock(bottom)
     }
@@ -478,10 +559,9 @@ fun OnboardingBottomBlock(content: @Composable ColumnScope.() -> Unit) {
 fun OnboardingSkipRow() {
     val skip = LocalOnboardingSkip.current
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val label = stringResource(R.string.onboarding_skip)
         if (skip != null) {
             Text(
-                text = label,
+                text = skip.label,
                 color = LocalDictusColors.current.textSecondary,
                 fontSize = SkipFontSize,
                 lineHeight = SkipLineHeight,
@@ -494,7 +574,7 @@ fun OnboardingSkipRow() {
         } else {
             // Same height as the link, invisible and out of the accessibility tree.
             Text(
-                text = label,
+                text = stringResource(R.string.onboarding_skip),
                 fontSize = SkipFontSize,
                 lineHeight = SkipLineHeight,
                 maxLines = 1,

@@ -20,6 +20,7 @@ object KeyboardSoundPolicy {
             KeyType.ACCENT_ADAPTIVE,
             KeyType.KEYBOARD_SWITCH,
             -> AudioManager.FX_KEYPRESS_STANDARD
+            KeyType.SPACER -> null
         }
     }
 }

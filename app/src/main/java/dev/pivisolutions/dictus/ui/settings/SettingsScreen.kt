@@ -2,17 +2,18 @@ package dev.pivisolutions.dictus.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,8 +21,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -48,13 +47,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -89,6 +87,7 @@ fun SettingsScreen(
     onNavigateToLicences: () -> Unit = {},
     onNavigateToDebugLogs: () -> Unit = {},
     onNavigateToSoundSettings: () -> Unit = {},
+    onNavigateToTranscriptionDebug: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
@@ -98,8 +97,6 @@ fun SettingsScreen(
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
     val learnedWordCount by viewModel.learnedWordCount.collectAsState()
-    val keyboardLayout by viewModel.keyboardLayout.collectAsState()
-    val keyboardMode by viewModel.keyboardMode.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
 
@@ -130,6 +127,7 @@ fun SettingsScreen(
             SettingMenuRow(
                 label = stringResource(R.string.settings_language),
                 options = listOf(
+                    "follow" to stringResource(R.string.settings_language_follow_keyboard),
                     "auto" to stringResource(R.string.settings_language_auto),
                     "fr" to stringResource(R.string.settings_language_fr),
                     "en" to stringResource(R.string.settings_language_en),
@@ -142,7 +140,9 @@ fun SettingsScreen(
         }
 
         // ---------- SECTION: Clavier ----------
-        // iOS order: keyboard language, ABC/123, layout, haptics, sounds, autocorrect, reset.
+        // iOS order: keyboard language, layout, haptics, sounds, autocorrect, reset.
+        // No ABC / 123 row since #288: the keyboard always opens on letters (iOS #888).
+        // No layout row since #134: each language has its own, chosen from the keyboard (#191).
         // Keyboard sounds and suggestions are Android-only, next to their closest iOS row.
         SectionHeader(text = stringResource(R.string.settings_section_keyboard))
         SettingsCard {
@@ -151,21 +151,6 @@ fun SettingsScreen(
                 options = keyboardLanguageOptions(),
                 selected = keyboardLanguage,
                 onSelect = { viewModel.setKeyboardLanguage(it) },
-            )
-            SettingDivider()
-            KeyboardModeSegment(
-                selected = keyboardMode,
-                onSelect = { viewModel.setKeyboardMode(it) },
-            )
-            SettingDivider()
-            SettingMenuRow(
-                label = stringResource(R.string.settings_keyboard_layout),
-                options = listOf(
-                    "azerty" to "AZERTY",
-                    "qwerty" to "QWERTY",
-                ),
-                selected = keyboardLayout,
-                onSelect = { viewModel.setKeyboardLayout(it) },
             )
             SettingDivider()
             SettingToggleRow(
@@ -235,20 +220,34 @@ fun SettingsScreen(
         // Legal notices is Android-only, next to the other web link.
         SectionHeader(text = stringResource(R.string.settings_section_about))
         SettingsCard {
+            // Five taps open the hidden transcription debug log (#295), in release builds too, as on iOS.
+            val versionTaps = remember { MultiTapCounter() }
             SettingInfoRow(
                 label = stringResource(R.string.settings_version),
                 value = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    if (versionTaps.onTap(SystemClock.uptimeMillis())) onNavigateToTranscriptionDebug()
+                },
             )
             SettingDivider()
             SettingLinkRow(
                 label = stringResource(R.string.settings_github),
-                url = "https://github.com/Pivii/dictus",
+                url = "https://github.com/getdictus/dictus-android",
                 context = context,
             )
             SettingDivider()
             SettingLinkRow(
-                label = stringResource(R.string.settings_legal),
-                url = "https://pivisolutions.dev/legal",
+                label = stringResource(R.string.settings_privacy),
+                url = stringResource(R.string.settings_privacy_url),
+                context = context,
+            )
+            SettingDivider()
+            SettingLinkRow(
+                label = stringResource(R.string.settings_terms),
+                url = stringResource(R.string.settings_terms_url),
                 context = context,
             )
             SettingDivider()
@@ -393,28 +392,20 @@ private fun SettingMenuRow(
     // An unknown stored value shows the first option, the default each row falls back to.
     val selectedLabel = options.firstOrNull { it.first == selected }?.second ?: options.first().second
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable { expanded = true }
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable { expanded = true },
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
         Box {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // fill = false: the value keeps its width, and wraps only when the row is short (#350).
                 Text(
                     text = selectedLabel,
                     color = DictusColors.Accent,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 Icon(
                     imageVector = Icons.Default.UnfoldMore,
@@ -451,77 +442,21 @@ private fun SettingMenuRow(
 }
 
 /**
- * Inline ABC / 123 segmented control for the keyboard's default mode (iOS `DefaultLayerPicker`).
- *
- * Writes the same values as the former picker: "abc" or "123"; any other stored value reads as ABC.
- */
-@Composable
-private fun KeyboardModeSegment(
-    selected: String,
-    onSelect: (String) -> Unit,
-) {
-    val description = stringResource(R.string.settings_default_mode)
-    val current = if (selected == "123") "123" else "abc"
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .height(36.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.background)
-            .padding(2.dp)
-            .semantics { contentDescription = description }
-            .selectableGroup(),
-    ) {
-        listOf("abc" to "ABC", "123" to "123").forEach { (value, text) ->
-            val isSelected = value == current
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (isSelected) LocalDictusColors.current.keySpecialBackground else Color.Transparent)
-                    .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(value) }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = text,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 15.sp,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                )
-            }
-        }
-    }
-}
-
-/**
  * Row with label + static info text (no interaction).
  */
 @Composable
 private fun SettingInfoRow(
     label: String,
     value: String,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
+    SettingRow(label = { SettingLabel(label) }, modifier = modifier) {
         Text(
             text = value,
             color = LocalDictusColors.current.textSecondary,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.End,
         )
     }
 }
@@ -535,21 +470,10 @@ private fun SettingToggleRow(
     checked: Boolean,
     onToggle: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable(onClick = onToggle),
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
         DictusToggle(checked = checked, onToggle = onToggle)
     }
 }
@@ -563,22 +487,10 @@ private fun SettingActionRow(
     onClick: () -> Unit,
     labelColor: Color = MaterialTheme.colorScheme.onBackground,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = labelColor,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
-    }
+    SettingRow(
+        label = { SettingLabel(label, color = labelColor) },
+        modifier = Modifier.clickable(onClick = onClick),
+    )
 }
 
 /**
@@ -589,26 +501,11 @@ private fun SettingNavRow(
     label: String,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable(onClick = onClick),
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalDictusColors.current.textSecondary,
-        )
+        SettingChevron()
     }
 }
 
@@ -621,30 +518,34 @@ private fun SettingLinkRow(
     url: String,
     context: android.content.Context,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clickable {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
-            }
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    SettingRow(
+        label = { SettingLabel(label) },
+        modifier = Modifier.clickable {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        },
     ) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = LocalDictusColors.current.textSecondary,
-        )
+        SettingChevron()
     }
+}
+
+@Composable
+private fun SettingLabel(text: String, color: Color = MaterialTheme.colorScheme.onBackground) {
+    Text(
+        text = text,
+        color = color,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Normal,
+    )
+}
+
+@Composable
+private fun SettingChevron() {
+    Icon(
+        imageVector = Icons.Default.ChevronRight,
+        contentDescription = null,
+        tint = LocalDictusColors.current.textSecondary,
+    )
 }
 
 /**

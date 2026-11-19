@@ -1,0 +1,5 @@
+• Les longues dictées avec Parakeet sont transcrites en entier, et Parakeet garde moins de mémoire entre deux dictées.
+• Une dictée faite dans l'app n'est plus perdue si Android ferme l'app.
+• Clavier : hauteur adaptée à l'écran, une seule barre comme sur iOS, annulation d'une autocorrection, disposition par langue, pas d'autocorrection dans les e-mails et les URL.
+• Nouvel onboarding : choix de la langue, première dictée guidée.
+• Affichage corrigé en paysage, petit écran et grande police.

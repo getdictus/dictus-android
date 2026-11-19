@@ -14,38 +14,6 @@ class KeyboardPreferenceResolverTest {
     }
 
     @Test
-    fun `profile default layout is used only without a valid explicit layout`() {
-        assertEquals(
-            KeyboardLayout.AZERTY,
-            KeyboardPreferenceResolver.layout(null, SupportedLanguage.FRENCH),
-        )
-        assertEquals(
-            KeyboardLayout.QWERTY,
-            KeyboardPreferenceResolver.layout("invalid", SupportedLanguage.ENGLISH),
-        )
-        assertEquals(
-            KeyboardLayout.QWERTY,
-            KeyboardPreferenceResolver.layout(null, SupportedLanguage.SPANISH),
-        )
-        assertEquals(
-            KeyboardLayout.QWERTY,
-            KeyboardPreferenceResolver.layout(null, SupportedLanguage.GERMAN),
-        )
-        assertEquals(
-            KeyboardLayout.AZERTY,
-            KeyboardPreferenceResolver.layout("azerty", SupportedLanguage.GERMAN),
-        )
-        assertEquals(
-            KeyboardLayout.AZERTY,
-            KeyboardPreferenceResolver.layout("azerty", SupportedLanguage.ENGLISH),
-        )
-        assertEquals(
-            KeyboardLayout.QWERTY,
-            KeyboardPreferenceResolver.layout("qwerty", SupportedLanguage.FRENCH),
-        )
-    }
-
-    @Test
     fun `French adaptive behavior requires French and AZERTY`() {
         assertTrue(
             KeyboardPreferenceResolver.usesFrenchAdaptiveKey(
@@ -62,6 +30,19 @@ class KeyboardPreferenceResolverTest {
         assertFalse(
             KeyboardPreferenceResolver.usesFrenchAdaptiveKey(
                 SupportedLanguage.ENGLISH,
+                KeyboardLayout.AZERTY,
+            ),
+        )
+        // #134: any language can now take any layout; only French on AZERTY gets the key.
+        assertFalse(
+            KeyboardPreferenceResolver.usesFrenchAdaptiveKey(
+                SupportedLanguage.FRENCH,
+                KeyboardLayout.QWERTZ,
+            ),
+        )
+        assertFalse(
+            KeyboardPreferenceResolver.usesFrenchAdaptiveKey(
+                SupportedLanguage.GERMAN,
                 KeyboardLayout.AZERTY,
             ),
         )

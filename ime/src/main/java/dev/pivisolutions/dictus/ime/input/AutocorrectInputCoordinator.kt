@@ -27,6 +27,13 @@ enum class AutocorrectSpaceResult {
 enum class AutocorrectSpaceDiagnosis {
     APPLIED,
     NO_SUGGESTION_EVIDENCE,
+    /**
+     * The token is not a word ([AutocorrectToken.isLetterToken]): a digit (`14h`, `3€`, as iOS
+     * #74), another symbol (`mot&`) or an elision left open (`l'`). Never corrected.
+     */
+    NOT_A_WORD,
+    /** The word is part of an email address or a URL (`a.b@c.fr`, `www.x.fr`), as iOS #919. */
+    ADDRESS,
     INPUT_ALREADY_KNOWN,
     INPUT_LEARNED,
     NO_CANDIDATE,
@@ -34,26 +41,60 @@ enum class AutocorrectSpaceDiagnosis {
     EDITOR_INDETERMINATE,
 }
 
-enum class AutocorrectBackspaceResult {
-    UNDONE,
-    PLAIN_DELETE,
+enum class AutocorrectUndoResult {
+    RESTORED,
+    REFUSED,
+    INDETERMINATE,
+}
+
+/**
+ * The undo chip of the suggestion bar (#276): the word as typed, offered back after a correction.
+ *
+ * [serial] tells two corrections of the same word apart, so the chip pulses on each of them.
+ */
+data class AutocorrectUndoOffer(val original: String, val serial: Long)
+
+/** What [AutocorrectInputCoordinator.revertIfAddress] did before the key is written. */
+enum class AutocorrectAddressRevert {
+    /** No address, or the correction could not be put back: the editor is as it was. */
+    UNCHANGED,
+    RESTORED,
+    /** The editor may have changed: the key must not be written over an unknown state. */
     INDETERMINATE,
 }
 
 /**
  * Session-bound, deterministic policy around [AutocorrectEditorTransaction].
  *
- * Editor text is held only in transient transaction values. The coordinator stores the original
- * token solely until the next input action, so only an immediately following Backspace can undo.
+ * Editor text is held only in transient transaction values. After a correction the coordinator
+ * keeps the original token and what the keyboard wrote after the correction, so a tap on the undo
+ * chip can restore the token while keeping that text, as iOS `performUndo` does (#276). The offer
+ * lives until the next Space, as iOS `closeUndoWindowAtSpace`, and Backspace never reverts it.
  */
 class AutocorrectInputCoordinator(
     private val learnRejectedWord: (String) -> Unit,
 ) {
+    /** Told every time the undo chip appears, changes or goes away. */
+    var onUndoOfferChanged: (AutocorrectUndoOffer?) -> Unit = {}
+
     private data class ExpectedSuggestion(val session: Long, val requestId: Long, val input: String)
     private data class PendingUndo(
         val session: Long,
         val undo: AutocorrectUndo,
         val personalizedLearningAllowed: Boolean,
+        val serial: Long,
+        /** What the keyboard wrote after the correction: its trailing text, then what followed. */
+        val written: String,
+        /**
+         * False once the editor could not show its text: then nothing typed after the correction
+         * can be verified, and the offer falls back to closing at the next input but Backspace.
+         */
+        val tracksTyping: Boolean = true,
+        /**
+         * Absolute cursor offset right after the correction and its trailing text; null when
+         * neither the editor nor its selection updates tell where the correction is.
+         */
+        val cursorAfter: Int? = null,
     )
 
     private var session = 0L
@@ -64,6 +105,23 @@ class AutocorrectInputCoordinator(
     private var expectedSuggestion: ExpectedSuggestion? = null
     private var suggestionSnapshot: AutocorrectSuggestionSnapshot? = null
     private var pendingUndo: PendingUndo? = null
+        set(value) {
+            val before = undoOffer
+            field = value
+            if (undoOffer != before) onUndoOfferChanged(undoOffer)
+        }
+    private var undoSerial = 0L
+
+    /**
+     * The collapsed cursor the editor last reported through [onEditorSelectionChanged], or null.
+     * Editors with no extracted text (Compose fields, #285) give no snapshot, so this is the only
+     * place they say where the cursor is.
+     */
+    private var reportedCursor: Int? = null
+
+    /** The undo chip to show, or null. */
+    val undoOffer: AutocorrectUndoOffer?
+        get() = pendingUndo?.let { AutocorrectUndoOffer(it.undo.original, it.serial) }
 
     /** Reason for the most recent Space outcome. Read by the service for one log line. */
     var lastSpaceDiagnosis: AutocorrectSpaceDiagnosis? = null
@@ -130,8 +188,31 @@ class AutocorrectInputCoordinator(
         return accepted
     }
 
+    /**
+     * Space closes the undo window of the correction before it, except the space typed right after
+     * the punctuation mark that made a correction (iOS #872): `cuisinr,` then Space keeps the chip
+     * of `cuisine` until the next Space.
+     */
     fun onSpace(editor: AutocorrectEditor, commitPlainSpace: () -> Unit): AutocorrectSpaceResult {
-        pendingUndo = null
+        val pending = pendingUndo
+        if (pending != null && !(AutocorrectTrigger.commitsWord(pending.undo.trailing) && pending.written == pending.undo.trailing)) {
+            pendingUndo = null
+        }
+        return onWordEnd(editor, trailing = " ", commitPlain = commitPlainSpace)
+    }
+
+    /**
+     * Commits the word before the cursor, as Space does, followed by [trailing] (#268).
+     *
+     * [trailing] is " " for Space, the mark itself for a punctuation key ([AutocorrectTrigger]),
+     * and empty for Return, whose key event the caller sends afterwards. A correction writes
+     * [trailing] in the same verified replacement; otherwise [commitPlain] inserts it.
+     */
+    fun onWordEnd(
+        editor: AutocorrectEditor,
+        trailing: String,
+        commitPlain: () -> Unit,
+    ): AutocorrectSpaceResult {
         val expected = expectedSuggestion
         val offered = suggestionSnapshot
         expectedSuggestion = null
@@ -145,21 +226,26 @@ class AutocorrectInputCoordinator(
         val correction = offered?.primaryCorrection
         val applicable = when {
             !identityEligible || offered == null -> null
+            AddressLikeToken.matches(offered.input) -> null
+            !AutocorrectToken.isLetterToken(offered.input) -> null
             offered.isKnownWord && !offered.knownInputDominance -> null
             offered.isLearnedWord -> null
-            correction == null -> null
+            correction == null || !AutocorrectToken.isLetterToken(correction) -> null
             else -> offered to correction
         }
         if (applicable == null) {
             lastSpaceDetail = null
             lastSpaceDiagnosis = when {
                 !identityEligible || offered == null -> AutocorrectSpaceDiagnosis.NO_SUGGESTION_EVIDENCE
+                AddressLikeToken.matches(offered.input) -> AutocorrectSpaceDiagnosis.ADDRESS
+                !AutocorrectToken.isLetterToken(offered.input) -> AutocorrectSpaceDiagnosis.NOT_A_WORD
                 offered.isKnownWord && !offered.knownInputDominance ->
                     AutocorrectSpaceDiagnosis.INPUT_ALREADY_KNOWN
                 offered.isLearnedWord -> AutocorrectSpaceDiagnosis.INPUT_LEARNED
                 else -> AutocorrectSpaceDiagnosis.NO_CANDIDATE
             }
-            commitPlainSpace()
+            commitPlain()
+            onTextTyped(trailing)
             return AutocorrectSpaceResult.PLAIN_SPACE
         }
         val (evidence, candidate) = applicable
@@ -170,10 +256,21 @@ class AutocorrectInputCoordinator(
                 original = evidence.input,
                 correction = candidate,
                 identityEligible = true,
+                trailing = trailing,
             )
         ) {
             is AutocorrectTransactionResult.Applied -> {
-                pendingUndo = PendingUndo(session, result.undo, personalizedLearningAllowed)
+                pendingUndo = PendingUndo(
+                    session = session,
+                    undo = result.undo,
+                    personalizedLearningAllowed = personalizedLearningAllowed,
+                    serial = ++undoSerial,
+                    written = result.undo.trailing,
+                    // The cursor before the correction sat at the end of the typed word.
+                    cursorAfter = absoluteCursor(editor) ?: reportedCursor?.let {
+                        it - result.undo.original.length + result.undo.correction.length + trailing.length
+                    },
+                )
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.APPLIED
                 lastSpaceDetail = null
                 AutocorrectSpaceResult.CORRECTED
@@ -181,6 +278,8 @@ class AutocorrectInputCoordinator(
             is AutocorrectTransactionResult.IndeterminateMutation -> {
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.EDITOR_INDETERMINATE
                 lastSpaceDetail = "INDETERMINATE_${result.operation.name}"
+                // The text after an earlier correction can no longer be vouched for.
+                pendingUndo = null
                 AutocorrectSpaceResult.INDETERMINATE
             }
             else -> {
@@ -191,66 +290,191 @@ class AutocorrectInputCoordinator(
                     is AutocorrectTransactionResult.EditorFailure -> "FAILED_${result.operation.name}"
                     else -> null
                 }
-                commitPlainSpace()
+                commitPlain()
+                onTextTyped(trailing)
                 AutocorrectSpaceResult.PLAIN_SPACE
             }
         }
     }
 
-    fun onBackspace(editor: AutocorrectEditor, deletePlain: () -> Unit): AutocorrectBackspaceResult {
+    /**
+     * Commits the word before the cursor for Return, then sends Return through [sendReturn].
+     *
+     * Return is always sent, whatever the correction did, as iOS `handleReturn` always inserts its
+     * newline: the correction writes nothing after the word, so Return can never double anything.
+     * Like iOS, Return closes an earlier undo and offers only the correction it made itself. What
+     * Return does belongs to the host: when it is not a new line, the text no longer ends with the
+     * correction and the next selection update withdraws the chip.
+     */
+    fun onReturn(editor: AutocorrectEditor, sendReturn: () -> Unit): AutocorrectSpaceResult {
+        pendingUndo = null
+        val result = onWordEnd(editor, trailing = "") {}
+        sendReturn()
+        onTextTyped("\n")
+        return result
+    }
+
+    /**
+     * Puts back the word corrected at a punctuation mark when [text], about to be typed right
+     * after that mark, makes the whole an email address or a URL (#332, iOS #919): `helene.` was
+     * corrected to `Hélène.`, and the `b` of `helene.bethmont@gmail.com` reveals an address. Not a
+     * refusal of the correction by the user, so nothing is learned.
+     *
+     * Only at the correction's own place: the undo matches the text before the cursor, so with the
+     * cursor after another `Hélène.` of the document it would rewrite that one. A cursor anywhere
+     * else, or an editor that does not tell where it is, drops the offer instead. An editor with
+     * no extracted text is located by the selection it reports (#332: Simple Notes on the Pixel).
+     */
+    fun revertIfAddress(editor: AutocorrectEditor, text: String): AutocorrectAddressRevert {
+        val pending = pendingUndo ?: return AutocorrectAddressRevert.UNCHANGED
+        val mark = pending.undo.trailing
+        if (
+            !AutocorrectTrigger.commitsWord(mark) || pending.written != mark ||
+            !AddressLikeToken.matches(pending.undo.original + mark + text)
+        ) {
+            return AutocorrectAddressRevert.UNCHANGED
+        }
+        pendingUndo = null
+        expectedSuggestion = null
+        suggestionSnapshot = null
+        if (pending.cursorAfter == null || (absoluteCursor(editor) ?: reportedCursor) != pending.cursorAfter) {
+            return AutocorrectAddressRevert.UNCHANGED
+        }
+        return when (AutocorrectEditorTransaction.undo(editor, pending.undo, identityEligible = true)) {
+            is AutocorrectTransactionResult.Restored -> AutocorrectAddressRevert.RESTORED
+            is AutocorrectTransactionResult.IndeterminateMutation -> AutocorrectAddressRevert.INDETERMINATE
+            else -> AutocorrectAddressRevert.UNCHANGED
+        }
+    }
+
+    /**
+     * Deletes one character through [deletePlain]; Backspace never reverts a correction (#276,
+     * iOS `handleBackspace`). The chip stays while the corrected word is still in the text: the
+     * deletion eats what was written after it, and once the word itself is reached it goes.
+     */
+    fun onBackspace(deletePlain: () -> Unit) {
+        expectedSuggestion = null
+        suggestionSnapshot = null
+        deletePlain()
+        val pending = pendingUndo ?: return
+        pendingUndo = if (pending.written.isEmpty()) {
+            null
+        } else {
+            val end = pending.written.offsetByCodePoints(pending.written.length, -1)
+            pending.copy(written = pending.written.substring(0, end))
+        }
+    }
+
+    /**
+     * Records [text] the keyboard wrote after a correction, in place of the last
+     * [replacingCodePoints] it wrote (the French adaptive key turns `e` into `é`), so its undo
+     * keeps it: iOS keeps the chip while the next word is typed. Without text to verify against,
+     * or when the edit reaches into the corrected word, the offer closes here.
+     */
+    fun onTextTyped(text: String, replacingCodePoints: Int = 0) {
+        expectedSuggestion = null
+        suggestionSnapshot = null
+        val pending = pendingUndo ?: return
+        val written = pending.written
+        pendingUndo = if (
+            pending.tracksTyping &&
+            written.codePointCount(0, written.length) >= replacingCodePoints
+        ) {
+            val kept = written.offsetByCodePoints(written.length, -replacingCodePoints)
+            pending.copy(written = written.substring(0, kept) + text)
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Puts the typed word back in place of its correction, keeping what was written after it
+     * (iOS `performUndo`). The undo is consumed whatever the outcome.
+     */
+    fun onUndoTapped(editor: AutocorrectEditor): AutocorrectUndoResult {
         val pending = pendingUndo
         pendingUndo = null
         expectedSuggestion = null
         suggestionSnapshot = null
         if (!sessionActive || pending == null || pending.session != session) {
-            deletePlain()
-            return AutocorrectBackspaceResult.PLAIN_DELETE
+            return AutocorrectUndoResult.REFUSED
         }
-
         return when (
             AutocorrectEditorTransaction.undo(
                 editor = editor,
-                undo = pending.undo,
+                undo = pending.undo.copy(trailing = pending.written),
                 identityEligible = true,
             )
         ) {
             is AutocorrectTransactionResult.Restored -> {
-                // This callback must update in-memory learning before returning from Backspace.
+                // A host with no refusal memory learns on the tap, as iOS does there (#872).
                 if (pending.personalizedLearningAllowed) {
                     learnRejectedWord(pending.undo.original)
                 }
-                AutocorrectBackspaceResult.UNDONE
+                AutocorrectUndoResult.RESTORED
             }
-            is AutocorrectTransactionResult.IndeterminateMutation ->
-                AutocorrectBackspaceResult.INDETERMINATE
-            else -> {
-                deletePlain()
-                AutocorrectBackspaceResult.PLAIN_DELETE
-            }
+            is AutocorrectTransactionResult.IndeterminateMutation -> AutocorrectUndoResult.INDETERMINATE
+            else -> AutocorrectUndoResult.REFUSED
         }
     }
 
-    /** Invalidates both the one-shot undo and suggestion evidence before any other input action. */
+    /** Invalidates both the undo offer and suggestion evidence (another kind of edit). */
     fun onOtherInput() {
         pendingUndo = null
         expectedSuggestion = null
         suggestionSnapshot = null
     }
 
-    /** Preserve undo across any duplicate callbacks for the verified post-correction selection. */
-    fun onEditorSelectionChanged(newSelectionStart: Int, newSelectionEnd: Int) {
+    /**
+     * Keeps the undo offer only while the text before the cursor still ends with the correction and
+     * what the keyboard wrote after it. iOS withdraws it on any change it did not make itself;
+     * Android reports the keyboard's own edits through the same callback, often late, so the
+     * text is compared instead of the selection. [textBeforeCursor] returns null when the editor
+     * will not show its text: the offer then closes at the next input but Backspace.
+     */
+    fun onEditorSelectionChanged(
+        newSelectionStart: Int,
+        newSelectionEnd: Int,
+        textBeforeCursor: (length: Int) -> CharSequence?,
+    ) {
         expectedSuggestion = null
         suggestionSnapshot = null
+        reportedCursor = newSelectionStart.takeIf { it >= 0 && it == newSelectionEnd }
         val pending = pendingUndo ?: return
-        if (
-            newSelectionStart != pending.undo.correctedSelection ||
-            newSelectionEnd != pending.undo.correctedSelection
-        ) {
+        if (newSelectionStart != newSelectionEnd) {
             pendingUndo = null
+            return
+        }
+        val expected = pending.undo.correction + pending.written
+        val text = try {
+            textBeforeCursor(expected.length + 1)
+        } catch (_: RuntimeException) {
+            null
+        }
+        pendingUndo = when {
+            text == null -> pending.copy(tracksTyping = false)
+            text.endsWith(expected) && endsAtWordStart(text, expected.length) -> pending
+            else -> null
         }
     }
 
+    /** The editor's collapsed cursor as an absolute offset, or null when it cannot be read. */
+    private fun absoluteCursor(editor: AutocorrectEditor): Int? = try {
+        editor.snapshot()
+            ?.takeIf { it.selectionStart == it.selectionEnd && it.selectionStart >= 0 }
+            ?.let { it.startOffset + it.selectionStart }
+    } catch (_: RuntimeException) {
+        null
+    }
+
+    /** Whether the [suffixLength] characters at the end of [text] start a word of their own. */
+    private fun endsAtWordStart(text: CharSequence, suffixLength: Int): Boolean {
+        val start = text.length - suffixLength
+        return start == 0 || !Character.isLetter(Character.codePointBefore(text, start))
+    }
+
     private fun clearTransientState() {
+        reportedCursor = null
         expectedSuggestion = null
         suggestionSnapshot = null
         pendingUndo = null

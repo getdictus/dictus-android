@@ -26,17 +26,6 @@
     <issue
         id="FlowOperatorInvokedInComposition"
         message="Flow operator functions should not be invoked within composition"
-        errorLine1="            .map { it[PreferenceKeys.KEYBOARD_MODE] ?: &quot;abc&quot; }"
-        errorLine2="             ~~~">
-        <location
-            file="src/main/java/dev/pivisolutions/dictus/ime/DictusImeService.kt"
-            line="283"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="FlowOperatorInvokedInComposition"
-        message="Flow operator functions should not be invoked within composition"
         errorLine1="            .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }"
         errorLine2="             ~~~">
         <location
@@ -97,17 +86,6 @@
         <location
             file="src/main/java/dev/pivisolutions/dictus/ime/ui/KeyboardView.kt"
             line="32"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/dev/pivisolutions/dictus/ime/ui/MicButtonRow.kt"
-            line="40"
             column="5"/>
     </issue>
 

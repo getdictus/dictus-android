@@ -3,7 +3,7 @@ package dev.pivisolutions.dictus.ime.input
 import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 
 /**
- * What the suggestion bar says about the last dictation: the undo offer after an insertion
+ * What the keyboard toolbar says about the last dictation: the undo offer after an insertion
  * (#132), or the notice after a dictation that inserted nothing (#153, #182).
  *
  * WHY one owner: both describe the field as the dictation left it, so anything that changes
@@ -19,6 +19,14 @@ class DictationFeedback(
     fun withdraw() {
         undo.clear()
         notice.clear()
+    }
+
+    /**
+     * The keyboard closed: the field the insertion was made into is no longer in front of the
+     * user, so the undo offer ends (#139, iOS `KeyboardState.registerControllerDisappearance`).
+     */
+    fun onKeyboardHidden() {
+        undo.clear()
     }
 
     /**

@@ -72,6 +72,17 @@ class DictationServiceStartGuardTest {
     }
 
     @Test
+    fun `a start without the microphone permission is refused`() {
+        // #220: a microphone foreground service without RECORD_AUDIO throws on Android 14+.
+        shadowOf(ApplicationProvider.getApplicationContext<android.app.Application>())
+            .denyPermissions(Manifest.permission.RECORD_AUDIO)
+
+        assertFalse(service.startRecording(DictationSource.APP))
+        assertFalse(service.startRecording(DictationSource.KEYBOARD))
+        assertTrue(service.state.value is DictationState.Idle)
+    }
+
+    @Test
     fun `a start from the app while the keyboard records is refused and changes nothing`() {
         startFromKeyboard()
 

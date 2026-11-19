@@ -33,8 +33,9 @@ enum class AiProvider { WHISPER, PARAKEET }
  * @param qualityLabelRes Short quality descriptor (e.g. "Fast"), as a string resource.
  * @param descriptionRes  Short description shown on the model card, as a string resource:
  *                        the catalog has no Context, the UI resolves it in its locale (#236).
- * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar.
- * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar.
+ * @param precision       Relative accuracy score 0.0–1.0 for the Precision bar, hand-set until measured
+ *                        with a real voice (#180).
+ * @param speed           Relative speed score 0.0–1.0 for the Vitesse bar, from [ModelBars] (#180).
  * @param provider        Inference engine.
  * @param source          Where the files are downloaded from.
  * @param isDeprecated    When true, hide from new downloads but keep if installed.
@@ -106,6 +107,10 @@ sealed interface ModelSource {
  */
 object ModelCatalog {
     const val DEFAULT_KEY = "tiny"
+
+    /** The lightest model: nothing lighter exists to suggest once it is the one running (#309). */
+    const val LIGHTEST_KEY = "tiny"
+
     // Pinned revision: the SHA-256 below are the LFS object ids of the files at this commit, so a
     // later upstream change can never make a valid install fail its check.
     private const val WHISPER_BASE_URL =
@@ -147,7 +152,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_tiny,
             precision = 0.4f,
-            speed = 1.0f,
+            speed = ModelBars.speed("tiny"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -160,7 +165,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_balanced,
             descriptionRes = R.string.model_description_base,
             precision = 0.6f,
-            speed = 0.7f,
+            speed = ModelBars.speed("base"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -173,7 +178,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small,
             precision = 0.9f,
-            speed = 0.35f,
+            speed = ModelBars.speed("small"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.8,
         ),
@@ -186,7 +191,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_small_q5,
             precision = 0.85f,
-            speed = 0.55f,
+            speed = ModelBars.speed("small-q5_1"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
         ),
@@ -199,7 +204,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_accurate,
             descriptionRes = R.string.model_description_medium,
             precision = 0.9f,
-            speed = 0.3f,
+            speed = ModelBars.speed("medium-q5_0"),
             languages = ModelLanguages.WHISPER_MULTILINGUAL,
             timeoutFactor = 1.0,
         ),
@@ -217,7 +222,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_fast,
             descriptionRes = R.string.model_description_parakeet_110m,
             precision = 0.75f,
-            speed = 0.85f,
+            speed = ModelBars.speed("parakeet-ctc-110m-int8"),
             provider = AiProvider.PARAKEET,
             languages = ModelLanguages.ENGLISH,
             timeoutFactor = 0.6,
@@ -237,7 +242,7 @@ object ModelCatalog {
             qualityLabelRes = R.string.model_quality_premium,
             descriptionRes = R.string.model_description_parakeet_v3,
             precision = 0.95f,
-            speed = 0.40f,
+            speed = ModelBars.speed("parakeet-tdt-0.6b-v3"),
             provider = AiProvider.PARAKEET,
             isTransducer = true,
             minRamGb = BuildConfig.PARAKEET_MIN_RAM_GB,
@@ -250,25 +255,31 @@ object ModelCatalog {
     fun findByKey(key: String): ModelInfo? = ALL.find { it.key == key }
 
     /**
-     * Return the recommended model key for onboarding based on device RAM.
+     * Return the recommended model key for onboarding based on device RAM and CPU generation.
      *
-     * >= 6 GB marketed RAM (Parakeet's minRamGb) -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
-     * < 6 GB marketed RAM                         -> small-q5_1 (190 MB, best accuracy/size trade-off)
+     * >= 6 GB marketed RAM (Parakeet's minRamGb)     -> parakeet-tdt-0.6b-v3 (640 MB, 25 languages, best quality)
+     * < 6 GB marketed RAM                            -> base (148 MB)
+     * < 6 GB marketed RAM on a [SocClass.LEGACY] CPU -> tiny (77 MB)
      *
-     * Same rule as iOS (ModelInfo.recommendedIdentifier, minus its A12/A13 exception). On a
-     * 6 GB Pixel 4, Parakeet peaks at ~1.5 GB PSS and answers in under 1 s for a 6 s dictation,
-     * where small-q5_1 takes about 30 s (#148).
+     * Follows iOS (ModelInfo.recommendedIdentifier), which keeps Small away from its old chips.
+     * On a 6 GB Pixel 4, Parakeet answers a 6 s dictation in under 1 s where small-q5_1 takes
+     * about 16 s, because whisper.cpp pads every take to a 30 s window (#145, #148): phones
+     * below 6 GB are usually slower than that one, so they get a lighter Whisper (#309).
      *
      * WHY DeviceRam: the Models screen gates the same model with the same helper, so
      * onboarding never recommends a model the Models screen shows as unavailable.
      */
     fun recommendedModelKey(context: Context): String =
-        recommendedModelKey(DeviceRam.totalMemBytes(context))
+        recommendedModelKey(DeviceRam.totalMemBytes(context), SocClass.current())
 
-    /** Pure variant of [recommendedModelKey] for a given totalMem reading. */
-    fun recommendedModelKey(totalMemBytes: Long): String {
+    /** Pure variant of [recommendedModelKey] for a given totalMem reading and CPU generation. */
+    fun recommendedModelKey(totalMemBytes: Long, socClass: SocClass): String {
         val parakeet = findByKey("parakeet-tdt-0.6b-v3")!!
-        return if (DeviceRam.meetsRequirement(parakeet, totalMemBytes)) parakeet.key else "small-q5_1"
+        return when {
+            DeviceRam.meetsRequirement(parakeet, totalMemBytes) -> parakeet.key
+            socClass == SocClass.LEGACY -> LIGHTEST_KEY
+            else -> "base"
+        }
     }
 
     /**

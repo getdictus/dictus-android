@@ -58,9 +58,11 @@ function(build_library target_name)
     target_compile_definitions(${target_name} PUBLIC GGML_USE_CPU)
     target_compile_definitions(${target_name} PRIVATE WHISPER_VERSION="${WHISPER_VERSION}")
 
+    # ggml is one target shared by both libraries of the ABI. On arm64 it stays ARMv8.0:
+    # the default libwhisper loads it on CPUs without FP16 (#321), so ARMv8.2 is set on
+    # whisper_v8fp16_va only (#322, checked by .github/scripts/check-arm64-baseline.sh).
     if (${target_name} STREQUAL "whisper_v8fp16_va")
         target_compile_options(${target_name} PRIVATE -march=armv8.2-a+fp16)
-        set(GGML_COMPILE_OPTIONS                      -march=armv8.2-a+fp16)
     elseif (${target_name} STREQUAL "whisper_vfpv4")
         target_compile_options(${target_name} PRIVATE -mfpu=neon-vfpv4)
         set(GGML_COMPILE_OPTIONS                      -mfpu=neon-vfpv4)

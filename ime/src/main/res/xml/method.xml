@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    One entry, « Dictus », in the system keyboard picker, as on iOS (#195). No subtype: the
+    keyboard language and its layout are per-language preferences inside Dictus (#134).
+-->
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
-    android:settingsActivity="dev.pivisolutions.dictus.MainActivity">
-    <subtype
-        android:label="@string/subtype_azerty"
-        android:imeSubtypeLocale="fr_FR"
-        android:imeSubtypeMode="keyboard" />
-    <subtype
-        android:label="@string/subtype_qwerty"
-        android:imeSubtypeLocale="en_US"
-        android:imeSubtypeMode="keyboard" />
-</input-method>
+    android:settingsActivity="dev.pivisolutions.dictus.MainActivity" />

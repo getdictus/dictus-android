@@ -35,6 +35,19 @@ class DictationNoticeTest {
     }
 
     @Test
+    fun `the refused microphone notice stays long enough to reach its button`() {
+        notice.show(Message.MicrophoneRefused)
+
+        scope.advanceTimeBy(DictationNotice.ACTION_DISPLAY_DURATION_MS - 1)
+        scope.runCurrent()
+        assertEquals(Message.MicrophoneRefused, notice.message.value)
+
+        scope.advanceTimeBy(1)
+        scope.runCurrent()
+        assertNull(notice.message.value)
+    }
+
+    @Test
     fun `a second empty dictation restarts the three seconds`() {
         notice.show(Message.NoWordsDetected)
         scope.advanceTimeBy(2_000)

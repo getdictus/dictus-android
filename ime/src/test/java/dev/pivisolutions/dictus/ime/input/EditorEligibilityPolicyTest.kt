@@ -56,4 +56,36 @@ class EditorEligibilityPolicyTest {
         assertTrue(policy.suggestionEligible)
         assertFalse(policy.personalizedLearningAllowed)
     }
+
+    @Test
+    fun `Google Keep note asking for autocorrect without a suggestion strip is eligible`() {
+        // Logged on the Pixel 4 in a Keep note (#368): CAP_SENTENCES | AUTO_CORRECT | MULTI_LINE |
+        // NO_SUGGESTIONS.
+        assertTrue(EditorEligibilityPolicy.resolve(0x000ac001, 0x54000001).suggestionEligible)
+    }
+
+    @Test
+    fun `Google Docs body is eligible`() {
+        assertTrue(EditorEligibilityPolicy.resolve(0x00024001, 0).suggestionEligible)
+    }
+
+    @Test
+    fun `no-suggestion multi-line field without autocorrect stays ineligible`() {
+        val inputType = InputType.TYPE_CLASS_TEXT or
+            InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+            InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+
+        assertFalse(EditorEligibilityPolicy.resolve(inputType, 0).suggestionEligible)
+    }
+
+    @Test
+    fun `autocorrect flag does not make a password field eligible`() {
+        val inputType = InputType.TYPE_CLASS_TEXT or
+            InputType.TYPE_TEXT_VARIATION_PASSWORD or
+            InputType.TYPE_TEXT_FLAG_AUTO_CORRECT or
+            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+
+        assertFalse(EditorEligibilityPolicy.resolve(inputType, 0).suggestionEligible)
+    }
 }

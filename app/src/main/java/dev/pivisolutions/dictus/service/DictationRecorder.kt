@@ -32,7 +32,7 @@ interface AudioCapture {
 class DictationRecorder(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<DictationState>,
-    private val newCapture: () -> AudioCapture,
+    private val newCapture: (DictationSource) -> AudioCapture,
 ) {
     @Volatile
     private var current: AudioCapture? = null
@@ -45,7 +45,7 @@ class DictationRecorder(
 
     fun start(source: DictationSource) {
         cancel()
-        val capture = newCapture()
+        val capture = newCapture(source)
         current = capture
         elapsedMs = 0L
         state.value = DictationState.Recording(source, elapsedMs = 0L, energy = emptyList())

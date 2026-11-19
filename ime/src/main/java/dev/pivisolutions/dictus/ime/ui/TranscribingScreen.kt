@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -24,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.WaveformBars
 import dev.pivisolutions.dictus.core.ui.WaveformDriver
 import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
+import dev.pivisolutions.dictus.core.ui.rememberTranscriptionFeedback
 
 /**
  * Transcribing overlay shown while whisper.cpp processes audio.
@@ -35,8 +39,8 @@ import dev.pivisolutions.dictus.core.ui.rememberSyntheticMotionEnabled
  * The WaveformDriver advances processingPhase each frame using the same
  * formula as iOS (link.duration / 2.0), producing smooth lateral wave motion.
  *
- * Total height: 310.dp (matching RecordingScreen and KeyboardScreen)
- * Layout: empty top row (46.dp) + center with waveform + label (218.dp) + empty bottom row (46.dp)
+ * Total height: LocalKeyboardSizing's total (matching RecordingScreen and KeyboardScreen, #139, #127)
+ * Layout: empty top row (52.dp) + center with waveform + label + empty bottom row (46.dp)
  */
 @Composable
 fun TranscribingScreen(
@@ -59,19 +63,20 @@ fun TranscribingScreen(
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
-        // Top spacer (46.dp) — no buttons during transcription
+        // Top spacer (52.dp) — no buttons during transcription; same height as the recording's
+        // top row, as iOS RecordingOverlay reserves it in every state.
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(RECORDING_TOP_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background),
         )
 
-        // Center (218.dp) — animated waveform bars + label
+        // Center — animated waveform bars + label
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(218.dp)
+                .height(dictationCentreHeight())
                 .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -84,25 +89,43 @@ fun TranscribingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 2.dp)
-                    .height(120.dp),
+                    .weight(1f, fill = false)
+                    .heightIn(max = 120.dp)
+                    .fillMaxHeight(),
                 isProcessing = true,
                 processingPhase = phase,
             )
 
-            // "Transcription..." label
+            val feedback = rememberTranscriptionFeedback(surface = "keyboard")
+            val label = stringResource(dev.pivisolutions.dictus.ime.R.string.ime_transcribing)
+
+            // "Transcription... 00:12" label
             Text(
-                text = stringResource(dev.pivisolutions.dictus.ime.R.string.ime_transcribing),
+                text = feedback?.let {
+                    String.format("%s %02d:%02d", label, it.elapsedMs / 60000, (it.elapsedMs % 60000) / 1000)
+                } ?: label,
                 color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 16.dp),
             )
+
+            if (feedback?.showSlowHint == true) {
+                Text(
+                    text = stringResource(dev.pivisolutions.dictus.core.R.string.transcription_slow_hint),
+                    color = LocalDictusColors.current.keyText.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    modifier = Modifier.padding(top = 4.dp, start = 16.dp, end = 16.dp),
+                )
+            }
         }
 
         // Bottom spacer (46.dp)
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp)
+                .height(RECORDING_BOTTOM_ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background),
         )
     }

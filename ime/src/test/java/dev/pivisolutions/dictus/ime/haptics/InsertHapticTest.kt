@@ -11,7 +11,7 @@ import org.junit.Test
 /** The insertion haptic of a keyboard dictation (#238), wired as the IME wires it. */
 class InsertHapticTest {
 
-    private val feedback = DictationFeedback(DictationUndo(), DictationNotice(TestScope()))
+    private val feedback = DictationFeedback(DictationUndo(TestScope()), DictationNotice(TestScope()))
     private var played = 0
     private val haptic = InsertHaptic { played++ }
 

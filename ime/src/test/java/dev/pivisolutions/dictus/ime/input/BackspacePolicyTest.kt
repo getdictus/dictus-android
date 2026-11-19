@@ -1,10 +1,14 @@
 package dev.pivisolutions.dictus.ime.input
 
+import android.view.KeyEvent
 import android.view.inputmethod.InputConnection
 import java.lang.reflect.Proxy
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class BackspacePolicyTest {
     @Test
     fun `first ten deletion commands stay character-wise`() {
@@ -56,7 +60,7 @@ class BackspacePolicyTest {
         val calls = mutableListOf<DeletionCall>()
         val inputConnection = inputConnection(textBeforeCursor = "hello world   ", calls = calls)
 
-        assertEquals(8, deletePrecedingWord(inputConnection))
+        assertEquals(WordDeletion.Token(codePoints = 8, accepted = true), deletePrecedingWord(inputConnection))
         assertEquals(listOf(DeletionCall("deleteSurroundingTextInCodePoints", 8, 0)), calls)
     }
 
@@ -66,7 +70,7 @@ class BackspacePolicyTest {
         val truncatedContext = "\uDE00" + "a".repeat(1023)
         val inputConnection = inputConnection(textBeforeCursor = truncatedContext, calls = calls)
 
-        assertEquals(1024, deletePrecedingWord(inputConnection))
+        assertEquals(WordDeletion.Token(codePoints = 1024, accepted = true), deletePrecedingWord(inputConnection))
         assertEquals(
             listOf(DeletionCall("deleteSurroundingTextInCodePoints", 1024, 0)),
             calls,
@@ -74,35 +78,61 @@ class BackspacePolicyTest {
     }
 
     @Test
-    fun `supplementary character deletion uses code point safe editor API`() {
-        val calls = mutableListOf<DeletionCall>()
-        val inputConnection = inputConnection(textBeforeCursor = "\uD83D\uDE00", calls = calls)
+    fun `unavailable word context falls back to one DEL key press`() {
+        val editor = KeyOnlyEditor("Bonjour", textBeforeCursorAvailable = false)
 
-        deletePrecedingCodePoint(inputConnection)
-
-        assertEquals(listOf(DeletionCall("deleteSurroundingTextInCodePoints", 1, 0)), calls)
+        assertEquals(WordDeletion.Key(accepted = true), deletePrecedingWord(editor.connection))
+        assertEquals("Bonjou", editor.text.toString())
     }
 
     @Test
-    fun `unsupported code point deletion does not fall back to UTF-16 deletion`() {
-        val calls = mutableListOf<DeletionCall>()
-        val inputConnection = inputConnection(
-            textBeforeCursor = "\uD83D\uDE00",
-            calls = calls,
-            codePointDeleteResult = false,
-        )
+    fun `backspace key press is a soft keyboard DEL down then up`() {
+        val editor = KeyOnlyEditor("a")
 
-        assertEquals(false, deletePrecedingCodePoint(inputConnection))
-        assertEquals(listOf(DeletionCall("deleteSurroundingTextInCodePoints", 1, 0)), calls)
+        assertEquals(true, sendBackspaceKey(editor.connection))
+
+        assertEquals(listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP), editor.keyEvents.map { it.action })
+        editor.keyEvents.forEach { event ->
+            assertEquals(KeyEvent.KEYCODE_DEL, event.keyCode)
+            assertEquals(KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, event.flags)
+        }
     }
 
     @Test
-    fun `unavailable word context falls back to code point safe deletion`() {
-        val calls = mutableListOf<DeletionCall>()
-        val inputConnection = inputConnection(textBeforeCursor = null, calls = calls)
+    fun `backspace deletes in an editor that ignores deleteSurroundingText (#369)`() {
+        val editor = KeyOnlyEditor("Bonjour")
 
-        assertEquals(1, deletePrecedingWord(inputConnection))
-        assertEquals(listOf(DeletionCall("deleteSurroundingTextInCodePoints", 1, 0)), calls)
+        sendBackspaceKey(editor.connection)
+
+        assertEquals("Bonjou", editor.text.toString())
+    }
+
+    /**
+     * An editor such as Google Docs (#369): it acknowledges deleteSurroundingText calls without
+     * applying them and handles only DEL key events, like a hardware keyboard.
+     */
+    private class KeyOnlyEditor(initial: String, textBeforeCursorAvailable: Boolean = true) {
+        val text = StringBuilder(initial)
+        val keyEvents = mutableListOf<KeyEvent>()
+        val connection: InputConnection = Proxy.newProxyInstance(
+            InputConnection::class.java.classLoader,
+            arrayOf(InputConnection::class.java),
+        ) { _, method, args ->
+            when (method.name) {
+                "getTextBeforeCursor" -> text.toString().takeIf { textBeforeCursorAvailable }
+                "deleteSurroundingText", "deleteSurroundingTextInCodePoints" -> true
+                "sendKeyEvent" -> {
+                    val event = args!![0] as KeyEvent
+                    keyEvents += event
+                    val deletes = event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DEL
+                    if (deletes && text.isNotEmpty()) {
+                        text.setLength(text.length - 1)
+                    }
+                    true
+                }
+                else -> null
+            }
+        } as InputConnection
     }
 
     private data class DeletionCall(val method: String, val before: Int, val after: Int)
@@ -110,7 +140,6 @@ class BackspacePolicyTest {
     private fun inputConnection(
         textBeforeCursor: CharSequence?,
         calls: MutableList<DeletionCall>,
-        codePointDeleteResult: Boolean = true,
     ): InputConnection = Proxy.newProxyInstance(
         InputConnection::class.java.classLoader,
         arrayOf(InputConnection::class.java),
@@ -119,7 +148,7 @@ class BackspacePolicyTest {
             "getTextBeforeCursor" -> textBeforeCursor
             "deleteSurroundingText", "deleteSurroundingTextInCodePoints" -> {
                 calls += DeletionCall(method.name, args[0] as Int, args[1] as Int)
-                method.name != "deleteSurroundingTextInCodePoints" || codePointDeleteResult
+                true
             }
             else -> defaultValue(method.returnType)
         }

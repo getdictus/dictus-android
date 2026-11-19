@@ -55,11 +55,14 @@ class OnboardingShellTest {
 
     @Test
     fun `the bar says which step of five is on screen`() {
-        setShell(OnboardingStep.Microphone)
+        setShell(OnboardingStep.Language)
         composeTestRule.onNodeWithContentDescription("Step 1 of 5").assertExists()
 
-        step = OnboardingStep.KeyboardLayout
+        step = OnboardingStep.ModelPreparation
         composeTestRule.onNodeWithContentDescription("Step 3 of 5").assertExists()
+
+        step = OnboardingStep.Microphone
+        composeTestRule.onNodeWithContentDescription("Step 4 of 5").assertExists()
 
         step = OnboardingStep.FirstDictation
         composeTestRule.onNodeWithContentDescription("Step 5 of 5").assertExists()
@@ -78,12 +81,12 @@ class OnboardingShellTest {
     // --- Back ---
 
     @Test
-    fun `the microphone step shows the back chevron and it goes back`() {
-        setShell(OnboardingStep.Microphone)
+    fun `the language step shows the back chevron and it goes back`() {
+        setShell(OnboardingStep.Language)
 
         composeTestRule.onNodeWithContentDescription("Back").performSemanticsAction(SemanticsActions.OnClick)
 
-        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Microphone), backs) }
+        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Language), backs) }
     }
 
     @Test
@@ -98,13 +101,13 @@ class OnboardingShellTest {
 
     @Test
     fun `the system back goes back a step where the chevron does`() {
-        setShell(OnboardingStep.Microphone)
+        setShell(OnboardingStep.Language)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
         }
 
-        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Microphone), backs) }
+        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Language), backs) }
     }
 
     @Test
@@ -130,12 +133,23 @@ class OnboardingShellTest {
     }
 
     @Test
+    fun `the microphone offers Not now and it declines`() {
+        setShell(OnboardingStep.Microphone)
+
+        composeTestRule.onNodeWithText("Skip").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Not now").performSemanticsAction(SemanticsActions.OnClick)
+
+        composeTestRule.runOnIdle { assertEquals(listOf(OnboardingStep.Microphone), skips) }
+    }
+
+    @Test
     fun `no other step offers Skip`() {
         setShell(OnboardingStep.Welcome)
         for (s in OnboardingStep.entries.filter { !it.isSkippable }) {
             step = s
             composeTestRule.waitForIdle()
             composeTestRule.onNodeWithText("Skip").assertDoesNotExist()
+            composeTestRule.onNodeWithText("Not now").assertDoesNotExist()
         }
     }
 }

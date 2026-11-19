@@ -1,16 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Onboarding: Welcome screen (Step 1) -->
-    <string name="onboarding_welcome_wordmark">Dictus</string>
-    <string name="onboarding_welcome_tagline">Voice dictation, 100\u00a0% offline</string>
-    <string name="onboarding_welcome_cta">Start</string>
+    <!-- Onboarding: Welcome screen (Step 1), the intro carousel (#197, iOS WelcomePage) -->
+    <string name="onboarding_intro_walking_title">Speak. Dictus writes.</string>
+    <string name="onboarding_intro_walking_subtitle">In all your apps, from the keyboard.</string>
+    <string name="onboarding_intro_metro_title">Even offline.</string>
+    <string name="onboarding_intro_metro_subtitle">On the metro or on a plane, Dictus still writes. Everything happens on your phone.</string>
+    <string name="onboarding_intro_keyboard_title">In your keyboard.</string>
+    <string name="onboarding_intro_keyboard_subtitle">In your notes, messages or emails: tap the mic, speak, and the text appears.</string>
+    <string name="onboarding_intro_page">Page %1$d of %2$d</string>
+    <string name="onboarding_welcome_cta">Get started</string>
+
+    <!-- Onboarding: Language step (#198) -->
+    <string name="onboarding_language_title">Your language</string>
+    <string name="onboarding_language_subtitle">Your phone\'s language, already selected. You can change it later in Settings.</string>
+    <string name="onboarding_language_role">Dictation and keyboard</string>
+    <string name="onboarding_language_change">Change</string>
+    <string name="onboarding_language_layout">Keyboard layout</string>
+    <string name="onboarding_language_model">%1$s model, the best for your language on this phone. ~%2$d MB, downloaded as soon as you continue. You can change it in Models.</string>
+    <string name="onboarding_language_cta">Continue</string>
+    <string name="onboarding_download_notice_title">The model is downloading</string>
+    <string name="onboarding_download_notice_message">The model (~%1$d MB) is downloading now. You can leave the app, for example to add the keyboard: the download keeps going in the background.</string>
+    <string name="onboarding_download_notice_ok">Got it</string>
+    <string name="onboarding_download_notice_notifications">Android will then ask you to allow notifications: they show the download\'s progress.</string>
 
     <!-- Onboarding: Microphone permission screen (Step 2) -->
     <string name="onboarding_mic_permission_title">Microphone</string>
-    <string name="onboarding_mic_permission_body">Dictus needs the microphone to transcribe your voice. Your recordings stay on your device.</string>
-    <string name="onboarding_mic_permission_cta_grant">Allow Microphone</string>
+    <string name="onboarding_mic_permission_body">Dictus records your voice only during a dictation you start, to turn it into text. Transcription runs on your phone: the audio and the text never leave your device.</string>
+    <string name="onboarding_mic_permission_cta_grant">Allow microphone</string>
+    <string name="onboarding_mic_permission_not_now">Not now</string>
+    <string name="onboarding_mic_permission_refused">Without the microphone, dictation cannot work. You can allow it later in Android settings.</string>
     <string name="onboarding_mic_permission_cta_continue">Continue</string>
+    <string name="home_mic_refused">Allow the microphone for Dictus in Android settings to dictate.</string>
 
     <!-- Onboarding: Keyboard setup screen (Step 3) -->
     <string name="onboarding_keyboard_setup_title">Add the keyboard</string>
@@ -19,29 +40,24 @@
     <string name="onboarding_keyboard_setup_cta_select">Select Dictus</string>
     <string name="onboarding_keyboard_setup_cta_continue">Continue</string>
 
-    <!-- Onboarding: Mode selection screen (Step 4) -->
-    <string name="onboarding_mode_selection_title">Choose your keyboard</string>
-    <string name="onboarding_mode_selection_body">ABC is selected by default. Switch if you prefer to open on numbers.</string>
-    <string name="onboarding_mode_selection_cta">Continue</string>
+    <!-- Onboarding: Model download screen (Step 4) -->
 
-    <!-- Onboarding: Model download screen (Step 5) -->
+    <!-- Onboarding: first dictation (#199, iOS GlobeKeyTutorialPage) -->
+    <string name="onboarding_first_dictation_title">Try it now</string>
+    <string name="onboarding_first_dictation_opening">Your keyboard opens below.</string>
+    <string name="onboarding_first_dictation_before_tap">Tap the field to open your keyboard</string>
+    <string name="onboarding_first_dictation_other_keyboard">Switch keyboards, then choose Dictus.</string>
+    <string name="onboarding_first_dictation_dictus_keyboard">Tap the blue mic and speak. The text lands here.</string>
+    <string name="onboarding_first_dictation_placeholder_tap">Tap here to write</string>
+    <string name="onboarding_first_dictation_placeholder_say">Say something\u2026</string>
+    <string name="onboarding_first_dictation_banner_choose">Choose Dictus</string>
+    <string name="onboarding_first_dictation_banner_mic">Tap the blue mic, then speak</string>
+    <string name="onboarding_first_dictation_continue">Continue</string>
 
-    <!-- Onboarding: Test recording screen (Step 6) -->
-    <string name="onboarding_test_recording_title">Test dictation</string>
-    <string name="onboarding_test_recording_body">Tap the mic and speak.\nDictus will transcribe your voice.</string>
-    <string name="onboarding_test_recording_result">Result</string>
-    <string name="onboarding_test_recording_transcribing">Transcribing\u2026</string>
-    <string name="onboarding_test_recording_no_result">(No result)</string>
-    <string name="onboarding_test_recording_tap_to_stop">Tap to stop</string>
-    <string name="onboarding_test_recording_cta_continue">Continue</string>
-    <string name="onboarding_test_recording_cd_copy">Copy</string>
-    <string name="onboarding_test_recording_cd_stop">Stop</string>
-    <string name="onboarding_test_recording_cd_record">Record</string>
-
-    <!-- Onboarding: Success screen (Step 7) -->
-    <string name="onboarding_success_title">All set!</string>
-    <string name="onboarding_success_body">Dictus is configured and ready to use.</string>
-    <string name="onboarding_success_cta">Start</string>
+    <!-- Onboarding: Success screen (Step 6) -->
+    <string name="onboarding_success_title">You\'re all set</string>
+    <string name="onboarding_success_body">Dictus is waiting in the keyboard of every app. Tap the mic, and speak.</string>
+    <string name="onboarding_success_cta">Get started</string>
 
     <!-- Onboarding: shell around every step (#196) -->
     <string name="onboarding_back">Back</string>
@@ -56,9 +72,7 @@
 
     <!-- Settings: Row labels -->
     <string name="settings_language">Language</string>
-    <string name="settings_keyboard_layout">Keyboard layout</string>
     <string name="settings_keyboard_language">Keyboard language</string>
-    <string name="settings_default_mode">Default mode</string>
     <string name="settings_haptic_feedback">Haptic feedback</string>
     <string name="settings_keyboard_sounds">Keyboard sounds</string>
     <string name="settings_suggestions">Suggestions</string>
@@ -77,9 +91,14 @@
     <string name="settings_export_logs">Export debug logs</string>
     <string name="settings_licences">Licences</string>
     <string name="settings_github">GitHub</string>
-    <string name="settings_legal">Legal notices</string>
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_terms">Terms of use</string>
+    <!-- The website pages in the interface language (#220). -->
+    <string name="settings_privacy_url">https://www.getdictus.com/en/privacy</string>
+    <string name="settings_terms_url">https://www.getdictus.com/en/terms</string>
 
     <!-- Settings: Language picker values -->
+    <string name="settings_language_follow_keyboard">Follow keyboard language</string>
     <string name="settings_language_auto">Automatic</string>
     <string name="settings_language_fr">Fran\u00e7ais</string>
     <string name="settings_language_en">English</string>
@@ -120,6 +139,27 @@
     <string name="debug_logs_copy">Copy</string>
     <string name="debug_logs_menu_cd">Menu</string>
     <string name="debug_logs_back_cd">Back</string>
+
+    <!-- TranscriptionDebugScreen (#295): hidden, five taps on Settings > Version -->
+    <string name="transcription_debug_title" translatable="false">Transcription debug</string>
+    <plurals name="transcription_debug_outcomes">
+        <item quantity="one">Outcomes (%1$d shown)</item>
+        <item quantity="other">Outcomes (%1$d shown)</item>
+    </plurals>
+    <plurals name="transcription_debug_stored">
+        <item quantity="one">%1$d total event persisted (last 7 days). Export ships the full window.</item>
+        <item quantity="other">%1$d total events persisted (last 7 days). Export ships the full window.</item>
+    </plurals>
+    <string name="transcription_debug_retention">Kept on this device for 7 days. Export ships the full window.</string>
+    <string name="transcription_debug_recent">Recent events</string>
+    <string name="transcription_debug_empty">No transcription events yet. Dictate something, then come back.</string>
+    <string name="transcription_debug_export">Export JSON…</string>
+    <string name="transcription_debug_clear">Clear</string>
+    <string name="transcription_debug_export_failed">Export failed</string>
+    <string name="transcription_debug_event_title">Transcription event</string>
+    <string name="transcription_debug_raw">Raw STT output</string>
+    <string name="transcription_debug_engine_output">Engine output</string>
+    <string name="transcription_debug_no_polish">(polish off: engine not called)</string>
 
     <!-- LicencesScreen -->
     <string name="licences_title">Licences</string>
@@ -186,6 +226,7 @@
     <string name="model_install_channel_name">Model installs</string>
     <string name="model_download_error">Download failed.</string>
     <string name="model_requires_ram">Requires %1$d GB of RAM or more</string>
+    <string name="model_size_approx">~%1$d MB</string>
     <string name="model_precision">Precision</string>
     <string name="model_speed">Speed</string>
     <string name="model_delete_cd">Delete</string>
@@ -205,6 +246,8 @@
 
     <!-- HomeScreen -->
     <string name="home_active_model">Active model</string>
+    <string name="home_no_model_title">Download a model to get started</string>
+    <string name="home_no_model_body">Go to the Models tab to download your first transcription model.</string>
     <string name="home_last_transcription">Last transcription</string>
     <string name="home_copy_cd">Copy</string>
     <string name="home_new_dictation">New dictation</string>
