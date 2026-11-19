@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -62,7 +63,10 @@ import dev.pivisolutions.dictus.ime.ui.LocalKeyboardSizing
 import dev.pivisolutions.dictus.ime.ui.keyboardSizing
 import dev.pivisolutions.dictus.ime.ui.usesFullscreenMode
 import dev.pivisolutions.dictus.ime.ui.rememberKeyboardSizing
+import dev.pivisolutions.dictus.ime.ui.SuggestionBarTrace
 import dev.pivisolutions.dictus.ime.ui.SuggestionPresentationMode
+import dev.pivisolutions.dictus.ime.ui.SuggestionTrace
+import dev.pivisolutions.dictus.ime.ui.ToolbarCentreSlot
 import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.AutoCapitalization
@@ -232,6 +236,11 @@ class DictusImeService : LifecycleInputMethodService() {
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     private val _suggestionMode = MutableStateFlow(SuggestionPresentationMode.COMPLETION)
     private var latestSuggestionRequestId: Long? = null
+    // Whether the completions of _currentWord are still being looked up: the bar keeps the word
+    // until the lookup answers, rather than falling back to ☰ at every key.
+    private val _completionPending = MutableStateFlow(false)
+    // Candidate count and empty-row reason behind the suggestion bar's dictus.log line.
+    private val _suggestionTrace = MutableStateFlow(SuggestionTrace.Initial)
     private var correctionSessionId = 0L
     // Rolling autocorrect tally. Autocorrect is silent by design, so a report of "it never
     // corrects" used to leave nothing behind; one line per Space would drown the 1 MB buffer in
@@ -395,6 +404,21 @@ class DictusImeService : LifecycleInputMethodService() {
                     } else {
                         emptyList()
                     }
+                    _completionPending.value = false
+                    _suggestionTrace.value = SuggestionTrace(
+                        computed = result.suggestions.size,
+                        reason = if (_suggestionsEnabled.value) null else "suggestions off",
+                    )
+                } else if (result.requestId == latestSuggestionRequestId) {
+                    _completionPending.value = false
+                    _suggestionTrace.value = SuggestionTrace(
+                        computed = result.suggestions.size,
+                        reason = when {
+                            !correctionContextCurrent -> "context changed"
+                            result.mode == NativeTrieSuggestionEngine.SuggestionMode.COMPLETION -> "word changed"
+                            else -> "prediction outdated"
+                        },
+                    )
                 }
             }
         }
@@ -483,7 +507,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun refreshSuggestionsFromEditor() {
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
-            clearSuggestionState()
+            clearSuggestionState(reason = "editor not eligible")
             return
         }
         val ic = currentInputConnection ?: return
@@ -500,14 +524,16 @@ class DictusImeService : LifecycleInputMethodService() {
         if (shouldRequestSuggestions() && currentWord.isNotEmpty()) {
             requestSuggestionsForCurrentWord()
         } else {
-            clearSuggestionState()
+            clearSuggestionState(reason = if (currentWord.isEmpty()) "no word" else "suggestions off")
         }
     }
 
     /** Starts a request-identified lookup and immediately invalidates the previous snapshot. */
     private fun requestSuggestionsForCurrentWord() {
         _suggestions.value = emptyList()
+        _suggestionTrace.value = SuggestionTrace(computed = null, reason = "pending")
         _suggestionMode.value = SuggestionPresentationMode.COMPLETION
+        _completionPending.value = _suggestionsEnabled.value
         val activation = dictionaryEngine.activation.value
         val context = activation?.takeIf { it.hasNgram && _suggestionsEnabled.value }?.let {
             ImeServicePrivacyPolicy.readEditorContextIfEligible(
@@ -558,12 +584,20 @@ class DictusImeService : LifecycleInputMethodService() {
         _currentWord.value = ""
         _suggestions.value = emptyList()
         _suggestionMode.value = SuggestionPresentationMode.PREDICTION
+        _completionPending.value = false
         latestSuggestionRequestId = token.requestId
         _predictionToken.value = token
+        _suggestionTrace.value = SuggestionTrace(computed = null, reason = "pending")
         autocorrectCoordinator.suggestionRequested(null, "")
     }
 
-    private fun clearSuggestionState() {
+    /**
+     * Empties the suggestion row. [awaitCompletion] keeps it on the word being typed: a typed
+     * character is followed by the editor's selection update, which asks for the new completions.
+     */
+    private fun clearSuggestionState(reason: String = "cleared", awaitCompletion: Boolean = false) {
+        _suggestionTrace.value = SuggestionTrace(computed = null, reason = reason)
+        _completionPending.value = awaitCompletion && _suggestionsEnabled.value && isCurrentEditorSuggestionEligible
         dictionaryEngine.invalidateSuggestions()
         predictionCoordinator.invalidate()
         latestSuggestionRequestId = null
@@ -899,6 +933,8 @@ class DictusImeService : LifecycleInputMethodService() {
         val dictationNoticeMessage by dictationNotice.message.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
+        val suggestionTrace by _suggestionTrace.collectAsState()
+        val isCompletionPending by _completionPending.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
         val autoCapSignal by _autoCapSignal.collectAsState()
         val keyboardSession by _keyboardSession.collectAsState()
@@ -1002,6 +1038,26 @@ class DictusImeService : LifecycleInputMethodService() {
             // An app dictation shows the keyboard, mic disabled, never its recording UI or ✓ (#248).
             when (if (appDictationActive) DictationState.Idle else dictationState) {
             is DictationState.Idle -> {
+                val barLine = SuggestionBarTrace.line(
+                    slot = ToolbarCentreSlot.resolve(
+                        notice = dictationNoticeMessage,
+                        appDictationInProgress = appDictationActive,
+                        offersDictationUndo = isDictationUndoAvailable,
+                        hasSuggestions = ToolbarCentreSlot.hasSuggestions(
+                            suggestions,
+                            autocorrectUndo,
+                            ToolbarCentreSlot.pendingWord(isCompletionPending, suggestionMode, currentWord),
+                        ),
+                    ),
+                    trace = suggestionTrace,
+                    mode = suggestionMode,
+                    currentWord = currentWord,
+                    suggestions = suggestions,
+                    undoOffer = autocorrectUndo,
+                )
+                // Logged from what the composition receives, so a bar that the service filled
+                // but the screen never showed tells itself apart from one never filled.
+                LaunchedEffect(barLine, suggestions) { Timber.d(barLine) }
                 KeyboardScreen(
                     onCommitText = { text -> commitText(text) },
                     onDeleteBackward = { deleteBackward() },
@@ -1021,6 +1077,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     currentWord = currentWord,
                     suggestions = suggestions,
                     suggestionMode = suggestionMode,
+                    isCompletionPending = isCompletionPending,
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,
                     onUndoDictation = { undoLastDictation() },
@@ -1324,7 +1381,7 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         } else {
             autoFullStop.clear()
-            clearSuggestionState()
+            clearSuggestionState(reason = "typing", awaitCompletion = true)
             val revert = autocorrectCoordinator.revertIfAddress(InputConnectionAutocorrectEditor(inputConnection), text)
             if (revert != AutocorrectAddressRevert.UNCHANGED) {
                 Timber.d("Autocorrect revert before an address: %s", revert)
@@ -1332,10 +1389,17 @@ class DictusImeService : LifecycleInputMethodService() {
             if (revert == AutocorrectAddressRevert.INDETERMINATE) {
                 // As after an indeterminate correction: nothing is written over an unknown state.
                 autocorrectCoordinator.onOtherInput()
+                // Nor does any selection update follow to ask for completions.
+                _completionPending.value = false
                 false
             } else {
                 val typed = inputConnection.commitText(text, 1)
-                if (typed) autocorrectCoordinator.onTextTyped(text) else autocorrectCoordinator.onOtherInput()
+                if (typed) {
+                    autocorrectCoordinator.onTextTyped(text)
+                } else {
+                    autocorrectCoordinator.onOtherInput()
+                    _completionPending.value = false
+                }
                 typed
             }
         }

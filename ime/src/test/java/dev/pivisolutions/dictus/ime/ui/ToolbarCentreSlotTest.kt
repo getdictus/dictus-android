@@ -111,6 +111,21 @@ class ToolbarCentreSlotTest {
         assertTrue(ToolbarCentreSlot.hasSuggestions(listOf("bonjour")))
     }
 
+    @Test
+    fun `a word whose completions are still looked up keeps the row`() {
+        assertTrue(ToolbarCentreSlot.hasSuggestions(emptyList(), pendingWord = "Bonj"))
+        assertFalse(ToolbarCentreSlot.hasSuggestions(emptyList(), pendingWord = ""))
+    }
+
+    @Test
+    fun `only a pending completion of a typed word counts, never a prediction`() {
+        val completion = SuggestionPresentationMode.COMPLETION
+        val prediction = SuggestionPresentationMode.PREDICTION
+        assertEquals("Bonj", ToolbarCentreSlot.pendingWord(true, completion, "Bonj"))
+        assertEquals("", ToolbarCentreSlot.pendingWord(false, completion, "Bonj"))
+        assertEquals("", ToolbarCentreSlot.pendingWord(true, prediction, "Bonj"))
+    }
+
     // #276: the undo chip sits in the suggestion row, so it alone fills the slot, suggestions off
     // included (decided by Pierre: it is the only way left to revert a correction).
     @Test
