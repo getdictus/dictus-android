@@ -43,7 +43,7 @@ node .claude/skills/verify-dictus-android/helpers/feedback-stub.mjs /tmp/dictus-
 curl -s localhost:8787/__mode/429     # next POSTs: ok | 429 (Retry-After 600) | 429-bare (no header) | 502 | 503
 ```
 
-On the Pixel, `adb reverse tcp:8787 tcp:8787` and `-Pdictus.feedbackEndpoint=http://localhost:8787/api/feedback`. The debug build allows plain HTTP to `10.0.2.2` and `localhost` only (`app/src/debug`). Each report the stub gets is a line of `feedback.jsonl`, the log replaced by its size and first line.
+On the Pixel, `adb reverse tcp:8787 tcp:8787` and `-Pdictus.feedbackEndpoint=http://localhost:8787/api/feedback`. The debug build allows plain HTTP to `10.0.2.2` and `localhost` only (`app/src/debug`). Each report the stub gets is a line of `feedback.jsonl`, the log replaced by its size and first two lines (title, export time).
 
 - **Open.** Réglages, scroll to À propos, tap `Envoyer un retour`. → title `Envoyer un retour`, `Envoyer` disabled, the box `Joindre le journal technique` off (`screen.sh app.settings.feedback`).
 - **Bug question.** Type a name and a message, leave `Bug` and the box off, tap `Envoyer`. → dialog `Joindre le journal technique ?` with `Voir ce qui sera envoyé`, `Envoyer sans`, `Joindre` (`app.settings.feedback.ask-log`). `Joindre` sends with the log and turns the box on; `Envoyer sans` sends without. `Idée` or `Autre`, or the box on: no dialog.
