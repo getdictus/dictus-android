@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.onboarding
 
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
@@ -40,6 +41,13 @@ data class LanguageSetup(
     }
 
     companion object {
+        /** The keyboard language and layout stored in [preferences]: what the keyboard types on. */
+        fun saved(preferences: Preferences): LanguageSetup =
+            LanguageSetup(
+                KeyboardLayoutPreference.activeLanguage(preferences),
+                KeyboardLayoutPreference.activeLayout(preferences),
+            )
+
         /** The keyboard language when none of the system's languages has a Dictus keyboard, as on iOS. */
         val FALLBACK_LANGUAGE = SupportedLanguage.ENGLISH
 

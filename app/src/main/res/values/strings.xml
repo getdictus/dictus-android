@@ -190,7 +190,6 @@
     <!-- FakeSettingsCard (onboarding step 3 — mimics Android system UI, strings intentionally in English) -->
     <string name="fake_settings_manage_keyboards">Manage keyboards</string>
     <string name="fake_settings_gboard_subtitle">Multilingual typing</string>
-    <string name="fake_settings_dictus_subtitle">QWERTY (English)</string>
 
     <!-- ModelCard — Parakeet provider -->
     <!-- Model languages (issue #133) -->

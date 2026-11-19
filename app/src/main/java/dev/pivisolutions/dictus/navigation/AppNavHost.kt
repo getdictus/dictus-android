@@ -189,6 +189,7 @@ private fun OnboardingScreen(
     val micGranted by viewModel.micPermissionGranted.collectAsState()
     val preparation by viewModel.preparation.collectAsState()
     val languageSetup by viewModel.languageSetup.collectAsState()
+    val savedKeyboard by viewModel.savedKeyboard.collectAsState()
     val downloadNotice by viewModel.downloadNotice.collectAsState()
     val notificationRequest by viewModel.notificationRequest.collectAsState()
 
@@ -237,13 +238,16 @@ private fun OnboardingScreen(
                 onNext = onNext,
                 onDecline = { viewModel.skipStep() },
             )
-            OnboardingStep.KeyboardSetup -> OnboardingKeyboardSetupScreen(
-                imeEnabled = imeEnabled,
-                imeSelected = imeSelected,
-                onOpenSettings = onOpenKeyboardSettings,
-                onOpenPicker = onShowKeyboardPicker,
-                onNext = onNext,
-            )
+            OnboardingStep.KeyboardSetup -> savedKeyboard?.let { keyboard ->
+                OnboardingKeyboardSetupScreen(
+                    keyboard = keyboard,
+                    imeEnabled = imeEnabled,
+                    imeSelected = imeSelected,
+                    onOpenSettings = onOpenKeyboardSettings,
+                    onOpenPicker = onShowKeyboardPicker,
+                    onNext = onNext,
+                )
+            }
             OnboardingStep.ModelPreparation -> OnboardingModelDownloadScreen(
                 preparation = preparation,
                 engine = dictationController?.engineState?.collectAsState()?.value,

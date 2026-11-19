@@ -217,6 +217,34 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun `keyboard step - names the language and layout Continue saved (#378)`() = runTest(testDispatcher) {
+        val vm = onLanguageStep("en-US")
+        vm.setKeyboardLanguage(SupportedLanguage.FRENCH)
+        vm.setKeyboardLayout(KeyboardLayout.AZERTY)
+
+        vm.confirmLanguage()
+        advanceUntilIdle()
+
+        assertEquals(LanguageSetup(SupportedLanguage.FRENCH, KeyboardLayout.AZERTY), vm.savedKeyboard.value)
+    }
+
+    @Test
+    fun `keyboard step - a relaunch names the saved choice, not the phone's language`() = runTest(testDispatcher) {
+        fakeDataStore.edit {
+            LanguageSetup(SupportedLanguage.GERMAN, KeyboardLayout.QWERTY).applyTo(it)
+            it[PreferenceKeys.ONBOARDING_STEP] = OnboardingStep.KeyboardSetup.storedName
+        }
+
+        val vm = OnboardingViewModel(
+            context, fakeDataStore, fakeInstaller, ModelManager(context), SavedStateHandle(),
+            listOf(Locale.FRANCE),
+        )
+        advanceUntilIdle()
+
+        assertEquals(LanguageSetup(SupportedLanguage.GERMAN, KeyboardLayout.QWERTY), vm.savedKeyboard.value)
+    }
+
+    @Test
     fun `language - Continue starts the recommended model's download and says so before moving on`() =
         runTest(testDispatcher) {
             val vm = onLanguageStep("fr-FR")

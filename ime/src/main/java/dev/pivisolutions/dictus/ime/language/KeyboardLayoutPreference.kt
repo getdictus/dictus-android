@@ -85,7 +85,8 @@ object KeyboardLayoutPreference {
         dataStore.edit { migrateIfNeeded(it) }
     }
 
-    private fun activeLanguage(preferences: Preferences): SupportedLanguage =
+    /** The language the keyboard types in. */
+    fun activeLanguage(preferences: Preferences): SupportedLanguage =
         SupportedLanguage.fromCodeOrDefault(preferences[PreferenceKeys.KEYBOARD_LANGUAGE])
 
     private fun storedLayouts(preferences: Preferences): Map<SupportedLanguage, KeyboardLayout> {

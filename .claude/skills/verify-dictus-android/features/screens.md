@@ -58,7 +58,7 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `share.voice-note` | — | — | voice-notes | absent | — |
 | `widget.live-activity` | — | — | live-activity | iOS-only | — |
 | **Android-only** | | | | | |
-| `app.onboarding.ime-setup` | Onboarding 3/7: bar segment 2/5, « Ajouter le clavier », « Ouvrir les paramètres » / « Sélectionner Dictus » / « Continuer » | fresh install, after step 2 | onboarding | not enabled / enabled but not selected / ready | no — onboarding completed on the Pixel |
+| `app.onboarding.ime-setup` | Onboarding 3/7: bar segment 2/5, « Ajouter le clavier », the « Gérer les claviers » illustration whose Dictus row names the saved keyboard language and layout (« AZERTY (Français) », « QWERTZ (Deutsch) », #378), « Ouvrir les paramètres » / « Sélectionner Dictus » / « Continuer » | fresh install, after step 2 | onboarding | not enabled / enabled but not selected / ready | no — onboarding completed on the Pixel |
 | `app.onboarding.default-page` | — | — | onboarding, keyboard.languages | retired by #270, as iOS removed it (#213); the Réglages choice is retired too (`keyboard.default-page`, #288): the keyboard always opens on letters | — |
 | `app.settings.sound-picker` | Sound list (« Début » / « Fin » / « Annuler ») | Réglages → Sons → `Début` | feedback.sounds-haptics | selected sound checked | [yes](../screens/app.settings.sound-picker.png) |
 | `app.settings.picker` | Inline choice menus anchored to the row (iOS `.menu` pickers, #189): « Langue », « Langue du clavier », « Thème », « Langue de l'interface »; the selected value carries a ✓ | Réglages → tap a row | keyboard.languages, appearance | one menu per setting | [yes](../screens/app.settings.picker.png) — before #189 (a sheet), to re-take |

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
+import dev.pivisolutions.dictus.onboarding.LanguageSetup
 import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.delay
 
@@ -53,9 +54,13 @@ import kotlinx.coroutines.delay
  *
  * WHY animated: The toggles start off and slide on one after another, visually guiding
  * the user through the steps they need to take in system settings.
+ *
+ * @param keyboard the keyboard language and layout chosen at the language step, under the
+ * Dictus row as « AZERTY (Français) », with the labels that step shows (#378).
  */
 @Composable
 fun FakeSettingsCard(
+    keyboard: LanguageSetup,
     modifier: Modifier = Modifier,
 ) {
     // Sequential toggle animation: off → toggle 1 on (Gboard, 800ms) → toggle 2 on (Dictus, 1400ms)
@@ -107,7 +112,7 @@ fun FakeSettingsCard(
         // Dictus entry (toggle 2 — animates on second)
         KeyboardEntryRow(
             name = "Dictus Keyboard",
-            subtitle = stringResource(R.string.fake_settings_dictus_subtitle),
+            subtitle = "${keyboard.layout.name} (${keyboard.language.profile.displayName})",
             isOn = toggle2On,
             icon = {
                 Image(
