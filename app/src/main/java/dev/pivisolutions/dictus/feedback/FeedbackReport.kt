@@ -61,7 +61,7 @@ data class FeedbackDraft(
         val EMAIL_SHAPE = Regex("""[^\s@]+@[^\s@]+\.[^\s@]+""")
 
         // JavaScript's `trim()` also strips U+FEFF.
-        fun trimmed(text: String): String = text.trim { it.isWhitespace() || it == '﻿' }
+        fun trimmed(text: String): String = text.trim { it.isWhitespace() || it == '\uFEFF' }
     }
 }
 
