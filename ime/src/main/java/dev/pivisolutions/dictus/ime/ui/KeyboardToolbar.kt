@@ -93,6 +93,7 @@ fun KeyboardToolbar(
     currentWord: String = "",
     suggestions: List<String> = emptyList(),
     suggestionMode: SuggestionPresentationMode = SuggestionPresentationMode.COMPLETION,
+    isCompletionPending: Boolean = false,
     onSuggestionSelected: (String, NextWordPredictionToken?) -> Unit = { _, _ -> },
     onCurrentWordSelected: () -> Unit = {},
     predictionToken: NextWordPredictionToken? = null,
@@ -143,7 +144,11 @@ fun KeyboardToolbar(
         notice = dictationNotice,
         appDictationInProgress = isAppDictationInProgress,
         offersDictationUndo = isDictationUndoAvailable,
-        hasSuggestions = ToolbarCentreSlot.hasSuggestions(suggestions, autocorrectUndo),
+        hasSuggestions = ToolbarCentreSlot.hasSuggestions(
+            suggestions,
+            autocorrectUndo,
+            pendingWord = ToolbarCentreSlot.pendingWord(isCompletionPending, suggestionMode, currentWord),
+        ),
     )
 
     Row(

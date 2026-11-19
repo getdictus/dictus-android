@@ -68,11 +68,7 @@ fun SuggestionBar(
     undoOffer: AutocorrectUndoOffer? = null,
     onUndoAutocorrect: () -> Unit = {},
 ) {
-    val slots = when {
-        undoOffer != null -> listOf(undoOffer.original) + suggestions.take(2)
-        mode == SuggestionPresentationMode.COMPLETION -> listOf(currentWord) + suggestions.take(2)
-        else -> suggestions.take(3)
-    }.let { it + List(3 - it.size) { "" } }
+    val slots = suggestionSlots(currentWord, suggestions, mode, undoOffer)
 
     Row(
         modifier = modifier
@@ -124,6 +120,18 @@ fun SuggestionBar(
         }
     }
 }
+
+/** The three slot texts, "" for an empty slot; slot 0 is the undo chip when [undoOffer] is set. */
+internal fun suggestionSlots(
+    currentWord: String,
+    suggestions: List<String>,
+    mode: SuggestionPresentationMode,
+    undoOffer: AutocorrectUndoOffer?,
+): List<String> = when {
+    undoOffer != null -> listOf(undoOffer.original) + suggestions.take(2)
+    mode == SuggestionPresentationMode.COMPLETION -> listOf(currentWord) + suggestions.take(2)
+    else -> suggestions.take(3)
+}.let { it + List(3 - it.size) { "" } }
 
 /**
  * A suggestion on one line. With a large font, a word too wide for its slot is drawn smaller,

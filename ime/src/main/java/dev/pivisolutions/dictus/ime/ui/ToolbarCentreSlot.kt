@@ -64,8 +64,21 @@ sealed interface ToolbarCentreSlot {
          * on its own: iOS `SuggestionState` empties the row when there is no completion, and ☰
          * comes back. The autocorrect undo chip counts, as iOS puts the typed word in the row; it
          * shows even with the suggestions turned off, as the only way left to revert a correction.
+         *
+         * [pendingWord] is the word whose completions are still being looked up, empty when none
+         * is awaited: until the lookup answers, the row stays with that word in its first slot.
+         * iOS computes completions in the keystroke; here each key empties the list and the answer
+         * comes later, after the next key when the editor answers slowly (Docs, Keep on a phone),
+         * so the row fell back to ☰ for as long as the user typed (#374).
          */
-        fun hasSuggestions(suggestions: List<String>, autocorrectUndo: AutocorrectUndoOffer? = null): Boolean =
-            suggestions.isNotEmpty() || autocorrectUndo != null
+        fun hasSuggestions(
+            suggestions: List<String>,
+            autocorrectUndo: AutocorrectUndoOffer? = null,
+            pendingWord: String = "",
+        ): Boolean = suggestions.isNotEmpty() || autocorrectUndo != null || pendingWord.isNotEmpty()
+
+        /** The word a completion lookup is pending for, "" when none is or the row predicts. */
+        fun pendingWord(isCompletionPending: Boolean, mode: SuggestionPresentationMode, currentWord: String): String =
+            if (isCompletionPending && mode == SuggestionPresentationMode.COMPLETION) currentWord else ""
     }
 }
