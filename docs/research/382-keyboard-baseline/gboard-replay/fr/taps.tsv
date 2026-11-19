@@ -1,0 +1,822 @@
+lang	sentence	tap	intended	resolved	x	y	down_us	up_us	after
+fr	0	0	j	j	748.8	1834.9	68518	4333	J
+fr	0	1	e	e	277.4	1702.7	59482	2446	Je
+fr	0	2	space	v	582.6	2016.8	54469	2325	Jev
+fr	0	3	s	s	167.6	1775.2	51167	2259	Jevs
+fr	0	4	u	u	682.8	1715.1	68863	2198	Jevsu
+fr	0	5	i	i	804.2	1688.4	51657	2520	Jevsui
+fr	0	6	s	s	198.4	1796.0	59234	2279	Jevsuis
+fr	0	7	space	space	585.3	2070.4	54028	3872	Je suis 
+fr	0	8	e	e	236.5	1635.9	64266	3983	Je suis e
+fr	0	9	n	n	760.2	1943.5	52068	2413	Je suis en
+fr	0	10	space	space	573.1	2089.7	57566	2337	Je suis en 
+fr	0	11	r	r	396.6	1670.9	53061	2373	Je suis en r
+fr	0	12	e	e	241.8	1692.2	54224	2357	Je suis en re
+fr	0	13	t	t	493.6	1699.6	52597	2351	Je suis en ret
+fr	0	14	a	a	44.7	1684.3	63307	2344	Je suis en reta
+fr	0	15	r	r	364.2	1718.0	61984	2093	Je suis en retar
+fr	0	16	d	d	273.5	1801.6	62940	3663	Je suis en retard
+fr	0	17	space	space	631.3	2109.9	49717	2339	Je suis en retard 
+fr	0	18	d	d	263.6	1847.3	57923	2251	Je suis en retard d
+fr	0	19	e	e	255.8	1686.6	62690	2334	Je suis en retard de
+fr	0	20	space	space	602.4	2127.3	60823	2266	Je suis en retard de 
+fr	0	21	d	d	268.8	1804.8	60258	2303	Je suis en retard de d
+fr	0	22	i	i	804.9	1656.8	52154	2302	Je suis en retard de di
+fr	0	23	x	x	294.4	1949.8	65525	2772	Je suis en retard de dix
+fr	0	24	space	space	617.3	2097.8	54085	2444	Je suis en retard de dix 
+fr	0	25	m	m	1011.0	1843.3	62905	2816	Je suis en retard de dix m
+fr	0	26	i	i	796.4	1714.8	66307	2264	Je suis en retard de dix mi
+fr	0	27	n	n	747.6	1920.3	53662	2173	Je suis en retard de dix min
+fr	0	28	u	u	700.1	1691.0	61098	2211	Je suis en retard de dix minu
+fr	0	29	t	t	497.7	1644.8	54455	2349	Je suis en retard de dix minut
+fr	0	30	e	e	286.5	1689.4	60254	3653	Je suis en retard de dix minute
+fr	0	31	s	s	164.6	1762.7	63989	2727	Je suis en retard de dix minutes
+fr	0	32	space	space	595.1	2105.6	63770	2061	Je suis en retard de dix minutes 
+fr	1	0	t	t	524.8	1682.2	55121	3210	T
+fr	1	1	u	u	684.7	1693.4	60179	2091	Tu
+fr	1	2	space	space	581.0	2124.6	65949	2484	Tu 
+fr	1	3	p	p	1016.9	1653.5	55816	2243	Tu p
+fr	1	4	e	e	275.8	1652.4	56736	2566	Tu pe
+fr	1	5	u	u	719.7	1707.6	54566	1988	Tu peu
+fr	1	6	x	x	306.2	1976.6	59112	3944	Tu peux
+fr	1	7	space	space	622.4	2113.9	65381	2631	Tu peux 
+fr	1	8	p	p	1042.3	1642.6	59013	2169	Tu peux p
+fr	1	9	a	a	77.0	1648.4	53005	2281	Tu peux pa
+fr	1	10	s	s	177.0	1789.3	56067	2038	Tu peux pas
+fr	1	11	s	s	154.2	1789.7	59725	2186	Tu peux pass
+fr	1	12	e	e	305.7	1682.4	55301	2683	Tu peux passe
+fr	1	13	r	r	386.9	1693.6	56167	2324	Tu peux passer
+fr	1	14	space	space	598.3	2103.7	66737	2258	Tu peux passer 
+fr	1	15	p	p	1048.5	1680.7	68154	2318	Tu peux passer p
+fr	1	16	r	r	376.5	1659.5	53244	2574	Tu peux passer pr
+fr	1	17	e	e	251.3	1722.7	65316	2425	Tu peux passer pre
+fr	1	18	n	n	764.4	1948.8	58779	2373	Tu peux passer pren
+fr	1	19	d	d	298.1	1776.9	57004	2334	Tu peux passer prend
+fr	1	20	r	r	373.4	1679.7	52053	2254	Tu peux passer prendr
+fr	1	21	e	e	330.8	1642.4	62762	2523	Tu peux passer prendre
+fr	1	22	space	space	620.3	2071.2	59509	2028	Tu peux passer prendre 
+fr	1	23	l	l	909.9	1778.8	62289	2317	Tu peux passer prendre l
+fr	1	24	e	e	285.7	1681.9	59151	2435	Tu peux passer prendre le
+fr	1	25	space	space	589.0	2093.3	52863	2431	Tu peux passer prendre le 
+fr	1	26	p	p	1043.4	1644.5	62545	2604	Tu peux passer prendre le p
+fr	1	27	a	a	46.6	1705.2	60679	2283	Tu peux passer prendre le pa
+fr	1	28	i	i	807.0	1681.4	58653	2375	Tu peux passer prendre le pai
+fr	1	29	n	n	727.8	1923.5	52161	2187	Tu peux passer prendre le pain
+fr	1	30	space	space	540.7	2066.6	62798	2571	Tu peux passer prendre le pain 
+fr	1	31	e	e	255.8	1672.8	52209	2130	Tu peux passer prendre le pain e
+fr	1	32	n	n	745.6	1910.7	60002	2464	Tu peux passer prendre le pain en
+fr	1	33	space	space	631.8	2074.6	58549	2266	Tu peux passer prendre le pain en 
+fr	1	34	r	r	371.6	1669.9	63472	2199	Tu peux passer prendre le pain en r
+fr	1	35	e	e	263.8	1683.3	63070	2487	Tu peux passer prendre le pain en re
+fr	1	36	n	n	760.9	1966.7	68406	2518	Tu peux passer prendre le pain en ren
+fr	1	37	t	t	479.7	1672.7	62544	2302	Tu peux passer prendre le pain en rent
+fr	1	38	r	r	411.8	1681.9	61022	2185	Tu peux passer prendre le pain en rentr
+fr	1	39	a	a	110.2	1734.4	66582	2240	Tu peux passer prendre le pain en rentra
+fr	1	40	n	n	758.3	1937.7	52882	3419	Tu peux passer prendre le pain en rentran
+fr	1	41	t	t	445.6	1738.0	58131	2257	Tu peux passer prendre le pain en rentrant
+fr	1	42	space	space	584.7	2103.3	61237	2799	Tu peux passer prendre le pain en rentrant 
+fr	2	0	o	o	923.4	1674.5	50891	2772	O
+fr	2	1	n	n	752.9	1973.9	54481	2450	On
+fr	2	2	space	space	520.7	2091.6	52942	2433	On 
+fr	2	3	s	s	175.7	1820.7	59285	2374	On s
+fr	2	4	e	e	273.4	1646.0	52429	2427	On se
+fr	2	5	space	space	571.8	2143.5	61881	1908	On se 
+fr	2	6	r	r	364.7	1656.0	49345	2275	On se r
+fr	2	7	e	e	292.5	1703.3	58469	4845	On se re
+fr	2	8	t	t	510.9	1693.7	55845	2533	On se ret
+fr	2	9	r	r	326.3	1670.9	56854	2257	On se retr
+fr	2	10	o	o	905.9	1695.2	62175	2265	On se retro
+fr	2	11	u	u	745.8	1654.2	54270	2274	On se retrou
+fr	2	12	v	v	498.0	1955.1	54389	2235	On se retrouv
+fr	2	13	e	e	328.8	1692.0	66156	2147	On se retrouve
+fr	2	14	space	space	557.2	2037.2	61404	2178	On se retrouve 
+fr	2	15	d	d	266.8	1843.1	55870	2430	On se retrouve d
+fr	2	16	e	e	256.9	1647.9	55130	2188	On se retrouve de
+fr	2	17	v	v	557.2	1993.1	54090	2296	On se retrouve dev
+fr	2	18	a	a	53.8	1684.2	60241	3357	On se retrouve deva
+fr	2	19	n	n	720.7	1930.1	64336	2513	On se retrouve devan
+fr	2	20	t	t	500.4	1716.3	61360	2522	On se retrouve devant
+fr	2	21	space	space	597.4	2085.6	59635	2629	On se retrouve devant 
+fr	2	22	l	l	911.2	1795.4	65593	15045	On se retrouve devant l
+fr	2	23	a	a	41.1	1682.5	50781	2235	On se retrouve devant la
+fr	2	24	space	space	575.1	2077.7	54331	2043	On se retrouve devant la 
+fr	2	25	g	g	489.2	1833.5	54703	2208	On se retrouve devant la g
+fr	2	26	a	a	70.2	1683.0	58653	2179	On se retrouve devant la ga
+fr	2	27	r	r	364.2	1697.0	53874	2509	On se retrouve devant la gar
+fr	2	28	e	e	289.2	1634.6	61596	2186	On se retrouve devant la gare
+fr	2	29	space	space	543.5	2100.8	61988	2494	On se retrouve devant la gare 
+fr	2	30	v	v	578.9	1961.1	65754	2278	On se retrouve devant la gare v
+fr	2	31	e	e	260.4	1728.9	55745	2398	On se retrouve devant la gare ve
+fr	2	32	r	r	365.2	1659.4	59062	2590	On se retrouve devant la gare ver
+fr	2	33	s	s	154.9	1850.8	56964	2282	On se retrouve devant la gare vers
+fr	2	34	space	space	596.3	2055.2	59576	2246	On se retrouve devant la gare vers 
+fr	2	35	m	l	954.4	1795.5	68981	2561	On se retrouve devant la gare vers l
+fr	2	36	i	i	797.3	1693.3	63774	2526	On se retrouve devant la gare vers li
+fr	2	37	d	d	274.4	1764.0	55563	2310	On se retrouve devant la gare vers lid
+fr	2	38	i	i	833.8	1700.7	55748	2111	On se retrouve devant la gare vers lidi
+fr	2	39	space	space	585.3	2118.1	55380	2286	On se retrouve devant la gare vers midi 
+fr	3	0	m	m	1018.8	1820.1	61491	2904	M
+fr	3	1	e	e	304.7	1664.2	54096	2533	Me
+fr	3	2	r	r	386.6	1655.1	64563	2055	Mer
+fr	3	3	c	c	452.0	1985.1	56246	2384	Merc
+fr	3	4	i	i	800.5	1688.1	59892	2489	Merci
+fr	3	5	space	space	557.4	2076.6	55227	2547	Merci 
+fr	3	6	p	p	1006.5	1622.6	63980	2175	Merci p
+fr	3	7	o	o	924.3	1654.1	61977	2412	Merci po
+fr	3	8	u	u	714.0	1665.5	67002	2137	Merci pou
+fr	3	9	r	r	395.0	1689.0	64602	2132	Merci pour
+fr	3	10	space	space	614.6	2103.2	56844	2172	Merci pour 
+fr	3	11	t	t	470.9	1672.7	55678	2192	Merci pour t
+fr	3	12	o	o	932.2	1655.7	60370	2304	Merci pour to
+fr	3	13	n	n	764.3	1957.7	52294	2500	Merci pour ton
+fr	3	14	space	space	619.9	2097.9	63175	2408	Merci pour ton 
+fr	3	15	m	m	1046.2	1838.7	57127	2342	Merci pour ton m
+fr	3	16	e	e	266.8	1658.9	56406	2639	Merci pour ton me
+fr	3	17	s	s	182.5	1836.5	54583	2272	Merci pour ton mes
+fr	3	18	s	s	148.1	1804.9	57756	2445	Merci pour ton mess
+fr	3	19	a	a	55.3	1704.6	56665	2240	Merci pour ton messa
+fr	3	20	g	g	498.5	1810.3	68925	2239	Merci pour ton messag
+fr	3	21	e	e	308.1	1674.3	60019	2195	Merci pour ton message
+fr	3	22	space	space	606.3	2112.1	53946	2628	Merci pour ton message 
+fr	3	23	j	j	706.7	1807.9	64146	2407	Merci pour ton message j
+fr	3	24	e	e	278.8	1625.5	63971	2754	Merci pour ton message je
+fr	3	25	space	space	596.0	2070.9	53162	2411	Merci pour ton message je 
+fr	3	26	t	t	462.4	1710.3	66403	2451	Merci pour ton message je t
+fr	3	27	e	e	227.3	1673.1	64587	2188	Merci pour ton message je te
+fr	3	28	space	space	594.1	2037.9	58320	6767	Merci pour ton message je te 
+fr	3	29	r	r	351.9	1644.7	57158	2272	Merci pour ton message je te r
+fr	3	30	a	a	27.9	1654.0	54289	2392	Merci pour ton message je te ra
+fr	3	31	p	p	1045.7	1664.1	63561	4503	Merci pour ton message je te rap
+fr	3	32	p	p	1054.6	1694.8	64846	2358	Merci pour ton message je te rapp
+fr	3	33	e	e	295.0	1691.2	63559	2890	Merci pour ton message je te rappe
+fr	3	34	l	l	895.2	1865.0	53242	2276	Merci pour ton message je te rappel
+fr	3	35	l	l	928.0	1840.9	66275	3907	Merci pour ton message je te rappell
+fr	3	36	e	e	236.7	1653.2	59251	5545	Merci pour ton message je te rappelle
+fr	3	37	space	space	594.3	2080.9	61725	2280	Merci pour ton message je te rappelle 
+fr	3	38	c	c	394.0	2003.5	59758	4521	Merci pour ton message je te rappelle c
+fr	3	39	e	e	247.7	1717.0	58660	2635	Merci pour ton message je te rappelle ce
+fr	3	40	space	space	603.5	2068.2	65614	2513	Merci pour ton message je te rappelle ce 
+fr	3	41	s	s	149.2	1827.5	67868	2217	Merci pour ton message je te rappelle ce s
+fr	3	42	o	o	901.5	1657.9	53202	2345	Merci pour ton message je te rappelle ce so
+fr	3	43	i	i	800.5	1700.5	64430	5868	Merci pour ton message je te rappelle ce soi
+fr	3	44	r	r	412.8	1678.4	63015	2705	Merci pour ton message je te rappelle ce soir
+fr	3	45	space	space	608.7	2046.2	53492	2314	Merci pour ton message je te rappelle ce soir 
+fr	4	0	l	l	941.9	1779.9	53508	2905	L
+fr	4	1	a	a	50.2	1667.4	66705	2565	La
+fr	4	2	space	space	548.7	2055.8	68114	2605	La 
+fr	4	3	r	r	371.1	1687.0	68004	2829	La r
+fr	4	4	e	e	300.8	1646.7	50786	2233	La re
+fr	4	5	u	u	708.7	1650.0	48073	2210	La reu
+fr	4	6	n	n	816.9	1957.9	55607	2275	La reun
+fr	4	7	i	i	807.5	1695.6	55710	2438	La reuni
+fr	4	8	o	o	913.2	1675.0	58303	7483	La reunio
+fr	4	9	n	n	717.1	1890.8	53801	2394	La reunion
+fr	4	10	space	space	585.9	2079.8	60563	2477	La réunion 
+fr	4	11	e	e	317.3	1696.0	65029	2733	La réunion e
+fr	4	12	s	s	143.5	1798.5	62648	5189	La réunion es
+fr	4	13	t	t	472.8	1718.3	63800	9434	La réunion est
+fr	4	14	space	space	576.4	2106.7	57955	2243	La réunion est 
+fr	4	15	d	d	287.6	1824.3	51147	2362	La réunion est d
+fr	4	16	e	e	263.9	1698.1	53774	2303	La réunion est de
+fr	4	17	c	c	421.0	1943.2	63821	2800	La réunion est dec
+fr	4	18	a	a	34.0	1714.8	62346	2224	La réunion est deca
+fr	4	19	l	l	899.9	1807.1	61890	2567	La réunion est decal
+fr	4	20	e	e	267.6	1657.5	57734	2290	La réunion est decale
+fr	4	21	e	e	264.5	1651.1	56671	2185	La réunion est decalee
+fr	4	22	space	space	594.2	2115.6	58510	2215	La réunion est décalée 
+fr	4	23	a	a	83.9	1670.3	64943	11751	La réunion est décalée a
+fr	4	24	space	space	602.4	2052.3	64825	2252	La réunion est décalée a 
+fr	4	25	j	j	678.2	1801.6	57328	2423	La réunion est décalée a j
+fr	4	26	e	e	265.3	1699.8	53050	2237	La réunion est décalée a je
+fr	4	27	u	u	692.7	1661.8	61753	2201	La réunion est décalée a jeu
+fr	4	28	d	d	280.3	1832.6	54671	2380	La réunion est décalée a jeud
+fr	4	29	i	i	810.3	1682.7	52725	2347	La réunion est décalée a jeudi
+fr	4	30	space	space	576.8	2095.5	55399	2501	La réunion est décalée a jeudi 
+fr	4	31	m	m	985.5	1833.7	61814	2524	La réunion est décalée a jeudi m
+fr	4	32	a	a	51.6	1679.2	54806	2202	La réunion est décalée a jeudi ma
+fr	4	33	t	t	466.2	1674.0	69061	4084	La réunion est décalée a jeudi mat
+fr	4	34	i	i	808.0	1694.5	55176	2368	La réunion est décalée a jeudi mati
+fr	4	35	n	n	760.4	1926.0	59810	2222	La réunion est décalée a jeudi matin
+fr	4	36	space	space	618.5	2069.3	54627	2788	La réunion est décalée a jeudi matin 
+fr	5	0	i	u	741.9	1680.7	55997	2868	U
+fr	5	1	l	l	908.6	1812.9	53580	2342	Ul
+fr	5	2	space	space	600.8	2102.2	55848	2086	Il 
+fr	5	3	f	f	379.0	1829.2	60194	2307	Il f
+fr	5	4	a	a	46.0	1674.4	60017	2236	Il fa
+fr	5	5	i	i	805.9	1699.7	64231	2297	Il fai
+fr	5	6	t	t	478.6	1662.0	49105	2195	Il fait
+fr	5	7	space	space	586.1	2072.5	60669	2137	Il fait 
+fr	5	8	t	t	487.0	1732.9	54515	1838	Il fait t
+fr	5	9	r	r	366.6	1653.2	53772	2254	Il fait tr
+fr	5	10	e	e	250.5	1696.4	55550	5113	Il fait tre
+fr	5	11	s	s	134.2	1833.7	59165	2495	Il fait tres
+fr	5	12	space	space	611.2	2099.3	56780	2334	Il fait très 
+fr	5	13	b	b	618.6	1968.6	64465	9784	Il fait très b
+fr	5	14	e	e	313.4	1690.8	60429	2166	Il fait très be
+fr	5	15	a	a	62.0	1700.2	61765	2332	Il fait très bea
+fr	5	16	u	u	709.0	1665.3	52766	2231	Il fait très beau
+fr	5	17	space	space	569.2	2131.8	64089	2371	Il fait très beau 
+fr	5	18	c	c	406.2	1966.3	64569	2311	Il fait très beau c
+fr	5	19	e	e	292.1	1647.5	62043	2292	Il fait très beau ce
+fr	5	20	space	space	569.4	2083.2	61105	2278	Il fait très beau ce 
+fr	5	21	m	m	1040.1	1857.1	54520	2292	Il fait très beau ce m
+fr	5	22	a	a	63.5	1696.6	65174	2229	Il fait très beau ce ma
+fr	5	23	t	t	509.3	1684.8	59319	2192	Il fait très beau ce mat
+fr	5	24	i	i	785.2	1693.4	63554	2299	Il fait très beau ce mati
+fr	5	25	n	n	769.5	1942.6	62019	2510	Il fait très beau ce matin
+fr	5	26	space	space	585.8	2088.2	52455	2475	Il fait très beau ce matin 
+fr	6	0	j	j	686.6	1809.4	65357	2441	J
+fr	6	1	e	e	258.5	1708.4	48826	2172	Je
+fr	6	2	space	space	575.5	2101.4	58858	2620	Je 
+fr	6	3	p	p	1011.2	1698.8	63658	4878	Je p
+fr	6	4	e	e	246.3	1698.3	57067	2262	Je pe
+fr	6	5	n	n	759.3	1936.1	60423	2408	Je pen
+fr	6	6	s	s	152.4	1819.1	56841	2320	Je pens
+fr	6	7	e	e	271.1	1628.5	68657	2497	Je pense
+fr	6	8	space	space	581.3	2109.5	57695	2281	Je pense 
+fr	6	9	q	q	55.4	1792.7	61126	2278	Je pense q
+fr	6	10	u	u	721.2	1648.7	65392	2000	Je pense qu
+fr	6	11	e	e	246.5	1658.2	48957	2501	Je pense que
+fr	6	12	space	space	588.6	2130.4	65564	2242	Je pense que 
+fr	6	13	n	n	765.7	1973.8	57517	2478	Je pense que n
+fr	6	14	o	o	881.9	1693.5	68137	2293	Je pense que no
+fr	6	15	u	u	658.3	1641.0	60466	2475	Je pense que nou
+fr	6	16	s	s	210.0	1857.7	57308	2536	Je pense que nous
+fr	6	17	space	space	586.1	2047.1	53755	2356	Je pense que nous 
+fr	6	18	a	a	119.5	1676.1	67056	2210	Je pense que nous a
+fr	6	19	l	l	932.2	1811.9	51921	2235	Je pense que nous al
+fr	6	20	l	l	945.8	1818.4	67189	2273	Je pense que nous all
+fr	6	21	o	o	921.6	1683.8	67229	2302	Je pense que nous allo
+fr	6	22	n	n	770.2	1959.4	53939	2307	Je pense que nous allon
+fr	6	23	s	s	165.4	1783.4	49670	2286	Je pense que nous allons
+fr	6	24	space	space	578.5	2093.0	56361	2328	Je pense que nous allons 
+fr	6	25	p	p	999.6	1663.9	56766	2622	Je pense que nous allons p
+fr	6	26	a	a	99.5	1661.4	54689	2248	Je pense que nous allons pa
+fr	6	27	r	r	375.1	1679.6	56645	2178	Je pense que nous allons par
+fr	6	28	t	t	491.8	1628.4	54200	2148	Je pense que nous allons part
+fr	6	29	i	i	784.8	1662.4	61431	2321	Je pense que nous allons parti
+fr	6	30	r	r	359.0	1717.2	63731	2195	Je pense que nous allons partir
+fr	6	31	space	space	597.7	2063.4	58012	2389	Je pense que nous allons partir 
+fr	6	32	d	d	277.5	1837.2	61630	2292	Je pense que nous allons partir d
+fr	6	33	e	e	245.9	1658.1	52761	2260	Je pense que nous allons partir de
+fr	6	34	m	m	1041.2	1822.9	60904	2480	Je pense que nous allons partir dem
+fr	6	35	a	a	47.0	1708.3	56723	2418	Je pense que nous allons partir dema
+fr	6	36	i	i	789.1	1674.1	57727	2189	Je pense que nous allons partir demai
+fr	6	37	n	n	722.9	1980.8	63511	2504	Je pense que nous allons partir demain
+fr	6	38	space	space	618.9	2118.0	59113	2211	Je pense que nous allons partir demain 
+fr	7	0	t	t	490.8	1654.4	63261	2581	T
+fr	7	1	u	u	698.6	1683.7	58864	2141	Tu
+fr	7	2	space	space	621.5	2070.6	61507	2085	Tu 
+fr	7	3	a	a	46.3	1647.7	47374	2135	Tu a
+fr	7	4	s	s	200.4	1839.4	58264	2327	Tu as
+fr	7	5	space	space	594.7	2065.9	59202	2255	Tu as 
+fr	7	6	b	b	655.2	1953.9	62736	2303	Tu as b
+fr	7	7	i	i	796.0	1662.0	55190	2166	Tu as bi
+fr	7	8	e	e	275.3	1700.6	50344	2182	Tu as bie
+fr	7	9	n	n	738.4	1921.6	61177	2259	Tu as bien
+fr	7	10	space	space	564.0	2097.8	62366	2387	Tu as bien 
+fr	7	11	r	r	374.6	1701.1	53324	2099	Tu as bien r
+fr	7	12	e	e	228.5	1626.0	55360	2079	Tu as bien re
+fr	7	13	c	c	447.2	1926.3	60851	2810	Tu as bien rec
+fr	7	14	u	u	692.6	1672.7	61333	2584	Tu as bien recu
+fr	7	15	space	space	597.4	2097.5	58011	2397	Tu as bien reçu 
+fr	7	16	l	l	938.3	1790.0	63243	2297	Tu as bien reçu l
+fr	7	17	e	e	268.8	1651.1	72935	6046	Tu as bien reçu le
+fr	7	18	space	space	579.5	2087.6	52894	2725	Tu as bien reçu le 
+fr	7	19	d	d	275.9	1798.2	64454	2022	Tu as bien reçu le d
+fr	7	20	o	o	921.2	1698.3	52127	2206	Tu as bien reçu le do
+fr	7	21	c	c	451.9	1982.0	58500	2376	Tu as bien reçu le doc
+fr	7	22	u	u	737.0	1681.8	57391	2257	Tu as bien reçu le docu
+fr	7	23	m	m	1022.8	1837.8	59279	2184	Tu as bien reçu le docum
+fr	7	24	e	e	245.7	1694.6	53476	2264	Tu as bien reçu le docume
+fr	7	25	n	n	768.3	1954.4	48332	2138	Tu as bien reçu le documen
+fr	7	26	t	t	490.9	1654.4	57490	2312	Tu as bien reçu le document
+fr	7	27	space	space	586.3	2082.0	54826	2160	Tu as bien reçu le document 
+fr	8	0	n	n	751.4	1949.6	57429	2816	N
+fr	8	1	o	o	949.9	1681.5	61721	2134	No
+fr	8	2	u	u	674.1	1705.1	59455	2196	Nou
+fr	8	3	s	s	141.9	1810.2	62909	2205	Nous
+fr	8	4	space	space	600.7	2101.3	61300	3163	Nous 
+fr	8	5	a	a	79.6	1683.5	56850	2151	Nous a
+fr	8	6	v	v	569.6	1971.5	59628	2289	Nous av
+fr	8	7	o	o	916.7	1673.7	65928	2456	Nous avo
+fr	8	8	n	n	749.2	1909.2	62106	2175	Nous avon
+fr	8	9	s	s	175.2	1800.5	65227	2430	Nous avons
+fr	8	10	space	space	630.9	2086.0	52410	2366	Nous avons 
+fr	8	11	r	r	401.5	1705.0	51240	2139	Nous avons r
+fr	8	12	e	e	284.2	1663.6	64849	2015	Nous avons re
+fr	8	13	s	s	141.6	1824.2	64885	2163	Nous avons res
+fr	8	14	e	e	287.5	1672.3	50276	2362	Nous avons rese
+fr	8	15	r	r	425.3	1691.1	52604	2075	Nous avons reser
+fr	8	16	v	v	579.3	1951.9	54627	2440	Nous avons reserv
+fr	8	17	e	e	255.8	1682.3	62562	2133	Nous avons reserve
+fr	8	18	space	space	614.5	2085.8	49742	2398	Nous avons réservé 
+fr	8	19	u	u	646.7	1718.2	61363	2185	Nous avons réservé u
+fr	8	20	n	n	727.2	1957.3	49828	2303	Nous avons réservé un
+fr	8	21	e	e	290.2	1640.4	58542	2374	Nous avons réservé une
+fr	8	22	space	space	567.3	2068.1	55390	2430	Nous avons réservé une 
+fr	8	23	t	t	479.6	1675.3	51858	2248	Nous avons réservé une t
+fr	8	24	a	a	115.2	1665.2	46797	2239	Nous avons réservé une ta
+fr	8	25	b	b	656.6	1969.6	58742	2764	Nous avons réservé une tab
+fr	8	26	l	l	912.3	1842.4	55855	2221	Nous avons réservé une tabl
+fr	8	27	e	e	264.9	1692.2	58040	2573	Nous avons réservé une table
+fr	8	28	space	space	560.2	2102.9	54560	2497	Nous avons réservé une table 
+fr	8	29	p	p	1046.9	1716.4	67504	2101	Nous avons réservé une table p
+fr	8	30	o	o	908.9	1664.0	56649	3175	Nous avons réservé une table po
+fr	8	31	u	u	705.5	1694.4	63473	2352	Nous avons réservé une table pou
+fr	8	32	r	r	394.4	1697.9	60072	2362	Nous avons réservé une table pour
+fr	8	33	space	space	628.5	2084.3	56155	2730	Nous avons réservé une table pour 
+fr	8	34	q	q	66.6	1833.3	53050	2200	Nous avons réservé une table pour q
+fr	8	35	u	u	728.2	1669.6	50579	2161	Nous avons réservé une table pour qu
+fr	8	36	a	a	87.1	1657.2	57475	2366	Nous avons réservé une table pour qua
+fr	8	37	t	t	496.4	1675.9	62523	3384	Nous avons réservé une table pour quat
+fr	8	38	r	r	322.2	1725.4	61721	3886	Nous avons réservé une table pour quatr
+fr	8	39	e	e	257.9	1665.5	66450	2569	Nous avons réservé une table pour quatre
+fr	8	40	space	space	572.8	2116.6	56733	2899	Nous avons réservé une table pour quatre 
+fr	8	41	p	p	1011.2	1658.0	55522	2395	Nous avons réservé une table pour quatre p
+fr	8	42	e	e	248.1	1665.2	63865	2747	Nous avons réservé une table pour quatre pe
+fr	8	43	r	r	375.5	1643.4	62248	2096	Nous avons réservé une table pour quatre per
+fr	8	44	s	s	169.5	1813.1	58539	2625	Nous avons réservé une table pour quatre pers
+fr	8	45	o	o	936.8	1680.2	53756	2301	Nous avons réservé une table pour quatre perso
+fr	8	46	n	n	776.0	1968.3	60836	2438	Nous avons réservé une table pour quatre person
+fr	8	47	n	n	765.3	1921.8	56007	2412	Nous avons réservé une table pour quatre personn
+fr	8	48	e	e	262.3	1662.5	58103	2410	Nous avons réservé une table pour quatre personne
+fr	8	49	s	s	143.7	1788.8	64025	2518	Nous avons réservé une table pour quatre personnes
+fr	8	50	space	space	576.4	2067.4	50765	2209	Nous avons réservé une table pour quatre personnes 
+fr	9	0	l	l	922.6	1823.5	60632	2941	L
+fr	9	1	e	e	300.0	1711.7	56903	2208	Le
+fr	9	2	space	space	591.3	2059.7	63414	2336	Le 
+fr	9	3	t	t	463.7	1668.7	60284	2060	Le t
+fr	9	4	r	r	373.0	1684.1	58994	2312	Le tr
+fr	9	5	a	a	24.7	1661.0	51832	2170	Le tra
+fr	9	6	i	i	780.3	1697.2	56690	2308	Le trai
+fr	9	7	n	n	770.9	1954.8	65572	2450	Le train
+fr	9	8	space	space	582.7	2083.7	59896	2285	Le train 
+fr	9	9	e	e	243.4	1686.6	62026	2952	Le train e
+fr	9	10	s	s	147.3	1821.0	49479	2090	Le train es
+fr	9	11	t	t	520.3	1678.5	61087	2076	Le train est
+fr	9	12	space	space	617.5	2072.5	53360	2272	Le train est 
+fr	9	13	a	a	46.1	1631.8	67373	1957	Le train est a
+fr	9	14	r	r	372.9	1685.9	63512	2266	Le train est ar
+fr	9	15	r	r	328.3	1665.5	63707	2609	Le train est arr
+fr	9	16	i	i	830.2	1602.3	55309	2265	Le train est arri
+fr	9	17	v	v	538.6	1957.0	58351	2607	Le train est arriv
+fr	9	18	e	e	273.2	1661.4	51811	2280	Le train est arrive
+fr	9	19	space	space	591.7	2089.5	62647	2091	Le train est arrivé 
+fr	9	20	a	a	54.1	1640.9	50368	2459	Le train est arrivé a
+fr	9	21	v	v	509.8	1962.1	51580	2174	Le train est arrivé av
+fr	9	22	e	e	303.5	1688.8	65501	2289	Le train est arrivé ave
+fr	9	23	c	c	422.9	1955.2	59950	2291	Le train est arrivé avec
+fr	9	24	space	space	579.5	2143.3	59922	2280	Le train est arrivé avec 
+fr	9	25	u	u	704.2	1722.9	61293	2282	Le train est arrivé avec u
+fr	9	26	n	n	699.8	1951.9	53658	2401	Le train est arrivé avec un
+fr	9	27	e	e	292.1	1690.6	55142	2640	Le train est arrivé avec une
+fr	9	28	space	space	557.0	2075.9	56281	2441	Le train est arrivé avec une 
+fr	9	29	h	h	601.3	1790.8	57840	2836	Le train est arrivé avec une h
+fr	9	30	e	e	286.2	1698.1	65543	2304	Le train est arrivé avec une he
+fr	9	31	u	u	730.9	1675.8	65725	2276	Le train est arrivé avec une heu
+fr	9	32	r	r	341.6	1700.1	57424	2968	Le train est arrivé avec une heur
+fr	9	33	e	e	279.4	1697.3	59297	2439	Le train est arrivé avec une heure
+fr	9	34	space	space	593.4	2117.9	51487	2329	Le train est arrivé avec une heure 
+fr	9	35	d	d	281.2	1834.8	57480	2237	Le train est arrivé avec une heure d
+fr	9	36	e	e	233.3	1681.0	67448	2485	Le train est arrivé avec une heure de
+fr	9	37	space	space	570.0	2083.2	54230	2806	Le train est arrivé avec une heure de 
+fr	9	38	r	r	423.6	1681.5	59627	2343	Le train est arrivé avec une heure de r
+fr	9	39	e	e	305.9	1680.1	66325	2206	Le train est arrivé avec une heure de re
+fr	9	40	t	t	535.1	1648.3	67530	2308	Le train est arrivé avec une heure de ret
+fr	9	41	a	a	69.1	1650.9	54230	2780	Le train est arrivé avec une heure de reta
+fr	9	42	r	r	400.9	1690.1	59525	3384	Le train est arrivé avec une heure de retar
+fr	9	43	d	d	253.2	1818.5	57824	2213	Le train est arrivé avec une heure de retard
+fr	9	44	space	space	578.0	2134.3	64708	8190	Le train est arrivé avec une heure de retard 
+fr	10	0	j	j	732.4	1851.7	58011	2603	J
+fr	10	1	e	e	265.6	1651.1	58503	2094	Je
+fr	10	2	space	space	568.5	2090.5	48435	1855	Je 
+fr	10	3	d	d	267.3	1822.7	52525	2250	Je d
+fr	10	4	o	o	921.4	1691.8	60795	2282	Je do
+fr	10	5	i	i	794.9	1700.7	58399	2165	Je doi
+fr	10	6	s	s	135.4	1834.4	53708	2049	Je dois
+fr	10	7	space	space	601.1	2050.9	61428	2197	Je dois 
+fr	10	8	e	e	231.9	1665.4	58513	2432	Je dois e
+fr	10	9	n	n	755.3	1976.3	57029	2176	Je dois en
+fr	10	10	c	c	421.8	1937.0	63534	2382	Je dois enc
+fr	10	11	o	o	948.3	1637.6	51810	2151	Je dois enco
+fr	10	12	r	r	403.4	1673.3	65135	2444	Je dois encor
+fr	10	13	e	e	267.6	1730.0	65737	2278	Je dois encore
+fr	10	14	space	space	658.6	2098.9	58408	2600	Je dois encore 
+fr	10	15	f	f	401.8	1835.6	60450	2085	Je dois encore f
+fr	10	16	i	i	817.7	1652.6	50700	2401	Je dois encore fi
+fr	10	17	n	n	735.4	1967.4	67739	2082	Je dois encore fin
+fr	10	18	i	i	806.5	1643.4	66331	2291	Je dois encore fini
+fr	10	19	r	r	365.3	1624.7	63236	2302	Je dois encore finir
+fr	10	20	space	space	605.8	2076.2	62588	2653	Je dois encore finir 
+fr	10	21	m	m	1052.3	1808.4	65999	2303	Je dois encore finir m
+fr	10	22	o	o	920.0	1709.4	53330	2475	Je dois encore finir mo
+fr	10	23	n	n	746.0	1944.1	71194	6601	Je dois encore finir mon
+fr	10	24	space	space	620.2	2122.4	57000	2435	Je dois encore finir mon 
+fr	10	25	r	r	393.1	1664.3	60423	2251	Je dois encore finir mon r
+fr	10	26	a	a	84.2	1671.9	60424	2526	Je dois encore finir mon ra
+fr	10	27	p	p	1022.0	1661.9	63910	2320	Je dois encore finir mon rap
+fr	10	28	p	p	995.9	1662.9	56352	2346	Je dois encore finir mon rapp
+fr	10	29	o	o	908.2	1678.5	60674	2237	Je dois encore finir mon rappo
+fr	10	30	r	r	410.0	1713.1	59381	2415	Je dois encore finir mon rappor
+fr	10	31	t	t	494.3	1666.1	53307	2020	Je dois encore finir mon rapport
+fr	10	32	space	space	584.9	2062.9	65931	2475	Je dois encore finir mon rapport 
+fr	10	33	a	a	32.9	1690.3	58858	2272	Je dois encore finir mon rapport a
+fr	10	34	v	v	518.4	1920.7	67114	2120	Je dois encore finir mon rapport av
+fr	10	35	a	a	62.5	1704.3	52404	2497	Je dois encore finir mon rapport ava
+fr	10	36	n	n	795.0	1964.5	68006	2522	Je dois encore finir mon rapport avan
+fr	10	37	t	t	486.8	1672.5	50379	2267	Je dois encore finir mon rapport avant
+fr	10	38	space	space	561.4	2108.0	56999	2108	Je dois encore finir mon rapport avant 
+fr	10	39	v	v	523.4	1953.9	58266	2184	Je dois encore finir mon rapport avant v
+fr	10	40	e	e	266.1	1622.5	59194	1990	Je dois encore finir mon rapport avant ve
+fr	10	41	n	n	716.8	1946.1	66180	2374	Je dois encore finir mon rapport avant ven
+fr	10	42	d	d	246.0	1795.8	59493	2596	Je dois encore finir mon rapport avant vend
+fr	10	43	r	r	387.2	1686.7	48476	2276	Je dois encore finir mon rapport avant vendr
+fr	10	44	e	e	297.1	1701.5	53494	2213	Je dois encore finir mon rapport avant vendre
+fr	10	45	d	d	260.9	1821.5	50112	2086	Je dois encore finir mon rapport avant vendred
+fr	10	46	i	i	796.7	1746.3	51245	2397	Je dois encore finir mon rapport avant vendredi
+fr	10	47	space	space	580.9	2130.0	63920	2808	Je dois encore finir mon rapport avant vendredi 
+fr	11	0	e	e	295.1	1667.8	65663	3025	E
+fr	11	1	l	l	926.3	1862.2	63283	2694	El
+fr	11	2	l	l	905.7	1822.4	53668	2158	Ell
+fr	11	3	e	e	255.8	1706.1	62479	2248	Elle
+fr	11	4	space	space	605.1	2080.5	56336	2370	Elle 
+fr	11	5	a	a	31.0	1626.6	48362	2175	Elle a
+fr	11	6	space	space	565.0	2088.4	50295	2383	Elle a 
+fr	11	7	t	t	485.4	1675.5	59584	2085	Elle a t
+fr	11	8	r	r	345.0	1685.8	62497	1978	Elle a tr
+fr	11	9	o	o	915.0	1690.2	62730	2513	Elle a tro
+fr	11	10	u	u	688.4	1690.2	69394	10013	Elle a trou
+fr	11	11	v	v	536.6	1997.8	69515	4255	Elle a trouv
+fr	11	12	e	e	272.7	1681.3	60113	2321	Elle a trouve
+fr	11	13	space	space	578.0	2105.0	66172	2585	Elle a trouvé 
+fr	11	14	u	u	726.0	1704.5	68371	5250	Elle a trouvé u
+fr	11	15	n	n	786.0	1968.7	62153	6525	Elle a trouvé un
+fr	11	16	space	space	644.3	2080.5	61122	2331	Elle a trouvé un 
+fr	11	17	a	a	74.8	1699.4	68386	2200	Elle a trouvé un a
+fr	11	18	p	p	1019.0	1681.1	56357	2544	Elle a trouvé un ap
+fr	11	19	p	p	1004.0	1712.5	53198	2373	Elle a trouvé un app
+fr	11	20	a	a	74.0	1646.9	54331	2269	Elle a trouvé un appa
+fr	11	21	r	r	397.9	1721.6	57811	2240	Elle a trouvé un appar
+fr	11	22	t	t	530.3	1686.8	62764	2345	Elle a trouvé un appart
+fr	11	23	e	e	246.6	1665.2	57376	2756	Elle a trouvé un apparte
+fr	11	24	m	m	1034.7	1793.9	55805	2410	Elle a trouvé un appartem
+fr	11	25	e	e	291.0	1739.1	55409	2414	Elle a trouvé un apparteme
+fr	11	26	n	n	773.0	1938.7	68194	2476	Elle a trouvé un appartemen
+fr	11	27	t	t	526.9	1675.4	53638	2110	Elle a trouvé un appartement
+fr	11	28	space	space	609.9	2095.9	60845	2335	Elle a trouvé un appartement 
+fr	11	29	p	p	1037.9	1693.7	66527	2099	Elle a trouvé un appartement p
+fr	11	30	r	r	416.5	1701.4	62092	2152	Elle a trouvé un appartement pr
+fr	11	31	e	e	275.6	1683.3	64226	2615	Elle a trouvé un appartement pre
+fr	11	32	s	s	160.7	1766.8	54841	2324	Elle a trouvé un appartement pres
+fr	11	33	space	space	594.3	2123.7	59402	2651	Elle a trouvé un appartement près 
+fr	11	34	d	d	290.4	1832.2	52520	2165	Elle a trouvé un appartement près d
+fr	11	35	u	u	708.5	1686.9	76573	9158	Elle a trouvé un appartement près du
+fr	11	36	space	space	615.8	2057.6	53056	2547	Elle a trouvé un appartement près du 
+fr	11	37	c	c	420.2	1972.8	61566	2221	Elle a trouvé un appartement près du c
+fr	11	38	e	e	259.6	1650.0	54556	2241	Elle a trouvé un appartement près du ce
+fr	11	39	n	n	767.1	1945.7	48043	2136	Elle a trouvé un appartement près du cen
+fr	11	40	t	t	480.1	1710.5	54883	2365	Elle a trouvé un appartement près du cent
+fr	11	41	r	r	379.4	1655.2	55486	2141	Elle a trouvé un appartement près du centr
+fr	11	42	e	e	237.4	1667.8	56018	2490	Elle a trouvé un appartement près du centre
+fr	11	43	space	space	590.0	2107.0	49146	2176	Elle a trouvé un appartement près du centre 
+fr	12	0	t	t	473.1	1673.6	67073	2648	T
+fr	12	1	u	u	677.7	1665.6	65613	2104	Tu
+fr	12	2	space	space	591.9	2128.9	62368	2242	Tu 
+fr	12	3	p	p	1018.1	1690.8	62099	2531	Tu p
+fr	12	4	o	o	895.2	1714.3	55694	4558	Tu po
+fr	12	5	u	u	689.3	1699.7	63220	2556	Tu pou
+fr	12	6	r	r	378.9	1698.1	51116	2209	Tu pour
+fr	12	7	r	r	374.9	1675.3	55163	2353	Tu pourr
+fr	12	8	a	a	24.9	1726.7	52247	2033	Tu pourra
+fr	12	9	i	i	841.4	1669.8	58686	2314	Tu pourrai
+fr	12	10	s	s	155.5	1808.7	63551	2064	Tu pourrais
+fr	12	11	space	space	589.2	2085.0	66797	2374	Tu pourrais 
+fr	12	12	v	v	524.3	1918.9	63594	2819	Tu pourrais v
+fr	12	13	e	e	273.5	1704.6	56280	3841	Tu pourrais ve
+fr	12	14	r	r	389.6	1674.3	62727	2343	Tu pourrais ver
+fr	12	15	i	i	800.3	1650.2	66842	2169	Tu pourrais veri
+fr	12	16	f	f	384.1	1853.4	63454	2161	Tu pourrais verif
+fr	12	17	i	i	789.1	1701.3	57947	2229	Tu pourrais verifi
+fr	12	18	e	e	289.3	1660.1	55843	4156	Tu pourrais verifie
+fr	12	19	r	r	356.1	1702.0	55979	2284	Tu pourrais verifier
+fr	12	20	space	space	576.2	2063.7	53068	2498	Tu pourrais vérifier 
+fr	12	21	l	l	915.4	1808.3	55737	4384	Tu pourrais vérifier l
+fr	12	22	e	e	294.4	1674.5	49153	2193	Tu pourrais vérifier le
+fr	12	23	s	s	108.9	1839.0	50399	2337	Tu pourrais vérifier les
+fr	12	24	space	space	606.3	2093.2	66986	2322	Tu pourrais vérifier les 
+fr	12	25	h	h	628.5	1836.6	68500	2245	Tu pourrais vérifier les h
+fr	12	26	o	o	890.5	1705.3	58186	2461	Tu pourrais vérifier les ho
+fr	12	27	r	r	368.7	1677.1	53051	2231	Tu pourrais vérifier les hor
+fr	12	28	a	a	52.8	1697.1	51817	2421	Tu pourrais vérifier les hora
+fr	12	29	i	i	789.9	1639.7	58278	2276	Tu pourrais vérifier les horai
+fr	12	30	r	r	365.6	1683.1	61465	2200	Tu pourrais vérifier les horair
+fr	12	31	e	e	258.1	1670.8	62011	2419	Tu pourrais vérifier les horaire
+fr	12	32	s	s	170.4	1783.3	57336	2530	Tu pourrais vérifier les horaires
+fr	12	33	space	space	570.1	2076.1	65012	2408	Tu pourrais vérifier les horaires 
+fr	12	34	d	d	252.2	1806.2	62414	2289	Tu pourrais vérifier les horaires d
+fr	12	35	u	u	734.4	1710.5	55828	1934	Tu pourrais vérifier les horaires du
+fr	12	36	space	space	573.7	2079.2	54187	2151	Tu pourrais vérifier les horaires du 
+fr	12	37	c	c	408.7	1971.0	56807	2274	Tu pourrais vérifier les horaires du c
+fr	12	38	i	i	822.7	1642.5	53353	2089	Tu pourrais vérifier les horaires du ci
+fr	12	39	n	n	798.1	1964.4	53423	2328	Tu pourrais vérifier les horaires du cin
+fr	12	40	e	e	299.6	1675.8	67567	2813	Tu pourrais vérifier les horaires du cine
+fr	12	41	m	m	1008.4	1864.3	51267	2328	Tu pourrais vérifier les horaires du cinem
+fr	12	42	a	a	47.6	1715.8	63010	2269	Tu pourrais vérifier les horaires du cinema
+fr	12	43	space	space	612.1	2079.4	60556	2287	Tu pourrais vérifier les horaires du cinéma 
+fr	13	0	l	l	950.5	1857.6	59070	2809	L
+fr	13	1	e	e	292.0	1717.5	60072	2215	Le
+fr	13	2	s	s	175.1	1818.3	54400	2258	Les
+fr	13	3	space	space	581.2	2081.5	56236	2298	Les 
+fr	13	4	e	e	246.5	1676.4	59481	2077	Les e
+fr	13	5	n	n	750.0	1932.3	54889	2364	Les en
+fr	13	6	f	f	365.1	1786.5	53313	2281	Les enf
+fr	13	7	a	a	13.8	1673.3	59905	2310	Les enfa
+fr	13	8	n	n	744.0	1978.9	63992	2497	Les enfan
+fr	13	9	t	t	504.5	1646.5	54285	2447	Les enfant
+fr	13	10	s	s	155.5	1797.8	59656	2088	Les enfants
+fr	13	11	space	space	579.7	2073.9	54911	2288	Les enfants 
+fr	13	12	s	s	176.2	1802.3	53888	2025	Les enfants s
+fr	13	13	o	o	879.5	1677.0	66118	2148	Les enfants so
+fr	13	14	n	n	759.8	1894.9	52748	2276	Les enfants son
+fr	13	15	t	t	448.0	1719.8	66488	2011	Les enfants sont
+fr	13	16	space	space	614.5	2058.6	55664	2423	Les enfants sont 
+fr	13	17	d	f	345.2	1869.0	54645	2058	Les enfants sont f
+fr	13	18	e	e	271.3	1666.1	63426	2128	Les enfants sont fe
+fr	13	19	j	j	718.7	1805.3	65828	2183	Les enfants sont fej
+fr	13	20	a	a	59.9	1670.0	57129	1959	Les enfants sont feja
+fr	13	21	space	space	567.3	2089.9	61169	2424	Les enfants sont déjà 
+fr	13	22	c	c	454.6	1994.6	70934	4486	Les enfants sont déjà c
+fr	13	23	o	o	944.2	1673.6	62879	5755	Les enfants sont déjà co
+fr	13	24	u	u	725.5	1660.7	58988	2155	Les enfants sont déjà cou
+fr	13	25	c	c	439.4	1941.7	58998	2262	Les enfants sont déjà couc
+fr	13	26	h	h	568.3	1797.6	67417	2106	Les enfants sont déjà couch
+fr	13	27	e	e	289.6	1668.0	61655	2141	Les enfants sont déjà couche
+fr	13	28	s	s	176.0	1800.4	55695	2095	Les enfants sont déjà couches
+fr	13	29	space	space	567.0	2073.0	49731	2178	Les enfants sont déjà couches 
+fr	13	30	d	d	256.0	1788.0	54741	2469	Les enfants sont déjà couches d
+fr	13	31	e	e	233.8	1615.1	67346	3014	Les enfants sont déjà couches de
+fr	13	32	p	p	1006.1	1697.0	56428	2225	Les enfants sont déjà couches dep
+fr	13	33	u	u	687.3	1687.4	59612	2117	Les enfants sont déjà couches depu
+fr	13	34	i	i	780.7	1676.7	52097	2424	Les enfants sont déjà couches depui
+fr	13	35	s	s	192.4	1818.6	54715	2272	Les enfants sont déjà couches depuis
+fr	13	36	space	space	618.4	2049.4	61796	2288	Les enfants sont déjà couchés depuis 
+fr	13	37	u	u	680.0	1647.4	69786	7070	Les enfants sont déjà couchés depuis u
+fr	13	38	n	n	794.2	1958.0	64205	6694	Les enfants sont déjà couchés depuis un
+fr	13	39	e	e	304.6	1685.5	53632	3187	Les enfants sont déjà couchés depuis une
+fr	13	40	space	space	610.1	2092.1	55279	2255	Les enfants sont déjà couchés depuis une 
+fr	13	41	h	h	561.5	1815.3	62497	2300	Les enfants sont déjà couchés depuis une h
+fr	13	42	e	e	298.6	1669.3	54644	2330	Les enfants sont déjà couchés depuis une he
+fr	13	43	u	u	698.1	1690.3	62259	2134	Les enfants sont déjà couchés depuis une heu
+fr	13	44	r	r	435.2	1708.2	57703	2638	Les enfants sont déjà couchés depuis une heur
+fr	13	45	e	e	263.9	1694.6	60965	2609	Les enfants sont déjà couchés depuis une heure
+fr	13	46	space	space	604.9	2075.6	52737	2228	Les enfants sont déjà couchés depuis une heure 
+fr	14	0	i	i	791.3	1697.5	61657	3310	I
+fr	14	1	l	l	962.1	1849.5	68002	2095	Il
+fr	14	2	space	space	583.5	2139.9	56812	2262	Il 
+fr	14	3	f	f	408.6	1830.9	60091	1843	Il f
+fr	14	4	a	a	44.6	1631.7	61269	2220	Il fa
+fr	14	5	u	u	680.1	1641.8	61865	2283	Il fau
+fr	14	6	t	t	510.7	1670.3	67065	2199	Il faut
+fr	14	7	space	space	631.8	2085.0	50962	2279	Il faut 
+fr	14	8	a	a	63.1	1685.7	59734	2562	Il faut a
+fr	14	9	c	c	455.2	1976.1	59274	2083	Il faut ac
+fr	14	10	h	h	595.7	1821.3	61911	2453	Il faut ach
+fr	14	11	e	e	295.3	1681.7	58899	3901	Il faut ache
+fr	14	12	t	t	495.2	1639.1	54289	2472	Il faut achet
+fr	14	13	e	e	271.1	1682.5	52910	2236	Il faut achete
+fr	14	14	r	r	372.0	1671.2	61151	2333	Il faut acheter
+fr	14	15	space	space	594.5	2087.3	55786	2152	Il faut acheter 
+fr	14	16	d	d	266.1	1800.0	58215	1924	Il faut acheter d
+fr	14	17	e	e	276.4	1632.4	58038	2252	Il faut acheter de
+fr	14	18	s	s	175.1	1812.1	47695	2330	Il faut acheter des
+fr	14	19	space	space	622.0	2106.0	53840	2226	Il faut acheter des 
+fr	14	20	t	t	466.1	1660.0	53684	2073	Il faut acheter des t
+fr	14	21	o	o	899.8	1698.9	58524	2250	Il faut acheter des to
+fr	14	22	m	m	1030.8	1799.1	64206	2164	Il faut acheter des tom
+fr	14	23	a	a	88.7	1668.5	54509	2498	Il faut acheter des toma
+fr	14	24	t	t	520.4	1699.8	68114	2381	Il faut acheter des tomat
+fr	14	25	e	e	286.2	1646.6	49890	2217	Il faut acheter des tomate
+fr	14	26	s	s	197.3	1855.9	63812	2261	Il faut acheter des tomates
+fr	14	27	space	space	617.9	2078.9	64923	2231	Il faut acheter des tomates 
+fr	14	28	e	e	245.9	1729.0	49811	2278	Il faut acheter des tomates e
+fr	14	29	t	t	476.5	1639.3	57627	2241	Il faut acheter des tomates et
+fr	14	30	space	space	583.8	2107.5	58757	2395	Il faut acheter des tomates et 
+fr	14	31	d	d	296.3	1811.4	56022	2062	Il faut acheter des tomates et d
+fr	14	32	u	u	684.6	1675.4	57053	2302	Il faut acheter des tomates et du
+fr	14	33	space	space	604.8	2058.9	53540	2288	Il faut acheter des tomates et du 
+fr	14	34	f	f	348.5	1821.0	55878	2272	Il faut acheter des tomates et du f
+fr	14	35	r	r	371.0	1656.4	58678	2339	Il faut acheter des tomates et du fr
+fr	14	36	o	o	945.1	1666.2	52179	2489	Il faut acheter des tomates et du fro
+fr	14	37	m	m	1032.7	1835.0	49055	2256	Il faut acheter des tomates et du from
+fr	14	38	a	a	54.7	1722.1	54258	2278	Il faut acheter des tomates et du froma
+fr	14	39	g	g	486.4	1827.2	63070	2283	Il faut acheter des tomates et du fromag
+fr	14	40	e	e	236.9	1659.2	58565	2203	Il faut acheter des tomates et du fromage
+fr	14	41	space	space	604.1	2033.9	63527	3718	Il faut acheter des tomates et du fromage 
+fr	15	0	j	j	668.3	1808.1	52848	2539	J
+fr	15	1	e	e	275.0	1689.8	60694	2031	Je
+fr	15	2	space	space	602.4	2123.5	64268	2197	Je 
+fr	15	3	n	n	771.0	1975.2	54373	2214	Je n
+fr	15	4	e	e	301.8	1684.0	64049	6775	Je ne
+fr	15	5	space	space	567.8	2067.7	52027	2088	Je ne 
+fr	15	6	s	s	163.7	1820.9	57232	2190	Je ne s
+fr	15	7	a	a	70.9	1670.3	54715	2558	Je ne sa
+fr	15	8	i	i	803.8	1711.9	60688	2300	Je ne sai
+fr	15	9	s	s	185.7	1773.4	54092	2211	Je ne sais
+fr	15	10	space	space	603.3	2086.0	54441	2141	Je ne sais 
+fr	15	11	p	p	1061.9	1684.3	60604	2236	Je ne sais p
+fr	15	12	a	a	61.3	1668.4	58167	2016	Je ne sais pa
+fr	15	13	s	s	181.8	1794.8	64541	2605	Je ne sais pas
+fr	15	14	space	space	538.1	2085.3	57212	2195	Je ne sais pas 
+fr	15	15	e	e	303.6	1700.7	54367	2253	Je ne sais pas e
+fr	15	16	n	n	757.3	2004.5	55875	2077	Je ne sais pas en
+fr	15	17	c	c	467.7	1965.7	50749	2229	Je ne sais pas enc
+fr	15	18	o	o	940.2	1685.0	55028	2207	Je ne sais pas enco
+fr	15	19	r	r	358.1	1667.3	64087	2032	Je ne sais pas encor
+fr	15	20	e	e	293.7	1649.3	60093	2216	Je ne sais pas encore
+fr	15	21	space	space	617.0	2115.4	57441	2492	Je ne sais pas encore 
+fr	15	22	s	s	117.5	1798.5	68584	2361	Je ne sais pas encore s
+fr	15	23	i	i	798.3	1690.1	64948	2590	Je ne sais pas encore si
+fr	15	24	space	space	597.5	2087.2	56898	2221	Je ne sais pas encore si 
+fr	15	25	j	j	712.1	1841.6	65127	3268	Je ne sais pas encore si j
+fr	15	26	e	e	283.7	1682.8	62599	2211	Je ne sais pas encore si je
+fr	15	27	space	space	611.7	2062.1	66761	2308	Je ne sais pas encore si je 
+fr	15	28	v	v	530.5	1913.8	57665	2454	Je ne sais pas encore si je v
+fr	15	29	i	i	789.3	1670.2	52400	2324	Je ne sais pas encore si je vi
+fr	15	30	e	e	282.0	1697.0	54821	2469	Je ne sais pas encore si je vie
+fr	15	31	n	n	714.2	1984.5	57188	2320	Je ne sais pas encore si je vien
+fr	15	32	d	s	223.7	1804.2	59098	2498	Je ne sais pas encore si je viens
+fr	15	33	r	r	369.8	1707.6	61534	2513	Je ne sais pas encore si je viensr
+fr	15	34	a	a	61.4	1679.2	58331	2548	Je ne sais pas encore si je viensra
+fr	15	35	i	i	862.3	1673.3	56451	2350	Je ne sais pas encore si je viensrai
+fr	15	36	space	space	552.5	2082.6	68254	2580	Je ne sais pas encore si je viendrai 
+fr	16	0	m	m	1009.9	1802.0	59006	3655	M
+fr	16	1	o	o	909.0	1644.4	49285	1905	Mo
+fr	16	2	n	n	754.8	1970.9	54613	2223	Mon
+fr	16	3	space	space	601.3	2145.3	64208	2143	Mon 
+fr	16	4	t	t	462.5	1719.9	55953	2180	Mon t
+fr	16	5	e	e	304.9	1668.1	67443	2827	Mon te
+fr	16	6	l	l	905.8	1782.2	54516	2230	Mon tel
+fr	16	7	e	e	269.7	1681.7	59500	2144	Mon tele
+fr	16	8	p	p	1021.1	1693.4	68084	2923	Mon telep
+fr	16	9	h	h	580.1	1834.9	55535	2067	Mon teleph
+fr	16	10	o	o	930.9	1646.5	58555	2293	Mon telepho
+fr	16	11	n	n	739.7	1934.9	63598	2232	Mon telephon
+fr	16	12	e	e	289.3	1637.3	49552	2063	Mon telephone
+fr	16	13	space	space	558.0	2108.3	52264	2349	Mon téléphone 
+fr	16	14	e	e	283.8	1723.7	56657	2252	Mon téléphone e
+fr	16	15	t	t	502.1	1671.8	61235	2209	Mon téléphone et
+fr	16	16	a	a	41.6	1673.7	57223	3621	Mon téléphone eta
+fr	16	17	i	i	802.7	1620.4	62140	2393	Mon téléphone etai
+fr	16	18	t	t	518.1	1646.2	69179	2533	Mon téléphone etait
+fr	16	19	space	space	630.4	2109.2	51874	2301	Mon téléphone était 
+fr	16	20	p	p	999.8	1694.3	56420	4898	Mon téléphone était p
+fr	16	21	r	r	397.2	1655.5	57174	2077	Mon téléphone était pr
+fr	16	22	e	e	277.7	1703.2	54452	2144	Mon téléphone était pre
+fr	16	23	s	s	155.8	1809.5	53766	2221	Mon téléphone était pres
+fr	16	24	q	q	74.7	1814.9	53797	2553	Mon téléphone était presq
+fr	16	25	u	u	701.0	1696.0	54396	2193	Mon téléphone était presqu
+fr	16	26	e	e	266.4	1672.0	58686	2661	Mon téléphone était presque
+fr	16	27	space	space	604.7	2115.2	57578	2630	Mon téléphone était presque 
+fr	16	28	d	d	259.6	1829.2	67847	2397	Mon téléphone était presque d
+fr	16	29	e	e	241.6	1683.0	56676	2983	Mon téléphone était presque de
+fr	16	30	c	c	473.8	1955.5	60333	2281	Mon téléphone était presque dec
+fr	16	31	h	h	609.3	1831.9	66147	2146	Mon téléphone était presque dech
+fr	16	32	a	a	33.0	1661.8	65011	2347	Mon téléphone était presque decha
+fr	16	33	r	r	379.0	1650.7	63313	5460	Mon téléphone était presque dechar
+fr	16	34	g	g	478.2	1783.3	57772	2304	Mon téléphone était presque decharg
+fr	16	35	e	e	267.4	1662.3	55256	2311	Mon téléphone était presque decharge
+fr	16	36	space	space	577.4	2076.3	53815	2305	Mon téléphone était presque déchargé 
+fr	17	0	n	n	744.5	1943.4	51545	2608	N
+fr	17	1	o	o	965.5	1668.1	62261	2138	No
+fr	17	2	u	u	665.5	1708.1	58384	2263	Nou
+fr	17	3	s	s	197.3	1811.3	49770	2195	Nous
+fr	17	4	space	space	545.4	2077.3	65932	2446	Nous 
+fr	17	5	p	p	1049.7	1673.7	62662	1940	Nous p
+fr	17	6	a	a	24.6	1689.2	59328	2140	Nous pa
+fr	17	7	r	r	343.7	1707.9	68169	3263	Nous par
+fr	17	8	l	l	904.3	1820.8	58188	2348	Nous parl
+fr	17	9	e	e	250.3	1701.0	50064	2179	Nous parle
+fr	17	10	r	r	363.1	1665.8	54233	2145	Nous parler
+fr	17	11	o	o	946.6	1689.6	57371	2063	Nous parlero
+fr	17	12	n	n	742.8	2000.7	55051	2269	Nous parleron
+fr	17	13	s	s	175.8	1773.0	61300	2623	Nous parlerons
+fr	17	14	space	space	594.6	2085.3	68617	2278	Nous parlerons 
+fr	17	15	d	d	269.1	1827.5	56177	2235	Nous parlerons d
+fr	17	16	u	u	719.3	1653.5	69099	6192	Nous parlerons du
+fr	17	17	space	space	596.3	2098.6	60317	2618	Nous parlerons du 
+fr	17	18	b	b	596.0	1906.0	52424	2104	Nous parlerons du b
+fr	17	19	u	u	692.7	1730.4	65548	2302	Nous parlerons du bu
+fr	17	20	d	d	255.7	1820.1	66058	2342	Nous parlerons du bud
+fr	17	21	g	g	465.7	1805.9	61469	2270	Nous parlerons du budg
+fr	17	22	e	e	294.9	1686.4	59627	2751	Nous parlerons du budge
+fr	17	23	t	t	532.6	1636.5	49253	2077	Nous parlerons du budget
+fr	17	24	space	space	626.1	2131.9	55578	2484	Nous parlerons du budget 
+fr	17	25	l	l	898.5	1813.7	60402	2113	Nous parlerons du budget l
+fr	17	26	a	a	43.0	1711.4	58503	2263	Nous parlerons du budget la
+fr	17	27	space	space	604.8	2118.2	57720	2357	Nous parlerons du budget la 
+fr	17	28	s	s	179.3	1805.2	61091	2159	Nous parlerons du budget la s
+fr	17	29	e	e	281.6	1679.2	59931	2265	Nous parlerons du budget la se
+fr	17	30	m	m	1045.3	1806.5	56913	2231	Nous parlerons du budget la sem
+fr	17	31	a	a	89.4	1670.4	65528	2223	Nous parlerons du budget la sema
+fr	17	32	i	i	816.0	1628.4	56405	2382	Nous parlerons du budget la semai
+fr	17	33	n	n	745.0	1992.3	53080	2154	Nous parlerons du budget la semain
+fr	17	34	e	e	244.2	1696.0	55790	2198	Nous parlerons du budget la semaine
+fr	17	35	space	space	638.1	2144.7	60204	2256	Nous parlerons du budget la semaine 
+fr	17	36	p	p	1033.2	1672.1	66730	2051	Nous parlerons du budget la semaine p
+fr	17	37	r	r	374.2	1678.4	61428	2309	Nous parlerons du budget la semaine pr
+fr	17	38	o	o	948.1	1693.4	50699	2230	Nous parlerons du budget la semaine pro
+fr	17	39	c	c	426.0	1958.0	57416	2282	Nous parlerons du budget la semaine proc
+fr	17	40	h	h	588.8	1824.0	61313	2279	Nous parlerons du budget la semaine proch
+fr	17	41	a	a	45.7	1651.6	53088	2821	Nous parlerons du budget la semaine procha
+fr	17	42	i	i	808.9	1625.8	60699	2261	Nous parlerons du budget la semaine prochai
+fr	17	43	n	n	746.5	1976.8	61804	2254	Nous parlerons du budget la semaine prochain
+fr	17	44	e	e	290.3	1627.6	57521	2936	Nous parlerons du budget la semaine prochaine
+fr	17	45	space	space	547.2	2050.4	50445	2457	Nous parlerons du budget la semaine prochaine 
+fr	18	0	t	t	491.8	1686.7	60978	2841	T
+fr	18	1	u	u	668.0	1683.9	57037	2526	Tu
+fr	18	2	space	space	568.5	2079.0	54616	2376	Tu 
+fr	18	3	a	a	30.1	1702.5	60932	2191	Tu a
+fr	18	4	s	s	198.8	1787.5	52525	2478	Tu as
+fr	18	5	space	space	596.5	2089.3	58883	2505	Tu as 
+fr	18	6	o	o	915.5	1692.1	68262	10007	Tu as o
+fr	18	7	u	u	697.7	1662.9	54539	2325	Tu as ou
+fr	18	8	b	b	635.3	1900.7	64968	2016	Tu as oub
+fr	18	9	l	l	874.0	1811.8	53818	2217	Tu as oubl
+fr	18	10	i	i	792.4	1667.7	61373	2955	Tu as oubli
+fr	18	11	e	e	249.0	1722.0	55725	2172	Tu as oublie
+fr	18	12	space	space	568.1	2105.3	47775	2342	Tu as oublié 
+fr	18	13	t	t	467.6	1695.9	63935	3341	Tu as oublié t
+fr	18	14	e	e	287.7	1680.8	58388	2062	Tu as oublié te
+fr	18	15	s	s	144.5	1801.1	62395	4920	Tu as oublié tes
+fr	18	16	space	space	624.4	2059.6	54693	2349	Tu as oublié tes 
+fr	18	17	c	c	423.6	1948.6	54012	2316	Tu as oublié tes c
+fr	18	18	l	l	913.1	1844.1	56505	2259	Tu as oublié tes cl
+fr	18	19	e	e	260.3	1667.2	65869	2287	Tu as oublié tes cle
+fr	18	20	s	s	155.5	1789.7	69607	5837	Tu as oublié tes cles
+fr	18	21	space	space	589.3	2072.6	61581	2438	Tu as oublié tes clés 
+fr	18	22	s	s	178.5	1794.6	72086	7745	Tu as oublié tes clés s
+fr	18	23	u	u	740.3	1667.1	54954	2533	Tu as oublié tes clés su
+fr	18	24	r	r	395.8	1682.7	65316	2166	Tu as oublié tes clés sur
+fr	18	25	space	space	606.0	2066.5	68506	2257	Tu as oublié tes clés sur 
+fr	18	26	l	l	910.3	1838.6	65224	2386	Tu as oublié tes clés sur l
+fr	18	27	a	a	39.1	1611.5	62031	2168	Tu as oublié tes clés sur la
+fr	18	28	space	space	637.0	2075.4	64631	2466	Tu as oublié tes clés sur la 
+fr	18	29	t	t	493.2	1696.9	54567	2407	Tu as oublié tes clés sur la t
+fr	18	30	a	a	21.8	1695.8	62767	2273	Tu as oublié tes clés sur la ta
+fr	18	31	b	b	648.3	1999.0	56067	2282	Tu as oublié tes clés sur la tab
+fr	18	32	l	l	947.3	1811.6	59898	2241	Tu as oublié tes clés sur la tabl
+fr	18	33	e	e	282.7	1655.0	54053	2067	Tu as oublié tes clés sur la table
+fr	18	34	space	space	601.2	2113.7	57148	2503	Tu as oublié tes clés sur la table 
+fr	19	0	l	l	942.6	1824.9	67397	2973	L
+fr	19	1	e	e	291.5	1655.6	58640	2295	Le
+fr	19	2	space	space	574.4	2087.9	64255	10170	Le 
+fr	19	3	m	m	1041.9	1858.1	52689	2092	Le m
+fr	19	4	e	e	279.4	1690.8	62182	2323	Le me
+fr	19	5	d	d	278.3	1824.2	63659	2138	Le med
+fr	19	6	e	e	296.3	1675.7	57066	2157	Le mede
+fr	19	7	c	c	452.7	1975.7	56473	2238	Le medec
+fr	19	8	i	i	804.8	1690.4	62154	3364	Le medeci
+fr	19	9	n	n	724.4	1977.0	64707	2215	Le medecin
+fr	19	10	space	space	601.3	2120.9	48821	2040	Le médecin 
+fr	19	11	p	p	1054.4	1652.1	71431	6617	Le médecin p
+fr	19	12	e	e	303.9	1673.2	62839	7177	Le médecin pe
+fr	19	13	u	u	732.7	1715.7	67844	2333	Le médecin peu
+fr	19	14	t	t	488.8	1667.0	49562	2199	Le médecin peut
+fr	19	15	space	space	591.2	2095.8	63273	2284	Le médecin peut 
+fr	19	16	m	m	1050.4	1818.6	64480	2127	Le médecin peut m
+fr	19	17	e	e	296.4	1686.9	51609	2196	Le médecin peut me
+fr	19	18	space	space	621.7	2078.8	52790	2586	Le médecin peut me 
+fr	19	19	r	r	393.4	1653.6	52304	2345	Le médecin peut me r
+fr	19	20	e	e	286.4	1702.5	49105	2125	Le médecin peut me re
+fr	19	21	c	c	407.7	1936.6	68694	2235	Le médecin peut me rec
+fr	19	22	e	e	314.3	1724.0	53264	3610	Le médecin peut me rece
+fr	19	23	v	v	502.5	1913.1	64342	2353	Le médecin peut me recev
+fr	19	24	o	o	897.5	1679.9	54799	2610	Le médecin peut me recevo
+fr	19	25	i	i	793.3	1670.6	57833	2222	Le médecin peut me recevoi
+fr	19	26	r	r	348.2	1703.6	60602	9339	Le médecin peut me recevoir
+fr	19	27	space	space	650.8	2135.1	61026	2368	Le médecin peut me recevoir 
+fr	19	28	l	l	915.1	1792.4	61119	2674	Le médecin peut me recevoir l
+fr	19	29	u	u	707.3	1671.2	64098	2301	Le médecin peut me recevoir lu
+fr	19	30	n	n	745.4	1931.3	55301	2289	Le médecin peut me recevoir lun
+fr	19	31	d	d	239.4	1829.1	54222	2134	Le médecin peut me recevoir lund
+fr	19	32	i	i	778.9	1687.3	55258	2271	Le médecin peut me recevoir lundi
+fr	19	33	space	space	605.4	2099.6	52495	2591	Le médecin peut me recevoir lundi 
+fr	19	34	e	e	274.2	1669.3	54618	2325	Le médecin peut me recevoir lundi e
+fr	19	35	n	n	707.6	1982.8	60213	2315	Le médecin peut me recevoir lundi en
+fr	19	36	space	space	608.5	2098.2	60471	2455	Le médecin peut me recevoir lundi en 
+fr	19	37	f	f	397.4	1808.5	56678	2138	Le médecin peut me recevoir lundi en f
+fr	19	38	i	i	785.3	1707.5	56284	2361	Le médecin peut me recevoir lundi en fi
+fr	19	39	n	n	790.8	1965.0	58573	2338	Le médecin peut me recevoir lundi en fin
+fr	19	40	space	space	581.7	2118.4	57516	2302	Le médecin peut me recevoir lundi en fin 
+fr	19	41	d	d	276.4	1807.3	61440	1857	Le médecin peut me recevoir lundi en fin d
+fr	19	42	e	e	271.7	1683.8	57522	2177	Le médecin peut me recevoir lundi en fin de
+fr	19	43	space	space	586.5	2107.1	62264	2542	Le médecin peut me recevoir lundi en fin de 
+fr	19	44	j	j	711.1	1837.1	59889	2445	Le médecin peut me recevoir lundi en fin de j
+fr	19	45	o	o	925.8	1665.3	53873	2415	Le médecin peut me recevoir lundi en fin de jo
+fr	19	46	u	u	724.8	1686.7	61353	2432	Le médecin peut me recevoir lundi en fin de jou
+fr	19	47	r	r	351.6	1678.0	57703	2601	Le médecin peut me recevoir lundi en fin de jour
+fr	19	48	n	n	752.2	1946.0	68676	5050	Le médecin peut me recevoir lundi en fin de journ
+fr	19	49	e	e	242.1	1688.6	52054	2488	Le médecin peut me recevoir lundi en fin de journe
+fr	19	50	e	e	271.8	1685.5	62707	2482	Le médecin peut me recevoir lundi en fin de journee
+fr	19	51	space	space	592.9	2091.7	65910	2621	Le médecin peut me recevoir lundi en fin de journée 

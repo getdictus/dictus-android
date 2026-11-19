@@ -16,7 +16,7 @@ numbers, what each run can and cannot show) is
 | `make_runs.py` | Turns the corpus into touch runs, with the iOS seed and touch model. Rerunning it rewrites the same files byte for byte. |
 | `runs/fr.tsv`, `runs/en.tsv` | One row per tap: the key aimed at, where the finger lands relative to its centre (in key units), and when. Byte-identical to the iOS runs. |
 | `harness/` | A Gradle build of its own: an app with one text field, and the instrumentation test `KeyboardReplay` that replays a run on whichever keyboard the emulator has selected. |
-| `run.sh` | One command: installs the harness, selects the keyboard, replays each language, pulls the files, prints the report. |
+| `run.sh` | One command: installs the harness, selects the keyboard and checks it stayed selected, replays each language, pulls the files, prints the report. |
 | `dictus_prefs.py` | Sets the Dictus keyboard language in the debug build's DataStore, keeping every other setting. |
 | `score.py` | The report, for every source: a replay, or text typed by hand on a device. Same counts as the iOS scorer. |
 
@@ -30,7 +30,8 @@ tools/keyboard-bench/run.sh --serial emulator-5554 --keyboard dictus > dictus.md
 tools/keyboard-bench/run.sh --serial emulator-5554 --keyboard gboard --langs en > gboard-en.md
 ```
 
-About 4 minutes per language and keyboard. Writes `taps.tsv`, `commits.tsv`, `texts.tsv`
+About 5 minutes per language and keyboard. `--mode probe` sweeps taps across the key
+boundaries instead. Writes `taps.tsv`, `commits.tsv`, `texts.tsv`
 and `keys.tsv` to `build/keyboard-bench/<keyboard>-<lang>/`.
 
 ## What the replay does
@@ -42,7 +43,10 @@ For each sentence, `KeyboardReplay`:
 2. reads where the keys are from the keyboard window's accessibility tree: the centre of
    each letter and of the space bar. One key unit across is the distance between two
    neighbouring letter centres, one unit down the distance between two letter rows, so
-   the run's offsets land the same way on any keyboard;
+   the run's offsets land the same way on any keyboard. It reads until two reads agree,
+   since the keyboard slides in after a restart. Gboard's nodes are touch areas, and the
+   last key of a row runs to the screen edge, so a row's end keys are aimed one pitch
+   from their neighbour rather than at their node's centre;
 3. for each tap, injects a touch-down and, 40 ms later, a touch-up at the aimed centre
    plus the run's offset, through `UiAutomation`. The keyboard's own hit test decides
    which key it is, and its own space bar runs its own autocorrect;

@@ -46,10 +46,22 @@ esac
 
 adbs() { adb -s "$SERIAL" "$@"; }
 
+# The keyboard the run is about, or a failure: stopping the Dictus app to set its language can
+# leave the system on another keyboard, and a replay on the wrong one says nothing.
+current_ime() { adbs shell settings get secure default_input_method | tr -d '\r'; }
+select_ime() {
+  for _ in 1 2 3 4 5; do
+    adbs shell ime set "$IME" > /dev/null
+    sleep 2
+    [[ "$(current_ime)" == "$IME" ]] && return 0
+  done
+  echo "the keyboard is $(current_ime), not $IME" >&2
+  exit 1
+}
+
 adbs install -r -t "$HARNESS/debug/keyboard-bench-harness-debug.apk" >&2
 adbs install -r -t "$HARNESS/androidTest/debug/keyboard-bench-harness-debug-androidTest.apk" >&2
 adbs shell ime enable "$IME" >&2
-adbs shell ime set "$IME" >&2
 COMMIT="$(git -C "$ROOT" rev-parse --short HEAD)"
 dirs=()
 IFS=, read -r -a langs <<< "$LANGS"
@@ -57,14 +69,15 @@ for lang in "${langs[@]}"; do
   name="$KEYBOARD-$lang"
   if [[ "$KEYBOARD" == dictus ]]; then
     python3 -I "$BENCH/dictus_prefs.py" --serial "$SERIAL" set keyboard_language "$lang" >&2
-    adbs shell ime set "$IME" >&2
   fi
+  select_ime
   extra=()
   [[ -n "$SENTENCES" ]] && extra=(-e sentences "$SENTENCES")
   log="$(adbs shell am instrument -w -e lang "$lang" -e out "$name" -e mode "$MODE" "${extra[@]}" \
     "$APP_ID.test/androidx.test.runner.AndroidJUnitRunner")"
   echo "$log" >&2
   grep -q '^OK (1 test)' <<< "$log" || { echo "replay failed: $name" >&2; exit 1; }
+  [[ "$(current_ime)" == "$IME" ]] || { echo "the keyboard changed during $name: $(current_ime)" >&2; exit 1; }
   mkdir -p "$OUT"
   rm -rf "${OUT:?}/$name"
   adbs pull "/sdcard/Android/data/$APP_ID/files/$name" "$OUT/" >&2

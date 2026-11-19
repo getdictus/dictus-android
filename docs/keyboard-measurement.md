@@ -35,7 +35,7 @@ platforms.
 | | Emulator replay | Device |
 |---|---|---|
 | Command | `run.sh` | typing by hand, then `score.py --typed` |
-| Takes | ~4 min per language and keyboard | ~10 min per language and keyboard |
+| Takes | ~5 min per language and keyboard | ~10 min per language and keyboard |
 | Dictus | yes | yes |
 | Gboard | yes, same taps | yes |
 | Wrong letters | per tap | from the text |
@@ -75,15 +75,33 @@ tools/keyboard-bench/run.sh --serial emulator-5554 --keyboard dictus > dictus.md
 (`dictus_prefs.py`, every other setting kept) and prints the report. The rows are in
 `build/keyboard-bench/<keyboard>-<lang>/`.
 
-**Gboard.** The Google APIs emulator images ship Gboard. Its language is set in its own
-settings, which no script can write, so set it by hand before each language: Gboard
-settings → Languages, keep only English (US) QWERTY for `en`, only Français AZERTY for
-`fr`. The harness refuses a run whose keyboard does not start its first row with `az`
-(fr) or `qw` (en). Then:
+**Gboard.** The Google APIs emulator images ship Gboard. Its languages live in its own
+settings, which no script can write, and `dictus_api35` returns to its snapshot at each
+boot, so add French once per emulator session, by hand:
+
+1. In any text field, Gboard's toolbar → settings → Languages → Add keyboard.
+2. Search `fran` **by tapping Gboard's keys**. Never `adb shell input text` or another
+   key event there: Gboard then takes the emulator for a device with a physical
+   keyboard and shows a floating toolbar instead of its keys, until the next boot.
+3. Français (France), AZERTY, turn Multilingual typing off, Done. Open English (US) and
+   turn its Multilingual typing off too: each run measures one language, as on Dictus.
+
+With two languages, Gboard draws a `langue suivante` / `next language` key; the harness
+taps it until the first row starts with `az` (fr) or `qw` (en), and refuses to run
+otherwise. Then:
 
 ```bash
-tools/keyboard-bench/run.sh --serial emulator-5554 --keyboard gboard --langs fr > gboard-fr.md
+tools/keyboard-bench/run.sh --serial emulator-5554 --keyboard gboard > gboard.md
 ```
+
+`run.sh` checks the selected keyboard before and after each language: stopping the
+Dictus app to set its language can leave the system on Gboard, and it fails rather than
+measure the wrong keyboard. Do not run Argent on the emulator during a replay: its own
+`UiAutomation` connection stops the harness from registering one.
+
+**Boundaries.** `run.sh --mode probe --langs fr` taps 2 px apart across every boundary
+of the top row, along the row and down into the row below, and writes `probe.tsv`: what
+each tap typed, or `none`.
 
 Leave the emulator's keyboard as you found it (Gboard on `dictus_api35`).
 
@@ -140,6 +158,9 @@ comparable numbers, a different day less so. Type Gboard and Dictus back to back
 - **One keyboard state.** Default settings, no learned words, no contacts. A tap on
   shift, the symbols key or delete does what it does on the real keyboard, and the next
   sentence starts from a fresh field.
-- **Gboard's state is its own.** It may download language data and learn from what it
-  is fed. Replay it on a Gboard that has not been used for typing in that AVD, and note
-  its version (`dumpsys package com.google.android.inputmethod.latin | grep versionName`).
+- **Gboard's state is its own.** It learns from what it types, so only its first replay
+  after a boot is a clean one. Note its version
+  (`dumpsys package com.google.android.inputmethod.latin | grep versionName`): the
+  emulator's is a preload, the Pixel's is whatever the Play Store installed.
+- **Gboard's boundaries move with context.** Its touch areas follow what was typed, so a
+  probe across a Gboard boundary measures that context as much as the geometry.
