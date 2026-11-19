@@ -140,7 +140,26 @@ class KeyboardToolbarTest {
         composeRule.onNodeWithText("xyzw").assertDoesNotExist()
     }
 
-    private fun setBar(currentWord: String = "", suggestions: List<String> = emptyList()) {
+    // Each key empties the list until its lookup answers, after the next key when the editor answers
+    // slowly: the bar showed ☰ for as long as the user typed (#374). It keeps the typed word meanwhile.
+    @Test fun `a typed word whose completions are pending keeps the menu's place`() {
+        setBar(currentWord = "Bonj", suggestions = emptyList(), isCompletionPending = true)
+
+        composeRule.onNodeWithText("Bonj").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Keyboard menu").assertDoesNotExist()
+    }
+
+    @Test fun `a pending lookup with no word in progress leaves the menu`() {
+        setBar(currentWord = "", suggestions = emptyList(), isCompletionPending = true)
+
+        composeRule.onNodeWithContentDescription("Keyboard menu").assertIsDisplayed()
+    }
+
+    private fun setBar(
+        currentWord: String = "",
+        suggestions: List<String> = emptyList(),
+        isCompletionPending: Boolean = false,
+    ) {
         composeRule.setContent {
             DictusTheme {
                 KeyboardToolbar(
@@ -148,6 +167,7 @@ class KeyboardToolbarTest {
                     onOpenSettings = {},
                     currentWord = currentWord,
                     suggestions = suggestions,
+                    isCompletionPending = isCompletionPending,
                 )
             }
         }
