@@ -26,19 +26,53 @@ enum class FirstDictationStage {
 
     companion object {
         /**
-         * The stage for a keyboard that is or is not up, that is or is not Dictus, while the
-         * page is or is not still waiting for the focus it asked for.
+         * The stage for a field that is or is not focused, with the keyboard window shown or
+         * not, under a keyboard that is or is not Dictus, while the page is or is not still
+         * waiting for the keyboard it asked for.
          *
-         * WHY "KEYBOARD UP" AND NOT "FIELD FOCUSED" AS ON iOS: on Android the system back
-         * closes the keyboard and leaves the field focused. No keyboard is no keyboard,
-         * whatever was last selected.
+         * WHY BOTH THE FOCUS AND THE KEYBOARD WINDOW, NOT THE FOCUS ALONE AS ON iOS (#379): on
+         * Android a field can hold the focus with no keyboard on screen. The system back
+         * closes the keyboard and leaves the field focused, and a show request can be dropped
+         * while the field takes the focus. The mic banner pointing at a keyboard that is not
+         * there is the bug Pierre saw on the Pixel 4.
          */
-        fun of(isKeyboardUp: Boolean, isDictusKeyboard: Boolean, isAwaitingAutoFocus: Boolean): FirstDictationStage =
+        fun of(
+            isFieldFocused: Boolean,
+            isImeVisible: Boolean,
+            isDictusKeyboard: Boolean,
+            isAwaitingAutoFocus: Boolean,
+        ): FirstDictationStage =
             when {
-                !isKeyboardUp -> if (isAwaitingAutoFocus) Opening else BeforeTap
+                !isKeyboardUp(isFieldFocused, isImeVisible) -> if (isAwaitingAutoFocus) Opening else BeforeTap
                 isDictusKeyboard -> DictusKeyboard
                 else -> OtherKeyboard
             }
+
+        /** Whether the field has a keyboard on screen: its focus, and the keyboard window shown. */
+        fun isKeyboardUp(isFieldFocused: Boolean, isImeVisible: Boolean): Boolean =
+            isFieldFocused && isImeVisible
+
+        /**
+         * Whether the page asks again for the field's focus and the keyboard, each time it
+         * comes to the front: on arrival, back from Settings or the app switcher, or when a
+         * system dialog over it closes (iOS #845).
+         *
+         * WHY NOT AFTER THE USER CLOSED IT: a keyboard closed on the page is the user's choice;
+         * from then on only a tap on the field opens it again, as on iOS.
+         */
+        fun asksForKeyboard(isKeyboardUp: Boolean, userClosedKeyboard: Boolean, isLeaving: Boolean): Boolean =
+            !isKeyboardUp && !userClosedKeyboard && !isLeaving
+
+        /**
+         * Whether a keyboard that just went down was closed by the user: it went down while
+         * the page was in front (resumed, its window focused).
+         *
+         * WHY THE PAGE MUST BE IN FRONT: going Home or to the app switcher closes the keyboard
+         * too, and so does the keyboard picker while it swaps keyboards. None of those is the
+         * user dismissing it.
+         */
+        fun keyboardClosedByUser(wasKeyboardUp: Boolean, isKeyboardUp: Boolean, isPageInFront: Boolean): Boolean =
+            wasKeyboardUp && !isKeyboardUp && isPageInFront
 
         /**
          * How long the page waits for the keyboard it asked for before asking for a tap.
