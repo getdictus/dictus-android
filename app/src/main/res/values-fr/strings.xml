@@ -343,4 +343,48 @@
     <string name="model_preparation_download_continues">Le t\u00e9l\u00e9chargement continue si vous quittez l\u2019app.</string>
     <string name="model_preparation_close">Fermer</string>
 
+    <!-- Envoyer un retour (#373), textes du formulaire iOS (#565, #981) -->
+    <string name="feedback_title">Envoyer un retour</string>
+    <string name="feedback_back_cd">Retour</string>
+    <string name="feedback_from">Expéditeur</string>
+    <string name="feedback_name">Votre nom</string>
+    <string name="feedback_email">E-mail (facultatif)</string>
+    <string name="feedback_from_footer">Le nom est obligatoire, un pseudonyme suffit. Indiquez un e-mail seulement si vous voulez une réponse.</string>
+    <string name="feedback_email_invalid">Cette adresse e-mail semble incomplète.</string>
+    <string name="feedback_name_too_long">Le nom est limité à 100 caractères.</string>
+    <string name="feedback_type">Type</string>
+    <string name="feedback_type_bug">Bug</string>
+    <string name="feedback_type_idea">Idée</string>
+    <string name="feedback_type_other">Autre</string>
+    <string name="feedback_prompt_bug">Que s’est-il passé, et qu’attendiez-vous ?</string>
+    <string name="feedback_prompt_idea">Votre idée</string>
+    <string name="feedback_prompt_other">Votre message</string>
+    <string name="feedback_message_overflow">Caractères au-delà de la limite de 4 000 : %1$d</string>
+    <string name="feedback_attach_log">Joindre le journal technique</string>
+    <string name="feedback_see_log">Voir ce qui sera envoyé</string>
+    <string name="feedback_log_title">Ce qui sera envoyé</string>
+    <string name="feedback_log_reading">Lecture du journal technique…</string>
+    <string name="feedback_log_empty">Le journal technique est vide.</string>
+    <string name="feedback_log_covers">Si vous joignez le journal technique, il couvre l’activité récente de Dictus.</string>
+    <string name="feedback_log_no_text">Il ne contient ni vos transcriptions, ni ce que vous tapez.</string>
+    <string name="feedback_log_contents">Il contient la version d’Android et de Dictus, le modèle de votre appareil, et l’identifiant des apps dans lesquelles vous avez utilisé le clavier. Vous pouvez le lire avant de l’envoyer.</string>
+    <string name="feedback_also_sent">Également envoyé</string>
+    <string name="feedback_device">Appareil</string>
+    <string name="feedback_locale">Langue et région</string>
+    <string name="feedback_revision">Révision du code</string>
+    <string name="feedback_send">Envoyer</string>
+    <string name="feedback_retry">Réessayer</string>
+    <string name="feedback_share">Partager à la place</string>
+    <string name="feedback_ask_log_title">Joindre le journal technique ?</string>
+    <string name="feedback_ask_log_attach">Joindre</string>
+    <string name="feedback_ask_log_send_without">Envoyer sans</string>
+    <string name="feedback_failed_unreachable">Dictus n’a pas pu joindre le serveur. Votre message est conservé.</string>
+    <string name="feedback_failed_rate_limited_minutes">Trop de retours envoyés depuis ce réseau. Réessayez dans %1$d minutes.</string>
+    <string name="feedback_failed_rate_limited">Trop de retours envoyés depuis ce réseau. Réessayez dans une minute.</string>
+    <string name="feedback_failed_delivery">Le serveur n’a pas pu transmettre votre retour. Votre message est conservé.</string>
+    <string name="feedback_failed_unavailable">L’envoi de retours est indisponible pour le moment. Votre message est conservé.</string>
+    <string name="feedback_failed_rejected">Le serveur a refusé ce retour. Partagez-le à la place.</string>
+    <string name="feedback_sent">Envoyé. Merci.</string>
+    <string name="feedback_done">OK</string>
+
 </resources>

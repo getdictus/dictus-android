@@ -89,6 +89,16 @@ object LogExporter {
         return zipFile
     }
 
+    /**
+     * The export as plain text for the feedback form (#373): the same header, then the previous
+     * file's lines and the current file's, oldest first. Null when neither file exists.
+     */
+    fun exportText(context: Context, logFile: File, settings: DictationSettings): Pair<String, String>? {
+        val files = listOf(FileLoggingTree.previousFileFor(logFile), logFile).filter(File::exists)
+        if (files.isEmpty()) return null
+        return buildHeader(exportContext(context, logFile, settings)) to files.joinToString("") { it.readText() }
+    }
+
     /** The settings a dictation runs with, read by the caller from DataStore. */
     data class DictationSettings(val activeModel: String, val language: String) {
         companion object {
