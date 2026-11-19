@@ -2,7 +2,6 @@ package dev.pivisolutions.dictus.keyboardbench
 
 import android.app.Activity
 import android.os.Bundle
-import android.os.SystemClock
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -18,7 +17,7 @@ import android.widget.EditText
  */
 class FieldActivity : Activity() {
 
-    /** The field's text after a change, and when the change landed (SystemClock.uptimeNanos). */
+    /** The field's text after a change, and when the change landed (System.nanoTime, the replay's clock). */
     data class Change(val atNanos: Long, val text: String)
 
     lateinit var field: EditText
@@ -41,7 +40,7 @@ class FieldActivity : Activity() {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
                 override fun afterTextChanged(s: Editable?) {
-                    val change = Change(SystemClock.uptimeNanos(), s?.toString().orEmpty())
+                    val change = Change(System.nanoTime(), s?.toString().orEmpty())
                     synchronized(changes) { changes.add(change) }
                 }
             })

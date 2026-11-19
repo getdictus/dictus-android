@@ -24,7 +24,7 @@ From the finger lifting to the first change of the field, as the app sees it: to
 
 | lang | key | taps | p50 | p95 | max |
 |---|---|---:|---:|---:|---:|
-| fr | letter | 670 | 2.30 | 4.52 | 15.04 |
+| fr | letter | 669 | 2.30 | 4.52 | 15.04 |
 | fr | space | 151 | 2.35 | 2.81 | 10.17 |
 | en | letter | 627 | 2.31 | 4.16 | 25.09 |
 | en | space | 155 | 2.38 | 2.93 | 6.39 |

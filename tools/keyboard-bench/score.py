@@ -122,8 +122,9 @@ def tap_section(rows):
             "of the same session with each other, never with a device.", "",
             "| lang | key | taps | p50 | p95 | max |", "|---|---|---:|---:|---:|---:|"]
     for lang, rs in by_lang.items():
-        for kind, pick in (("letter", lambda r: len(r["resolved"]) == 1),
-                           ("space", lambda r: r["resolved"] == "space")):
+        # Timed by the key aimed at and what it typed: a space tap that typed `v` is neither.
+        for kind, pick in (("letter", lambda r: r["intended"] != "space" and len(r["resolved"]) == 1),
+                           ("space", lambda r: r["intended"] == "space" and r["resolved"] == "space")):
             us = [tap_us(r) for r in rs if pick(r) and int(r["down_us"]) >= 0]
             out.append(f"| {lang} | {kind} | {len(us)} | {ms(us, 0.5)} | {ms(us, 0.95)} | {ms(us, 1.0)} |")
     out.append("")
@@ -185,8 +186,9 @@ def typed_rows(specs):
         lang, path = spec.split(":", 1)
         with open(os.path.join(bench, "corpus", f"{lang}.txt"), encoding="utf-8") as f:
             intended = [line.strip() for line in f if line.strip()]
+        # A sentence the keyboard left empty is still a line: only trailing blank lines go.
         with open(path, encoding="utf-8") as f:
-            typed = [line.strip() for line in f if line.strip()]
+            typed = [line.strip() for line in f.read().rstrip("\n").split("\n")]
         if len(typed) != len(intended):
             raise SystemExit(f"{path}: {len(typed)} lines, the {lang} corpus has {len(intended)}")
         rows += [{"lang": lang, "sentence": str(i), "intended": a, "final": b}

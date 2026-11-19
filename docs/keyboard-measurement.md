@@ -38,8 +38,8 @@ platforms.
 | Takes | ~5 min per language and keyboard | ~10 min per language and keyboard |
 | Dictus | yes | yes |
 | Gboard | yes, same taps | yes |
-| Wrong letters | per tap | from the text |
-| Autocorrect outcomes | per word | from the text |
+| Wrong letters | per tap | character error rate only, autocorrect included |
+| Autocorrect outcomes | per word | no: the final text cannot tell a word typed right from one corrected |
 | Missed spacebar | per tap, and glued words | glued words |
 | Time per keystroke | tap to text, emulator | no |
 

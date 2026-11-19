@@ -91,6 +91,16 @@ def adb(serial, *args, data=None):
     return subprocess.run(["adb", "-s", serial, *args], input=data, capture_output=True, check=True).stdout
 
 
+def read_prefs(serial):
+    """The DataStore file, or nothing when the app has never written one (a fresh install)."""
+    done = subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE, "cat", PATH], capture_output=True)
+    if done.returncode == 0:
+        return done.stdout
+    if b"No such file" in done.stderr + done.stdout:
+        return b""
+    raise SystemExit(f"cannot read {PATH}: {(done.stderr or done.stdout).decode(errors='replace').strip()}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--serial", required=True)
@@ -99,7 +109,7 @@ def main():
     parser.add_argument("value", nargs="?")
     args = parser.parse_args()
 
-    data = adb(args.serial, "exec-out", "run-as", PACKAGE, "cat", PATH)
+    data = read_prefs(args.serial)
     current = {name: (entry, raw) for name, entry, raw in entries(data)}
     if args.action == "get":
         print(string_of(current[args.name][0]) if args.name in current else "(unset)")
@@ -108,7 +118,7 @@ def main():
         raise SystemExit("set needs a value")
     kept = b"".join(raw for name, (_, raw) in current.items() if name != args.name)
     adb(args.serial, "shell", "am", "force-stop", PACKAGE)
-    adb(args.serial, "exec-in", "run-as", PACKAGE, "sh", "-c", f"cat > {PATH}",
+    adb(args.serial, "exec-in", "run-as", PACKAGE, "sh", "-c", f"mkdir -p {PATH.rsplit('/', 1)[0]} && cat > {PATH}",
         data=kept + string_entry(args.name, args.value))
     print(f"{args.name} = {args.value}")
 

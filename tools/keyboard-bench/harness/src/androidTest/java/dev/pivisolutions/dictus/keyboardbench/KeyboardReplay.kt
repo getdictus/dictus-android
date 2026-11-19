@@ -271,7 +271,7 @@ class KeyboardReplay {
         val corpus = instrumentation.context.assets.open("$lang.txt").bufferedReader().readLines().filter { it.isNotBlank() }
         val run = readRun(lang)
         val only = args.getString("sentences")?.split(",")?.map { it.trim().toInt() }?.toSet()
-        val taps = mutableListOf("lang\tsentence\ttap\tintended\tresolved\tx\ty\tdown_us\tup_us\tafter")
+        val taps = mutableListOf("lang\tsentence\ttap\tintended\tresolved\tx\ty\tdown_us\tup_us\tafter\tlate")
         val commits = mutableListOf("lang\tsentence\tintended\ttyped\tfinal")
         val texts = mutableListOf("lang\tsentence\tintended\tfinal")
         for ((s, sentenceTaps) in run.groupBy { it.sentence }) {
@@ -295,6 +295,13 @@ class KeyboardReplay {
                 previousT = tap.tMs
                 val (x, y) = keys.point(tap.key, tap.dx, tap.dy)
                 if (tap.key != "space" && tokenWords.lastOrNull() != wordIndex) tokenWords.add(wordIndex)
+                // A change that landed after the previous tap settled belongs to no tap: take it
+                // into the text before this one, and count it, so this tap reports only its own.
+                val late = activity.changesFrom(seen[0])
+                if (late.isNotEmpty()) {
+                    seen[0] += late.size
+                    text = late.last().text
+                }
                 val outcome = tap(activity, x, y, text, seen)
                 if (outcome.resolved == "space") {
                     commit(text, outcome.after)?.let { (typed, final) ->
@@ -305,7 +312,7 @@ class KeyboardReplay {
                 }
                 if (tap.key == "space") wordIndex++
                 taps.add("$lang\t$s\t${tap.index}\t${tap.key}\t${outcome.resolved}\t${"%.1f".format(x)}\t" +
-                    "${"%.1f".format(y)}\t${outcome.downToTextUs}\t${outcome.upToTextUs}\t${clean(outcome.after)}")
+                    "${"%.1f".format(y)}\t${outcome.downToTextUs}\t${outcome.upToTextUs}\t${clean(outcome.after)}\t${late.size}")
                 text = outcome.after
             }
             // A last read: a keyboard may still be finishing the last commit.

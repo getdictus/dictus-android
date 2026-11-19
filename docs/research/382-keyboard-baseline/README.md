@@ -12,7 +12,9 @@ taken 2026-11-19 on the `dictus_api35` emulator (Android 15, Google APIs x86_64,
   QWERTY and Français (France) AZERTY, multilingual typing off for both, every other
   setting as shipped. The AVD returns to its snapshot at each boot, so this Gboard had
   typed nothing before.
-- **Tool**: `tools/keyboard-bench/` at `41739e3`, the commit the reports name.
+- **Tool**: `tools/keyboard-bench/` at `41739e3`, the commit the reports name. The
+  `report.md` files were scored again after review, with `score.py` timing letters by
+  the key aimed at (one Gboard space tap that typed `v` had been timed as a letter).
 
 ## Files
 
