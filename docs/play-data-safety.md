@@ -17,7 +17,7 @@ Google counts data as *collected* when it leaves the device, and as *shared* whe
 | Typed text | Handled by the keyboard on the phone; the words it learns stay in the app's private storage (`Réinitialiser les mots appris` clears them). | No | No |
 | Diagnostic logs | Written on the phone, without any dictated or typed text: counts and timings only (`PrivacySafeLog`). They leave only through « Exporter les logs de débogage », which opens the Android share sheet; the user picks the destination. | No (user-initiated share, see below) | No |
 | Transcription debug JSON | Hidden screen (tap the version five times, #295). Holds the raw text of recent dictations. Leaves only through « Exporter le JSON… » and the share sheet. | No (user-initiated share) | No |
-| Speech models | Downloaded from `huggingface.co` (Whisper) and GitHub releases of `k2-fsa/sherpa-onnx` (Parakeet) after the user confirms the language step or taps « Télécharger » in Modèles. The request carries no user data, only the model's path. These files are app content, not user data. | No | No |
+| Speech models | Downloaded from Hugging Face at pinned revisions (Whisper: `huggingface.co/ggerganov/whisper.cpp`; Parakeet 0.6B v3: `huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8`) and, for Parakeet 110M only, from a GitHub release of `k2-fsa/sherpa-onnx` (`releases/download/asr-models/`), after the user confirms the language step or taps « Télécharger » in Modèles. The request carries no user data, only the model's path. These files are app content, not user data. | No | No |
 | Device or other IDs, location, contacts, files, app activity | Never read. | No | No |
 
 **Why the exports are not "collection".** Google exempts data that leaves the device through a user-initiated action the user expects to share, such as the share sheet. Dictus never sends the logs or the JSON itself; the user picks the app and the recipient. If Pierre later adds a "send logs to support" button that uploads them, this answer changes.
@@ -30,7 +30,7 @@ Since nothing is collected, the "Security practices" section (encryption in tran
 
 URL for the Console: `https://www.getdictus.com/en/privacy` (French page: `/fr/privacy`). The app links both from Réglages → À propos, with the terms of use.
 
-**Blocker before submission:** on 2026-11-05 both pages say they cover "the Dictus apps for iOS and Desktop". Play reviews the policy against the Android app: it must name Android, the keyboard, the microphone, on-device processing and the log export. Asked of Wes on the website repo (outside this repo).
+Both pages cover Android since 2026-11-13: the keyboard, the microphone, on-device processing, the log export and the model downloads. French: `https://www.getdictus.com/fr/privacy`; English: `https://www.getdictus.com/en/privacy`. Nothing left to do here before submission.
 
 ## Foreground services
 

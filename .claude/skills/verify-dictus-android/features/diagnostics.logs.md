@@ -46,4 +46,4 @@ Preconditions: Launch and Doctor OK.
 - Do not tap « Effacer » in the menu: it erases Pierre's log. The same goes for « Effacer » in Transcription debug: it erases his dictation journal.
 - The export opens the share sheet with Pierre's apps and accounts: prove the sheet opens, then system back; never send.
 - Coming back from Debug Logs restores Réglages at another scroll offset: re-read the frames before the next tap (a stale frame opened the export sheet once).
-- « GitHub », « Politique de confidentialité » and « Conditions d’utilisation » open the browser; the two legal pages in the interface language.
+- « GitHub », « Politique de confidentialité » and « Conditions d’utilisation » open the browser: GitHub on `github.com/getdictus/dictus-android` (the repo the Play listing names), the two legal pages in the interface language.

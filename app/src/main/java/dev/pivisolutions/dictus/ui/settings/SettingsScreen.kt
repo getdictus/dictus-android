@@ -235,7 +235,7 @@ fun SettingsScreen(
             SettingDivider()
             SettingLinkRow(
                 label = stringResource(R.string.settings_github),
-                url = "https://github.com/Pivii/dictus",
+                url = "https://github.com/getdictus/dictus-android",
                 context = context,
             )
             SettingDivider()
