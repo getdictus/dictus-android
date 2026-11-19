@@ -192,6 +192,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `diagnostics.log-export` | Free | present | no |
 | `diagnostics.app-group-check` | N/A | iOS-only (N/A) | no |
 | `diagnostics.about` | Free | present | no |
+| `diagnostics.feedback` | Free | present (#373) | no |
 | `app.onboarding.welcome` | Free | present | no |
 | `app.onboarding.language` | Free | present (#198) | no |
 | `app.onboarding.keyboard-setup` | N/A | iOS-only (N/A) — equivalent: app.onboarding.ime-setup | no |
