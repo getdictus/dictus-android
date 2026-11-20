@@ -39,13 +39,12 @@ class DictusColorsTest {
             DictusColors.AccentHighlight,
             DictusColors.Surface,
             DictusColors.Recording,
-            DictusColors.SmartMode,
             DictusColors.Success,
             DictusColors.OnBackground,
             DictusColors.OnSurface,
             DictusColors.KeyBackground,
             DictusColors.KeyText,
         )
-        assertEquals(11, colors.size)
+        assertEquals(10, colors.size)
     }
 }

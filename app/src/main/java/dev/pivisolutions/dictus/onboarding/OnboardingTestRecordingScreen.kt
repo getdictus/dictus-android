@@ -3,6 +3,8 @@ package dev.pivisolutions.dictus.onboarding
 import android.app.Activity
 import android.os.Build
 import android.os.SystemClock
+import android.view.ViewTreeObserver
+import android.view.Window
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.animation.AnimatedContent
@@ -61,6 +63,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -71,6 +75,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
@@ -101,12 +110,13 @@ import kotlinx.coroutines.delay
  *   watches the system setting).
  * @param onNext called once the field holds a dictation, on « Continuer », or on « Passer »
  *   through the shell.
+ * @param isImeVisible whether the keyboard window is on screen; read from the window by default.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingTestRecordingScreen(
     isDictusKeyboard: Boolean,
     onNext: () -> Unit,
+    isImeVisible: Boolean = rememberIsImeVisible(),
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -114,11 +124,16 @@ fun OnboardingTestRecordingScreen(
 
     var text by rememberSaveable { mutableStateOf("") }
     var isFieldFocused by remember { mutableStateOf(false) }
-    // A focused field is not enough: the system back closes the keyboard and keeps the focus.
-    // Below Android 15 this window is not edge to edge, so Compose sees no keyboard inset and
-    // the focus is all there is to go by, as on iOS.
-    val isKeyboardUp = isFieldFocused &&
-        (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM || WindowInsets.isImeVisible)
+    // A focused field is not enough (#379): the keyboard window must be on screen too.
+    val isKeyboardUp = FirstDictationStage.isKeyboardUp(isFieldFocused, isImeVisible)
+    // The page is in front when the activity is resumed and its window has the focus: not
+    // behind Home, the app switcher, Settings or the keyboard picker.
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val isPageInFront = LocalWindowInfo.current.isWindowFocused &&
+        lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+    // Set when the user closes the keyboard on the page: from then on only a tap on the field
+    // opens it again (iOS #845).
+    var userClosedKeyboard by remember { mutableStateOf(false) }
 
     // True from the page's start until a keyboard comes up or the wait gives up.
     var isAwaitingAutoFocus by remember { mutableStateOf(true) }
@@ -133,7 +148,8 @@ fun OnboardingTestRecordingScreen(
     var frozenStage by remember { mutableStateOf<FirstDictationStage?>(null) }
 
     val stage = frozenStage ?: FirstDictationStage.of(
-        isKeyboardUp = isKeyboardUp,
+        isFieldFocused = isFieldFocused,
+        isImeVisible = isImeVisible,
         isDictusKeyboard = isDictusKeyboard,
         isAwaitingAutoFocus = isAwaitingAutoFocus,
     )
@@ -147,27 +163,44 @@ fun OnboardingTestRecordingScreen(
         isCompleted = true
     }
 
-    val activity = context as? Activity
-    DisposableEffect(activity) {
-        val window = activity?.window
+    val window = (context as? Activity)?.window
+    DisposableEffect(window) {
         val previousMode = window?.attributes?.softInputMode
-        @Suppress("DEPRECATION") // Still what stops the pan on an edge-to-edge window.
-        window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        window?.resizeForKeyboard()
         onDispose { if (window != null && previousMode != null) window.setSoftInputMode(previousMode) }
     }
 
     LaunchedEffect(Unit) {
         // The keyboard opens with no tap (iOS #845); after a second without it, ask for one.
-        focusRequester.requestFocus()
-        keyboardController?.show()
         val requestedAt = SystemClock.elapsedRealtime()
         delay(FirstDictationStage.AUTO_FOCUS_TIMEOUT_MS)
         if (FirstDictationStage.autoFocusHasFailed(SystemClock.elapsedRealtime() - requestedAt, isKeyboardUp)) {
             isAwaitingAutoFocus = false
         }
     }
+    LaunchedEffect(isPageInFront) {
+        // On arrival, and back in front with no keyboard (iOS #845). WHY ON EACH RETURN TO THE
+        // FRONT AND NOT ONCE (#379): a show request made while the window does not have the
+        // focus yet is dropped by the system, and the field is left focused with no keyboard.
+        if (!isPageInFront) return@LaunchedEffect
+        // WHY AGAIN (#379): when the window comes back into view, Android 10 to 13 recompute the
+        // adjust mode from the one the window was created with and lose the resize, so the
+        // keyboard would cover the hint and « Passer ».
+        window?.resizeForKeyboard()
+        if (FirstDictationStage.asksForKeyboard(isKeyboardUp, userClosedKeyboard, isLeaving = frozenStage != null)) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
+    var wasKeyboardUp by remember { mutableStateOf(false) }
     LaunchedEffect(isKeyboardUp) {
         if (isKeyboardUp) isAwaitingAutoFocus = false
+        if (frozenStage == null &&
+            FirstDictationStage.keyboardClosedByUser(wasKeyboardUp, isKeyboardUp, isPageInFront)
+        ) {
+            userClosedKeyboard = true
+        }
+        wasKeyboardUp = isKeyboardUp
     }
     LaunchedEffect(stage) {
         when (stage) {
@@ -306,6 +339,48 @@ private fun FirstDictationHint(stage: FirstDictationStage) {
             }
         }
     }
+}
+
+/**
+ * Whether the keyboard window is on screen: Compose's keyboard inset from Android 15, the
+ * window's own insets below.
+ *
+ * WHY NOT `WindowInsets.isImeVisible` BELOW ANDROID 15 (#379): the activity is not edge to
+ * edge there, the decor view takes the insets, and Compose's keyboard inset does not follow the
+ * keyboard (it stayed « visible » with the keyboard closed on Android 10). The window's insets
+ * still carry it, and with the window resizing to the keyboard every show and hide is a new
+ * layout pass.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun rememberIsImeVisible(): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+        WindowInsets.isImeVisible
+    } else {
+        rememberImeVisibleInWindow()
+    }
+
+/** Whether the window's own insets show the keyboard, read again on each layout pass. */
+@Composable
+private fun rememberImeVisibleInWindow(): Boolean {
+    val view = LocalView.current
+    var isVisible by remember { mutableStateOf(false) }
+    DisposableEffect(view) {
+        val read = {
+            isVisible = ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        }
+        val listener = ViewTreeObserver.OnGlobalLayoutListener { read() }
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        read()
+        onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(listener) }
+    }
+    return isVisible
+}
+
+/** Resize the window to the keyboard instead of panning it up to the cursor. */
+private fun Window.resizeForKeyboard() {
+    @Suppress("DEPRECATION") // Still what stops the pan on an edge-to-edge window.
+    setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 }
 
 /** The subtitle for a stage (iOS `instruction`). */

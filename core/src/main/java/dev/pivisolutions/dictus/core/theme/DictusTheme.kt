@@ -75,7 +75,8 @@ val LocalDictusColors = staticCompositionLocalOf { DictusDarkExtraColors }
  * - primary/onPrimary: accent blue for interactive elements
  * - background/surface: dark navy tones from the iOS design
  * - error: red used for recording state indicator
- * - tertiary: purple for smart/AI mode indicator
+ * - tertiary: the highlight blue, so Material defaults that read it stay on the brand
+ *   (Android has no smart mode, and no colour of its own for one)
  */
 private val DictusDarkColorScheme = darkColorScheme(
     primary = DictusColors.Accent,
@@ -86,7 +87,7 @@ private val DictusDarkColorScheme = darkColorScheme(
     onBackground = DictusColors.OnBackground,
     onSurface = DictusColors.OnSurface,
     error = DictusColors.Recording,
-    tertiary = DictusColors.SmartMode,
+    tertiary = DictusColors.AccentHighlight,
 )
 
 /**
@@ -104,7 +105,7 @@ private val DictusLightColorScheme = lightColorScheme(
     onBackground = DictusColors.LightOnBackground,
     onSurface = DictusColors.LightOnSurface,
     error = DictusColors.Recording,
-    tertiary = DictusColors.SmartMode,
+    tertiary = DictusColors.AccentHighlight,
 )
 
 /**
