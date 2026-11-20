@@ -20,9 +20,13 @@ import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
  *
  * IME state is re-read from the system by MainActivity after settings/picker round trips,
  * so it remains correct after activity or process recreation rather than trusting saved UI state.
+ *
+ * @param keyboard the keyboard language and layout saved at the language step, named on the
+ * illustration's Dictus row (#378).
  */
 @Composable
 fun OnboardingKeyboardSetupScreen(
+    keyboard: LanguageSetup,
     imeEnabled: Boolean,
     imeSelected: Boolean,
     onOpenSettings: () -> Unit,
@@ -65,7 +69,7 @@ fun OnboardingKeyboardSetupScreen(
             )
         },
     ) {
-        FakeSettingsCard(modifier = Modifier.fillMaxWidth())
+        FakeSettingsCard(keyboard = keyboard, modifier = Modifier.fillMaxWidth())
     }
 }
 

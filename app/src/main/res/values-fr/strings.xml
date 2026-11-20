@@ -191,7 +191,6 @@
     <!-- FakeSettingsCard (onboarding step 3 — mimics Android system UI) -->
     <string name="fake_settings_manage_keyboards">G\u00e9rer les claviers</string>
     <string name="fake_settings_gboard_subtitle">Saisie multilingue</string>
-    <string name="fake_settings_dictus_subtitle">AZERTY (Fran\u00e7ais)</string>
 
     <!-- ModelCard — Parakeet provider -->
     <!-- Model languages (issue #133) -->

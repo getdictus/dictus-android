@@ -5,12 +5,15 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import dev.pivisolutions.dictus.core.theme.DictusTheme
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class OnboardingKeyboardSetupScreenTest {
@@ -83,16 +86,43 @@ class OnboardingKeyboardSetupScreenTest {
         composeTestRule.runOnIdle { assertTrue(advanced) }
     }
 
+    @Test
+    fun `the illustration names the language and layout chosen at the language step (#378)`() {
+        setScreen(keyboard = LanguageSetup(SupportedLanguage.FRENCH, KeyboardLayout.AZERTY))
+
+        composeTestRule.onNodeWithText("AZERTY (Français)").assertExists()
+        composeTestRule.onNodeWithText("QWERTY (English)").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the illustration follows a layout other than the language's default`() {
+        setScreen(keyboard = LanguageSetup(SupportedLanguage.GERMAN, KeyboardLayout.QWERTY))
+
+        composeTestRule.onNodeWithText("QWERTY (Deutsch)").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "fr")
+    fun `in French the illustration names English when English was chosen (#378)`() {
+        setScreen(keyboard = LanguageSetup(SupportedLanguage.ENGLISH, KeyboardLayout.QWERTY))
+
+        composeTestRule.onNodeWithText("Ajouter le clavier").assertExists()
+        composeTestRule.onNodeWithText("QWERTY (English)").assertExists()
+        composeTestRule.onNodeWithText("AZERTY (Français)").assertDoesNotExist()
+    }
+
     private fun setScreen(
-        imeEnabled: Boolean,
-        imeSelected: Boolean,
-        onOpenSettings: () -> Unit,
-        onOpenPicker: () -> Unit,
-        onNext: () -> Unit,
+        keyboard: LanguageSetup = LanguageSetup(SupportedLanguage.ENGLISH, KeyboardLayout.QWERTY),
+        imeEnabled: Boolean = false,
+        imeSelected: Boolean = false,
+        onOpenSettings: () -> Unit = {},
+        onOpenPicker: () -> Unit = {},
+        onNext: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             DictusTheme {
                 OnboardingKeyboardSetupScreen(
+                    keyboard = keyboard,
                     imeEnabled = imeEnabled,
                     imeSelected = imeSelected,
                     onOpenSettings = onOpenSettings,

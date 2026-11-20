@@ -30,8 +30,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -129,6 +131,20 @@ class OnboardingViewModel(
      * Nothing is written before « Continuer ».
      */
     val languageSetup: StateFlow<LanguageSetup?> = _languageSetup.asStateFlow()
+
+    /**
+     * The keyboard language and layout as stored, null until read: the keyboard step's
+     * illustration names them (#378).
+     *
+     * WHY THE STORE AND NOT [languageSetup]: the keyboard step sends the user to Android's
+     * settings, where the process can die; [languageSetup] then comes back prefilled from the
+     * phone's language, while the store still holds what « Continuer » saved, which is what
+     * the keyboard types on.
+     */
+    val savedKeyboard: StateFlow<LanguageSetup?> = dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map(LanguageSetup::saved)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _downloadNotice = MutableStateFlow(false)
 
