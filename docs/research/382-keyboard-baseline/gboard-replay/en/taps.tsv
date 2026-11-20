@@ -1,0 +1,787 @@
+lang	sentence	tap	intended	resolved	x	y	down_us	up_us	after
+en	0	0	i	i	788.9	1678.2	57392	4164	I
+en	0	1	space	space	573.4	2074.7	56531	4083	I 
+en	0	2	a	a	102.0	1782.3	61434	3059	I a
+en	0	3	m	m	824.0	1953.4	55620	2815	I am
+en	0	4	space	space	592.5	2092.1	62897	2378	I am 
+en	0	5	r	r	346.5	1666.3	63681	2286	I am r
+en	0	6	u	u	672.3	1616.0	56816	4071	I am ru
+en	0	7	n	n	732.7	1959.2	65781	2126	I am run
+en	0	8	n	n	746.7	1941.1	55160	2302	I am runn
+en	0	9	i	i	791.9	1682.3	68194	5462	I am runni
+en	0	10	n	n	778.5	1957.8	64975	2343	I am runnin
+en	0	11	g	g	541.8	1819.9	55556	2883	I am running
+en	0	12	space	space	622.5	2067.5	60587	2331	I am running 
+en	0	13	a	a	127.7	1802.9	68141	2297	I am running a
+en	0	14	b	b	621.7	1949.6	64283	2429	I am running ab
+en	0	15	o	o	908.8	1645.6	66289	2211	I am running abo
+en	0	16	u	u	701.6	1648.8	55656	2497	I am running abou
+en	0	17	t	t	488.5	1690.4	51643	2389	I am running about
+en	0	18	space	space	605.5	2041.8	61150	2259	I am running about 
+en	0	19	t	t	442.3	1672.7	64584	2352	I am running about t
+en	0	20	e	e	276.2	1659.7	58669	2416	I am running about te
+en	0	21	n	n	773.3	1969.4	60811	2280	I am running about ten
+en	0	22	space	none	569.7	2157.3	-1	-1	I am running about ten
+en	0	23	m	m	880.4	1958.0	67890	2169	I am running about tenm
+en	0	24	i	i	818.8	1674.8	69008	2203	I am running about tenmi
+en	0	25	n	n	761.1	1967.5	67472	2293	I am running about tenmin
+en	0	26	u	u	686.4	1677.6	62544	2012	I am running about tenminu
+en	0	27	t	t	497.6	1694.4	57869	2471	I am running about tenminut
+en	0	28	e	e	247.6	1638.0	59064	2374	I am running about tenminute
+en	0	29	s	s	193.0	1834.3	58393	2203	I am running about tenminutes
+en	0	30	space	space	584.2	2121.6	56942	2842	I am running about ten minutes 
+en	0	31	l	l	956.3	1806.9	56047	2338	I am running about ten minutes l
+en	0	32	a	a	157.8	1819.6	66306	13507	I am running about ten minutes la
+en	0	33	t	t	490.6	1671.0	65488	2727	I am running about ten minutes lat
+en	0	34	e	e	290.8	1660.7	52685	2316	I am running about ten minutes late
+en	0	35	space	space	615.6	2068.7	55038	2311	I am running about ten minutes late 
+en	1	0	c	c	434.4	1946.4	53647	2013	C
+en	1	1	a	a	120.4	1830.5	69065	4514	Ca
+en	1	2	n	n	796.4	1963.7	64529	2138	Can
+en	1	3	space	space	623.4	2061.9	62551	2366	Can 
+en	1	4	y	y	592.7	1683.9	53188	2439	Can y
+en	1	5	o	o	902.6	1668.2	58895	2474	Can yo
+en	1	6	u	u	676.7	1654.9	48035	2404	Can you
+en	1	7	space	space	586.4	2117.6	53684	2347	Can you 
+en	1	8	p	p	1036.3	1655.8	57990	3284	Can you p
+en	1	9	i	i	807.0	1704.0	66781	2330	Can you pi
+en	1	10	c	c	430.1	1913.5	65780	2499	Can you pic
+en	1	11	k	k	827.2	1846.2	65543	2694	Can you pick
+en	1	12	space	space	640.1	2123.8	57152	2360	Can you pick 
+en	1	13	u	u	710.5	1685.6	61825	2266	Can you pick u
+en	1	14	p	p	971.9	1667.8	65921	2212	Can you pick up
+en	1	15	space	space	588.1	2059.4	55836	2172	Can you pick up 
+en	1	16	s	s	195.8	1818.2	56080	2325	Can you pick up s
+en	1	17	o	o	936.9	1653.1	69275	11181	Can you pick up so
+en	1	18	m	m	842.6	1949.6	61670	2245	Can you pick up som
+en	1	19	e	e	273.7	1680.5	63199	2401	Can you pick up some
+en	1	20	space	space	583.4	2074.6	61428	2352	Can you pick up some 
+en	1	21	b	b	671.2	1940.2	66866	2281	Can you pick up some b
+en	1	22	r	r	388.6	1696.2	53779	2258	Can you pick up some br
+en	1	23	e	e	289.9	1683.1	55552	2456	Can you pick up some bre
+en	1	24	a	a	113.7	1787.0	55101	2669	Can you pick up some brea
+en	1	25	d	d	308.4	1843.2	56639	2631	Can you pick up some bread
+en	1	26	space	space	580.7	2099.0	46613	2344	Can you pick up some bread 
+en	1	27	o	o	938.5	1649.9	58777	2298	Can you pick up some bread o
+en	1	28	n	n	757.4	1961.4	62986	2263	Can you pick up some bread on
+en	1	29	space	space	581.2	2115.5	62247	2375	Can you pick up some bread on 
+en	1	30	t	t	433.5	1679.5	66902	3743	Can you pick up some bread on t
+en	1	31	h	h	663.0	1839.9	67076	2651	Can you pick up some bread on th
+en	1	32	e	e	278.7	1672.5	58220	3176	Can you pick up some bread on the
+en	1	33	space	space	652.1	2106.1	66066	2724	Can you pick up some bread on the 
+en	1	34	w	w	200.0	1664.0	55881	2662	Can you pick up some bread on the w
+en	1	35	a	a	82.6	1851.3	62970	2481	Can you pick up some bread on the wa
+en	1	36	y	y	597.8	1674.8	63103	2288	Can you pick up some bread on the way
+en	1	37	space	space	592.4	2073.8	65478	3248	Can you pick up some bread on the way 
+en	1	38	h	h	611.2	1763.3	62846	2183	Can you pick up some bread on the way h
+en	1	39	o	o	947.9	1626.7	62377	2316	Can you pick up some bread on the way ho
+en	1	40	m	m	885.4	1964.5	62282	2604	Can you pick up some bread on the way hom
+en	1	41	e	e	238.4	1665.7	55241	2438	Can you pick up some bread on the way home
+en	1	42	space	space	577.3	2105.0	64599	2640	Can you pick up some bread on the way home 
+en	2	0	l	l	925.5	1849.8	59346	2351	L
+en	2	1	e	e	265.6	1659.5	62769	2116	Le
+en	2	2	t	t	477.6	1642.8	61880	2269	Let
+en	2	3	space	space	586.1	2055.0	57264	2305	Let 
+en	2	4	u	u	666.2	1681.3	58095	2562	Let u
+en	2	5	s	s	239.8	1840.8	55558	2098	Let us
+en	2	6	space	space	596.5	2123.4	58453	2123	Let us 
+en	2	7	m	m	844.8	1901.4	61112	2289	Let us m
+en	2	8	e	e	267.7	1685.5	52781	2317	Let us me
+en	2	9	e	e	280.0	1691.2	51282	2552	Let us mee
+en	2	10	t	t	486.4	1684.8	60111	2055	Let us meet
+en	2	11	space	space	580.1	2123.8	58746	2272	Let us meet 
+en	2	12	i	k	844.6	1739.5	62484	2364	Let us meet k
+en	2	13	n	n	792.5	1934.0	49892	2260	Let us meet kn
+en	2	14	space	space	586.7	2121.9	60740	2323	Let us meet in 
+en	2	15	f	f	451.3	1802.3	55134	4034	Let us meet in f
+en	2	16	r	r	357.5	1683.5	49696	2159	Let us meet in fr
+en	2	17	o	o	918.5	1700.2	61473	2413	Let us meet in fro
+en	2	18	n	n	753.4	2009.3	55555	2302	Let us meet in fron
+en	2	19	t	t	478.4	1686.4	47199	2554	Let us meet in front
+en	2	20	space	space	565.6	2093.6	61061	2507	Let us meet in front 
+en	2	21	o	o	895.4	1715.5	58721	2509	Let us meet in front o
+en	2	22	f	f	425.6	1866.0	55680	2730	Let us meet in front of
+en	2	23	space	space	580.6	2124.6	61788	2379	Let us meet in front of 
+en	2	24	t	t	519.0	1667.7	50076	2395	Let us meet in front of t
+en	2	25	h	h	649.8	1843.1	57373	2164	Let us meet in front of th
+en	2	26	e	e	249.1	1691.8	53477	2248	Let us meet in front of the
+en	2	27	space	space	596.4	2064.6	47599	2263	Let us meet in front of the 
+en	2	28	s	s	183.7	1814.1	64222	2371	Let us meet in front of the s
+en	2	29	t	t	493.4	1703.7	58595	2327	Let us meet in front of the st
+en	2	30	a	a	119.1	1818.3	53705	2451	Let us meet in front of the sta
+en	2	31	t	t	490.7	1713.0	60934	2326	Let us meet in front of the stat
+en	2	32	i	i	818.2	1659.1	64408	2487	Let us meet in front of the stati
+en	2	33	o	o	910.6	1719.5	54929	2386	Let us meet in front of the statio
+en	2	34	n	n	769.4	1929.4	58008	2350	Let us meet in front of the station
+en	2	35	space	space	596.6	2137.1	58146	2509	Let us meet in front of the station 
+en	2	36	a	a	128.2	1792.8	57268	2618	Let us meet in front of the station a
+en	2	37	r	r	370.2	1617.9	63657	2693	Let us meet in front of the station ar
+en	2	38	o	o	940.3	1664.4	65258	2469	Let us meet in front of the station aro
+en	2	39	u	u	709.4	1693.1	51356	2419	Let us meet in front of the station arou
+en	2	40	n	n	734.7	1980.7	53104	2354	Let us meet in front of the station aroun
+en	2	41	d	d	370.8	1775.5	67655	6769	Let us meet in front of the station around
+en	2	42	space	space	559.7	2062.0	52061	2397	Let us meet in front of the station around 
+en	2	43	n	n	746.1	1965.2	59846	3405	Let us meet in front of the station around n
+en	2	44	o	o	889.3	1653.5	58303	2482	Let us meet in front of the station around no
+en	2	45	o	o	896.3	1682.1	65893	2320	Let us meet in front of the station around noo
+en	2	46	n	n	751.8	1909.1	67121	2287	Let us meet in front of the station around noon
+en	2	47	space	space	630.2	2059.2	56443	2926	Let us meet in front of the station around noon 
+en	3	0	t	t	475.2	1649.7	65119	2230	T
+en	3	1	h	h	627.3	1820.8	65629	2436	Th
+en	3	2	a	a	125.6	1800.0	52196	2173	Tha
+en	3	3	n	n	771.2	1983.7	53531	1976	Than
+en	3	4	k	k	869.2	1847.4	52749	2169	Thank
+en	3	5	s	s	224.3	1800.2	50891	2976	Thanks
+en	3	6	space	space	566.9	2075.5	61331	2395	Thanks 
+en	3	7	f	f	410.8	1815.4	55982	2268	Thanks f
+en	3	8	o	o	944.1	1660.2	60944	2345	Thanks fo
+en	3	9	r	r	387.8	1698.6	67000	2369	Thanks for
+en	3	10	space	space	604.6	2140.1	60713	2726	Thanks for 
+en	3	11	y	y	601.2	1665.6	69085	2838	Thanks for y
+en	3	12	o	o	911.7	1648.5	48778	2183	Thanks for yo
+en	3	13	u	u	653.0	1665.5	68420	2356	Thanks for you
+en	3	14	r	r	384.7	1698.5	50148	2286	Thanks for your
+en	3	15	space	space	540.7	2050.3	58616	2210	Thanks for your 
+en	3	16	m	m	848.7	1965.5	54204	2128	Thanks for your m
+en	3	17	e	e	309.8	1699.3	59299	2239	Thanks for your me
+en	3	18	s	s	239.8	1802.2	52167	2220	Thanks for your mes
+en	3	19	s	s	224.7	1817.1	60737	2177	Thanks for your mess
+en	3	20	a	a	163.2	1821.5	56218	2309	Thanks for your messa
+en	3	21	g	g	566.4	1812.3	52276	2522	Thanks for your messag
+en	3	22	e	e	262.3	1634.4	64704	2714	Thanks for your message
+en	3	23	space	space	621.1	2115.4	61771	2554	Thanks for your message 
+en	3	24	i	i	805.1	1709.7	59787	2426	Thanks for your message i
+en	3	25	space	space	593.0	2129.7	67495	2616	Thanks for your message I 
+en	3	26	w	w	167.5	1644.8	76538	25093	Thanks for your message I w
+en	3	27	i	i	822.0	1656.2	61323	7012	Thanks for your message I wi
+en	3	28	l	l	1000.5	1837.3	61769	2074	Thanks for your message I wil
+en	3	29	l	l	959.1	1842.9	65455	2115	Thanks for your message I will
+en	3	30	space	space	544.8	2098.8	57613	2494	Thanks for your message I will 
+en	3	31	c	c	460.7	1971.2	53474	2279	Thanks for your message I will c
+en	3	32	a	a	128.5	1817.1	52978	3787	Thanks for your message I will ca
+en	3	33	l	l	968.3	1821.2	65595	2941	Thanks for your message I will cal
+en	3	34	l	l	950.5	1757.0	59586	2473	Thanks for your message I will call
+en	3	35	space	space	594.9	2115.1	60622	3029	Thanks for your message I will call 
+en	3	36	y	y	592.1	1728.7	66371	2396	Thanks for your message I will call y
+en	3	37	o	o	922.3	1664.4	58917	2447	Thanks for your message I will call yo
+en	3	38	u	u	665.0	1627.0	53482	2492	Thanks for your message I will call you
+en	3	39	space	space	623.1	2089.6	55223	2976	Thanks for your message I will call you 
+en	3	40	t	t	508.3	1684.8	66021	2514	Thanks for your message I will call you t
+en	3	41	o	o	958.1	1680.4	51446	2324	Thanks for your message I will call you to
+en	3	42	n	n	725.4	1938.0	49858	2313	Thanks for your message I will call you ton
+en	3	43	i	i	852.2	1661.0	61100	2342	Thanks for your message I will call you toni
+en	3	44	g	g	550.8	1816.4	62389	2486	Thanks for your message I will call you tonig
+en	3	45	h	h	622.8	1833.2	64454	2551	Thanks for your message I will call you tonigh
+en	3	46	t	t	483.1	1651.0	58381	2545	Thanks for your message I will call you tonight
+en	3	47	space	space	585.0	2075.5	62477	2357	Thanks for your message I will call you tonight 
+en	4	0	t	t	476.2	1670.5	53517	2004	T
+en	4	1	h	h	670.9	1750.8	64207	2269	Th
+en	4	2	e	e	288.1	1664.8	56254	2060	The
+en	4	3	space	space	592.3	2122.5	52515	2855	The 
+en	4	4	m	m	872.5	1976.6	54708	2243	The m
+en	4	5	e	e	293.9	1687.4	55648	2548	The me
+en	4	6	e	e	286.4	1669.8	54012	2531	The mee
+en	4	7	t	t	487.7	1669.8	53947	2251	The meet
+en	4	8	i	i	844.5	1690.9	63232	2373	The meeti
+en	4	9	n	n	765.4	1908.4	65694	5317	The meetin
+en	4	10	g	g	548.5	1867.6	58295	4471	The meeting
+en	4	11	space	space	613.9	2065.4	50362	2193	The meeting 
+en	4	12	h	h	637.2	1818.7	63902	3667	The meeting h
+en	4	13	a	a	68.0	1808.9	55141	2473	The meeting ha
+en	4	14	s	s	209.7	1793.9	59299	2284	The meeting has
+en	4	15	space	space	591.6	2122.8	65044	2507	The meeting has 
+en	4	16	b	edit	669.4	2027.6	54493	2839	The meeting has. 
+en	4	17	e	e	294.7	1696.7	60223	2345	The meeting has. E
+en	4	18	e	e	252.8	1647.8	54900	2634	The meeting has. Ee
+en	4	19	n	n	762.8	1958.4	47089	1992	The meeting has. Een
+en	4	20	space	space	567.8	2120.3	57159	2300	The meeting has. Een 
+en	4	21	m	m	877.0	1968.3	49590	2133	The meeting has. Een m
+en	4	22	o	o	934.1	1675.2	56267	2652	The meeting has. Een mo
+en	4	23	v	v	527.5	1988.0	56988	2281	The meeting has. Een mov
+en	4	24	e	e	250.7	1680.3	63169	2193	The meeting has. Een move
+en	4	25	d	d	368.1	1800.3	59885	2559	The meeting has. Een moved
+en	4	26	space	space	620.8	2047.8	54679	2985	The meeting has. Een moved 
+en	4	27	t	t	500.9	1699.6	53683	2140	The meeting has. Een moved t
+en	4	28	o	o	911.0	1699.0	55517	2274	The meeting has. Een moved to
+en	4	29	space	space	607.6	2060.2	50069	2399	The meeting has. Een moved to 
+en	4	30	t	t	488.1	1683.4	66682	2183	The meeting has. Een moved to t
+en	4	31	h	h	622.4	1872.6	51044	2171	The meeting has. Een moved to th
+en	4	32	u	u	706.5	1664.7	59511	2546	The meeting has. Een moved to thu
+en	4	33	r	r	444.4	1683.0	53531	2479	The meeting has. Een moved to thur
+en	4	34	s	s	204.1	1822.1	55244	2521	The meeting has. Een moved to thurs
+en	4	35	d	d	317.9	1814.9	67154	2379	The meeting has. Een moved to thursd
+en	4	36	a	a	106.3	1805.9	61497	2369	The meeting has. Een moved to thursda
+en	4	37	y	y	546.9	1725.8	57387	2311	The meeting has. Een moved to thursday
+en	4	38	space	space	577.8	2137.0	49790	2331	The meeting has. Een moved to Thursday 
+en	4	39	m	.	885.5	2017.1	63884	12720	The meeting has. Een moved to Thursday .
+en	4	40	o	i	857.6	1634.5	55059	2178	The meeting has. Een moved to Thursday .i
+en	4	41	r	r	391.4	1665.7	58345	2401	The meeting has. Een moved to Thursday .ir
+en	4	42	n	n	751.6	1936.4	51253	2268	The meeting has. Een moved to Thursday .irn
+en	4	43	i	i	821.6	1708.5	51244	2047	The meeting has. Een moved to Thursday .irni
+en	4	44	n	n	784.5	1961.8	59644	2313	The meeting has. Een moved to Thursday .irnin
+en	4	45	g	g	563.8	1798.7	54004	2257	The meeting has. Een moved to Thursday .irning
+en	4	46	space	space	548.7	2065.4	69294	6388	The meeting has. Een moved to Thursday .morning 
+en	5	0	t	t	440.3	1701.3	46989	2132	T
+en	5	1	h	h	601.3	1838.3	59257	5159	Th
+en	5	2	e	e	272.2	1667.1	59352	2114	The
+en	5	3	space	space	582.3	2127.5	48054	2374	The 
+en	5	4	w	w	162.8	1723.8	57514	2162	The w
+en	5	5	e	e	307.3	1668.0	55904	2346	The we
+en	5	6	a	a	141.2	1814.0	62274	2110	The wea
+en	5	7	t	t	499.0	1627.0	61954	4703	The weat
+en	5	8	h	h	670.6	1831.8	66879	2072	The weath
+en	5	9	e	e	298.2	1690.9	57550	2222	The weathe
+en	5	10	r	r	362.3	1673.8	65684	2425	The weather
+en	5	11	space	space	599.4	2115.5	68074	2605	The weather 
+en	5	12	i	i	806.5	1598.0	58312	2203	The weather i
+en	5	13	s	s	246.0	1851.3	58555	2438	The weather is
+en	5	14	space	space	583.7	2075.1	54375	2366	The weather is 
+en	5	15	r	r	395.3	1675.7	63764	2231	The weather is r
+en	5	16	e	e	266.8	1666.1	52924	2620	The weather is re
+en	5	17	a	a	120.4	1857.5	51019	2167	The weather is rea
+en	5	18	l	l	944.2	1837.8	57821	2363	The weather is real
+en	5	19	l	l	978.4	1796.4	53396	2605	The weather is reall
+en	5	20	y	y	588.1	1664.7	49017	2413	The weather is really
+en	5	21	space	space	619.2	2050.5	65265	2245	The weather is really 
+en	5	22	n	n	742.7	1954.2	64726	2280	The weather is really n
+en	5	23	i	i	808.2	1697.6	68572	2765	The weather is really ni
+en	5	24	c	c	394.9	1974.5	58637	2294	The weather is really nic
+en	5	25	e	e	259.4	1656.1	63250	2239	The weather is really nice
+en	5	26	space	space	581.5	2059.9	67730	3993	The weather is really nice 
+en	5	27	t	t	510.0	1666.9	55870	2262	The weather is really nice t
+en	5	28	o	o	886.6	1678.0	58130	2328	The weather is really nice to
+en	5	29	d	d	309.3	1853.3	62816	2534	The weather is really nice tod
+en	5	30	a	a	123.9	1834.5	59095	2042	The weather is really nice toda
+en	5	31	y	y	593.4	1641.5	64089	2231	The weather is really nice today
+en	5	32	space	space	593.0	2063.6	55524	2293	The weather is really nice today 
+en	6	0	i	i	796.3	1690.0	66180	2243	I
+en	6	1	space	space	597.8	2107.5	68548	2231	I 
+en	6	2	t	t	473.0	1706.1	58994	2204	I t
+en	6	3	h	h	690.6	1849.5	57761	2569	I th
+en	6	4	i	i	761.8	1716.2	55984	2285	I thi
+en	6	5	n	n	743.1	1976.0	53915	2170	I thin
+en	6	6	k	k	863.7	1798.3	58526	2425	I think
+en	6	7	space	space	614.0	2124.6	52668	2418	I think 
+en	6	8	w	w	155.4	1691.6	66863	2320	I think w
+en	6	9	e	e	285.6	1655.4	53884	2353	I think we
+en	6	10	space	space	586.2	2084.1	58680	2254	I think we 
+en	6	11	a	a	105.6	1780.7	52884	2242	I think we a
+en	6	12	r	r	403.1	1659.4	66937	2172	I think we ar
+en	6	13	e	e	270.1	1670.9	62439	2309	I think we are
+en	6	14	space	space	608.6	2085.3	60570	2330	I think we are 
+en	6	15	l	l	1009.8	1786.7	56973	2135	I think we are l
+en	6	16	e	e	257.1	1655.7	61224	2379	I think we are le
+en	6	17	a	a	108.6	1863.9	51696	2250	I think we are lea
+en	6	18	v	v	544.7	1947.2	66077	2285	I think we are leav
+en	6	19	i	i	837.9	1661.2	52644	2270	I think we are leavi
+en	6	20	n	n	735.8	2002.7	56478	2423	I think we are leavin
+en	6	21	g	g	554.3	1835.5	51756	2388	I think we are leaving
+en	6	22	space	space	542.0	2105.9	67876	2426	I think we are leaving 
+en	6	23	t	t	504.3	1694.5	60960	2072	I think we are leaving t
+en	6	24	o	o	937.0	1686.2	59058	2040	I think we are leaving to
+en	6	25	m	m	888.9	1909.0	57415	2221	I think we are leaving tom
+en	6	26	o	o	937.4	1652.2	60150	2369	I think we are leaving tomo
+en	6	27	r	r	430.8	1667.5	55164	2067	I think we are leaving tomor
+en	6	28	r	r	407.2	1707.5	63610	2249	I think we are leaving tomorr
+en	6	29	o	o	915.9	1658.8	55564	2349	I think we are leaving tomorro
+en	6	30	w	w	156.8	1684.2	62227	2349	I think we are leaving tomorrow
+en	6	31	space	space	532.9	2099.4	62824	2917	I think we are leaving tomorrow 
+en	7	0	d	d	314.3	1793.3	58093	2320	D
+en	7	1	i	i	801.5	1666.5	53187	2096	Di
+en	7	2	d	d	331.3	1776.6	61688	2045	Did
+en	7	3	space	space	585.9	2064.5	65839	2187	Did 
+en	7	4	y	y	570.6	1643.2	65466	2575	Did y
+en	7	5	o	o	936.3	1657.2	51844	1967	Did yo
+en	7	6	u	u	694.3	1658.5	54390	2572	Did you
+en	7	7	space	space	603.7	2086.4	55217	2532	Did you 
+en	7	8	g	g	527.5	1828.3	65309	2232	Did you g
+en	7	9	e	e	210.1	1669.7	59330	2134	Did you ge
+en	7	10	t	t	498.4	1666.5	60020	2035	Did you get
+en	7	11	space	space	594.7	2115.9	67127	2317	Did you get 
+en	7	12	t	t	482.5	1667.2	59260	2119	Did you get t
+en	7	13	h	h	642.8	1783.5	64111	4434	Did you get th
+en	7	14	e	e	207.9	1708.0	48911	2149	Did you get the
+en	7	15	space	space	595.5	2114.8	55434	2654	Did you get the 
+en	7	16	d	d	366.0	1827.9	63135	2229	Did you get the d
+en	7	17	o	o	879.6	1667.5	53664	2385	Did you get the do
+en	7	18	c	c	376.5	1985.2	54410	2495	Did you get the doc
+en	7	19	u	u	723.6	1656.9	50315	2354	Did you get the docu
+en	7	20	m	m	811.6	1979.2	57730	2252	Did you get the docum
+en	7	21	e	e	267.0	1669.8	52395	2869	Did you get the docume
+en	7	22	n	n	740.6	1950.7	52076	2170	Did you get the documen
+en	7	23	t	t	451.8	1699.5	55769	3030	Did you get the document
+en	7	24	space	space	607.5	2073.7	52397	2284	Did you get the document 
+en	7	25	i	i	784.5	1720.4	64135	2509	Did you get the document i
+en	7	26	space	space	599.4	2079.4	55478	2455	Did you get the document I 
+en	7	27	s	s	185.3	1809.9	60655	2308	Did you get the document I s
+en	7	28	e	e	253.7	1658.2	69422	3886	Did you get the document I se
+en	7	29	n	n	754.8	1950.6	60257	2323	Did you get the document I sen
+en	7	30	t	t	498.3	1658.6	57123	2460	Did you get the document I sent
+en	7	31	space	space	580.7	2124.6	54331	2749	Did you get the document I sent 
+en	8	0	w	w	161.4	1696.3	56242	2449	W
+en	8	1	e	e	278.8	1680.9	61352	2155	We
+en	8	2	space	space	585.0	2113.9	54541	2542	We 
+en	8	3	b	b	630.2	1923.0	55921	2057	We b
+en	8	4	o	o	927.4	1674.6	58420	2201	We bo
+en	8	5	o	o	930.7	1651.9	50605	2117	We boo
+en	8	6	k	k	828.9	1813.5	57028	2406	We book
+en	8	7	e	e	246.5	1680.6	65347	2324	We booke
+en	8	8	d	d	270.7	1843.7	61169	2334	We booked
+en	8	9	space	space	621.2	2078.5	48176	2266	We booked 
+en	8	10	a	a	115.6	1796.6	49688	2117	We booked a
+en	8	11	space	space	545.9	2095.8	57664	2485	We booked a 
+en	8	12	t	t	480.8	1661.6	65373	2100	We booked a t
+en	8	13	a	a	119.8	1836.4	53417	2299	We booked a ta
+en	8	14	b	b	658.9	1948.7	64032	5240	We booked a tab
+en	8	15	l	l	960.3	1798.2	52786	2390	We booked a tabl
+en	8	16	e	e	296.8	1698.9	47568	2219	We booked a table
+en	8	17	space	space	585.9	2068.8	57776	2225	We booked a table 
+en	8	18	f	f	429.0	1821.3	63286	2111	We booked a table f
+en	8	19	o	o	895.4	1672.1	55326	2537	We booked a table fo
+en	8	20	r	r	409.0	1721.2	52902	1952	We booked a table for
+en	8	21	space	space	603.4	2113.0	60774	2317	We booked a table for 
+en	8	22	f	f	399.6	1802.4	63760	2403	We booked a table for f
+en	8	23	o	o	922.6	1659.0	53306	2122	We booked a table for fo
+en	8	24	u	u	723.2	1689.3	57228	2140	We booked a table for fou
+en	8	25	r	r	385.2	1675.3	63659	2400	We booked a table for four
+en	8	26	space	space	614.0	2095.1	49495	2274	We booked a table for four 
+en	8	27	p	p	1057.0	1635.8	64196	2386	We booked a table for four p
+en	8	28	e	e	312.1	1633.5	65100	2230	We booked a table for four pe
+en	8	29	o	o	892.2	1640.0	64030	2312	We booked a table for four peo
+en	8	30	p	p	1017.7	1683.8	58617	2167	We booked a table for four peop
+en	8	31	l	l	975.3	1797.6	60458	2460	We booked a table for four peopl
+en	8	32	e	e	251.1	1699.1	53014	2426	We booked a table for four people
+en	8	33	space	space	590.9	2092.9	62499	2086	We booked a table for four people 
+en	9	0	t	t	505.9	1639.4	58205	2102	T
+en	9	1	h	h	657.7	1780.0	57772	2121	Th
+en	9	2	e	e	284.2	1732.3	54819	2181	The
+en	9	3	space	space	572.5	2081.2	56139	2298	The 
+en	9	4	t	t	495.8	1712.2	61084	2494	The t
+en	9	5	r	r	373.6	1667.8	57331	2163	The tr
+en	9	6	a	a	114.3	1859.0	56901	2226	The tra
+en	9	7	i	i	797.8	1677.1	63808	2234	The trai
+en	9	8	n	n	764.5	1943.7	58893	2700	The train
+en	9	9	space	space	616.9	2101.0	55797	2289	The train 
+en	9	10	a	a	76.9	1827.7	49236	2163	The train a
+en	9	11	r	r	384.9	1663.6	64587	2511	The train ar
+en	9	12	r	r	378.5	1694.1	63883	2286	The train arr
+en	9	13	i	i	808.5	1693.0	47473	2201	The train arri
+en	9	14	v	v	470.4	1950.1	63715	2336	The train arriv
+en	9	15	e	e	264.8	1620.3	68065	2287	The train arrive
+en	9	16	d	d	365.4	1795.5	54880	2431	The train arrived
+en	9	17	space	space	598.2	2109.8	59373	2524	The train arrived 
+en	9	18	a	a	128.4	1774.7	60276	4034	The train arrived a
+en	9	19	n	n	724.0	1958.1	58796	2330	The train arrived an
+en	9	20	space	space	582.8	2111.2	57807	2263	The train arrived an 
+en	9	21	h	h	669.1	1790.6	57508	2174	The train arrived an h
+en	9	22	o	o	898.0	1662.8	51886	2352	The train arrived an ho
+en	9	23	u	u	720.1	1642.1	60508	2547	The train arrived an hou
+en	9	24	r	r	341.3	1688.7	65276	2409	The train arrived an hour
+en	9	25	space	space	614.2	2011.3	50215	2202	The train arrived an hour 
+en	9	26	l	l	948.0	1841.7	65338	2139	The train arrived an hour l
+en	9	27	a	a	124.8	1860.7	65246	2169	The train arrived an hour la
+en	9	28	t	t	515.5	1672.0	50065	2235	The train arrived an hour lat
+en	9	29	e	e	270.9	1677.0	65939	2405	The train arrived an hour late
+en	9	30	space	space	619.4	2088.4	65273	2296	The train arrived an hour late 
+en	10	0	i	i	847.1	1691.1	58430	2208	I
+en	10	1	space	space	572.2	2097.8	46751	2137	I 
+en	10	2	s	a	164.8	1837.8	63759	2202	I a
+en	10	3	t	t	538.2	1695.6	68547	2102	I at
+en	10	4	i	i	811.4	1661.1	63339	2126	I ati
+en	10	5	l	l	966.5	1833.2	60897	2195	I atil
+en	10	6	l	l	1006.2	1812.3	53889	2197	I atill
+en	10	7	space	none	573.2	2150.6	-1	-1	I atill
+en	10	8	h	h	675.7	1817.4	54574	2241	I atillh
+en	10	9	a	a	113.4	1768.4	58769	2144	I atillha
+en	10	10	v	v	566.4	1958.7	51202	2074	I atillhav
+en	10	11	e	e	244.9	1682.9	57847	2946	I atillhave
+en	10	12	space	space	595.2	2074.8	67977	2757	I still have 
+en	10	13	t	t	456.9	1691.8	66191	7340	I still have t
+en	10	14	o	o	923.9	1660.2	65463	5735	I still have to
+en	10	15	space	space	620.0	2101.3	65002	2290	I still have to 
+en	10	16	f	f	447.4	1852.9	66692	2187	I still have to f
+en	10	17	i	i	834.2	1683.2	62762	2232	I still have to fi
+en	10	18	n	n	722.7	1999.8	58634	2076	I still have to fin
+en	10	19	i	i	788.1	1690.3	66086	2390	I still have to fini
+en	10	20	s	s	247.2	1849.9	64428	2429	I still have to finis
+en	10	21	h	h	632.7	1826.3	52543	2229	I still have to finish
+en	10	22	space	space	630.4	2076.1	62745	2502	I still have to finish 
+en	10	23	m	edit	916.6	1920.5	56934	2349	I still have to finish
+en	10	24	y	y	623.8	1668.5	65019	5192	I still have to finishy
+en	10	25	space	space	643.6	2130.0	52840	2274	I still have to finishy 
+en	10	26	r	r	405.3	1672.4	59509	2234	I still have to finishy r
+en	10	27	e	e	241.3	1631.9	58544	2435	I still have to finishy re
+en	10	28	p	p	991.8	1619.8	54082	2522	I still have to finishy rep
+en	10	29	o	o	918.7	1676.7	59894	2376	I still have to finishy repo
+en	10	30	r	r	332.0	1693.7	62559	2319	I still have to finishy repor
+en	10	31	t	t	487.8	1721.9	65983	2628	I still have to finishy report
+en	10	32	space	space	569.8	2084.5	61600	2578	I still have to finishy report 
+en	10	33	b	b	650.1	1966.7	66537	2133	I still have to finishy report b
+en	10	34	e	e	232.0	1656.4	52881	2473	I still have to finishy report be
+en	10	35	f	f	426.3	1816.4	51471	2289	I still have to finishy report bef
+en	10	36	o	o	915.3	1652.3	60158	5616	I still have to finishy report befo
+en	10	37	r	r	345.6	1677.7	70442	4617	I still have to finishy report befor
+en	10	38	e	e	279.9	1661.5	66218	2444	I still have to finishy report before
+en	10	39	space	space	609.6	2077.2	61732	2394	I still have to finishy report before 
+en	10	40	f	f	450.8	1818.1	63541	2343	I still have to finishy report before f
+en	10	41	r	r	341.5	1659.4	67623	2308	I still have to finishy report before fr
+en	10	42	i	i	826.0	1642.0	56875	2325	I still have to finishy report before fri
+en	10	43	d	d	320.2	1786.3	58729	2876	I still have to finishy report before frid
+en	10	44	a	a	78.9	1808.1	59421	2446	I still have to finishy report before frida
+en	10	45	y	y	639.6	1641.4	66268	2361	I still have to finishy report before friday
+en	10	46	space	space	586.7	2100.2	62911	2383	I still have to finishy report before Friday 
+en	11	0	s	s	197.2	1812.3	63241	2373	S
+en	11	1	h	h	635.6	1821.3	56928	2304	Sh
+en	11	2	e	e	325.5	1670.9	66140	2083	She
+en	11	3	space	space	592.3	2081.2	56657	2330	She 
+en	11	4	f	f	406.7	1818.5	68602	2021	She f
+en	11	5	o	i	868.5	1696.4	56698	2124	She fi
+en	11	6	u	u	710.8	1683.3	54723	2217	She fiu
+en	11	7	n	n	736.5	1971.9	62712	2125	She fiun
+en	11	8	d	d	365.2	1801.4	54462	2555	She fiund
+en	11	9	space	space	569.9	2057.0	56466	2547	She found 
+en	11	10	a	a	90.9	1799.2	64003	4158	She found a
+en	11	11	n	n	767.4	1955.8	52660	2163	She found an
+en	11	12	space	space	542.9	2084.0	59540	2446	She found an 
+en	11	13	a	a	102.9	1833.7	55920	2088	She found an a
+en	11	14	p	p	1069.3	1666.9	58496	2286	She found an ap
+en	11	15	a	a	107.9	1821.7	63340	2591	She found an apa
+en	11	16	r	r	370.4	1724.2	64712	2741	She found an apar
+en	11	17	t	t	452.7	1667.9	53079	2275	She found an apart
+en	11	18	m	m	878.4	1975.1	67470	2541	She found an apartm
+en	11	19	e	e	255.3	1647.7	64912	2131	She found an apartme
+en	11	20	n	n	732.4	1953.4	59086	2271	She found an apartmen
+en	11	21	t	t	447.7	1673.4	46687	2252	She found an apartment
+en	11	22	space	space	580.9	2078.1	64280	2226	She found an apartment 
+en	11	23	n	n	732.0	1968.1	67505	2330	She found an apartment n
+en	11	24	e	e	271.8	1655.6	63771	2497	She found an apartment ne
+en	11	25	a	a	111.4	1813.5	66093	7540	She found an apartment nea
+en	11	26	r	r	380.7	1686.3	56174	2303	She found an apartment near
+en	11	27	space	space	618.8	2111.2	54849	2387	She found an apartment near 
+en	11	28	t	t	487.8	1636.5	63555	2225	She found an apartment near t
+en	11	29	h	h	644.0	1849.6	61228	2411	She found an apartment near th
+en	11	30	e	e	264.1	1644.4	53173	2224	She found an apartment near the
+en	11	31	space	space	620.7	2067.7	51437	2388	She found an apartment near the 
+en	11	32	c	x	354.5	1962.3	56365	2359	She found an apartment near the x
+en	11	33	i	i	788.3	1649.5	52683	2091	She found an apartment near the xi
+en	11	34	t	t	493.5	1656.3	56826	2111	She found an apartment near the xit
+en	11	35	y	y	577.7	1639.0	63838	2184	She found an apartment near the xity
+en	11	36	space	space	569.7	2103.9	60581	2359	She found an apartment near the city 
+en	11	37	c	c	419.6	1946.4	59370	3999	She found an apartment near the city c
+en	11	38	e	e	271.6	1699.6	67437	3268	She found an apartment near the city ce
+en	11	39	n	n	748.8	1973.5	60988	2178	She found an apartment near the city cen
+en	11	40	t	t	527.4	1680.3	65314	2276	She found an apartment near the city cent
+en	11	41	r	r	381.3	1668.0	60526	2243	She found an apartment near the city centr
+en	11	42	e	e	258.8	1699.9	50127	2217	She found an apartment near the city centre
+en	11	43	space	space	596.0	2080.5	52851	2423	She found an apartment near the city centre 
+en	12	0	c	c	422.0	1912.8	65590	2153	C
+en	12	1	o	o	928.7	1698.0	59363	2105	Co
+en	12	2	u	u	696.2	1651.5	63836	2445	Cou
+en	12	3	l	l	945.9	1838.2	55327	2127	Coul
+en	12	4	d	d	343.3	1842.3	58687	2299	Could
+en	12	5	space	space	611.5	2127.2	52461	2133	Could 
+en	12	6	y	y	604.2	1638.8	52255	2159	Could y
+en	12	7	o	o	925.7	1661.1	52667	2049	Could yo
+en	12	8	u	u	659.1	1661.5	60628	2142	Could you
+en	12	9	space	space	573.2	2079.6	59039	2544	Could you 
+en	12	10	c	c	458.9	1915.0	58557	2109	Could you c
+en	12	11	h	h	621.3	1834.7	65462	2461	Could you ch
+en	12	12	e	e	264.0	1713.6	57670	2042	Could you che
+en	12	13	c	c	406.6	1923.8	59101	2419	Could you chec
+en	12	14	k	k	849.5	1805.1	63946	5429	Could you check
+en	12	15	space	space	571.8	2069.0	55997	2602	Could you check 
+en	12	16	t	t	496.4	1633.9	56865	2001	Could you check t
+en	12	17	h	h	665.6	1791.1	55849	4503	Could you check th
+en	12	18	e	e	253.3	1721.5	64835	2387	Could you check the
+en	12	19	space	space	606.0	2128.2	59399	2582	Could you check the 
+en	12	20	m	m	899.2	1955.0	59276	2261	Could you check the m
+en	12	21	o	o	959.7	1704.2	63661	2427	Could you check the mo
+en	12	22	v	v	569.8	1945.4	53976	2255	Could you check the mov
+en	12	23	i	i	826.2	1700.0	55575	2284	Could you check the movi
+en	12	24	e	e	267.7	1677.2	67087	2524	Could you check the movie
+en	12	25	space	space	560.8	2128.3	66230	2171	Could you check the movie 
+en	12	26	t	t	486.1	1661.6	54061	2162	Could you check the movie t
+en	12	27	i	i	800.5	1691.8	66033	2371	Could you check the movie ti
+en	12	28	m	m	897.8	1988.3	58703	2481	Could you check the movie tim
+en	12	29	e	e	226.1	1674.2	57026	2622	Could you check the movie time
+en	12	30	s	s	235.1	1825.0	64051	2723	Could you check the movie times
+en	12	31	space	space	605.4	2069.8	61378	2489	Could you check the movie times 
+en	12	32	f	f	435.5	1814.8	57407	2197	Could you check the movie times f
+en	12	33	o	o	884.6	1701.4	56895	2517	Could you check the movie times fo
+en	12	34	r	r	360.5	1684.9	59274	2171	Could you check the movie times for
+en	12	35	space	space	576.0	2082.9	51297	2383	Could you check the movie times for 
+en	12	36	t	t	495.0	1692.9	63121	2112	Could you check the movie times for t
+en	12	37	o	o	909.6	1694.0	59365	2078	Could you check the movie times for to
+en	12	38	n	n	733.5	1941.9	57624	2233	Could you check the movie times for ton
+en	12	39	i	i	778.6	1716.2	59173	5285	Could you check the movie times for toni
+en	12	40	g	g	529.3	1804.1	68063	2464	Could you check the movie times for tonig
+en	12	41	h	h	650.5	1829.4	63808	2508	Could you check the movie times for tonigh
+en	12	42	t	t	455.2	1666.1	64026	2139	Could you check the movie times for tonight
+en	12	43	space	space	579.0	2039.4	61364	2438	Could you check the movie times for tonight 
+en	13	0	t	t	512.1	1682.2	55840	2082	T
+en	13	1	h	h	641.6	1828.5	53876	2120	Th
+en	13	2	e	e	249.9	1675.7	64749	2240	The
+en	13	3	space	space	623.3	2099.7	53480	2383	The 
+en	13	4	k	k	843.9	1807.0	68520	2497	The k
+en	13	5	i	i	777.5	1675.5	59332	2688	The ki
+en	13	6	d	d	315.2	1804.9	48373	2178	The kid
+en	13	7	s	s	192.9	1796.7	65431	2482	The kids
+en	13	8	space	space	608.7	2122.3	62131	2304	The kids 
+en	13	9	h	h	643.2	1812.2	66279	2643	The kids h
+en	13	10	a	a	110.1	1837.0	62674	1890	The kids ha
+en	13	11	v	v	540.5	1952.2	56348	2267	The kids hav
+en	13	12	e	e	273.2	1665.2	53996	2234	The kids have
+en	13	13	space	space	585.1	2082.7	57153	2211	The kids have 
+en	13	14	b	b	645.3	1948.3	53612	2604	The kids have b
+en	13	15	e	e	270.9	1631.5	61042	2353	The kids have be
+en	13	16	e	e	330.8	1663.3	62240	2202	The kids have bee
+en	13	17	n	n	753.8	1958.2	61920	2265	The kids have been
+en	13	18	space	space	581.4	2075.5	65882	2616	The kids have been 
+en	13	19	a	a	148.0	1849.2	65029	2140	The kids have been a
+en	13	20	s	s	238.8	1794.9	55057	2192	The kids have been as
+en	13	21	l	l	928.1	1853.2	59141	2382	The kids have been asl
+en	13	22	e	e	272.6	1690.4	50992	2437	The kids have been asle
+en	13	23	e	e	277.7	1733.2	59034	2773	The kids have been aslee
+en	13	24	p	p	1026.2	1691.0	55580	2307	The kids have been asleep
+en	13	25	space	space	619.3	2106.8	51585	2222	The kids have been asleep 
+en	13	26	f	f	462.2	1781.9	55170	2374	The kids have been asleep f
+en	13	27	o	o	901.6	1662.3	64087	2554	The kids have been asleep fo
+en	13	28	r	r	368.9	1702.8	60316	2202	The kids have been asleep for
+en	13	29	space	space	591.1	2086.6	57934	2067	The kids have been asleep for 
+en	13	30	a	a	63.0	1821.7	56385	2298	The kids have been asleep for a
+en	13	31	n	n	733.5	1938.5	59499	5247	The kids have been asleep for an
+en	13	32	space	space	577.5	2105.8	60914	2737	The kids have been asleep for an 
+en	13	33	h	h	626.0	1884.1	66395	2353	The kids have been asleep for an h
+en	13	34	o	o	904.9	1685.9	67023	2633	The kids have been asleep for an ho
+en	13	35	u	u	699.8	1680.0	57810	2234	The kids have been asleep for an hou
+en	13	36	r	r	323.8	1724.6	69308	2344	The kids have been asleep for an hour
+en	13	37	space	space	600.8	2080.8	49991	2431	The kids have been asleep for an hour 
+en	14	0	w	w	214.5	1655.5	60053	2169	W
+en	14	1	e	e	242.6	1710.4	50965	2196	We
+en	14	2	space	space	549.3	2081.1	59395	2424	We 
+en	14	3	n	m	818.5	1970.0	58749	2102	We m
+en	14	4	e	e	271.7	1684.7	54249	2057	We me
+en	14	5	e	e	256.5	1709.5	57493	2224	We mee
+en	14	6	d	d	389.2	1789.2	54195	2206	We meed
+en	14	7	space	space	602.0	2097.0	61702	2131	We need 
+en	14	8	t	t	528.8	1687.1	65921	4036	We need t
+en	14	9	o	o	964.2	1666.2	61203	3083	We need to
+en	14	10	space	space	587.2	2105.2	54170	2409	We need to 
+en	14	11	b	b	677.9	1938.7	66005	2422	We need to b
+en	14	12	u	u	719.6	1693.7	52341	2064	We need to bu
+en	14	13	y	y	563.7	1701.9	66664	2284	We need to buy
+en	14	14	space	space	601.7	2072.6	53870	2418	We need to buy 
+en	14	15	t	t	512.0	1705.0	67519	2390	We need to buy t
+en	14	16	o	o	919.3	1695.3	59949	2739	We need to buy to
+en	14	17	m	m	848.7	1935.1	57136	2534	We need to buy tom
+en	14	18	a	a	122.9	1844.8	60940	2384	We need to buy toma
+en	14	19	t	t	479.0	1716.8	59911	2249	We need to buy tomat
+en	14	20	o	o	921.9	1623.9	54347	2319	We need to buy tomato
+en	14	21	e	e	234.5	1700.2	64111	2802	We need to buy tomatoe
+en	14	22	s	s	225.9	1831.7	56273	2452	We need to buy tomatoes
+en	14	23	space	space	599.3	2096.5	57514	2338	We need to buy tomatoes 
+en	14	24	a	a	67.1	1853.0	50890	2024	We need to buy tomatoes a
+en	14	25	n	n	728.1	1948.1	65586	2481	We need to buy tomatoes an
+en	14	26	d	d	364.0	1799.3	48939	2379	We need to buy tomatoes and
+en	14	27	space	space	632.1	2084.9	50484	2437	We need to buy tomatoes and 
+en	14	28	s	s	253.1	1846.5	52402	2533	We need to buy tomatoes and s
+en	14	29	o	o	931.0	1694.9	54961	2530	We need to buy tomatoes and so
+en	14	30	m	m	868.4	1983.2	62758	2134	We need to buy tomatoes and som
+en	14	31	e	e	267.0	1690.1	64852	2272	We need to buy tomatoes and some
+en	14	32	space	space	581.0	2117.5	57060	2244	We need to buy tomatoes and some 
+en	14	33	c	c	432.4	1979.5	65324	2232	We need to buy tomatoes and some c
+en	14	34	h	h	658.5	1824.6	52583	2219	We need to buy tomatoes and some ch
+en	14	35	e	e	251.0	1670.2	59423	2442	We need to buy tomatoes and some che
+en	14	36	e	e	291.4	1675.6	64863	2553	We need to buy tomatoes and some chee
+en	14	37	s	s	226.1	1856.7	56434	2585	We need to buy tomatoes and some chees
+en	14	38	e	e	268.3	1630.7	50272	2318	We need to buy tomatoes and some cheese
+en	14	39	space	space	588.6	2105.3	63589	2368	We need to buy tomatoes and some cheese 
+en	15	0	i	i	790.9	1662.3	57533	1868	I
+en	15	1	space	space	571.5	2093.0	53596	2040	I 
+en	15	2	d	d	292.8	1800.4	50371	2136	I d
+en	15	3	o	o	940.4	1674.4	56306	2140	I do
+en	15	4	space	space	598.0	2105.8	61933	2226	I do 
+en	15	5	n	n	718.0	1955.0	63716	2568	I do n
+en	15	6	o	o	887.7	1671.2	64057	2201	I do no
+en	15	7	t	t	492.3	1673.8	57148	2243	I do not
+en	15	8	space	space	586.6	2117.3	51486	2456	I do not 
+en	15	9	k	k	871.7	1856.6	62191	2236	I do not k
+en	15	10	n	n	749.7	1912.2	55381	2370	I do not kn
+en	15	11	o	o	933.2	1662.9	63599	2780	I do not kno
+en	15	12	w	w	161.3	1650.7	51053	2274	I do not know
+en	15	13	space	space	604.1	2071.4	57118	2292	I do not know 
+en	15	14	y	y	607.0	1726.8	56724	2342	I do not know y
+en	15	15	e	e	283.6	1654.8	59698	8022	I do not know ye
+en	15	16	t	t	493.8	1685.8	51344	2311	I do not know yet
+en	15	17	space	space	567.8	2129.7	57371	2244	I do not know yet 
+en	15	18	i	i	820.8	1672.3	52485	2292	I do not know yet i
+en	15	19	f	f	402.3	1758.5	60446	2546	I do not know yet if
+en	15	20	space	space	587.4	2039.5	62989	2322	I do not know yet if 
+en	15	21	i	i	784.3	1667.9	62146	2263	I do not know yet if i
+en	15	22	space	space	615.1	2086.5	51583	2499	I do not know yet if I 
+en	15	23	c	c	415.6	2008.6	66234	6869	I do not know yet if I c
+en	15	24	a	a	122.7	1826.6	68325	2061	I do not know yet if I ca
+en	15	25	n	n	755.3	1947.2	68681	2511	I do not know yet if I can
+en	15	26	space	space	644.4	2067.0	56794	2526	I do not know yet if I can 
+en	15	27	c	c	466.7	1940.6	59707	2313	I do not know yet if I can c
+en	15	28	o	o	903.5	1678.8	63438	2368	I do not know yet if I can co
+en	15	29	m	m	875.8	1918.9	61668	2367	I do not know yet if I can com
+en	15	30	e	e	274.8	1643.4	54014	2562	I do not know yet if I can come
+en	15	31	space	space	538.6	2065.9	50649	2516	I do not know yet if I can come 
+en	16	0	m	m	878.4	1956.4	63691	2638	M
+en	16	1	y	y	563.6	1668.5	60041	2412	My
+en	16	2	space	space	528.1	2058.2	53121	2215	My 
+en	16	3	p	o	958.2	1673.6	55204	2068	My o
+en	16	4	h	h	634.2	1797.5	58963	2294	My oh
+en	16	5	o	o	902.0	1643.3	61071	2104	My oho
+en	16	6	n	n	722.4	1970.9	60773	2147	My ohon
+en	16	7	e	e	265.6	1705.8	53283	2153	My ohone
+en	16	8	space	space	569.2	2075.0	52178	2515	My phone 
+en	16	9	w	w	148.0	1665.0	66408	6049	My phone w
+en	16	10	a	a	109.7	1807.1	59809	4025	My phone wa
+en	16	11	s	s	249.0	1804.1	55262	2193	My phone was
+en	16	12	space	space	584.6	2095.4	53597	2324	My phone was 
+en	16	13	a	a	134.8	1841.2	60131	2033	My phone was a
+en	16	14	l	l	969.0	1825.9	70396	7181	My phone was al
+en	16	15	m	m	845.6	2009.9	55644	2174	My phone was alm
+en	16	16	o	o	912.9	1713.9	50970	2163	My phone was almo
+en	16	17	s	s	243.9	1803.5	54307	2348	My phone was almos
+en	16	18	t	t	436.6	1686.1	58768	2143	My phone was almost
+en	16	19	space	space	618.0	2106.6	50486	2192	My phone was almost 
+en	16	20	o	o	897.2	1717.2	65563	2267	My phone was almost o
+en	16	21	u	u	704.0	1726.3	65301	2142	My phone was almost ou
+en	16	22	t	t	460.3	1665.7	57487	2385	My phone was almost out
+en	16	23	space	space	584.4	2096.1	55370	2375	My phone was almost out 
+en	16	24	o	o	896.9	1692.7	56957	2113	My phone was almost out o
+en	16	25	f	f	445.7	1801.6	53608	2235	My phone was almost out of
+en	16	26	space	space	595.9	2076.2	59747	2417	My phone was almost out of 
+en	16	27	b	b	662.6	1959.3	55743	2214	My phone was almost out of b
+en	16	28	a	a	136.1	1804.2	54532	2478	My phone was almost out of ba
+en	16	29	t	t	449.8	1679.9	59394	2326	My phone was almost out of bat
+en	16	30	t	t	495.4	1658.6	68000	2400	My phone was almost out of batt
+en	16	31	e	e	271.8	1686.6	59217	2235	My phone was almost out of batte
+en	16	32	r	r	353.0	1682.9	55019	2538	My phone was almost out of batter
+en	16	33	y	y	592.3	1674.8	55660	2185	My phone was almost out of battery
+en	16	34	space	space	570.0	2070.5	61867	2555	My phone was almost out of battery 
+en	17	0	w	w	165.8	1686.9	54556	2016	W
+en	17	1	e	e	307.3	1688.7	64407	2010	We
+en	17	2	space	space	612.3	2105.2	53622	2241	We 
+en	17	3	w	w	176.9	1670.3	54868	2185	We w
+en	17	4	i	i	795.0	1713.8	57436	2139	We wi
+en	17	5	l	l	959.6	1848.6	61818	2280	We wil
+en	17	6	l	l	995.3	1794.8	52421	2111	We will
+en	17	7	space	space	571.5	2086.5	50216	2118	We will 
+en	17	8	t	t	477.6	1689.1	60474	2362	We will t
+en	17	9	a	a	106.7	1826.3	51338	2239	We will ta
+en	17	10	l	l	943.7	1832.3	56324	2245	We will tal
+en	17	11	k	k	868.3	1778.4	62153	2191	We will talk
+en	17	12	space	space	600.3	2088.9	62699	2310	We will talk 
+en	17	13	a	a	78.3	1817.2	58156	2357	We will talk a
+en	17	14	b	b	652.4	1956.8	52868	2591	We will talk ab
+en	17	15	o	o	877.1	1601.5	53068	2667	We will talk abo
+en	17	16	u	u	701.0	1679.2	57076	2456	We will talk abou
+en	17	17	t	t	476.5	1718.1	51055	2349	We will talk about
+en	17	18	space	space	580.9	2098.9	56327	2385	We will talk about 
+en	17	19	t	t	512.6	1686.3	65249	2270	We will talk about t
+en	17	20	h	h	677.8	1837.4	58181	2305	We will talk about th
+en	17	21	e	e	270.8	1650.3	67085	2422	We will talk about the
+en	17	22	space	space	581.1	2125.1	65768	2176	We will talk about the 
+en	17	23	b	b	670.2	1929.9	57302	2295	We will talk about the b
+en	17	24	u	u	705.5	1667.3	63566	2219	We will talk about the bu
+en	17	25	d	d	320.0	1828.0	59103	2361	We will talk about the bud
+en	17	26	g	g	569.6	1864.9	63690	2263	We will talk about the budg
+en	17	27	e	e	300.0	1683.9	52997	2221	We will talk about the budge
+en	17	28	t	t	476.9	1692.0	67915	2198	We will talk about the budget
+en	17	29	space	space	574.4	2081.3	58190	2763	We will talk about the budget 
+en	17	30	n	n	754.4	1969.4	55363	2325	We will talk about the budget n
+en	17	31	e	e	273.2	1644.9	54848	2379	We will talk about the budget ne
+en	17	32	x	x	344.4	2002.6	65770	2225	We will talk about the budget nex
+en	17	33	t	t	478.1	1693.9	55575	2165	We will talk about the budget next
+en	17	34	space	space	619.5	2114.8	65862	2594	We will talk about the budget next 
+en	17	35	w	w	154.4	1692.9	59978	2378	We will talk about the budget next w
+en	17	36	e	e	286.3	1624.0	52247	2212	We will talk about the budget next we
+en	17	37	e	e	244.1	1705.3	69393	2229	We will talk about the budget next wee
+en	17	38	k	k	876.4	1799.1	68035	2277	We will talk about the budget next week
+en	17	39	space	space	546.0	2071.1	62469	2883	We will talk about the budget next week 
+en	18	0	y	y	606.3	1691.7	56544	2549	Y
+en	18	1	o	o	932.0	1678.9	64782	2211	Yo
+en	18	2	u	u	714.5	1672.6	52998	2319	You
+en	18	3	space	space	526.5	2043.9	55236	2135	You 
+en	18	4	l	l	942.6	1813.2	65793	2136	You l
+en	18	5	e	e	274.8	1688.2	65120	2270	You le
+en	18	6	f	f	436.3	1785.6	55776	2386	You lef
+en	18	7	t	t	466.4	1670.2	50755	2372	You left
+en	18	8	space	space	592.2	2091.6	52001	2572	You left 
+en	18	9	y	y	592.8	1676.2	64077	2109	You left y
+en	18	10	o	o	899.3	1672.4	54622	2009	You left yo
+en	18	11	u	u	676.5	1688.3	59528	2033	You left you
+en	18	12	r	r	366.8	1645.0	54716	2414	You left your
+en	18	13	space	space	582.9	2141.6	53217	2605	You left your 
+en	18	14	k	k	829.5	1819.9	57014	2232	You left your k
+en	18	15	e	e	256.8	1707.2	63053	2384	You left your ke
+en	18	16	y	y	555.1	1644.1	49317	2225	You left your key
+en	18	17	s	s	232.7	1861.8	62981	2276	You left your keys
+en	18	18	space	space	567.2	2067.5	60472	2855	You left your keys 
+en	18	19	o	o	959.7	1697.9	62954	2258	You left your keys o
+en	18	20	n	n	730.4	1963.2	61916	2386	You left your keys on
+en	18	21	space	space	598.1	2127.7	60177	2626	You left your keys on 
+en	18	22	t	t	517.2	1664.8	57448	2348	You left your keys on t
+en	18	23	h	h	636.7	1810.7	52560	2133	You left your keys on th
+en	18	24	e	e	277.8	1644.9	62942	2201	You left your keys on the
+en	18	25	space	space	594.7	2083.8	61854	2357	You left your keys on the 
+en	18	26	k	k	886.3	1798.5	51152	2169	You left your keys on the k
+en	18	27	i	i	800.5	1678.5	62157	2355	You left your keys on the ki
+en	18	28	t	t	499.5	1636.1	58557	3379	You left your keys on the kit
+en	18	29	c	c	426.5	1944.7	60411	2635	You left your keys on the kitc
+en	18	30	h	h	624.7	1841.5	54200	2287	You left your keys on the kitch
+en	18	31	e	e	274.1	1673.7	65771	2459	You left your keys on the kitche
+en	18	32	n	n	754.5	1965.3	65708	2149	You left your keys on the kitchen
+en	18	33	space	space	594.2	2140.8	62445	2038	You left your keys on the kitchen 
+en	18	34	t	t	479.9	1694.6	66872	2427	You left your keys on the kitchen t
+en	18	35	a	a	98.5	1849.2	54128	2333	You left your keys on the kitchen ta
+en	18	36	b	b	656.3	1980.0	57288	2389	You left your keys on the kitchen tab
+en	18	37	l	l	955.9	1826.8	61027	2226	You left your keys on the kitchen tabl
+en	18	38	e	e	301.4	1695.0	60156	2101	You left your keys on the kitchen table
+en	18	39	space	space	618.8	2092.1	62303	2525	You left your keys on the kitchen table 
+en	19	0	t	t	457.7	1675.0	63546	2197	T
+en	19	1	h	h	656.4	1803.5	61334	2086	Th
+en	19	2	e	e	274.8	1711.7	54370	2265	The
+en	19	3	space	space	602.5	2073.6	65230	2658	The 
+en	19	4	d	d	296.5	1757.3	63515	2102	The d
+en	19	5	o	o	892.8	1650.7	64456	2332	The do
+en	19	6	c	c	397.0	1979.5	63259	2133	The doc
+en	19	7	t	t	492.9	1685.8	65561	2294	The doct
+en	19	8	o	o	919.4	1683.3	59302	2017	The docto
+en	19	9	r	r	342.7	1688.8	57337	2834	The doctor
+en	19	10	space	space	627.5	2092.2	56446	2602	The doctor 
+en	19	11	c	c	429.5	1961.7	55078	1940	The doctor c
+en	19	12	a	a	138.7	1792.5	56852	2182	The doctor ca
+en	19	13	n	n	744.3	1974.2	63995	2227	The doctor can
+en	19	14	space	space	611.7	2091.0	60188	2133	The doctor can 
+en	19	15	s	s	212.2	1834.5	50021	2066	The doctor can s
+en	19	16	e	e	292.3	1642.9	67572	2451	The doctor can se
+en	19	17	e	e	269.0	1622.8	52116	2166	The doctor can see
+en	19	18	space	space	603.6	2063.9	64830	2506	The doctor can see 
+en	19	19	m	m	857.6	2008.3	54534	2363	The doctor can see m
+en	19	20	e	e	252.6	1728.4	61068	2569	The doctor can see me
+en	19	21	space	space	638.4	2104.7	59502	2607	The doctor can see me 
+en	19	22	o	o	944.2	1663.7	63011	2609	The doctor can see me o
+en	19	23	n	n	776.0	1940.3	55079	2262	The doctor can see me on
+en	19	24	space	space	555.4	2061.7	55730	2393	The doctor can see me on 
+en	19	25	m	m	853.1	1957.3	63270	2403	The doctor can see me on m
+en	19	26	o	o	886.3	1695.3	53748	2847	The doctor can see me on mo
+en	19	27	n	n	721.1	1953.7	52155	2385	The doctor can see me on mon
+en	19	28	d	d	325.2	1773.0	58093	2300	The doctor can see me on mond
+en	19	29	a	a	141.7	1783.3	64067	2244	The doctor can see me on monda
+en	19	30	y	y	576.5	1645.5	67021	2511	The doctor can see me on monday
+en	19	31	space	space	586.2	2053.4	65538	2715	The doctor can see me on Monday 
+en	19	32	a	a	97.9	1804.7	68122	4165	The doctor can see me on Monday a
+en	19	33	f	d	366.2	1768.6	71248	8153	The doctor can see me on Monday ad
+en	19	34	t	t	496.9	1686.3	58745	2189	The doctor can see me on Monday adt
+en	19	35	e	e	296.5	1693.8	56074	2075	The doctor can see me on Monday adte
+en	19	36	r	r	374.6	1650.2	59502	2595	The doctor can see me on Monday adter
+en	19	37	n	n	796.7	1977.0	61029	2106	The doctor can see me on Monday adtern
+en	19	38	o	o	955.0	1675.9	58697	2279	The doctor can see me on Monday adterno
+en	19	39	o	o	905.7	1690.5	65796	2670	The doctor can see me on Monday adternoo
+en	19	40	n	n	742.2	1949.2	53390	2296	The doctor can see me on Monday adternoon
+en	19	41	space	space	616.2	2068.8	51123	2899	The doctor can see me on Monday afternoon 

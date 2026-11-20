@@ -1,0 +1,42 @@
+# dictus-probe-fr.tsv: what a tap typed, 2 px apart, across each top-row boundary ('.' = nothing)
+a/z       across dead 12 px  aaaaaaaaaaaaa......zzzzzzzzzzzzzz
+z/e       across dead 10 px  zzzzzzzzzzzzzz.....eeeeeeeeeeeeee
+e/r       across dead 10 px  eeeeeeeeeeeeee.....rrrrrrrrrrrrrr
+r/t       across dead 10 px  rrrrrrrrrrrrrr.....tttttttttttttt
+t/y       across dead 10 px  tttttttttttttt.....yyyyyyyyyyyyyy
+y/u       across dead 12 px  yyyyyyyyyyyyy......uuuuuuuuuuuuuu
+u/i       across dead 10 px  uuuuuuuuuuuuuu.....iiiiiiiiiiiiii
+i/o       across dead 10 px  iiiiiiiiiiiiii.....oooooooooooooo
+o/p       across dead 10 px  oooooooooooooo.....pppppppppppppp
+a/below   down   dead 12 px  aaaaaaaaaaaaa......qqqqqqqqqqqqqq
+z/below   down   dead 12 px  zzzzzzzzzzzzz......ssssssssssssss
+e/below   down   dead 12 px  eeeeeeeeeeeee......dddddddddddddd
+r/below   down   dead 12 px  rrrrrrrrrrrrr......ffffffffffffff
+t/below   down   dead 12 px  ttttttttttttt......gggggggggggggg
+y/below   down   dead 12 px  yyyyyyyyyyyyy......hhhhhhhhhhhhhh
+u/below   down   dead 12 px  uuuuuuuuuuuuu......jjjjjjjjjjjjjj
+i/below   down   dead 12 px  iiiiiiiiiiiii......kkkkkkkkkkkkkk
+o/below   down   dead 12 px  ooooooooooooo......llllllllllllll
+p/below   down   dead 12 px  ppppppppppppp......mmmmmmmmmmmmmm
+
+# gboard-probe-fr.tsv: what a tap typed, 2 px apart, across each top-row boundary ('.' = nothing)
+a/z       across dead  0 px  aaaaaaaaaaaaaaaaaaaazazzzzzzzzzzz
+z/e       across dead  0 px  zzzzzzzzzzzzzzzzeezeeeeeeeeeeeeee
+e/r       across dead  0 px  eeeereeeeeeeeeeerererrrrrrrrrrrrr
+r/t       across dead  0 px  rrrrrrrrrrrrrrrrrrtrrtrtttttttttt
+t/y       across dead  0 px  tttttttttttttttttytyyyyyyyyyyyyyy
+y/u       across dead  0 px  yyyyyyyyyyyyyyyyuyuuuuuuuuuuuuuuu
+u/i       across dead  0 px  uuuuuiuuuuuuuuuuuiiiiiiiiiiiiiiii
+i/o       across dead  0 px  iiiiiiiiiiiiiiiiiiioioooooooooooo
+o/p       across dead  0 px  ooooooooooooooooooopppppppppppppp
+a/below   down   dead  0 px  aaaaaaaaaaaaaaaaqqqaaqaaqqaqqqqqq
+z/below   down   dead  0 px  zzzzzzzzzzzzzzzzzssszsssssszszsss
+e/below   down   dead  0 px  eeeeeeeeeeeeeeeeeeddddddeeddedddd
+r/below   down   dead  0 px  rrrrrrrrrrrrrrrrrfrfffffffffffffr
+t/below   down   dead  0 px  ttttttttttttttttgtgggttggttggtggg
+y/below   down   dead  0 px  yyyyyyyyyyyyyyyyyhhhhhyhyhyhyhhhh
+u/below   down   dead  0 px  uuuuuuuuuuuuuuuuujjujjujuujujjujj
+i/below   down   dead  0 px  iiiiiiiiiiiiiiiiikiiikkikkkikkkkk
+o/below   down   dead  0 px  ooooooooooooooooooollllololllllll
+p/below   down   dead  0 px  ppppppppppppppppmmmmmmpmmpmpmmmmm
+
