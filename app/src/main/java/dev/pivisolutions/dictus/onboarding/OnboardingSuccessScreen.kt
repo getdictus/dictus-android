@@ -3,12 +3,10 @@ package dev.pivisolutions.dictus.onboarding
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,12 +24,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.theme.DictusColors
+import dev.pivisolutions.dictus.ui.DictusAppIcon
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingCenteredPage
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingPrimaryButton
 import kotlinx.coroutines.async
@@ -98,24 +96,15 @@ fun OnboardingSuccessScreen(
     }
 }
 
-/**
- * The launcher icon, drawn from its adaptive layers in iOS's rounded tile (`DictusIconTile`).
- * A launcher shows the middle 72 dp of the 108 dp layers, so each layer is drawn at 1.5 times
- * the tile and clipped to it.
- */
+/** The launcher icon in iOS's rounded tile (`DictusIconTile`), with its soft shadow. */
 @Composable
 private fun AppIconTile() {
     val shape = RoundedCornerShape(27.dp)
-    Box(
-        modifier = Modifier
-            .shadow(elevation = 18.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.18f))
-            .size(TileSize)
-            .clip(shape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(painterResource(R.drawable.ic_launcher_background), null, Modifier.requiredSize(TileSize * 1.5f))
-        Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.requiredSize(TileSize * 1.5f))
-    }
+    DictusAppIcon(
+        size = TileSize,
+        shape = shape,
+        modifier = Modifier.shadow(elevation = 18.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.18f)),
+    )
 }
 
 private val TileSize = 120.dp

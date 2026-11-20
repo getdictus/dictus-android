@@ -334,7 +334,7 @@ iOS Dictus uses Liquid Glass (iOS 26). Android cannot replicate Liquid Glass, bu
 | Accent highlight | `#6BA3FF` | `#6BA3FF` (primaryContainer) | `#93C5FD` |
 | Surface | `#161C2C` | `#161C2C` or `surface` | `surface` |
 | Recording | `#EF4444` | `#EF4444` (error) | `#DC2626` |
-| Smart mode | `#8B5CF6` | `#8B5CF6` (tertiary) | `#7C3AED` |
+| Smart mode | `#8B5CF6` | — (no smart mode; `tertiary` is the accent highlight, #376) | — |
 | Success | `#22C55E` | `#22C55E` (custom) | `#16A34A` |
 
 ### Approach: custom dark theme with dynamic color option

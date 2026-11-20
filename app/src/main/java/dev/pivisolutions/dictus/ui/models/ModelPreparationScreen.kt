@@ -46,9 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -60,7 +58,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.R
@@ -74,6 +71,7 @@ import dev.pivisolutions.dictus.models.ModelPreparationSteps
 import dev.pivisolutions.dictus.models.ModelPreparationTarget
 import dev.pivisolutions.dictus.models.downloadedMegabytes
 import dev.pivisolutions.dictus.service.ModelInstallState
+import dev.pivisolutions.dictus.ui.DictusLogo
 import kotlinx.coroutines.delay
 
 /** Where the screen is shown. Decides the caption's leave notice, as on iOS. */
@@ -589,33 +587,4 @@ private fun PreparationRing(ring: ModelPreparationRing, colors: PreparationColor
             DictusLogo(height = Metrics.logoHeight, sideBarColor = colors.logoSideBar)
         }
     }
-}
-
-/**
- * The three-bar Dictus logo with the app icon's proportions (iOS `DictusLogoGeometry`): bars
- * 18, 42 and 27 units high, 9 wide, 7.5 apart; side bars at 45 % and 65 % opacity, the centre
- * one in the brand gradient.
- */
-@Composable
-private fun DictusLogo(height: Dp, sideBarColor: Color) {
-    val barWidth = height * (9f / 42f)
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(height * (7.5f / 42f)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        LogoBar(barWidth, height * (18f / 42f), SolidColor(sideBarColor.copy(alpha = 0.45f)))
-        LogoBar(barWidth, height, Brush.verticalGradient(listOf(DictusColors.AccentHighlight, DictusColors.AccentDark)))
-        LogoBar(barWidth, height * (27f / 42f), SolidColor(sideBarColor.copy(alpha = 0.65f)))
-    }
-}
-
-@Composable
-private fun LogoBar(width: Dp, height: Dp, brush: Brush) {
-    Box(
-        modifier = Modifier
-            .width(width)
-            .height(height)
-            .clip(RoundedCornerShape(percent = 50))
-            .background(brush),
-    )
 }
