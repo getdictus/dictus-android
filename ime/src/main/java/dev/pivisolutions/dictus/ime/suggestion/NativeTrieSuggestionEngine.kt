@@ -123,6 +123,8 @@ class NativeTrieSuggestionEngine(
         val primaryCorrection: String?,
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
+        /** [primaryCorrection] comes from an accent rule or a contraction, not the fuzzy search. */
+        val ruleCorrection: Boolean = false,
     )
     class Activation internal constructor(
         val language: SupportedLanguage,
@@ -276,6 +278,7 @@ class NativeTrieSuggestionEngine(
         val primaryCorrection: String?,
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
+        val ruleCorrection: Boolean = false,
     )
 
     private data class NativeQuery(
@@ -425,6 +428,7 @@ class NativeTrieSuggestionEngine(
                 .take(maxResults)
                 .map { TypedCase.applyTo(it, input, locale) },
             contextIdentity = contextIdentity,
+            ruleCorrection = profileCorrection != null || contraction != null,
         )
     }
 
@@ -526,6 +530,7 @@ class NativeTrieSuggestionEngine(
                     primaryCorrection = result.primaryCorrection,
                     suggestions = result.suggestions,
                     contextIdentity = result.contextIdentity,
+                    ruleCorrection = result.ruleCorrection,
                 )
             }
         }

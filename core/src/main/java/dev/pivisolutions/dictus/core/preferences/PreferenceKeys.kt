@@ -87,4 +87,12 @@ object PreferenceKeys {
     // --- Custom vocabulary (#203) ---
     /** The user's vocabulary entries as one JSON array, written whole by `VocabularyStore`. */
     val VOCABULARY_ENTRIES = stringPreferencesKey("vocabulary_entries")
+
+    // --- Debug switches ---
+    /**
+     * Spatial autocorrect (#385): the space bar also reads where each letter was tapped. Read in
+     * debuggable builds only, and shown in no settings screen: the keyboard bench sets it
+     * (`tools/keyboard-bench/dictus_prefs.py`). Off when unset.
+     */
+    val DEBUG_SPATIAL_AUTOCORRECT = booleanPreferencesKey("debug_spatial_autocorrect")
 }
