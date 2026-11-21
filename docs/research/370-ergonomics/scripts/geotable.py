@@ -73,7 +73,12 @@ def touch_areas(d):
 
 def measure(d):
     text = geometry(d)
-    return (parse(text, d), "drawn") if text else (touch_areas(d), "touch areas")
+    if text:
+        return parse(text, d), "drawn"
+    # Only Gboard's nodes are touch areas; Dictus's are its labels, so a failure there is an error.
+    if "gboard" not in Path(d).name:
+        raise SystemExit(f"{d}: geometry.py found no drawn keys")
+    return touch_areas(d), "touch areas"
 
 
 dm, dk = measure(sys.argv[1])

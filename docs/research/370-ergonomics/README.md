@@ -33,7 +33,7 @@ autocorrect; the app is not changed (see Method).
 
 | # | Fix | What iOS does | Measured or estimated effect | Risk |
 |---|---|---|---|---|
-| 1 | **Close the dead bands.** Each key's touch area becomes its whole cell: the gap between two keys and between two rows is split at its middle, the 2 dp row padding goes to the edge keys, and the rounded corners count. The drawn keys do not move. | The grid is cells with no spacing (`KeyboardView.swift:1170`, `:1174` return 0); each cell is `(width - 1) / units` wide (`:1164`), so 1/9 pt is left between cells; the drawn key is inset 3 pt across and 5.5 pt down inside its cell (`Theme.swift:213`, `:200`), so the boundary is the middle of the visible gap. | Simulated (`--snap gaps`): wrong words fr **21 → 12**, en **25 → 17**; wrong letters fr 26 → 16 (3.9 % → 2.4 %), en 36 → 24 (5.7 % → 3.8 %); miscorrections fr 11 → 8, en 7 → 6. Of the 47 taps that typed nothing, 33 landed between two keys of a row, 8 between two rows, 1 at a screen edge. Example (fr): the replay typed « une » as `ne` (kept wrong) and `ue` (put back to `une` by the trie); with the bands closed it types `une` both times. #386 measured the same word on the #384 bench with its spatial decoder (off by default): `ue`, the n in a dead band, comes out as « je » from the decoder where the trie had found « une ». A dead band does not only lose a letter, it can make a correction layer worse. | Low. Only points that typed nothing change; every tap on a drawn key types what it typed before. To check on the device: the space bar's trackpad (a drag that leaves the drawn key), the accent popup, delete's repeat. |
+| 1 | **Close the dead bands.** Each key's touch area becomes its whole cell: the gap between two keys and between two rows is split at its middle, the 2 dp row padding goes to the edge keys, and the rounded corners count. The drawn keys do not move. | The grid is cells with no spacing (`KeyboardView.swift:1170`, `:1174` return 0); each cell is `(width - 1) / units` wide (`:1164`), so 1/9 pt is left between cells; the drawn key is inset 3 pt across and 5.5 pt down inside its cell (`Theme.swift:213`, `:200`), so the boundary is the middle of the visible gap. | Simulated (`--snap gaps`): wrong words fr **21 → 12**, en **25 → 17**; wrong letters fr 26 → 16 (3.9 % → 2.4 %), en 36 → 24 (5.7 % → 3.8 %); miscorrections fr 11 → 8, en 7 → 6. Of the 47 taps that typed nothing, 33 landed between two keys of a row, 8 between two rows, 1 at a screen edge. Example (fr): the replay typed « une » as `ne` (kept wrong) and `ue` (put back to `une` by the trie); with the bands closed it types `une` both times. #386 measured the same word on the #384 bench with its spatial decoder (off by default): `ue`, the n in a dead band, comes out as « je » from the decoder where the trie had found « une ». A dead band does not only lose a letter, it can make a correction layer worse. The simulation moves taps that land outside every drawn key's rectangle; a tap in a rounded corner, inside the rectangle, stays dead, so it slightly understates the fix. | Low. Only points that typed nothing change; every tap on a drawn key types what it typed before. To check on the device: the space bar's trackpad (a drag that leaves the drawn key), the accent popup, delete's repeat. |
 | 2 | **Bottom row down to the navigation bar.** The space bar (and 123, emoji, return) takes the 4 dp under it (the key's own 2 dp padding and the grid's 2 dp), as Gboard and iOS do. | The grid is pinned to the input view's bottom (`KeyboardViewController.swift:305`); the space cell runs 5.5 pt under the drawn key to the grid's edge. Below the extension's view nothing types (the iOS baseline lost one space there, `954-keyboard-baseline/README.md:46`). | Simulated on top of fix 1 (`--snap gaps,below`): en wrong words **17 → 13**, missed space taps en 3 → 1; fr unchanged (no French space tap landed there). | Low, if it stops at the navigation bar: the bar's own buttons (hide keyboard, switch keyboard) stay the system's. |
 | 3 | **Top row up to the toolbar.** The strip between the toolbar and row 1 (3.6 to 4 dp) types the top-row key under it. | Same as fix 1: the top-row cell starts 5.5 pt above the drawn key, at the grid's top; the toolbar is a separate view above it (`KeyboardViewController.swift:72`) and keeps its own touches. | Not simulated (`--snap` has no mode for it). In the replay, 1 French and 2 English letter taps landed above row 1: at most 3 letters. | Low; the toolbar must keep its height and touches. |
 | 4 | **Edge keys to the screen edge.** a, q, p, m, shift and delete take the 2 dp row padding. Part of fix 1. | `clampedPoint` pulls every touch 4 pt inside the grid (`KeyboardView.swift:830`) so the edge cells catch it. | Included in fix 1's simulation: 1 English tap. | Low. |
@@ -245,8 +245,10 @@ the three Gboards are not the same version; the Pixel's Gboard is the Play Store
   edge; down through the space bar near both ends and in the middle to the screen's bottom edge;
   across both ends of the space bar at three heights; down from under the other bottom-row keys
   to the screen's bottom edge; from each screen edge to the centre of a, p, q, m, shift and
-  delete at three heights. Before each tap the field holds `bonjour`, so delete has something to
-  delete and the keyboard is not on its automatic capital. A tap is classified from the field (a
+  delete at three heights. The field is set to `bonjour` at each reset (every 20 taps, and after
+  any tap that changed the keys or emptied the field), so delete has something to delete and the
+  keyboard is not on its automatic capital; between resets each tap follows what the previous ones
+  typed. A tap is classified from the field (a
   character, space, delete, return) or, when the field did not change, from a capture of the keys
   (shift, 123 or emoji changed them) and from the window list (the navigation bar's buttons). The
   bar is never tapped: the microphone is in it.
@@ -270,7 +272,13 @@ top.
   separately.
 - The simulation moves taps; it does not run a changed keyboard. A real fix could differ at the
   edges of what it moves (a drag that starts in a gap, the space bar's trackpad).
-- Gboard's boundaries move with what was typed (#382); the maps were taken after `bonjour`.
+- Gboard's boundaries move with what was typed (#382); the maps were taken after `bonjour` plus
+  up to 19 letters typed by the earlier taps since the last reset, so a Gboard boundary near a
+  letter can differ from one tap to the next.
+- The maps were taken before the harness drained a field change that lands after a tap settled
+  (added after review, as replay does); a late change would show as a single odd tap inside a
+  run. The few single odd taps in the maps have other causes: the period of a double space and
+  the automatic capital after it, and the back-gesture arrow at a screen edge.
 - On `dictus_api35` the lines under 123, emoji and return start a quarter row below the key's
   centre and cross the key; on the two other profiles they start at the drawn key's bottom edge
   (a page switch on a small screen did not always come back). Both show what is under the key.

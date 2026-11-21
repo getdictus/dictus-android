@@ -624,6 +624,12 @@ class KeyboardReplay {
                     continue
                 }
                 if (dirty || count++ % MAP_RESET_EVERY == 0) restore()
+                // A change that landed after the previous tap settled belongs to that tap, as in replay.
+                val late = activity.changesFrom(seen[0])
+                if (late.isNotEmpty()) {
+                    seen[0] += late.size
+                    text = late.last().text
+                }
                 val before = text
                 val outcome = tap(activity, px.toFloat(), py.toFloat(), before, seen)
                 text = outcome.after
