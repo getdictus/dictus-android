@@ -68,10 +68,11 @@ numbers, Whisper included:
 \* 112,996 KB of that run was swapped out (TOTAL SWAP PSS), which hides the comparison.
 
 The total moves by tens of megabytes between runs with nothing to do with the decoder: the
-clean pages of the APK come and go with the page cache. What the decoder allocates shows in
-Private Dirty: +8 KB between the two English runs. Its models are clean pages of the APK file
-(`.apk mmap`), 3.6 MB per language at most, read in only as a search touches them, and which
-the system can drop under pressure.
+clean pages of the APK come and go with the page cache. Between the two English runs the whole
+process's Private Dirty moved by +8 KB, the sum of opposite moves (Dalvik Heap +3,968 KB, `.art
+mmap` -4,032 KB): no isolated measure of what the decoder allocates, only no visible growth. Its
+models are clean pages of the APK file (`.apk mmap`), 3.6 MB per language at most, read in only
+as a search touches them, and which the system can drop under pressure.
 
 APK (`app-debug.apk`, `-Pdictus.emulatorAbi=true`): 201,031,116 bytes on develop `f36e579`,
 208,353,457 on the branch, +7,322,341, of which 7,199,993 are the two stored models.

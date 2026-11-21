@@ -67,7 +67,7 @@ class SpatialAutocorrectTest {
             spatial.keyTouches.touched(c.toString(), keys.getValue(c), local)
             spatial.typed(c.toString())
         }
-        spatial.sync("thinl")
+        spatial.sync("thinl", "i thinl")
     }
 
     private class FixedKey(left: Float, top: Float) : KeyPlacement() {

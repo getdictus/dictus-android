@@ -99,6 +99,6 @@ done
 
 if [[ "$MODE" == replay ]]; then
   label="$KEYBOARD, emulator replay"
-  [[ -n "$SPATIAL" ]] && label="$label, spatial autocorrect $([[ "$SPATIAL" == true ]] && echo on || echo off)"
+  [[ "$KEYBOARD" == dictus && -n "$SPATIAL" ]] && label="$label, spatial autocorrect $([[ "$SPATIAL" == true ]] && echo on || echo off)"
   python3 -I "$BENCH/score.py" "${dirs[@]}" --keyboard "$label" --commit "$COMMIT"
 fi

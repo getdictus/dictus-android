@@ -455,6 +455,8 @@ class DictusImeService : LifecycleInputMethodService() {
         bindingScope.launch {
             dictionaryEngine.activation.filterNotNull().collect { activation ->
                 autocorrectCoordinator.onOtherInput()
+                // Taps made on the other language's keys are not this grid's.
+                spatialAutocorrect.clear()
                 clearSuggestionState()
                 val activeState = ActiveKeyboardState(activation.language, activation.layout)
                 _activeKeyboardState.value = activeState
@@ -537,7 +539,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun refreshSuggestionsFromEditor() {
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
-            spatialAutocorrect.sync("")
+            spatialAutocorrect.sync("", "")
             clearSuggestionState(reason = "editor not eligible")
             return
         }
@@ -552,7 +554,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
 
         _currentWord.value = currentWord
-        spatialAutocorrect.sync(currentWord)
+        spatialAutocorrect.sync(currentWord, beforeCursor)
         if (shouldRequestSuggestions() && currentWord.isNotEmpty()) {
             requestSuggestionsForCurrentWord()
         } else {

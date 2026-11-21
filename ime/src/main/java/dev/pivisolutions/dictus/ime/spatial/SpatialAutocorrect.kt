@@ -37,9 +37,9 @@ internal class SpatialAutocorrect(private val openModel: (language: String) -> T
         if (enabled) buffer.deleted()
     }
 
-    /** The word before the cursor, as the service just read it from the editor. */
-    fun sync(word: String) {
-        if (enabled) buffer.sync(word)
+    /** The word before the cursor and the text before it ([beforeCursor] ends with [word]), as the service just read them. */
+    fun sync(word: String, beforeCursor: String) {
+        if (enabled) buffer.sync(word, place(beforeCursor, word))
     }
 
     /** A word ended: what is typed next starts a new one. */
@@ -57,10 +57,10 @@ internal class SpatialAutocorrect(private val openModel: (language: String) -> T
     ): String? {
         if (!enabled) return null
         val word = offered.input
-        val taps = buffer.taps(word) ?: return null
+        val before = textBeforeCursor()?.toString()?.takeIf { it.endsWith(word) } ?: return null
+        val taps = buffer.taps(word, place(before, word)) ?: return null
         val grid = keyTouches.grid() ?: return null
         val decoder = decoder(language) ?: return null
-        val before = textBeforeCursor()?.toString()?.takeIf { it.endsWith(word) } ?: return null
         val trie = offered.primaryCorrection.takeUnless { offered.isKnownWord && !offered.knownInputDominance }
         return SpatialCorrection.correct(
             word = word,
@@ -85,6 +85,13 @@ internal class SpatialAutocorrect(private val openModel: (language: String) -> T
 
     internal companion object {
         val MODEL_LANGUAGES = setOf("fr", "en")
+
+        /**
+         * Where [word] is: the characters before it, enough to tell two occurrences of one word
+         * apart. The service reads 50 characters, so a word up to the decoder's 32 letters keeps
+         * all of them.
+         */
+        fun place(beforeCursor: String, word: String) = beforeCursor.dropLast(word.length).takeLast(16)
 
         /** Hex's `TypingWord.previousWord`: the last word of [before], lowercase. */
         fun previousWord(before: String) =

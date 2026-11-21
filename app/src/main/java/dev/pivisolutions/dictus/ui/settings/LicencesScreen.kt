@@ -166,6 +166,16 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // SCOWL's copyright file, shipped verbatim: its WordNet, VarCon and Ispell notices ask for it.
+        val scowlNotice = remember {
+            val copyright = try {
+                context.assets.open("licences/scowl-2020.12.07.txt").bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                ""
+            }
+            SCOWL_INTRO + "\n\n" + copyright
+        }
+
         // Spatial autocorrect (#385): Hex's decoder, ported code, and where its two models come
         // from. Google Books asks for the attribution, SCOWL's notice travels with its output,
         // and fr.hextm, derived from Grammalecte's dictionary, is offered under the MPL 2.0.
@@ -203,7 +213,7 @@ fun LicencesScreen(
             name = "SCOWL",
             author = "Kevin Atkinson",
             url = "http://wordlist.aspell.net",
-            licenceText = SCOWL_NOTICE,
+            licenceText = scowlNotice,
             onLinkClick = openLink,
         )
 
@@ -341,16 +351,6 @@ private const val GRAMMALECTE_NOTICE =
         "derived from it, is offered under the same licence; the script that builds it is " +
         "tools/typing-model/build-typing-model.py in https://github.com/getdictus/dictus-ios."
 
-private const val SCOWL_NOTICE =
+private const val SCOWL_INTRO =
     "The English spatial autocorrect model (en.hextm) keeps only the words of SCOWL (Spell Checker " +
-        "Oriented Word Lists) and VarCon, sizes up to 70.\n\n" +
-        "Copyright 2000-2018 by Kevin Atkinson\n\n" +
-        "Permission to use, copy, modify, distribute and sell these word lists, the associated " +
-        "scripts, the output created from the scripts, and its documentation for any purpose is " +
-        "hereby granted without fee, provided that the above copyright notice appears in all copies " +
-        "and that both that copyright notice and this permission notice appear in supporting " +
-        "documentation. Kevin Atkinson makes no representations about the suitability of this array " +
-        "for any purpose. It is provided \"as is\" without express or implied warranty.\n\n" +
-        "SCOWL's inflections come from WordNet 1.6, Copyright 1997 by Princeton University. All " +
-        "rights reserved. THIS SOFTWARE AND DATABASE IS PROVIDED \"AS IS\" AND PRINCETON UNIVERSITY " +
-        "MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED."
+        "Oriented Word Lists) and VarCon 2020.12.07, sizes up to 70. Its copyright file, verbatim:"

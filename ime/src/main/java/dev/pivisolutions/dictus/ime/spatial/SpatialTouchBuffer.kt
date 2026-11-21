@@ -5,10 +5,11 @@ package dev.pivisolutions.dictus.ime.spatial
  * `SpatialTouchBuffer` (getdictus/dictus-ios#1013).
  *
  * The keyboard records each key it writes, and [sync] tells the buffer what the word before the
- * cursor reads whenever the service reads it from the editor. A tap is kept only while the
- * buffer's characters are exactly that word. An edit the keyboard did not record (a cursor
- * moved in the field, a paste, a suggestion tapped) makes the two disagree, and the word is
- * then left to the trie.
+ * cursor reads whenever the service reads it from the editor, with the text just before it. A
+ * tap is kept only while the buffer's characters are exactly that word, at the same place: the
+ * text before the word has not changed since the buffer first saw it. An edit the keyboard did
+ * not record (a cursor moved in the field, even to the same word elsewhere, a paste, a
+ * suggestion tapped) makes the two disagree, and the word is then left to the trie.
  *
  * WHY it checks against the editor rather than tracking every edit: the service has a dozen
  * ways to change the text, and an edit missed here would hand the decoder taps that belong to
@@ -19,6 +20,8 @@ internal class SpatialTouchBuffer {
     private val text = StringBuilder()
     /** One per character of [text]; null where no tap typed it (a popup accent, an apostrophe). */
     private val points = ArrayList<KeyPoint?>()
+    /** The text before the word, as the editor last showed it; null until it has. */
+    private var before: String? = null
 
     /** The keyboard wrote [typed], tapped at [point] when it is one key's single character. */
     fun typed(typed: String, point: KeyPoint?) {
@@ -39,9 +42,14 @@ internal class SpatialTouchBuffer {
         points.removeAt(points.lastIndex)
     }
 
-    /** The word before the cursor reads [word]: unless the buffer is exactly that, its taps are dropped. */
-    fun sync(word: String) {
-        if (text.contentEquals(word)) return
+    /**
+     * The word before the cursor reads [word], after [before]: unless the buffer is exactly that
+     * word at that place, its taps are dropped.
+     */
+    fun sync(word: String, before: String) {
+        val here = this.before
+        this.before = before
+        if (text.contentEquals(word) && (here == null || here == before)) return
         text.setLength(0)
         text.append(word)
         points.clear()
@@ -51,8 +59,13 @@ internal class SpatialTouchBuffer {
     fun clear() {
         text.setLength(0)
         points.clear()
+        before = null
     }
 
-    /** One point per character of [word] (null where none was recorded), or null when the buffer is not exactly [word]. */
-    fun taps(word: String): List<KeyPoint?>? = if (word.isNotEmpty() && text.contentEquals(word)) points.toList() else null
+    /**
+     * One point per character of [word] (null where none was recorded), or null when the buffer
+     * is not exactly [word] after [before].
+     */
+    fun taps(word: String, before: String): List<KeyPoint?>? =
+        if (word.isNotEmpty() && text.contentEquals(word) && this.before == before) points.toList() else null
 }

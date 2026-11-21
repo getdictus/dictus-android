@@ -12,8 +12,8 @@ class SpatialTouchBufferTest {
     fun `the buffer holds one tap per character of the word`() {
         val buffer = SpatialTouchBuffer()
         "trouce".forEachIndexed { i, c -> buffer.typed(c.toString(), p(i)) }
-        buffer.sync("trouce")
-        assertEquals((0..5).map(::p), buffer.taps("trouce"))
+        buffer.sync("trouce", "Je ")
+        assertEquals((0..5).map(::p), buffer.taps("trouce", "Je "))
     }
 
     @Test
@@ -22,9 +22,9 @@ class SpatialTouchBufferTest {
         buffer.typed("a", p(1))
         buffer.typed("b", p(2))
         buffer.deleted()
-        buffer.sync("a")
+        buffer.sync("a", "Je ")
         buffer.typed("c", p(3))
-        assertEquals(listOf(p(1), p(3)), buffer.taps("ac"))
+        assertEquals(listOf(p(1), p(3)), buffer.taps("ac", "Je "))
     }
 
     @Test
@@ -33,7 +33,8 @@ class SpatialTouchBufferTest {
         buffer.typed("t", p(1))
         buffer.typed("e", p(2))
         buffer.replacedLast("é")
-        assertEquals(listOf(p(1), p(2)), buffer.taps("té"))
+        buffer.sync("té", "Je ")
+        assertEquals(listOf(p(1), p(2)), buffer.taps("té", "Je "))
     }
 
     @Test
@@ -41,10 +42,10 @@ class SpatialTouchBufferTest {
         val buffer = SpatialTouchBuffer()
         buffer.typed("a", p(1))
         // The cursor moved into another word, or a suggestion was tapped: the editor says so.
-        buffer.sync("xyza")
+        buffer.sync("xyza", "Je ")
         buffer.typed("b", p(2))
-        assertEquals(listOf(null, null, null, null, p(2)), buffer.taps("xyzab"))
-        assertNull(buffer.taps("ab"))
+        assertEquals(listOf(null, null, null, null, p(2)), buffer.taps("xyzab", "Je "))
+        assertNull(buffer.taps("ab", "Je "))
     }
 
     @Test
@@ -53,7 +54,8 @@ class SpatialTouchBufferTest {
         buffer.typed("a", p(1))
         buffer.typed("é", null)
         buffer.typed("b", p(2))
-        assertEquals(listOf(p(1), null, p(2)), buffer.taps("aéb"))
+        buffer.sync("aéb", "Je ")
+        assertEquals(listOf(p(1), null, p(2)), buffer.taps("aéb", "Je "))
     }
 
     @Test
@@ -63,6 +65,19 @@ class SpatialTouchBufferTest {
         buffer.clear()
         buffer.typed("a", p(5))
         buffer.typed("m", p(6))
-        assertEquals(listOf(p(5), p(6)), buffer.taps("am"))
+        buffer.sync("am", "Je ")
+        assertEquals(listOf(p(5), p(6)), buffer.taps("am", "Je "))
+    }
+
+    @Test
+    fun `the same word elsewhere in the field is not the one typed`() {
+        val buffer = SpatialTouchBuffer()
+        buffer.sync("", "Je ")
+        "thinl".forEachIndexed { i, c -> buffer.typed(c.toString(), p(i)) }
+        buffer.sync("thinl", "Je ")
+        // The cursor moved after another "thinl", further on in the field.
+        buffer.sync("thinl", "et puis ")
+        assertNull(buffer.taps("thinl", "et puis "))
+        assertNull(buffer.taps("thinl", "Je "))
     }
 }
