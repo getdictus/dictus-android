@@ -77,7 +77,8 @@ class SpatialTouchBufferTest {
         buffer.sync("thinl", "Je ")
         // The cursor moved after another "thinl", further on in the field.
         buffer.sync("thinl", "et puis ")
-        assertNull(buffer.taps("thinl", "et puis "))
+        // The word is there, but none of its letters has a tap: the decoder does not read it.
+        assertEquals(List(5) { null }, buffer.taps("thinl", "et puis "))
         assertNull(buffer.taps("thinl", "Je "))
     }
 }
