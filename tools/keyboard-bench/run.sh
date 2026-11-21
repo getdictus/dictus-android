@@ -10,6 +10,8 @@
 #   ./gradlew -p tools/keyboard-bench/harness assembleDebug assembleDebugAndroidTest
 # Dictus is switched to each run's language by this script (dictus_prefs.py). Gboard is not:
 # leave its keyboard on the run's language (docs/keyboard-measurement.md, "Gboard").
+# --spatial on|off sets Dictus's spatial autocorrect switch (#385) before each run; without it
+# the switch stays as it is (off on a fresh install).
 #
 # Writes taps.tsv, commits.tsv, texts.tsv and keys.tsv per language under
 # build/keyboard-bench/<keyboard>-<lang>/ and prints the report on stdout.
@@ -24,6 +26,7 @@ KEYBOARD=""
 LANGS="fr,en"
 MODE=replay
 SENTENCES=""
+SPATIAL=""
 OUT="$ROOT/build/keyboard-bench"
 
 while [[ $# -gt 0 ]]; do
@@ -33,11 +36,18 @@ while [[ $# -gt 0 ]]; do
     --langs) LANGS="$2"; shift 2 ;;
     --mode) MODE="$2"; shift 2 ;;
     --sentences) SENTENCES="$2"; shift 2 ;;
+    --spatial) SPATIAL="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
 [[ -n "$SERIAL" ]] || { echo "pass --serial" >&2; exit 2; }
+case "$SPATIAL" in
+  "") ;;
+  on) SPATIAL=true ;;
+  off) SPATIAL=false ;;
+  *) echo "pass --spatial on|off" >&2; exit 2 ;;
+esac
 case "$KEYBOARD" in
   dictus) IME=dev.pivisolutions.dictus/.ime.DictusImeService ;;
   gboard) IME=com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME ;;
@@ -69,6 +79,9 @@ for lang in "${langs[@]}"; do
   name="$KEYBOARD-$lang"
   if [[ "$KEYBOARD" == dictus ]]; then
     python3 -I "$BENCH/dictus_prefs.py" --serial "$SERIAL" set keyboard_language "$lang" >&2
+    if [[ -n "$SPATIAL" ]]; then
+      python3 -I "$BENCH/dictus_prefs.py" --serial "$SERIAL" set --bool debug_spatial_autocorrect "$SPATIAL" >&2
+    fi
   fi
   select_ime
   extra=()
@@ -85,5 +98,7 @@ for lang in "${langs[@]}"; do
 done
 
 if [[ "$MODE" == replay ]]; then
-  python3 -I "$BENCH/score.py" "${dirs[@]}" --keyboard "$KEYBOARD, emulator replay" --commit "$COMMIT"
+  label="$KEYBOARD, emulator replay"
+  [[ -n "$SPATIAL" ]] && label="$label, spatial autocorrect $([[ "$SPATIAL" == true ]] && echo on || echo off)"
+  python3 -I "$BENCH/score.py" "${dirs[@]}" --keyboard "$label" --commit "$COMMIT"
 fi
