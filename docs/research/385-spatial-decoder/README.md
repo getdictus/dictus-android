@@ -19,6 +19,11 @@ replayed on its own, `dumpsys meminfo` read right after.
 With the switch off, `texts.tsv` and `commits.tsv` are byte-identical to the #382 baseline
 (develop at `71f5ece`) in both languages, and so are the taps apart from their times.
 
+After the review fixes (`5d91f64`: the buffer also checks where the word is, a language change
+drops the taps), both "on" runs were replayed again: `texts.tsv` and `commits.tsv` came out
+byte-identical to the ones here. Their space times were 4.32 / 8.01 / 40.4 ms (fr) and
+3.90 / 7.78 / 23.4 ms (en), the same order as below.
+
 ## Before and after
 
 | | fr off | fr on | en off | en on |
