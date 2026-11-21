@@ -17,6 +17,10 @@ import javax.inject.Inject
  * Returns "unknown" outside a working tree (a source archive, a CI checkout without git).
  * A build with no revision information has to keep saying so rather than guess.
  */
+// The feedback route (#373), on the www host: the apex answers 308, a redirect a POST should
+// not depend on.
+val FEEDBACK_PRODUCTION = "https://www.getdictus.com/api/feedback"
+
 fun gitOutput(vararg command: String): String = try {
     val output = ByteArrayOutputStream()
     val result = providers.exec {
@@ -232,9 +236,15 @@ android {
                 gb
             } ?: 6
             buildConfigField("int", "PARAKEET_MIN_RAM_GB", parakeetMinRamGb.toString())
+            // Feedback route (#373). A debug build can post to a local stub or a preview instead:
+            //   ./gradlew assembleDebug -Pdictus.feedbackEndpoint=http://10.0.2.2:8787/api/feedback
+            // Release always posts to production.
+            val feedbackEndpoint = providers.gradleProperty("dictus.feedbackEndpoint").orNull ?: FEEDBACK_PRODUCTION
+            buildConfigField("String", "FEEDBACK_ENDPOINT", "\"$feedbackEndpoint\"")
         }
         release {
             buildConfigField("int", "PARAKEET_MIN_RAM_GB", "6")
+            buildConfigField("String", "FEEDBACK_ENDPOINT", "\"$FEEDBACK_PRODUCTION\"")
             // A build type has one signing config for its APK and its AAB, so the environment
             // picks it: release.yml builds them in separate steps, and only the bundle step
             // sets UPLOAD_KEYSTORE_PATH.

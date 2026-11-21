@@ -339,4 +339,48 @@
     <string name="model_preparation_download_continues">The download continues if you leave the app.</string>
     <string name="model_preparation_close">Close</string>
 
+    <!-- Send feedback (#373), texts from the iOS form (#565, #981) -->
+    <string name="feedback_title">Send feedback</string>
+    <string name="feedback_back_cd">Back</string>
+    <string name="feedback_from">From</string>
+    <string name="feedback_name">Your name</string>
+    <string name="feedback_email">Email (optional)</string>
+    <string name="feedback_from_footer">A name is required. A pseudonym is fine. Give an email only if you want a reply.</string>
+    <string name="feedback_email_invalid">This email address looks incomplete.</string>
+    <string name="feedback_name_too_long">The name is limited to 100 characters.</string>
+    <string name="feedback_type">Type</string>
+    <string name="feedback_type_bug">Bug</string>
+    <string name="feedback_type_idea">Idea</string>
+    <string name="feedback_type_other">Other</string>
+    <string name="feedback_prompt_bug">What happened, and what did you expect?</string>
+    <string name="feedback_prompt_idea">Your idea</string>
+    <string name="feedback_prompt_other">Your message</string>
+    <string name="feedback_message_overflow">Characters over the 4,000 limit: %1$d</string>
+    <string name="feedback_attach_log">Attach the debug log</string>
+    <string name="feedback_see_log">See what will be sent</string>
+    <string name="feedback_log_title">What will be sent</string>
+    <string name="feedback_log_reading">Reading the debug log…</string>
+    <string name="feedback_log_empty">The debug log is empty.</string>
+    <string name="feedback_log_covers">If you attach the debug log, it covers Dictus\'s most recent activity.</string>
+    <string name="feedback_log_no_text">It contains neither your transcriptions nor what you type.</string>
+    <string name="feedback_log_contents">It contains the Android and Dictus versions, your device model, and the identifiers of the apps you used the keyboard in. You can read it before sending.</string>
+    <string name="feedback_also_sent">Also sent</string>
+    <string name="feedback_device">Device</string>
+    <string name="feedback_locale">Language and region</string>
+    <string name="feedback_revision">Code revision</string>
+    <string name="feedback_send">Send</string>
+    <string name="feedback_retry">Retry</string>
+    <string name="feedback_share">Share instead</string>
+    <string name="feedback_ask_log_title">Attach the debug log?</string>
+    <string name="feedback_ask_log_attach">Attach</string>
+    <string name="feedback_ask_log_send_without">Send without</string>
+    <string name="feedback_failed_unreachable">Dictus could not reach the server. Your message is kept.</string>
+    <string name="feedback_failed_rate_limited_minutes">Too many reports came from this network. Try again in %1$d minutes.</string>
+    <string name="feedback_failed_rate_limited">Too many reports came from this network. Try again in a minute.</string>
+    <string name="feedback_failed_delivery">The server could not deliver your report. Your message is kept.</string>
+    <string name="feedback_failed_unavailable">Feedback is unavailable right now. Your message is kept.</string>
+    <string name="feedback_failed_rejected">The server refused this report. Share it instead.</string>
+    <string name="feedback_sent">Sent. Thank you.</string>
+    <string name="feedback_done">Done</string>
+
 </resources>

@@ -88,6 +88,7 @@ fun SettingsScreen(
     onNavigateToDebugLogs: () -> Unit = {},
     onNavigateToSoundSettings: () -> Unit = {},
     onNavigateToTranscriptionDebug: () -> Unit = {},
+    onNavigateToFeedback: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
@@ -216,7 +217,7 @@ fun SettingsScreen(
         }
 
         // ---------- SECTION: À propos ----------
-        // iOS order: version, GitHub, licences, debug logs, export logs.
+        // iOS order: version, send feedback, GitHub, licences, debug logs, export logs.
         // Legal notices is Android-only, next to the other web link.
         SectionHeader(text = stringResource(R.string.settings_section_about))
         SettingsCard {
@@ -231,6 +232,11 @@ fun SettingsScreen(
                 ) {
                     if (versionTaps.onTap(SystemClock.uptimeMillis())) onNavigateToTranscriptionDebug()
                 },
+            )
+            SettingDivider()
+            SettingNavRow(
+                label = stringResource(R.string.feedback_title),
+                onClick = onNavigateToFeedback,
             )
             SettingDivider()
             SettingLinkRow(

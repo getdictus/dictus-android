@@ -43,6 +43,12 @@ sealed class AppDestination(val route: String) {
     /** Debug Logs viewer — navigated from Settings > À propos > Debug Logs. */
     data object DebugLogs : AppDestination("debug_logs")
 
+    /** Send feedback (#373) — navigated from Settings > À propos > Envoyer un retour. */
+    data object Feedback : AppDestination("feedback")
+
+    /** The debug log the feedback form attaches, read-only (#373). */
+    data object FeedbackLog : AppDestination("feedback_log")
+
     /** Hidden transcription debug log (#295) — five taps on Settings > À propos > Version. */
     data object TranscriptionDebug : AppDestination("transcription_debug")
 
