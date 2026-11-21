@@ -45,6 +45,12 @@ internal object AutocorrectToken {
     }
 
     /**
+     * Whether [text] is letter words ([isLetterToken]) separated by single spaces: the shape of a
+     * correction. Only the spatial decoder (#385) writes two words ("je suis" for `jesuis`).
+     */
+    fun isLetterWords(text: String): Boolean = text.split(' ').all(::isLetterToken)
+
+    /**
      * Apostrophes and hyphens that join two halves of one word.
      *
      * Both apostrophe shapes are accepted because the editor holds whatever the host app or an
