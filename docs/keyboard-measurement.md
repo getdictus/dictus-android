@@ -103,6 +103,14 @@ measure the wrong keyboard. Do not run Argent on the emulator during a replay: i
 of the top row, along the row and down into the row below, and writes `probe.tsv`: what
 each tap typed, or `none`.
 
+**Touch maps and touch-area simulations** (#370). `run.sh --mode map --langs fr` taps 2 px
+apart along lines around the space bar, the edge keys, the top row and the bottom of the
+keyboard, and writes `map.tsv`; `run.sh --snap gaps|gaps,below` replays the runs with each tap
+that lands in no key area moved into the nearest one, which simulates tiled touch areas on the
+keyboard as it ships. Dictus's accessibility nodes are its labels, so both take its key
+rectangles with `--rects`, measured on a capture. See
+[`docs/research/370-ergonomics/`](research/370-ergonomics/README.md).
+
 Leave the emulator's keyboard as you found it (Gboard on `dictus_api35`).
 
 ### 2. Device

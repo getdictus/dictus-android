@@ -7,6 +7,7 @@ import android.text.InputType
 import android.text.TextWatcher
 import android.view.Gravity
 import android.view.inputmethod.EditorInfo
+import android.widget.TextView
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 
@@ -24,6 +25,7 @@ class FieldActivity : Activity() {
         private set
 
     private val changes = mutableListOf<Change>()
+    private var editorActions = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +38,12 @@ class FieldActivity : Activity() {
             imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN
             gravity = Gravity.TOP
             textSize = 18f
+            // The return key: a single-line field gets an editor action, not a newline. Counted for the
+            // touch map, and kept from hiding the keyboard.
+            setOnEditorActionListener { _: TextView, _: Int, _: android.view.KeyEvent? ->
+                synchronized(changes) { editorActions++ }
+                true
+            }
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
@@ -54,9 +62,15 @@ class FieldActivity : Activity() {
 
     fun changeCount(): Int = synchronized(changes) { changes.size }
 
-    /** Empties the field and starts a new input session, as opening a new message does. */
-    fun reset() {
-        field.setText("")
+    fun editorActionCount(): Int = synchronized(changes) { editorActions }
+
+    /**
+     * Empties the field, or sets it to [text] with the cursor at its end, and starts a new input
+     * session, as opening a new message does.
+     */
+    fun reset(text: String = "") {
+        field.setText(text)
+        field.setSelection(text.length)
         val imm = getSystemService(InputMethodManager::class.java)
         imm.restartInput(field)
         imm.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
