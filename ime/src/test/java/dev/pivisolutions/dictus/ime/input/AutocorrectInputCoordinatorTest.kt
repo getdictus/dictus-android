@@ -48,6 +48,26 @@ class AutocorrectInputCoordinatorTest {
         }
     }
 
+    /**
+     * #388 (iOS #997): `arribe`, kept twice while the bar offered `arrive | arrivé`, was learned on
+     * iOS. Here Space never teaches a word: only an undo of a correction does (a bar tap is counted
+     * by the service, not here), so a kept typo stays unlearned however often it is kept.
+     */
+    @Test
+    fun `a typo space keeps is never learned`() {
+        val learned = mutableListOf<String>()
+        val coordinator = AutocorrectInputCoordinator(learned::add)
+        coordinator.startSession()
+        repeat(3) { request ->
+            val editor = FakeEditor(tokenSnapshot("arribe"))
+            coordinator.suggestionRequested(request.toLong(), "arribe")
+            coordinator.suggestionPublished(snapshot(request.toLong(), "arribe", correction = null))
+
+            assertEquals(AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(editor) {})
+        }
+        assertEquals(emptyList<String>(), learned)
+    }
+
     @Test
     fun `explicit dominance evidence permits known input without weakening known guard`() {
         val coordinator = AutocorrectInputCoordinator {}

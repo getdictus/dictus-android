@@ -14,6 +14,7 @@ import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.toNativeTrieLayout
 import dev.pivisolutions.dictus.trie.NativeTrie
+import dev.pivisolutions.dictus.trie.TrieCorrection
 import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 import java.io.Closeable
 import java.text.Normalizer
@@ -45,7 +46,12 @@ interface NativeTrieHandle : Closeable {
 
     fun complete(prefix: String, maxResults: Int): List<String>
 
-    fun correct(word: String, maxEditDistance: Float = 2f, maxResults: Int): List<String>
+    /** Correction candidates, best scored first, each with its edit cost and frequency. */
+    fun correctionCandidates(
+        word: String,
+        maxEditDistance: Float = 2f,
+        maxResults: Int,
+    ): List<TrieCorrection>
 
     fun predictAfterWord(word: String, maxResults: Int): List<String> = emptyList()
 
@@ -77,11 +83,11 @@ class AndroidNativeTrieOpener(private val context: Context) : NativeTrieOpener {
         override fun complete(prefix: String, maxResults: Int): List<String> =
             trie.complete(prefix, maxResults)
 
-        override fun correct(
+        override fun correctionCandidates(
             word: String,
             maxEditDistance: Float,
             maxResults: Int,
-        ): List<String> = trie.correct(word, maxEditDistance, maxResults)
+        ): List<TrieCorrection> = trie.correctionCandidates(word, maxEditDistance, maxResults)
 
         override fun predictAfterWord(word: String, maxResults: Int): List<String> =
             trie.predictAfterWord(word, maxResults).map { it.word }
@@ -123,6 +129,11 @@ class NativeTrieSuggestionEngine(
         val primaryCorrection: String?,
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
+        /**
+         * The typed word is kept and [suggestions] are corrections offered for a tap only: no
+         * slot is the one Space applies (iOS `.candidates`, #388).
+         */
+        val keepsTypedWord: Boolean = false,
     )
     class Activation internal constructor(
         val language: SupportedLanguage,
@@ -276,6 +287,7 @@ class NativeTrieSuggestionEngine(
         val primaryCorrection: String?,
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
+        val keepsTypedWord: Boolean = false,
     )
 
     private data class NativeQuery(
@@ -283,7 +295,7 @@ class NativeTrieSuggestionEngine(
         val profileCorrection: AccentCollapseCandidateSelector.Selection?,
         val contraction: String?,
         val completions: List<String>,
-        val corrections: List<String>,
+        val corrections: List<TrieCorrection>,
         val contextScores: Map<String, Int>,
         val contextIdentity: CorrectionContextIdentity?,
     )
@@ -347,7 +359,12 @@ class NativeTrieSuggestionEngine(
                     ) { word -> live.handle.wordExists(word) }
                 }
                 val completions = live.handle.complete(input, candidateLimit)
-                val corrections = live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit)
+                // Ten, not the bar's six: the word meant can sit sixth (`morning` for `irning`),
+                // and it has to be there for context to lift it (iOS #997).
+                val normalized = input.canonicalLookupKey()
+                val corrections = live.handle
+                    .correctionCandidates(input, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
+                    .filter { it.word.canonicalLookupKey() != normalized }
                 val usableContext = context?.takeIf {
                     !isKnownWord &&
                         it.currentWord == input &&
@@ -357,7 +374,7 @@ class NativeTrieSuggestionEngine(
                 val scores = if (usableContext == null) {
                     emptyMap()
                 } else {
-                    (completions + corrections)
+                    (completions + corrections.map { it.word })
                         .distinctBy { it.canonicalLookupKey() }
                         .associate { word ->
                             val key = word.canonicalLookupKey()
@@ -385,20 +402,37 @@ class NativeTrieSuggestionEngine(
             isKnownWord, profileCorrection, contraction, completions, corrections,
             contextScores, contextIdentity,
         ) = nativeQuery
+        val normalizedInput = input.canonicalLookupKey()
+        val rankingCandidates = corrections.map {
+            val key = it.word.canonicalLookupKey()
+            CorrectionCandidate(key, it.cost.toDouble(), it.frequency, contextScores[key]?.coerceAtLeast(0) ?: 0)
+        }
+        val trieDecision = CorrectionRanking.decide(rankingCandidates)
+        // Two accented spellings of the same letters, equally likely (#388, iOS #997): `reserve`
+        // is `réserve` or `réservé`. Keep what was typed, offer both.
+        val ambiguousAccents = profileCorrection?.let {
+            CorrectionRanking.ambiguousAccentSpellings(normalizedInput, rankingCandidates)
+        }
         val nativeCandidates = rerank(
-            listOfNotNull(profileCorrection?.word, contraction) + completions + corrections,
+            listOfNotNull(profileCorrection?.word, contraction) + completions + trieDecision.ranked,
             contextScores,
         )
         if (nativeCandidates.isEmpty() && learned.isEmpty()) {
             return QueryResult(isKnownWord, false, null, emptyList(), contextIdentity)
         }
 
-        val normalizedInput = input.canonicalLookupKey()
-        val primaryCorrection = profileCorrection?.word
-            ?: contraction
-            ?: rerank(corrections, contextScores).firstOrNull {
-                it.canonicalLookupKey() != normalizedInput
-            }
+        val primaryCorrection = when {
+            ambiguousAccents != null -> null
+            else -> profileCorrection?.word ?: contraction ?: trieDecision.replacement
+        }
+        // A word Space keeps although the trie has readings for it: the bar offers them, none
+        // bold. A learned or known input is a word, not a typo, and keeps its completions.
+        val offered = when {
+            normalizedInput in learnedKeys -> null
+            ambiguousAccents != null -> ambiguousAccents
+            isKnownWord || profileCorrection != null || contraction != null -> null
+            else -> (trieDecision.proposal as? CorrectionProposal.Suggest)?.words
+        }
         val prefixInput = normalizedInput.stripAccents()
         val seen = mutableSetOf(normalizedInput)
         val learnedPrefixWords = learned.asSequence()
@@ -417,6 +451,16 @@ class NativeTrieSuggestionEngine(
 
         // Candidates come back in dictionary case; the user's capitals must survive (#224).
         val locale = live?.language?.let { Locale.forLanguageTag(it.code) } ?: Locale.ROOT
+        if (offered != null) {
+            return QueryResult(
+                isKnownWord = isKnownWord,
+                knownInputDominance = profileCorrection?.knownInputDominance == true,
+                primaryCorrection = null,
+                suggestions = offered.take(maxResults).map { TypedCase.applyTo(it, input, locale) },
+                contextIdentity = contextIdentity,
+                keepsTypedWord = true,
+            )
+        }
         return QueryResult(
             isKnownWord = isKnownWord,
             knownInputDominance = profileCorrection?.knownInputDominance == true,
@@ -526,6 +570,7 @@ class NativeTrieSuggestionEngine(
                     primaryCorrection = result.primaryCorrection,
                     suggestions = result.suggestions,
                     contextIdentity = result.contextIdentity,
+                    keepsTypedWord = result.keepsTypedWord,
                 )
             }
         }
@@ -576,6 +621,7 @@ class NativeTrieSuggestionEngine(
         const val CANDIDATE_MULTIPLIER = 2
         const val MAX_NATIVE_RESULTS = 20
         const val MAX_EDIT_DISTANCE = 2f
+        const val RANKED_CORRECTIONS = 10
         const val MAX_PREDICTION_RESULTS = 3
         const val MAX_CONTEXT_RANK_BOOST = 2.0
         const val CONTEXT_SCORE_SCALE = 1_000.0

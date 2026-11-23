@@ -55,6 +55,9 @@ enum class SuggestionPresentationMode { COMPLETION, PREDICTION }
  *
  * After an autocorrection, slot 0 is the undo chip ([undoOffer], #276, iOS `SuggestionBarView`
  * `undoAvailable`) and the two others keep the first completions or predictions.
+ *
+ * [keepsTypedWord]: Space keeps the typed word, and the two other slots are corrections offered
+ * for a tap only, so none is bold (iOS `.candidates`, #388).
  */
 @Composable
 fun SuggestionBar(
@@ -67,7 +70,9 @@ fun SuggestionBar(
     predictionToken: NextWordPredictionToken? = null,
     undoOffer: AutocorrectUndoOffer? = null,
     onUndoAutocorrect: () -> Unit = {},
+    keepsTypedWord: Boolean = false,
 ) {
+    val bold = boldSlot(mode, undoOffer, keepsTypedWord)
     val slots = suggestionSlots(currentWord, suggestions, mode, undoOffer)
 
     Row(
@@ -109,9 +114,7 @@ fun SuggestionBar(
                     if (text.isNotEmpty()) {
                         SuggestionText(
                             text = text,
-                            fontWeight = if (
-                                undoOffer == null && mode == SuggestionPresentationMode.COMPLETION && index == 1
-                            ) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = if (index == bold) FontWeight.Bold else FontWeight.Normal,
                         )
                     }
                 }
@@ -120,6 +123,16 @@ fun SuggestionBar(
         }
     }
 }
+
+/**
+ * The slot drawn bold, the word Space writes: the first completion or correction, or none when an
+ * undo chip, predictions, or corrections Space does not apply fill the bar.
+ */
+internal fun boldSlot(
+    mode: SuggestionPresentationMode,
+    undoOffer: AutocorrectUndoOffer?,
+    keepsTypedWord: Boolean,
+): Int? = if (undoOffer == null && mode == SuggestionPresentationMode.COMPLETION && !keepsTypedWord) 1 else null
 
 /** The three slot texts, "" for an empty slot; slot 0 is the undo chip when [undoOffer] is set. */
 internal fun suggestionSlots(

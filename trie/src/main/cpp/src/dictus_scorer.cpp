@@ -248,6 +248,7 @@ static void searchRecursive(const Trie& trie,
             Candidate c;
             utf16ToUtf8(wordBuf, wordLen, c.word, sizeof(c.word));
             c.score = score;
+            c.cost = remainCost;
             c.frequency = node.frequency;
             insertCandidate(results, c, maxResults);
         }
