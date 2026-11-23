@@ -22,6 +22,7 @@ import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.DictationNotice
 import dev.pivisolutions.dictus.ime.input.NextWordPredictionToken
+import dev.pivisolutions.dictus.ime.input.ReturnKeyStyle
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
 import timber.log.Timber
@@ -79,6 +80,7 @@ fun KeyboardScreen(
     autoCapSignal: AutoCapSignal? = null,
     // Bumped by the service each time the keyboard is hidden, so the next opening starts afresh.
     keyboardSession: Int = 0,
+    returnKeyStyle: ReturnKeyStyle = ReturnKeyStyle.NEWLINE,
 ) {
     // Keyboard state — the keyboard always opens on letters (#288, no "open on 123" setting).
     var currentLayer by remember { mutableStateOf(KeyboardLayer.LETTERS) }
@@ -163,6 +165,7 @@ fun KeyboardScreen(
                     onTrackpadActiveChange = { isTrackpadActive = it },
                     onTrackpadMove = onMoveCursor,
                     frenchAdaptiveKeyState = frenchAdaptiveKeyState,
+                    returnKeyStyle = returnKeyStyle,
                     onKeyPress = { key ->
                         handleKeyPress(
                             key = key,

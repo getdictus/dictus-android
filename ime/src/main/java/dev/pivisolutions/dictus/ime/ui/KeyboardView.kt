@@ -13,7 +13,9 @@ import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.input.ReturnKeyStyle
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
 
 /**
@@ -40,6 +42,7 @@ fun KeyboardView(
     onTrackpadMove: (Int) -> Unit = {},
     frenchAdaptiveKeyState: FrenchAdaptiveKey.State = FrenchAdaptiveKey.DEFAULT,
     onFrenchAdaptiveVariant: (String) -> Unit = {},
+    returnKeyStyle: ReturnKeyStyle = ReturnKeyStyle.NEWLINE,
     modifier: Modifier = Modifier,
 ) {
     val baseRows = when (layer) {
@@ -50,7 +53,7 @@ fun KeyboardView(
     val rows = KeyboardLayouts.localizeUtilityLabels(
         baseRows,
         languageProfile.spaceLabel,
-        languageProfile.returnLabel,
+        returnKeyStyle.label(SupportedLanguage.fromCodeOrDefault(languageProfile.code)),
     )
 
     Column(
@@ -74,6 +77,7 @@ fun KeyboardView(
                 onTrackpadMove = onTrackpadMove,
                 frenchAdaptiveKeyState = frenchAdaptiveKeyState,
                 onFrenchAdaptiveVariant = onFrenchAdaptiveVariant,
+                returnKeyRole = returnKeyStyle.role,
             )
         }
     }

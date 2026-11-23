@@ -39,6 +39,7 @@ data class DictusColorScheme(
     val keyText: Color,
     val keySpecialBackground: Color,
     val iconBackground: Color,
+    val returnActionBackground: Color,
 )
 
 /** Dark variant of custom Dictus colors. */
@@ -49,6 +50,7 @@ private val DictusDarkExtraColors = DictusColorScheme(
     keyText = DictusColors.KeyText,
     keySpecialBackground = DictusColors.KeySpecialBackground,
     iconBackground = DictusColors.IconBackground,
+    returnActionBackground = DictusColors.ReturnActionBlue,
 )
 
 /** Light variant of custom Dictus colors. */
@@ -59,6 +61,7 @@ private val DictusLightExtraColors = DictusColorScheme(
     keyText = DictusColors.LightOnSurface,
     keySpecialBackground = DictusColors.LightKeySpecialBackground,
     iconBackground = DictusColors.LightBackground,
+    returnActionBackground = DictusColors.LightReturnActionBlue,
 )
 
 /**

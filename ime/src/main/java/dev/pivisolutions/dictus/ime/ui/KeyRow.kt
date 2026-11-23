@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.pivisolutions.dictus.ime.input.ReturnKeyRole
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
@@ -34,6 +35,7 @@ fun KeyRow(
     onTrackpadMove: (Int) -> Unit = {},
     frenchAdaptiveKeyState: FrenchAdaptiveKey.State = FrenchAdaptiveKey.DEFAULT,
     onFrenchAdaptiveVariant: (String) -> Unit = {},
+    returnKeyRole: ReturnKeyRole = ReturnKeyRole.NEWLINE,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -89,6 +91,7 @@ fun KeyRow(
                 labelsVisible = labelsVisible,
                 onTrackpadActiveChange = onTrackpadActiveChange,
                 onTrackpadMove = onTrackpadMove,
+                returnKeyRole = returnKeyRole,
                 modifier = Modifier.weight(key.widthMultiplier),
             )
         }
