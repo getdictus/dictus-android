@@ -251,6 +251,25 @@ class AutocorrectInputCoordinatorTest {
         assertNull(coordinator.undoOffer)
     }
 
+    @Test
+    fun `space writes a curated casing, a correction that only changes the case`() {
+        // dictus-ios #1005: `iphone` becomes `iPhone`, and the known French `whatsapp` becomes
+        // `WhatsApp`, the engine marking the curated casing as dominating the known input.
+        listOf(
+            snapshot(1L, "iphone", correction = "iPhone") to "iPhone ",
+            snapshot(1L, "whatsapp", known = true, dominant = true, correction = "WhatsApp") to "WhatsApp ",
+        ).forEach { (offered, expected) ->
+            val coordinator = AutocorrectInputCoordinator {}
+            val editor = FakeEditor(tokenSnapshot(offered.input))
+            coordinator.startSession()
+            coordinator.suggestionRequested(1L, offered.input)
+            assertTrue(coordinator.suggestionPublished(offered))
+
+            assertEquals(AutocorrectSpaceResult.CORRECTED, coordinator.onSpace(editor) {})
+            assertEquals(expected, editor.snapshotValue.text)
+        }
+    }
+
     private fun publishEligible(coordinator: AutocorrectInputCoordinator) {
         coordinator.suggestionRequested(1L, "helo")
         assertTrue(coordinator.suggestionPublished(snapshot(1L, "helo", correction = "hello")))
