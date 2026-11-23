@@ -37,4 +37,16 @@ val frenchLanguageProfile = LanguageProfile(
         'c' to listOf('ç'),
     ),
     contractionPrefixes = listOf("l'", "d'", "c'", "j'", "n'", "s'", "m'", "t'", "qu'"),
+    // French elides before a vowel or a mute h, never before a consonant: `dvotre` must not
+    // become `d'votre` (dictus-ios #1035).
+    elisionOnset = ElisionOnset(
+        prefixes = setOf(
+            "d'", "l'", "j'", "m'", "n'", "t'", "s'", "c'",
+            "qu'", "jusqu'", "lorsqu'", "puisqu'",
+        ),
+        initials = setOf(
+            'a', 'e', 'i', 'o', 'u', 'y', 'h',
+            'à', 'â', 'ä', 'é', 'è', 'ê', 'ë', 'î', 'ï', 'ô', 'ö', 'ù', 'û', 'ü', 'ÿ', 'œ', 'æ',
+        ),
+    ),
 )

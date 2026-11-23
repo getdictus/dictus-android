@@ -18,6 +18,8 @@ data class LanguageProfile(
     val overrides: Map<String, String>,
     val accentMap: Map<Char, List<Char>>,
     val contractionPrefixes: List<String>,
+    /** The prefixes that elide and the letters an elided word may start with. Null without elision. */
+    val elisionOnset: ElisionOnset? = null,
     val collapseRules: List<CollapseRule> = emptyList(),
     val seedBigrams: List<BigramSeed> = emptyList(),
 )
