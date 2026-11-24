@@ -56,6 +56,14 @@ class ProStatus(
         dataStore.edit { it[PreferenceKeys.DEBUG_PRO_ENTITLEMENT_FORCED] = forced }
     }
 
+    /** Flips the Debug override, read and written in one edit. Ignored in a release build. */
+    suspend fun toggleDebugProEntitlementForced() {
+        if (!debugBuild) return
+        dataStore.edit {
+            it[PreferenceKeys.DEBUG_PRO_ENTITLEMENT_FORCED] = it[PreferenceKeys.DEBUG_PRO_ENTITLEMENT_FORCED] != true
+        }
+    }
+
     companion object {
         /** The entitlement rule against explicit inputs, as iOS `ProStatusManager.entitlement`. */
         fun entitlement(preferences: Preferences, debugBuild: Boolean): Boolean {
