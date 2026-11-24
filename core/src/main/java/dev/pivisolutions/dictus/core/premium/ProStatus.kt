@@ -37,6 +37,11 @@ class ProStatus(
         .map { entitlement(it, debugBuild) }
         .distinctUntilChanged()
 
+    /** A purchase exists: the paid half alone, iOS `ProStatusManager.isPaid`. */
+    val isPaid: Flow<Boolean> = dataStore.data
+        .map { it[PreferenceKeys.PRO_PAID] == true }
+        .distinctUntilChanged()
+
     /** The Debug switch's own value, false in a release build. */
     val debugProEntitlementForced: Flow<Boolean> = dataStore.data
         .map { debugBuild && it[PreferenceKeys.DEBUG_PRO_ENTITLEMENT_FORCED] == true }

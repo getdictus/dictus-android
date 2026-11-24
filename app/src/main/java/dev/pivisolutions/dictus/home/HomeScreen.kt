@@ -55,10 +55,12 @@ import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
+import dev.pivisolutions.dictus.core.premium.ProHomeCardContent
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.core.ui.GlassCard
+import dev.pivisolutions.dictus.pro.ProHomeCardView
 import dev.pivisolutions.dictus.model.ModelCatalog
 import dev.pivisolutions.dictus.model.ModelManager
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
@@ -83,6 +85,8 @@ import kotlinx.coroutines.flow.map
  *   premium flag; tests override it to exercise the gated behaviour both ways.
  * @param isModelDownloaded Whether every file of a model is on disk. Defaults to
  *   [ModelManager.isDownloaded]; tests answer it themselves instead of writing model files.
+ * @param proCard What the Home Pro card shows (#207), `ProHomeCardContent.Hidden` for nothing.
+ * @param onOpenProHub Opens the Dictus Pro hub from that card.
  * @param installState A model's background install, as `ModelInstaller.state` reports it: each
  *   change checks the disk again, so an install that ends while Home is on screen shows at once.
  */
@@ -94,6 +98,8 @@ fun HomeScreen(
     historyEnabled: Boolean = PremiumFlags.HISTORY_VISIBLE,
     isModelDownloaded: (modelKey: String) -> Boolean = rememberModelDownloadCheck(),
     installState: (modelKey: String) -> Flow<ModelInstallState> = { emptyFlow() },
+    proCard: ProHomeCardContent = ProHomeCardContent.Hidden,
+    onOpenProHub: () -> Unit = {},
 ) {
     // null until DataStore answers, so the no-model card never flashes for a user whose
     // active model is downloaded but is not the default one.
@@ -276,6 +282,13 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+
+        // The Home Pro card, after the dictation cards as on iOS HomeView. Nothing while the
+        // paywall is hidden (`ProHomeCard`).
+        if (proCard != ProHomeCardContent.Hidden) {
+            Spacer(modifier = Modifier.height(16.dp))
+            ProHomeCardView(content = proCard, onOpen = onOpenProHub)
         }
 
         Spacer(modifier = Modifier.weight(1f))

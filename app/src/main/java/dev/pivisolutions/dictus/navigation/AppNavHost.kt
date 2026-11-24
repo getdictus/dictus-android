@@ -33,7 +33,7 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
-import dev.pivisolutions.dictus.core.premium.PremiumFlags
+import dev.pivisolutions.dictus.core.premium.ProFeature
 import dev.pivisolutions.dictus.feedback.FeedbackLogScreen
 import dev.pivisolutions.dictus.feedback.FeedbackScreen
 import dev.pivisolutions.dictus.history.HistoryRoute
@@ -52,6 +52,8 @@ import dev.pivisolutions.dictus.onboarding.OnboardingTestRecordingScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingViewModel
 import dev.pivisolutions.dictus.onboarding.OnboardingWelcomeScreen
 import dev.pivisolutions.dictus.permission.KeyboardMicRequest
+import dev.pivisolutions.dictus.pro.ProHubRoute
+import dev.pivisolutions.dictus.pro.ProViewModel
 import dev.pivisolutions.dictus.ui.onboarding.OnboardingShell
 import dev.pivisolutions.dictus.ui.navigation.DictusBottomNavBar
 import dev.pivisolutions.dictus.ui.settings.DebugLogsScreen
@@ -301,6 +303,9 @@ private fun MainTabsScreen(
     val currentRoute = navBackStackEntry?.destination?.route ?: AppDestination.Home.route
     // Outside the NavHost, the owner is the activity rather than a back stack entry.
     val activityViewModelOwner = checkNotNull(LocalViewModelStoreOwner.current)
+    // One Pro state for Home's card, Settings' row and the hub (#207).
+    val proViewModel: ProViewModel = hiltViewModel(activityViewModelOwner)
+    val proState by proViewModel.state.collectAsState()
 
     ActiveDictationRedirect(
         dictationController = dictationController,
@@ -315,6 +320,7 @@ private fun MainTabsScreen(
     val showBottomBar = showMainNavigation &&
         currentRoute != AppDestination.Recording.route &&
         currentRoute != AppDestination.History.route &&
+        currentRoute != AppDestination.ProHub.route &&
         currentRoute != AppDestination.Licences.route &&
         currentRoute != AppDestination.DebugLogs.route &&
         currentRoute != AppDestination.Feedback.route &&
@@ -378,21 +384,42 @@ private fun MainTabsScreen(
                         navController.navigate(AppDestination.History.route) { launchSingleTop = true }
                     },
                     installState = modelInstaller::state,
+                    proCard = proState.homeCard,
+                    onOpenProHub = { navController.navigate(AppDestination.ProHub.route) { launchSingleTop = true } },
                 )
             }
-            // History is a Pro feature that has not shipped yet: while the flag is off the
-            // route is never registered, so no navigation can reach the screen even by
-            // mistake. The implementation stays compiled and unit-tested behind it.
-            if (PremiumFlags.HISTORY_VISIBLE) {
-                composable(
-                    route = AppDestination.History.route,
-                    enterTransition = { slideInVertically(initialOffsetY = { it }) },
-                    exitTransition = { slideOutVertically(targetOffsetY = { it }) },
-                    popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
-                    popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
-                ) {
-                    HistoryRoute(onBack = { navController.popBackStack() })
-                }
+            // History is a Pro feature. Its route is reached from Home's hint, drawn only while
+            // `PremiumFlags.HISTORY_VISIBLE` is on, and from the Pro hub's card, reachable only
+            // with Pro (#207). The route is always registered: a graph rebuilt on an entitlement
+            // change would reset the back stack under the user.
+            composable(
+                route = AppDestination.History.route,
+                enterTransition = { slideInVertically(initialOffsetY = { it }) },
+                exitTransition = { slideOutVertically(targetOffsetY = { it }) },
+                popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
+                popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
+            ) {
+                HistoryRoute(onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = AppDestination.ProHub.route,
+                enterTransition = { slideInVertically(initialOffsetY = { it }) },
+                exitTransition = { slideOutVertically(targetOffsetY = { it }) },
+                popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
+                popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
+            ) {
+                ProHubRoute(
+                    onClose = { navController.popBackStack() },
+                    onOpenFeature = { feature ->
+                        when (feature) {
+                            ProFeature.HISTORY ->
+                                navController.navigate(AppDestination.History.route) { launchSingleTop = true }
+                            // Not listed by the hub until they ship (`ProHub.listedFeatures`).
+                            ProFeature.SMART_MODE, ProFeature.VOCABULARY, ProFeature.VOICE_NOTES -> Unit
+                        }
+                    },
+                    viewModel = proViewModel,
+                )
             }
             composable(AppDestination.Models.route) {
                 ModelsScreen(dictationController = dictationController)
@@ -413,6 +440,11 @@ private fun MainTabsScreen(
                     },
                     onNavigateToFeedback = {
                         navController.navigate(AppDestination.Feedback.route)
+                    },
+                    proRowVisible = proState.settingsRowVisible,
+                    isPro = proState.isPro,
+                    onNavigateToProHub = {
+                        navController.navigate(AppDestination.ProHub.route) { launchSingleTop = true }
                     },
                 )
             }

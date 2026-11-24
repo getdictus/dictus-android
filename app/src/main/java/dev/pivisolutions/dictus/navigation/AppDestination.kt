@@ -28,6 +28,9 @@ sealed class AppDestination(val route: String) {
     /** Private local transcription history; content is never carried in the route. */
     data object History : AppDestination("history")
 
+    /** Dictus Pro hub (#207), from Settings' « Dictus Pro » row or Home's Pro card. */
+    data object ProHub : AppDestination("pro_hub")
+
     /** Model management tab — download, select, and delete models. */
     data object Models : AppDestination("models")
 
