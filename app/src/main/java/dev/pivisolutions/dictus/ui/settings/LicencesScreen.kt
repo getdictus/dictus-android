@@ -165,6 +165,18 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Hex — the keyboard's per-language long-press accent lists, as data (#406)
+        LicenceBlock(
+            name = "Hex",
+            author = "Christopher Langton",
+            url = "https://github.com/anomalyco/hex",
+            licenceText = "The keyboard's long-press accent lists, per language, come from Hex.\n\n" +
+                mitLicence("Copyright (c) 2026 Christopher Langton"),
+            onLinkClick = openLink,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         // Dictus itself
         LicenceBlock(
             name = "Dictus",

@@ -64,6 +64,9 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import timber.log.Timber
 
+/** Room kept between the accent popup and each screen edge. */
+private val ACCENT_POPUP_SCREEN_INSET = 4.dp
+
 internal val KeyPressedSemantics = SemanticsPropertyKey<Boolean>("KeyPressed")
 internal var SemanticsPropertyReceiver.keyPressed by KeyPressedSemantics
 
@@ -130,20 +133,26 @@ fun KeyButton(
     var showAccentPopup by remember { mutableStateOf(false) }
     var highlightedAccentIndex by remember { mutableStateOf<Int?>(null) }
     val showPreviewPopup = isPressed && key.type == KeyType.CHARACTER && !showAccentPopup
-    val accentCellWidthPx = with(density) { 44.dp.toPx() }
+    // Narrowed below 44 dp only when the list would not fit the screen on one row (#406).
+    val accentCellWidthPx = AccentPopupFit.optionWidth(
+        cellWidth = with(density) { 44.dp.toPx() },
+        availableWidth = view.rootView.width - with(density) { 2 * ACCENT_POPUP_SCREEN_INSET.toPx() },
+        count = accentChars?.size ?: 0,
+    )
     val selectionSlopPx = with(density) { 8.dp.toPx() }
 
     // Horizontal shift (px) needed to keep the accent popup within screen bounds.
     // Computed once and shared between the Popup offset and resolveAccentIndex().
-    val accentShiftPx = remember(keyWidthPx, keyPositionXPx, accentChars) {
+    val accentShiftPx = remember(keyWidthPx, keyPositionXPx, accentChars, accentCellWidthPx) {
         val accents = accentChars ?: return@remember 0
         if (accents.isEmpty() || keyWidthPx <= 0) return@remember 0
         val popupWidthPx = accents.size * accentCellWidthPx
         val naturalLeftPx = keyPositionXPx + (keyWidthPx - popupWidthPx) / 2f
         val screenWidthPx = view.rootView.width.toFloat()
+        val insetPx = with(density) { ACCENT_POPUP_SCREEN_INSET.toPx() }
         val clampedLeftPx = naturalLeftPx.coerceIn(
-            0f,
-            (screenWidthPx - popupWidthPx).coerceAtLeast(0f),
+            insetPx,
+            (screenWidthPx - popupWidthPx - insetPx).coerceAtLeast(insetPx),
         )
         (clampedLeftPx - naturalLeftPx).toInt()
     }
@@ -470,6 +479,7 @@ fun KeyButton(
             ) {
                 AccentPopup(
                     accents = accentChars,
+                    cellWidth = with(density) { accentCellWidthPx.toDp() },
                     highlightedIndex = highlightedAccentIndex,
                     onAccentSelected = { accent ->
                         showAccentPopup = false
