@@ -331,10 +331,10 @@ class NativeTrieSuggestionEngine(
                 // the prefix is put back on each candidate (iOS AOSPTrieEngine.spellCheck). A word
                 // the dictionary holds whole (`aujourd'hui`) and a prefix that is not an elision
                 // (`din't`, which must still reach `don't`) are checked whole, as before.
-                val isWholeWordKnown = live.handle.wordExists(input)
+                val isWholeWordKnown = live.handle.knowsWord(input)
                 val elision = if (isWholeWordKnown) null else ElidedWord.of(input, live.profile)
                 val isKnownWord = isWholeWordKnown ||
-                    elision?.word?.takeIf(String::isNotEmpty)?.let(live.handle::wordExists) == true
+                    elision?.word?.takeIf(String::isNotEmpty)?.let(live.handle::knowsWord) == true
                 // Both spellings are dictionary words (`a` / `à`, `ma` / `m'a`), so only the words
                 // before can choose; the choice is applied although the typed word is known.
                 val contextualSpelling = textBeforeCursor?.let { live.profile.contextualSpelling(input, it) }
