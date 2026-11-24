@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import dev.pivisolutions.dictus.ime.input.DeleteSwipeMove
+import dev.pivisolutions.dictus.ime.input.DeleteWordSwipe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +36,8 @@ fun KeyboardView(
     languageProfile: LanguageProfile = frenchLanguageProfile,
     onKeyPress: (KeyDefinition) -> Unit,
     onDeleteWord: () -> Unit = {},
+    onDeleteSwipeMove: (DeleteSwipeMove) -> DeleteWordSwipe.Change? = { null },
+    onDeleteSwipeEnd: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     onKeySound: (KeyType) -> Unit = {},
     labelsVisible: Boolean = true,
@@ -68,6 +72,8 @@ fun KeyboardView(
                 isCapsLock = isCapsLock,
                 onKeyPress = onKeyPress,
                 onDeleteWord = onDeleteWord,
+                onDeleteSwipeMove = onDeleteSwipeMove,
+                onDeleteSwipeEnd = onDeleteSwipeEnd,
                 onAccentSelected = onAccentSelected,
                 accentMap = languageProfile.accentMap,
                 onKeySound = onKeySound,

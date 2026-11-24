@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import dev.pivisolutions.dictus.ime.input.DeleteSwipeMove
+import dev.pivisolutions.dictus.ime.input.DeleteWordSwipe
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +32,8 @@ fun KeyRow(
     isCapsLock: Boolean = false,
     onKeyPress: (KeyDefinition) -> Unit,
     onDeleteWord: () -> Unit = {},
+    onDeleteSwipeMove: (DeleteSwipeMove) -> DeleteWordSwipe.Change? = { null },
+    onDeleteSwipeEnd: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     accentMap: Map<Char, List<Char>> = emptyMap(),
     onKeySound: (KeyType) -> Unit = {},
@@ -87,6 +91,8 @@ fun KeyRow(
                 isCapsLock = isCapsLock,
                 onPress = { onKeyPress(renderedKey) },
                 onDeleteWord = onDeleteWord,
+                onDeleteSwipeMove = onDeleteSwipeMove,
+                onDeleteSwipeEnd = onDeleteSwipeEnd,
                 accentChars = accentChars,
                 onAccentSelected = if (renderedKey.type == KeyType.ACCENT_ADAPTIVE) {
                     onFrenchAdaptiveVariant

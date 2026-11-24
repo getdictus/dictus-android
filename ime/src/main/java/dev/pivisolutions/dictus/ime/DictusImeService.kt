@@ -97,6 +97,9 @@ import dev.pivisolutions.dictus.ime.input.ImeServicePrivacyPolicy
 import dev.pivisolutions.dictus.ime.input.ImeTranscriptionRetentionSession
 import dev.pivisolutions.dictus.ime.input.KeyboardDictationOwnership
 import dev.pivisolutions.dictus.ime.input.PersonalizedLearningEntryPoint
+import dev.pivisolutions.dictus.ime.input.DeleteSwipeMove
+import dev.pivisolutions.dictus.ime.input.DeleteWordSwipe
+import dev.pivisolutions.dictus.ime.input.InputConnectionDeleteSwipeEditor
 import dev.pivisolutions.dictus.ime.input.deletePrecedingWord
 import dev.pivisolutions.dictus.ime.input.sendBackspaceKey
 import dev.pivisolutions.dictus.ime.input.moveCursorBy
@@ -139,6 +142,8 @@ import timber.log.Timber
 class DictusImeService : LifecycleInputMethodService() {
 
     companion object {
+        /** How much text before the cursor the delete slide reads: words are short. */
+        private const val DELETE_SWIPE_CONTEXT = 256
         /** Fully-qualified class name of DictationService in the app module. */
         private const val DICTATION_SERVICE_CLASS =
             "dev.pivisolutions.dictus.service.DictationService"
@@ -200,6 +205,12 @@ class DictusImeService : LifecycleInputMethodService() {
     private var lastAutoCapContext: String? = null
     // Double-space full stop (#193): allowed per field from EditorInfo, undone by the next Backspace.
     private val autoFullStop = AutoFullStopInput()
+
+    /** The delete slide of the touch on delete in progress, from its first move (#408). */
+    private var deleteSwipe: DeleteWordSwipe? = null
+
+    /** The text before the cursor right before the last delete tap, for the slide to give back. */
+    private var contextBeforeBackspace: String? = null
     private var isAutoFullStopAllowed = false
     private val transcriptionRetentionSession = ImeTranscriptionRetentionSession()
     // Last dictation insertion, offered for undo in the keyboard toolbar (#132, #139).
@@ -1087,6 +1098,8 @@ class DictusImeService : LifecycleInputMethodService() {
                     onCommitText = { text -> commitText(text) },
                     onDeleteBackward = { deleteBackward() },
                     onDeleteWordBackward = { deleteWordBackward() },
+                    onDeleteSwipeMove = { move -> deleteSwipeMove(move) },
+                    onDeleteSwipeEnd = { endDeleteSwipe() },
                     onSendReturn = { sendReturnKey() },
                     languageProfile = activeLanguage.profile,
                     onCycleLanguage = cycleKeyboardLanguage,
@@ -1490,6 +1503,7 @@ class DictusImeService : LifecycleInputMethodService() {
     fun deleteBackward() {
         val inputConnection = currentInputConnection ?: return
         dictationFeedback.withdraw()
+        contextBeforeBackspace = inputConnection.getTextBeforeCursor(DELETE_SWIPE_CONTEXT, 0)?.toString()
         clearSuggestionState()
         if (autoFullStop.onBackspace(inputConnection, isEditorSelectionCollapsed)) {
             autocorrectCoordinator.onOtherInput()
@@ -1533,6 +1547,47 @@ class DictusImeService : LifecycleInputMethodService() {
         Timber.d("Backspace repeat: %s", deletePrecedingWord(inputConnection))
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
+    }
+
+    /**
+     * The finger on delete moved (#408): the slide deletes or gives back whole words, one per
+     * letter-key width left of the touch-down. Returns null until it takes over.
+     */
+    private fun deleteSwipeMove(move: DeleteSwipeMove): DeleteWordSwipe.Change? {
+        val inputConnection = currentInputConnection ?: return null
+        val swipe = deleteSwipe ?: DeleteWordSwipe(
+            editor = InputConnectionDeleteSwipeEditor(inputConnection, DELETE_SWIPE_CONTEXT),
+            startX = move.startX,
+            step = move.step,
+            touchDownDeletion = DeleteWordSwipe.touchDownDeletion(
+                before = contextBeforeBackspace,
+                after = inputConnection.getTextBeforeCursor(DELETE_SWIPE_CONTEXT, 0)?.toString(),
+            ),
+        ).also { deleteSwipe = it }
+        if (move.repeatRan) swipe.forgetTouchDownDeletion()
+        val wasActive = swipe.isActive
+        val change = swipe.move(move.x) ?: return null
+        if (!wasActive) {
+            // The slide owns delete: an autocorrection undo chip would put back a word it removed.
+            dictationFeedback.withdraw()
+            autoFullStop.clear()
+            autocorrectCoordinator.onOtherInput()
+        }
+        if (change.steps > 0 || !wasActive) {
+            clearSuggestionState()
+            refreshFrenchAdaptiveKeyState()
+            refreshAutoCapitalization()
+        }
+        return change
+    }
+
+    /** The touch on delete ended: what the slide deleted stays deleted. */
+    private fun endDeleteSwipe() {
+        val swipe = deleteSwipe ?: return
+        deleteSwipe = null
+        if (!swipe.isActive) return
+        Timber.d("Delete swipe ended: words=%d frozen=%b", swipe.deletedWordCount, swipe.isFrozen)
+        swipe.finish()
     }
 
     /**

@@ -53,6 +53,8 @@ import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.input.BackspaceDeletion
 import dev.pivisolutions.dictus.ime.input.BackspaceRepeatPolicy
+import dev.pivisolutions.dictus.ime.input.DeleteSwipeMove
+import dev.pivisolutions.dictus.ime.input.DeleteWordSwipe
 import dev.pivisolutions.dictus.ime.input.ReturnKeyRole
 import dev.pivisolutions.dictus.ime.input.TrackpadMotionAccumulator
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
@@ -74,19 +76,30 @@ internal fun pressedKeyBackground(
 ): Color = if (isPressed) lerp(releasedColor, keyTextColor, 0.18f) else releasedColor
 
 /**
- * Waits until the delete gesture that started with [pointerId] ends and returns why:
- * the finger lifted or the system cancelled the pointer (a cancel arrives as an
- * unpressed change), the pointer left the key, or something else took the pointer.
+ * Follows the delete gesture that started with [pointerId] until it ends and returns why: the
+ * finger lifted or the system cancelled the pointer (a cancel arrives as an unpressed change), or
+ * something else took the pointer. Each move goes to [onMove], also once the finger is off the
+ * key: the delete slide (#408) keeps the finger on delete for its whole touch. [onSlidOff] is
+ * called once, the first time the pointer leaves the key.
  */
-private suspend fun AwaitPointerEventScope.awaitDeleteGestureEnd(pointerId: PointerId): String {
+private suspend fun AwaitPointerEventScope.followDeleteGesture(
+    pointerId: PointerId,
+    onSlidOff: () -> Unit,
+    onMove: (x: Float) -> Unit,
+): String {
+    var slidOff = false
     while (true) {
         val change = awaitPointerEvent().changes.firstOrNull { it.id == pointerId }
             ?: return "pointer lost"
         when {
             !change.pressed -> return "released"
             change.isConsumed -> return "consumed"
-            change.isOutOfBounds(size, extendedTouchPadding) -> return "slid off"
         }
+        if (!slidOff && change.isOutOfBounds(size, extendedTouchPadding)) {
+            slidOff = true
+            onSlidOff()
+        }
+        onMove(change.position.x)
     }
 }
 
@@ -112,6 +125,8 @@ fun KeyButton(
     isCapsLock: Boolean = false,
     onPress: () -> Unit,
     onDeleteWord: () -> Unit = onPress,
+    onDeleteSwipeMove: (DeleteSwipeMove) -> DeleteWordSwipe.Change? = { null },
+    onDeleteSwipeEnd: () -> Unit = {},
     accentChars: List<String>? = null,
     onAccentSelected: ((String) -> Unit)? = null,
     onSound: (KeyType) -> Unit = {},
@@ -178,6 +193,8 @@ fun KeyButton(
     // long-lived and would otherwise capture stale references.
     val currentOnPress = rememberUpdatedState(onPress)
     val currentOnDeleteWord = rememberUpdatedState(onDeleteWord)
+    val currentOnDeleteSwipeMove = rememberUpdatedState(onDeleteSwipeMove)
+    val currentOnDeleteSwipeEnd = rememberUpdatedState(onDeleteSwipeEnd)
     val currentOnAccentSelected = rememberUpdatedState(onAccentSelected)
     val currentOnSound = rememberUpdatedState(onSound)
     val currentOnTrackpadActiveChange = rememberUpdatedState(onTrackpadActiveChange)
@@ -229,15 +246,40 @@ fun KeyButton(
                         }
                     }
 
+                    // One word per letter-key width: the delete key is wider than a letter.
+                    val wordStepPx = size.width / key.widthMultiplier
+                    var swiping = false
+                    var slidOff = false
+
                     // Disposal cancels this coroutine mid-wait, so the finally block
                     // also covers the key leaving composition.
                     var stopReason = "disposed"
                     try {
-                        stopReason = awaitDeleteGestureEnd(down.id)
+                        stopReason = followDeleteGesture(
+                            pointerId = down.id,
+                            onSlidOff = {
+                                slidOff = true
+                                repeatJob.cancel()
+                            },
+                        ) { x ->
+                            val change = currentOnDeleteSwipeMove.value(
+                                DeleteSwipeMove(down.position.x, x, wordStepPx, repeatRan = repeating),
+                            ) ?: return@followDeleteGesture
+                            if (!swiping) {
+                                // The slide owns delete from here: the repeat stops before a
+                                // tick can compete with it.
+                                swiping = true
+                                repeatJob.cancel()
+                            }
+                            repeat(change.steps) { HapticHelper.performKeyHaptic(view) }
+                        }
                     } finally {
                         repeatJob.cancel()
                         isPressed = false
-                        if (repeating) Timber.d("Backspace repeat stopped: %s", stopReason)
+                        if (repeating && !swiping) {
+                            Timber.d("Backspace repeat stopped: %s", if (slidOff) "slid off" else stopReason)
+                        }
+                        currentOnDeleteSwipeEnd.value()
                     }
                 }
             }
