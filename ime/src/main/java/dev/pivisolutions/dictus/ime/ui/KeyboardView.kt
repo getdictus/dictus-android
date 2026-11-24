@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
@@ -57,7 +56,7 @@ fun KeyboardView(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(top = 2.dp, bottom = 2.dp),
+            .padding(vertical = GRID_VERTICAL_PADDING),
     ) {
         rows.forEachIndexed { rowIndex, rowKeys ->
             KeyRow(

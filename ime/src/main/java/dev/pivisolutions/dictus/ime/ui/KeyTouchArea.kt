@@ -15,15 +15,19 @@ internal val ROW_EDGE_PADDING = 2.dp
 /** Above and below a drawn key, inside its row ([KeyButton]): two rows' keys are twice this apart. */
 internal val KEY_VERTICAL_PADDING = 2.dp
 
+/** Above the top row and below the bottom row, inside the grid ([KeyboardView]). */
+internal val GRID_VERTICAL_PADDING = 2.dp
+
 /**
  * How far, in px, a key's touch area reaches past its drawn key on each side (#400).
  *
  * The touch areas of a page tile the key grid, as iOS's touch targets do
  * (`KeyPlaneGeometry.layout`, getdictus/dictus-ios develop): the gap between two keys and between
  * two rows is split at its middle, and a row's first and last key reach the screen edge. A tap
- * anywhere on the grid then types the key nearest to it instead of nothing. The top and bottom
- * rows stop at their drawn keys: the strips under the toolbar and above the navigation bar stay
- * dead.
+ * anywhere on the grid then types the key nearest to it instead of nothing. The bottom row
+ * reaches down to the grid's bottom edge, where the navigation bar starts (#401), as iOS's last
+ * row runs to the bottom of its grid; the bar's own buttons stay the system's. The top row stops
+ * at its drawn key: the strip under the toolbar stays dead.
  */
 data class KeyTouchArea(val left: Int, val top: Int, val right: Int, val bottom: Int) {
     companion object {
@@ -35,8 +39,9 @@ data class KeyTouchArea(val left: Int, val top: Int, val right: Int, val bottom:
 /**
  * The touch area of the key at [keyIndex] of [keyCount] in the row at [rowIndex] of [rowCount].
  *
- * Computed on [KEY_GAP] rounded to px, the way the row's spacing is, so two neighbours' halves
- * add up to the gap exactly: one px less leaves a dead line, one more lets two keys share it.
+ * Computed on each padding and spacing rounded to px, the way the layout rounds them, so two
+ * neighbours' halves add up to the gap exactly: one px less leaves a dead line, one more lets two
+ * keys share it.
  */
 internal fun keyTouchArea(
     density: Density,
@@ -49,11 +54,12 @@ internal fun keyTouchArea(
         val gap = KEY_GAP.roundToPx()
         val edge = ROW_EDGE_PADDING.roundToPx()
         val vertical = KEY_VERTICAL_PADDING.roundToPx()
+        val gridBottom = GRID_VERTICAL_PADDING.roundToPx()
         KeyTouchArea(
             left = if (keyIndex == 0) edge else gap / 2,
             top = if (rowIndex == 0) 0 else vertical,
             right = if (keyIndex == keyCount - 1) edge else gap - gap / 2,
-            bottom = if (rowIndex == rowCount - 1) 0 else vertical,
+            bottom = if (rowIndex == rowCount - 1) vertical + gridBottom else vertical,
         )
     }
 
