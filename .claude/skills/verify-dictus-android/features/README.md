@@ -79,7 +79,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Free | present | no |
 | `live-activity` | N/A | iOS-only (N/A) | no |
 | [`onboarding`](onboarding.md) | Free | partial — no Pro scenes, no What's new | no |
-| `pro.subscription` | Pro on iOS — absent | absent | no |
+| `pro.subscription` | Pro | partial — entitlement and hub (#3, #207); nothing is sold (no paywall, no purchase, no trial) | no |
 | [`diagnostics.logs`](diagnostics.logs.md) | Free | present | no |
 | `dictation.start` | Free | present | no |
 | `dictation.stop` | Free | present | no |
@@ -183,7 +183,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `onboarding.completion` | Free | present | no |
 | `onboarding.resume` | Free | partial — survives process death, not a force stop | no |
 | `onboarding.whats-new` | Free | absent | no |
-| `pro.hub` | Pro on iOS — absent | absent | no |
+| `pro.hub` | Pro | partial — hub for a Pro user: history card, Debug notice, legal links; no membership card or trial block (no purchase channel, no trial) (#207). Reached from Réglages → `Dictus Pro` in a Debug build under « Forcer Dictus Pro » | no |
 | `pro.paywall` | Pro on iOS — absent | absent | no |
 | `pro.restore` | Pro on iOS — absent | absent | no |
 | `pro.trial` | Pro on iOS — absent | absent | no |
@@ -222,7 +222,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.settings.debug-logs` | Free | present | no |
 | `app.settings.licences` | Free | present | no |
 | `app.settings.polish-debug` | Free | present — « Transcription debug » (#295) | no |
-| `app.pro.hub` | Pro on iOS — absent | absent | no |
+| `app.pro.hub` | Pro | partial — see `pro.hub` (#207) | no |
 | `app.pro.smart-modes` | Pro on iOS — absent | absent | no |
 | `app.pro.history` | Pro on iOS — absent | absent | no |
 | `app.pro.vocabulary` | Pro on iOS — absent | absent | no |
