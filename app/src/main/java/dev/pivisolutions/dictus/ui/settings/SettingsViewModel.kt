@@ -158,9 +158,7 @@ class SettingsViewModel @Inject constructor(
 
     /** Flip the Debug override. A no-op in a release build. */
     fun toggleDebugProEntitlementForced() {
-        viewModelScope.launch {
-            proStatus.setDebugProEntitlementForced(!debugProEntitlementForced.value)
-        }
+        viewModelScope.launch { proStatus.toggleDebugProEntitlementForced() }
     }
 
     /** Forget every word the keyboard learned; autocorrect applies to them again. */

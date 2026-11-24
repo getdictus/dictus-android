@@ -59,6 +59,20 @@ class ProStatusTest {
     }
 
     @Test
+    fun `two quick toggles land back where they started`() = runTest {
+        val job = Job()
+        val status = ProStatus(store(CoroutineScope(Dispatchers.IO + job)), debugBuild = true)
+
+        status.toggleDebugProEntitlementForced()
+        status.toggleDebugProEntitlementForced()
+        assertFalse(status.isPro.first())
+
+        status.toggleDebugProEntitlementForced()
+        assertTrue(status.isPro.first())
+        job.cancelAndJoin()
+    }
+
+    @Test
     fun `the Debug override never writes the paid half`() = runTest {
         val job = Job()
         val dataStore = store(CoroutineScope(Dispatchers.IO + job))
