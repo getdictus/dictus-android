@@ -1,6 +1,7 @@
 package dev.pivisolutions.dictus.ime.suggestion
 
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.allowsElided
 import java.util.Locale
 
 /**
@@ -46,7 +47,8 @@ object ContractionExpander {
             if (letters <= 0 || lowered.length <= letters) return@forEach
             if (lowered.substring(0, letters) + "'" != prefix) return@forEach
             val suffix = lowered.substring(letters)
-            if (suffix.isEmpty()) return@forEach
+            // French never elides before a consonant: `dvotre` is not `d'votre`.
+            if (suffix.isEmpty() || !profile.allowsElided(suffix, prefix)) return@forEach
 
             if (lookup.exists(suffix)) return preserveCase(word, prefix + suffix)
             // The suffix may be a real word missing its accents: `Cetait` → `etait` → `était`.

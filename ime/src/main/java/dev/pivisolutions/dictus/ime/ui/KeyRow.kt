@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import dev.pivisolutions.dictus.ime.input.ReturnKeyRole
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
@@ -19,6 +19,9 @@ import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
  * Each key receives a weight proportional to its widthMultiplier so that
  * wider keys (shift, space, delete) take up more horizontal space. A [KeyType.SPACER] only
  * takes its share of the width: nothing is drawn there and a touch on it does nothing.
+ *
+ * [rowIndex] of [rowCount] places the row in the grid, for the keys' touch areas
+ * ([keyTouchArea]); a row alone is the whole grid.
  */
 @Composable
 fun KeyRow(
@@ -35,19 +38,22 @@ fun KeyRow(
     onTrackpadMove: (Int) -> Unit = {},
     frenchAdaptiveKeyState: FrenchAdaptiveKey.State = FrenchAdaptiveKey.DEFAULT,
     onFrenchAdaptiveVariant: (String) -> Unit = {},
+    rowIndex: Int = 0,
+    rowCount: Int = 1,
     returnKeyRole: ReturnKeyRole = ReturnKeyRole.NEWLINE,
     modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(horizontal = ROW_EDGE_PADDING),
+        horizontalArrangement = Arrangement.spacedBy(KEY_GAP),
     ) {
-        keys.forEach { key ->
+        keys.forEachIndexed { keyIndex, key ->
             if (key.type == KeyType.SPACER) {
                 Spacer(modifier = Modifier.weight(key.widthMultiplier))
-                return@forEach
+                return@forEachIndexed
             }
             val renderedKey = if (key.type == KeyType.ACCENT_ADAPTIVE) {
                 key.copy(
@@ -91,6 +97,7 @@ fun KeyRow(
                 labelsVisible = labelsVisible,
                 onTrackpadActiveChange = onTrackpadActiveChange,
                 onTrackpadMove = onTrackpadMove,
+                touchArea = keyTouchArea(density, keyIndex, keys.size, rowIndex, rowCount),
                 returnKeyRole = returnKeyRole,
                 modifier = Modifier.weight(key.widthMultiplier),
             )
