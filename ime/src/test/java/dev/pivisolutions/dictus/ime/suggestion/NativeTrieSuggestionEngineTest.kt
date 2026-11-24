@@ -1154,6 +1154,68 @@ class NativeTrieSuggestionEngineTest {
         }
     }
 
+    // #404: a mistyped brand is corrected to the brand, in its casing, not in the typed case.
+
+    @Test
+    fun `a mistyped brand is corrected to its casing on Space and in the bar`() = runTest(dispatcher) {
+        val readings = mapOf(
+            "whatsap" to "whatsapp", "Whatsap" to "whatsapp", "iphon" to "iphone", "youtub" to "youtube",
+        )
+        val casings = mapOf(
+            "whatsap" to "WhatsApp", "Whatsap" to "WhatsApp", "iphon" to "iPhone", "youtub" to "YouTube",
+        )
+        readings.forEach { (typed, reading) ->
+            val handle = FakeHandle(corrections = listOf(correction(reading, 1.0, 40_000)))
+            val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+            advanceUntilIdle()
+
+            engine.requestSuggestions(typed)
+            advanceUntilIdle()
+
+            val result = engine.suggestionResults.value
+            assertEquals(typed, casings.getValue(typed), result.primaryCorrection)
+            assertEquals(typed, casings.getValue(typed), result.suggestions.firstOrNull())
+        }
+    }
+
+    @Test
+    fun `a brand among offered readings takes its casing`() = runTest(dispatcher) {
+        // Two close readings, neither written on Space: the bar still shows the brand's casing.
+        val handle = FakeHandle(
+            corrections = listOf(correction("iphone", 1.0, 40_000), correction("phone", 1.0, 40_000),
+                correction("iphones", 1.0, 40_000)),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("Iphonr")
+        advanceUntilIdle()
+
+        val result = engine.suggestionResults.value
+        assertTrue(result.keepsTypedWord)
+        assertTrue(result.suggestions.toString(), "iPhone" in result.suggestions)
+    }
+
+    @Test
+    fun `an ordinary correction, a name that is also a word, and capitals keep the typed case`() =
+        runTest(dispatcher) {
+            listOf(
+                Triple("tble", "table", "table"),
+                Triple("Tble", "table", "Table"),
+                Triple("Discorf", "discord", "Discord"),
+                Triple("WHATSAP", "whatsapp", "WHATSAPP"),
+            ).forEach { (typed, reading, written) ->
+                val handle = FakeHandle(corrections = listOf(correction(reading, 1.0, 40_000)))
+                val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+                advanceUntilIdle()
+
+                engine.requestSuggestions(typed)
+                advanceUntilIdle()
+
+                assertEquals(typed, written, engine.suggestionResults.value.primaryCorrection)
+            }
+        }
+
     private fun createEngine(opener: NativeTrieOpener) = NativeTrieSuggestionEngine(
         dataStore = dataStore,
         coroutineScope = scope,
