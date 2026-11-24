@@ -449,6 +449,12 @@ class NativeTrieSuggestionEngine(
                 contextIdentity = contextIdentity,
             )
         }
+        // A brand among the candidates is written in its casing, not the typed case (#404):
+        // `whatsap` gives `WhatsApp`. Capitals stay capitals, as for a typed brand (`IPHONE`).
+        val restoreCase = { word: String ->
+            val typedCase = TypedCase.applyTo(word, input, locale)
+            (CuratedNames.decision(typedCase) as? CuratedNames.Decision.Recase)?.casing ?: typedCase
+        }
         val rankingCandidates = corrections.map {
             val key = it.word.canonicalLookupKey()
             CorrectionCandidate(key, it.cost.toDouble(), it.frequency, contextScores[key]?.coerceAtLeast(0) ?: 0)
@@ -501,7 +507,7 @@ class NativeTrieSuggestionEngine(
                 isKnownWord = isKnownWord,
                 knownInputDominance = profileCorrection?.knownInputDominance == true,
                 primaryCorrection = null,
-                suggestions = offered.take(maxResults).map { TypedCase.applyTo(it, input, locale) },
+                suggestions = offered.take(maxResults).map(restoreCase),
                 contextIdentity = contextIdentity,
                 keepsTypedWord = true,
             )
@@ -510,10 +516,10 @@ class NativeTrieSuggestionEngine(
             isKnownWord = isKnownWord,
             knownInputDominance = contextualSpelling != null ||
                 profileCorrection?.knownInputDominance == true,
-            primaryCorrection = primaryCorrection?.let { TypedCase.applyTo(it, input, locale) },
+            primaryCorrection = primaryCorrection?.let(restoreCase),
             suggestions = (learnedPrefixWords + learnedNative + normalNative)
                 .take(maxResults)
-                .map { TypedCase.applyTo(it, input, locale) },
+                .map(restoreCase),
             contextIdentity = contextIdentity,
         )
     }
