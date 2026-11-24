@@ -22,6 +22,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
+import dev.pivisolutions.dictus.BuildConfig
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.audio.DictationSoundPlayer
 import dev.pivisolutions.dictus.core.logging.DictationTrace
@@ -38,7 +39,7 @@ import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import dev.pivisolutions.dictus.model.ModelCatalog
-import dev.pivisolutions.dictus.core.premium.PremiumFlags
+import dev.pivisolutions.dictus.core.premium.HistoryAvailability
 import dev.pivisolutions.dictus.history.TranscriptionHistoryMetadata
 import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
 import dev.pivisolutions.dictus.recording.LastTranscriptionStore
@@ -507,9 +508,11 @@ class DictationService : Service(), DictationController {
             // 4. Only a dictation with words reaches history.
             if (outcome is TranscriptionOutcome.Transcribed) {
                 val model = ModelCatalog.findByKey(activeModelKey)
-                // Pro gate: callers still express the retention their context deserves,
-                // the flag only ever downgrades it (see PremiumFlags.HISTORY_VISIBLE).
-                val effectiveRetention = PremiumFlags.effectiveRetention(retention)
+                // Pro gate (#202): callers still express the retention their context deserves,
+                // the entitlement only ever downgrades it. Read now rather than before the
+                // transcription, as iOS asks at append time: Pro or the switch can change meanwhile.
+                val historyEntitled = HistoryAvailability.isEntitled(dataStore.data.first(), BuildConfig.DEBUG)
+                val effectiveRetention = HistoryAvailability.effectiveRetention(retention, historyEntitled)
                 transcriptionHistoryWriter.persist(
                     retention = effectiveRetention,
                     text = outcome.text,
