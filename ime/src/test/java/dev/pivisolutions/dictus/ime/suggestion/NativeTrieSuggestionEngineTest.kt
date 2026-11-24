@@ -15,6 +15,7 @@ import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.cycleKeyboardLanguage
 import dev.pivisolutions.dictus.ime.model.ShiftState
+import dev.pivisolutions.dictus.trie.TrieCorrection
 import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -242,7 +243,7 @@ class NativeTrieSuggestionEngineTest {
             advanceUntilIdle()
 
             assertEquals(listOf("bond", "bonzai", "bonjour"), engine.getSuggestions("bOn", 3))
-            assertEquals(listOf(6, 6), handle.requestedLimits)
+            assertEquals(listOf(6, 10), handle.requestedLimits)
             assertTrue(engine.getSuggestions("bon", 0).isEmpty())
         }
 
@@ -553,9 +554,13 @@ class NativeTrieSuggestionEngineTest {
     @Test
     fun `context score reranks only existing native candidates with deterministic bounded ties`() =
         runTest(dispatcher) {
+            // `bonjor` is within the context window of `bonheur` (iOS #997: 0.5 more at most).
             val handle = FakeHandle(
                 prefix = listOf("bonjour", "bonsoir"),
-                fuzzy = listOf("bonheur", "bonjor"),
+                corrections = listOf(
+                    TrieCorrection("bonheur", 0.4f, 40_000),
+                    TrieCorrection("bonjor", 0.8f, 40_000),
+                ),
                 hasNgram = true,
                 scores = mapOf("salut" to mapOf("bonjor" to 50_000, "bonsoir" to 50_000)),
             )
@@ -684,7 +689,8 @@ class NativeTrieSuggestionEngineTest {
         val handle = object : NativeTrieHandle {
             override val hasNgram = true
             override fun complete(prefix: String, maxResults: Int) = listOf("newest")
-            override fun correct(word: String, maxEditDistance: Float, maxResults: Int) = emptyList<String>()
+            override fun correctionCandidates(word: String, maxEditDistance: Float, maxResults: Int) =
+                emptyList<TrieCorrection>()
             override fun predictAfterWord(word: String, maxResults: Int): List<String> {
                 entered.countDown()
                 check(release.await(5, TimeUnit.SECONDS))
@@ -730,11 +736,11 @@ class NativeTrieSuggestionEngineTest {
                     return listOf("ancienne")
                 }
 
-                override fun correct(
+                override fun correctionCandidates(
                     word: String,
                     maxEditDistance: Float,
                     maxResults: Int,
-                ) = emptyList<String>()
+                ) = emptyList<TrieCorrection>()
 
                 override fun close() = Unit
             }
@@ -813,11 +819,11 @@ class NativeTrieSuggestionEngineTest {
 
             override fun complete(prefix: String, maxResults: Int) = listOf("first", "second")
 
-            override fun correct(
+            override fun correctionCandidates(
                 word: String,
                 maxEditDistance: Float,
                 maxResults: Int,
-            ) = emptyList<String>()
+            ) = emptyList<TrieCorrection>()
 
             override fun bigramScore(previousWord: String, word: String): Int {
                 scoreEntered.countDown()
@@ -876,11 +882,11 @@ class NativeTrieSuggestionEngineTest {
                 return listOf("hello")
             }
 
-            override fun correct(
+            override fun correctionCandidates(
                 word: String,
                 maxEditDistance: Float,
                 maxResults: Int,
-            ) = emptyList<String>()
+            ) = emptyList<TrieCorrection>()
 
             override fun close() {
                 closeCount++
@@ -934,11 +940,11 @@ class NativeTrieSuggestionEngineTest {
                 }
 
                 @Synchronized
-                override fun correct(
+                override fun correctionCandidates(
                     word: String,
                     maxEditDistance: Float,
                     maxResults: Int,
-                ) = emptyList<String>()
+                ) = emptyList<TrieCorrection>()
 
                 override fun close() = Unit
             }
@@ -978,6 +984,137 @@ class NativeTrieSuggestionEngineTest {
                 executor.shutdownNow()
             }
         }
+
+    // #388 (iOS #997): the trie's corrections are ranked, and a typo with no sure reading is kept.
+
+    private fun correction(word: String, cost: Double, frequency: Int) =
+        TrieCorrection(word, cost.toFloat(), frequency)
+
+    @Test
+    fun `two close readings go to the more frequent whatever the trie order`() = runTest(dispatcher) {
+        // `les sats`: the trie lists `sans` first; `sais` is as close and more frequent.
+        val handle = FakeHandle(
+            corrections = listOf(
+                correction("sans", 1.00, 52_050), correction("sais", 1.00, 53_558),
+                correction("rats", 0.8062, 33_454), correction("date", 0.90, 35_206),
+            ),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("sats")
+        advanceUntilIdle()
+
+        assertEquals("sais", engine.suggestionResults.value.primaryCorrection)
+        assertEquals(false, engine.suggestionResults.value.keepsTypedWord)
+    }
+
+    @Test
+    fun `a typo with three close readings is kept and its readings offered`() = runTest(dispatcher) {
+        // `irning`: `irving`, `inning` or `ironing`. Space writes nothing; the bar offers two.
+        val handle = FakeHandle(
+            corrections = listOf(
+                correction("irving", 0.80, 41_799), correction("inning", 1.00, 40_002),
+                correction("ironing", 1.00, 39_855), correction("morning", 1.40, 48_864),
+            ),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        listOf("irning" to listOf("irving", "inning"), "Irning" to listOf("Irving", "Inning"))
+            .forEach { (typed, offered) ->
+                engine.requestSuggestions(typed)
+                advanceUntilIdle()
+                val result = engine.suggestionResults.value
+                assertEquals(typed, null, result.primaryCorrection)
+                assertEquals(typed, offered, result.suggestions)
+                assertTrue(typed, result.keepsTypedWord)
+            }
+    }
+
+    @Test
+    fun `an implausible pick is kept as typed`() = runTest(dispatcher) {
+        // `la reùion`: `réunion` would be picked at 0.10, against `région`.
+        val handle = FakeHandle(
+            prefix = listOf("reùionx"),
+            corrections = listOf(
+                correction("région", 1.15, 35_201), correction("réunion", 1.30, 36_517),
+                correction("recoin", 1.70, 23_593),
+            ),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("reùion")
+        advanceUntilIdle()
+
+        assertEquals(null, engine.suggestionResults.value.primaryCorrection)
+        assertEquals(listOf("région", "réunion"), engine.suggestionResults.value.suggestions)
+        assertTrue(engine.suggestionResults.value.keepsTypedWord)
+    }
+
+    @Test
+    fun `two equally likely accent spellings keep the typed word`() = runTest(dispatcher) {
+        // `nous avons reserve`: `réserve` or `réservé`, the accent pass writes neither.
+        val frequencies = mapOf("réserve" to 33_835, "réservé" to 31_794)
+        val handle = FakeHandle(
+            knownWords = frequencies.keys,
+            frequencies = frequencies,
+            corrections = listOf(
+                correction("réserve", 0.15, 33_835), correction("réservé", 0.30, 31_794),
+                correction("réserves", 1.15, 29_642),
+            ),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("reserve")
+        advanceUntilIdle()
+
+        assertEquals(null, engine.suggestionResults.value.primaryCorrection)
+        assertEquals(listOf("réserve", "réservé"), engine.suggestionResults.value.suggestions)
+        assertTrue(engine.suggestionResults.value.keepsTypedWord)
+    }
+
+    @Test
+    fun `the previous word lifts a near reading`() = runTest(dispatcher) {
+        // `we meef`: `meet` is closer, `need` is what follows `we`.
+        val handle = FakeHandle(
+            hasNgram = true,
+            scores = mapOf("we" to mapOf("need" to 50_486)),
+            corrections = listOf(
+                correction("meet", 0.50, 50_394), correction("need", 0.80, 53_774),
+                correction("meer", 0.41, 38_760), correction("beef", 0.80, 44_631),
+            ),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("meef", context = correctionContext("we meef", "meef"))
+        advanceUntilIdle()
+        assertEquals("need", engine.suggestionResults.value.primaryCorrection)
+
+        engine.requestSuggestions("meef")
+        advanceUntilIdle()
+        assertEquals("meet", engine.suggestionResults.value.primaryCorrection)
+    }
+
+    @Test
+    fun `a learned typo keeps its completions and offers nothing to replace it`() = runTest(dispatcher) {
+        val handle = FakeHandle(
+            corrections = listOf(correction("irving", 0.80, 41_799), correction("inning", 1.00, 40_002),
+                correction("ironing", 1.00, 39_855)),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+        engine.personalDictionary.learnWord("irning")
+        advanceUntilIdle()
+
+        engine.requestSuggestions("irning")
+        advanceUntilIdle()
+
+        assertEquals(false, engine.suggestionResults.value.keepsTypedWord)
+    }
 
     private fun createEngine(opener: NativeTrieOpener) = NativeTrieSuggestionEngine(
         dataStore = dataStore,
@@ -1034,6 +1171,7 @@ class NativeTrieSuggestionEngineTest {
         private val trigram: List<String> = emptyList(),
         private val scores: Map<String, Map<String, Int>> = emptyMap(),
         private val fuzzyByWord: Map<String, List<String>> = emptyMap(),
+        private val corrections: List<TrieCorrection>? = null,
     ) : NativeTrieHandle {
         var closeCount = 0
         val requestedLimits = mutableListOf<Int>()
@@ -1053,9 +1191,17 @@ class NativeTrieSuggestionEngineTest {
             return this.prefix.take(maxResults)
         }
 
-        override fun correct(word: String, maxEditDistance: Float, maxResults: Int): List<String> {
+        override fun correctionCandidates(
+            word: String,
+            maxEditDistance: Float,
+            maxResults: Int,
+        ): List<TrieCorrection> {
             requestedLimits += maxResults
-            return (fuzzyOverride ?: fuzzyByWord[word] ?: fuzzy).take(maxResults)
+            // A plain word list stands for the trie's order: each a whole edit dearer than the
+            // one before, so the ranking keeps that order unless frequencies say otherwise.
+            return (corrections ?: (fuzzyOverride ?: fuzzyByWord[word] ?: fuzzy).mapIndexed { index, candidate ->
+                TrieCorrection(candidate, 0.4f + index, frequencies[candidate] ?: 0)
+            }).take(maxResults)
         }
 
         override fun predictAfterWord(word: String, maxResults: Int): List<String> {

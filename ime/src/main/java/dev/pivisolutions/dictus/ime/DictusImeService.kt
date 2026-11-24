@@ -241,6 +241,8 @@ class DictusImeService : LifecycleInputMethodService() {
     private val _currentWord = MutableStateFlow("")
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     private val _suggestionMode = MutableStateFlow(SuggestionPresentationMode.COMPLETION)
+    // The bar offers corrections for a word Space keeps: no slot is bold (#388, iOS #997).
+    private val _keepsTypedWord = MutableStateFlow(false)
     private var latestSuggestionRequestId: Long? = null
     // Whether the completions of _currentWord are still being looked up: the bar keeps the word
     // until the lookup answers, rather than falling back to ☰ at every key.
@@ -410,6 +412,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     } else {
                         emptyList()
                     }
+                    _keepsTypedWord.value = predictionPublication == null && result.keepsTypedWord
                     _completionPending.value = false
                     _suggestionTrace.value = SuggestionTrace(
                         computed = result.suggestions.size,
@@ -948,6 +951,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val isDictationUndoAvailable by dictationUndo.isAvailable.collectAsState()
         val dictationNoticeMessage by dictationNotice.message.collectAsState()
         val suggestionMode by _suggestionMode.collectAsState()
+        val keepsTypedWord by _keepsTypedWord.collectAsState()
         val predictionToken by _predictionToken.collectAsState()
         val suggestionTrace by _suggestionTrace.collectAsState()
         val isCompletionPending by _completionPending.collectAsState()
@@ -1093,6 +1097,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     currentWord = currentWord,
                     suggestions = suggestions,
                     suggestionMode = suggestionMode,
+                    keepsTypedWord = keepsTypedWord,
                     isCompletionPending = isCompletionPending,
                     predictionToken = predictionToken,
                     isDictationUndoAvailable = isDictationUndoAvailable,

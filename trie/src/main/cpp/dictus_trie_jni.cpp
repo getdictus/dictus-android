@@ -249,6 +249,52 @@ Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeCorrect(
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
+Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeCorrectionCandidates(
+    JNIEnv* env,
+    jobject,
+    jlong handle,
+    jstring word,
+    jfloat maxEditDistance,
+    jint maxResults
+) {
+    jclass candidateClass = env->FindClass("dev/pivisolutions/dictus/trie/TrieCorrection");
+    if (candidateClass == nullptr) return nullptr;
+    jmethodID constructor = env->GetMethodID(candidateClass, "<init>", "(Ljava/lang/String;FI)V");
+    if (constructor == nullptr) return nullptr;
+    Engine* engine = fromHandle(handle);
+    const std::u16string input = toUtf16(env, word);
+    if (engine == nullptr || input.empty() || input.size() > 32 ||
+        maxEditDistance <= 0.0f || maxEditDistance > 2.0f || maxResults <= 0 || maxResults > 20) {
+        return env->NewObjectArray(0, candidateClass, nullptr);
+    }
+    const std::vector<dictus::Candidate> candidates = engine->scorer.correct(
+        engine->trie,
+        reinterpret_cast<const uint16_t*>(input.data()),
+        static_cast<int>(input.size()),
+        maxEditDistance,
+        maxResults
+    );
+    jobjectArray result = env->NewObjectArray(
+        static_cast<jsize>(candidates.size()), candidateClass, nullptr);
+    if (result == nullptr) return nullptr;
+    for (size_t index = 0; index < candidates.size(); ++index) {
+        jstring candidateWord = env->NewStringUTF(candidates[index].word);
+        if (candidateWord == nullptr) return result;
+        jobject candidate = env->NewObject(
+            candidateClass,
+            constructor,
+            candidateWord,
+            static_cast<jfloat>(candidates[index].cost),
+            static_cast<jint>(candidates[index].frequency));
+        env->DeleteLocalRef(candidateWord);
+        if (candidate == nullptr) return result;
+        env->SetObjectArrayElement(result, static_cast<jsize>(index), candidate);
+        env->DeleteLocalRef(candidate);
+    }
+    return result;
+}
+
+extern "C" JNIEXPORT jobjectArray JNICALL
 Java_dev_pivisolutions_dictus_trie_NativeTrie_nativeComplete(
     JNIEnv* env,
     jobject,

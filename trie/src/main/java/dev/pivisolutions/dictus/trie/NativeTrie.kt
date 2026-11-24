@@ -22,6 +22,13 @@ data class NgramPrediction(
     val score: Int,
 )
 
+/** One spell correction candidate: its weighted edit cost from the input and its encoded frequency. */
+data class TrieCorrection(
+    val word: String,
+    val cost: Float,
+    val frequency: Int,
+)
+
 /** Owns one native mmap-backed dictionary. Instances must be closed. */
 class NativeTrie private constructor(
     private var nativeHandle: Long,
@@ -206,6 +213,25 @@ class NativeTrie private constructor(
         ).toList()
     }
 
+    /**
+     * The dictionary words within [maxEditDistance] weighted edits of [word], best scored first,
+     * each with its edit cost and frequency, for the correction ranking (#388). The word itself is
+     * included when it is in the dictionary.
+     */
+    @Synchronized
+    fun correctionCandidates(
+        word: String,
+        maxEditDistance: Float = 2f,
+        maxResults: Int = 10,
+    ): List<TrieCorrection> {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        require(maxEditDistance > 0f && maxEditDistance <= MAX_EDIT_DISTANCE)
+        require(maxResults in 1..20)
+        val canonical = word.canonicalLookup()
+        if (canonical.isEmpty() || canonical.length > MAX_INPUT_LENGTH) return emptyList()
+        return nativeCorrectionCandidates(nativeHandle, canonical, maxEditDistance, maxResults).toList()
+    }
+
     /** Returns bounded, deterministic highest-frequency completions, excluding [prefix] itself. */
     @Synchronized
     fun complete(prefix: String, maxResults: Int = 3): List<String> {
@@ -311,6 +337,12 @@ class NativeTrie private constructor(
         maxEditDistance: Float,
         maxResults: Int,
     ): Array<String>
+    private external fun nativeCorrectionCandidates(
+        handle: Long,
+        word: String,
+        maxEditDistance: Float,
+        maxResults: Int,
+    ): Array<TrieCorrection>
     private external fun nativeComplete(
         handle: Long,
         prefix: String,

@@ -16,6 +16,18 @@ class NativeTrieInstrumentedTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Test
+    fun correctionCandidatesCarryEditCostAndFrequency() {
+        NativeTrie.open(context, "en_spellcheck.dict", TrieKeyboardLayout.QWERTY).use { trie ->
+            val candidates = trie.correctionCandidates("helo", maxResults = 10)
+            val hello = candidates.single { it.word == "hello" }
+            assertTrue("helo -> hello cost: ${hello.cost}", hello.cost > 0f && hello.cost <= 1f)
+            assertEquals(trie.frequency("hello"), hello.frequency)
+            assertEquals(candidates.map { it.word }, trie.correct("helo", maxResults = 10))
+            assertEquals(0f, trie.correctionCandidates("hello").single { it.word == "hello" }.cost)
+        }
+    }
+
+    @Test
     fun germanDictionaryPreservesUmlautsAndSharpSAndCorrectsUber() {
         NativeTrie.open(context, "de_spellcheck.dict", TrieKeyboardLayout.QWERTY).use { trie ->
             assertTrue(trie.wordExists("über"))
