@@ -1116,6 +1116,73 @@ class NativeTrieSuggestionEngineTest {
         assertEquals(false, engine.suggestionResults.value.keepsTypedWord)
     }
 
+    // dictus-ios #1005: app and brand names are never corrected, and take their casing.
+
+    @Test
+    fun `Dictus at a sentence start is kept, not corrected to Rictus`() = runTest(dispatcher) {
+        val handle = FakeHandle(corrections = listOf(correction("rictus", 0.4, 23_489)))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("Dictus")
+        advanceUntilIdle()
+
+        val result = engine.suggestionResults.value
+        assertEquals(null, result.primaryCorrection)
+        assertTrue(result.suggestions.none { it.equals("rictus", ignoreCase = true) })
+    }
+
+    @Test
+    fun `a lowercase or autocapitalized brand takes its casing on Space and in the bold slot`() =
+        runTest(dispatcher) {
+            val handle = FakeHandle(corrections = listOf(correction("phone", 1.0, 40_000)))
+            val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+            advanceUntilIdle()
+
+            listOf("iphone", "Iphone").forEach { typed ->
+                engine.requestSuggestions(typed)
+                advanceUntilIdle()
+
+                val result = engine.suggestionResults.value
+                assertEquals(typed, "iPhone", result.primaryCorrection)
+                assertEquals(typed, "iPhone", result.suggestions.firstOrNull())
+                assertEquals(typed, false, result.keepsTypedWord)
+            }
+        }
+
+    @Test
+    fun `a brand the dictionary knows still takes its casing`() = runTest(dispatcher) {
+        // The French list has `whatsapp`: the known-word guard must not keep it lowercase.
+        val handle = FakeHandle(knownWords = setOf("whatsapp"), frequencies = mapOf("whatsapp" to 17_303))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        engine.requestSuggestions("whatsapp")
+        advanceUntilIdle()
+
+        val result = engine.suggestionResults.value
+        assertEquals("WhatsApp", result.primaryCorrection)
+        assertTrue(result.knownInputDominance)
+    }
+
+    @Test
+    fun `names that are also words, and a brand in capitals, are kept as typed`() = runTest(dispatcher) {
+        val handle = FakeHandle(
+            corrections = listOf(correction("discard", 0.5, 39_806), correction("iphones", 1.0, 30_000)),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        listOf("discord", "Discord", "telegram", "IPHONE", "iPhone").forEach { typed ->
+            engine.requestSuggestions(typed)
+            advanceUntilIdle()
+
+            val result = engine.suggestionResults.value
+            assertEquals(typed, null, result.primaryCorrection)
+            assertEquals(typed, false, result.keepsTypedWord)
+        }
+    }
+
     private fun createEngine(opener: NativeTrieOpener) = NativeTrieSuggestionEngine(
         dataStore = dataStore,
         coroutineScope = scope,

@@ -312,6 +312,8 @@ class NativeTrieSuggestionEngine(
         textBeforeCursor: String? = null,
     ): QueryResult {
         if (input.isBlank() || maxResults <= 0) return QueryResult(false, false, null, emptyList())
+        // An app or brand name decides before any dictionary rule (dictus-ios #1005).
+        val curated = CuratedNames.decision(input)
         val candidateLimit = maxResults
             .coerceIn(1, MAX_NATIVE_RESULTS / CANDIDATE_MULTIPLIER) * CANDIDATE_MULTIPLIER
         val learned = personalDictionary.learnedWords.value
@@ -336,7 +338,7 @@ class NativeTrieSuggestionEngine(
                 // Both spellings are dictionary words (`a` / `à`, `ma` / `m'a`), so only the words
                 // before can choose; the choice is applied although the typed word is known.
                 val contextualSpelling = textBeforeCursor?.let { live.profile.contextualSpelling(input, it) }
-                val profileCorrection = AccentCollapseCandidateSelector.select(
+                val profileCorrection = if (curated != null) null else AccentCollapseCandidateSelector.select(
                     input = input,
                     profile = live.profile,
                     inputKnown = isKnownWord,
@@ -352,7 +354,7 @@ class NativeTrieSuggestionEngine(
                 // prefer `c'est` over any other neighbour of `cest`. The expansion is exact —
                 // a declared prefix plus a word already in the dictionary — so it is resolved
                 // here and ranked above the fuzzy candidates.
-                val contraction = if (isKnownWord) {
+                val contraction = if (isKnownWord || curated != null) {
                     null
                 } else {
                     ContractionExpander.expand(
@@ -378,15 +380,19 @@ class NativeTrieSuggestionEngine(
                 // Ten, not the bar's six: the word meant can sit sixth (`morning` for `irning`),
                 // and it has to be there for context to lift it (iOS #997).
                 val normalized = input.canonicalLookupKey()
-                val corrections = when {
-                    elision == null ->
-                        live.handle.correctionCandidates(input, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
-                    elision.word.isEmpty() -> emptyList()
-                    else -> live.handle
-                        .correctionCandidates(elision.word, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
-                        .filter { live.profile.allowsElided(it.word, elision.prefix) }
-                        .map { it.copy(word = elision.prefix + it.word) }
-                }.filter { it.word.canonicalLookupKey() != normalized }
+                val corrections = if (curated != null) {
+                    emptyList()
+                } else {
+                    when {
+                        elision == null ->
+                            live.handle.correctionCandidates(input, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
+                        elision.word.isEmpty() -> emptyList()
+                        else -> live.handle
+                            .correctionCandidates(elision.word, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
+                            .filter { live.profile.allowsElided(it.word, elision.prefix) }
+                            .map { it.copy(word = elision.prefix + it.word) }
+                    }.filter { it.word.canonicalLookupKey() != normalized }
+                }
                 val usableContext = context?.takeIf {
                     !isKnownWord &&
                         it.currentWord == input &&
@@ -426,6 +432,23 @@ class NativeTrieSuggestionEngine(
             contextScores, contextIdentity,
         ) = nativeQuery
         val normalizedInput = input.canonicalLookupKey()
+        // Candidates come back in dictionary case; the user's capitals must survive (#224).
+        val locale = live?.language?.let { Locale.forLanguageTag(it.code) } ?: Locale.ROOT
+        if (curated != null) {
+            // Kept as typed, or written in its own casing, which TypedCase must not undo: the
+            // casing leads the bar's bold slot, and a known word (`whatsapp` in French) yields to it.
+            val casing = (curated as? CuratedNames.Decision.Recase)?.casing
+            val others = completions
+                .filter { it.canonicalLookupKey() != normalizedInput }
+                .map { TypedCase.applyTo(it, input, locale) }
+            return QueryResult(
+                isKnownWord = isKnownWord,
+                knownInputDominance = casing != null,
+                primaryCorrection = casing,
+                suggestions = (listOfNotNull(casing) + others).take(maxResults),
+                contextIdentity = contextIdentity,
+            )
+        }
         val rankingCandidates = corrections.map {
             val key = it.word.canonicalLookupKey()
             CorrectionCandidate(key, it.cost.toDouble(), it.frequency, contextScores[key]?.coerceAtLeast(0) ?: 0)
@@ -473,8 +496,6 @@ class NativeTrieSuggestionEngine(
             if (normalized in learnedKeys) learnedNative += word else normalNative += word
         }
 
-        // Candidates come back in dictionary case; the user's capitals must survive (#224).
-        val locale = live?.language?.let { Locale.forLanguageTag(it.code) } ?: Locale.ROOT
         if (offered != null) {
             return QueryResult(
                 isKnownWord = isKnownWord,
