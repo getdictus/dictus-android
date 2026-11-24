@@ -470,6 +470,21 @@ class NativeTrieSuggestionEngineTest {
         }
     }
 
+    /** Only an elision prefix is split off: an English contraction typo is corrected whole. */
+    @Test
+    fun `an apostrophe word without an elision prefix is corrected whole`() = runTest(dispatcher) {
+        dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+        val handle = FakeHandle(
+            knownWords = setOf("don't", "t", "s"),
+            fuzzyByWord = mapOf("din't" to listOf("don't"), "it'z" to listOf("it's")),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        assertEquals("don't", engine.correctionOnSpace("din't"))
+        assertEquals("it's", engine.correctionOnSpace("it'z"))
+    }
+
     private suspend fun TestScope.frenchElisionEngine(): NativeTrieSuggestionEngine {
         dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "fr" }
         val handle = FakeHandle(
