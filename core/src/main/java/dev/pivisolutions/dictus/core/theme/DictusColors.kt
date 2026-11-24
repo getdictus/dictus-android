@@ -50,4 +50,9 @@ object DictusColors {
     val LightBorderSubtle = Color(0xFFD1D1D6)      // iOS separator light
     val LightKeyBackground = Color(0xFFE8E8ED)     // Light key background
     val LightKeySpecialBackground = Color(0xFFD4D4DA) // Light special key background
+
+    // The return key of a field that acts (send, go, search, done): Apple's systemBlue, as the
+    // iOS key uses it rather than the Dictus accent (iOS #1023, KeyView.returnActionColor).
+    val ReturnActionBlue = Color(0xFF0A84FF) // systemBlue, dark appearance
+    val LightReturnActionBlue = Color(0xFF007AFF) // systemBlue, light appearance
 }

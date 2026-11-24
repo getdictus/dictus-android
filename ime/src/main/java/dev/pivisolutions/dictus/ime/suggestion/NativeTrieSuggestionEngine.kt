@@ -13,6 +13,7 @@ import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.allowsElided
+import dev.pivisolutions.dictus.ime.language.contextualSpelling
 import dev.pivisolutions.dictus.ime.language.toNativeTrieLayout
 import dev.pivisolutions.dictus.trie.NativeTrie
 import dev.pivisolutions.dictus.trie.TrieCorrection
@@ -156,6 +157,7 @@ class NativeTrieSuggestionEngine(
         val words: List<String>,
         val maxResults: Int,
         val context: CorrectionContext? = null,
+        val textBeforeCursor: String? = null,
     ) {
         val input: String = words.joinToString(" ")
     }
@@ -204,7 +206,8 @@ class NativeTrieSuggestionEngine(
                 }
 
                 val result = when (request.mode) {
-                    SuggestionMode.COMPLETION -> query(request.input, request.maxResults, request.context)
+                    SuggestionMode.COMPLETION ->
+                        query(request.input, request.maxResults, request.context, request.textBeforeCursor)
                     SuggestionMode.PREDICTION -> queryPredictions(request.words, request.maxResults)
                 }
                 publishIfCurrent(request, result)
@@ -293,6 +296,7 @@ class NativeTrieSuggestionEngine(
 
     private data class NativeQuery(
         val isKnownWord: Boolean,
+        val contextualSpelling: String?,
         val profileCorrection: AccentCollapseCandidateSelector.Selection?,
         val contraction: String?,
         val completions: List<String>,
@@ -305,6 +309,7 @@ class NativeTrieSuggestionEngine(
         input: String,
         maxResults: Int,
         context: CorrectionContext? = null,
+        textBeforeCursor: String? = null,
     ): QueryResult {
         if (input.isBlank() || maxResults <= 0) return QueryResult(false, false, null, emptyList())
         // An app or brand name decides before any dictionary rule (dictus-ios #1005).
@@ -319,7 +324,7 @@ class NativeTrieSuggestionEngine(
             live
         }
         val nativeQuery = if (live == null) {
-            NativeQuery(false, null, null, emptyList(), emptyList(), emptyMap(), null)
+            NativeQuery(false, null, null, null, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
                 // After an elision only the word can be misspelled: `j'ai` is checked as `ai`, and
@@ -330,6 +335,9 @@ class NativeTrieSuggestionEngine(
                 val elision = if (isWholeWordKnown) null else ElidedWord.of(input, live.profile)
                 val isKnownWord = isWholeWordKnown ||
                     elision?.word?.takeIf(String::isNotEmpty)?.let(live.handle::wordExists) == true
+                // Both spellings are dictionary words (`a` / `à`, `ma` / `m'a`), so only the words
+                // before can choose; the choice is applied although the typed word is known.
+                val contextualSpelling = textBeforeCursor?.let { live.profile.contextualSpelling(input, it) }
                 val profileCorrection = if (curated != null) null else AccentCollapseCandidateSelector.select(
                     input = input,
                     profile = live.profile,
@@ -407,6 +415,7 @@ class NativeTrieSuggestionEngine(
                 }
                 NativeQuery(
                     isKnownWord,
+                    contextualSpelling,
                     profileCorrection,
                     contraction,
                     completions,
@@ -419,7 +428,7 @@ class NativeTrieSuggestionEngine(
             }
         }
         val (
-            isKnownWord, profileCorrection, contraction, completions, corrections,
+            isKnownWord, contextualSpelling, profileCorrection, contraction, completions, corrections,
             contextScores, contextIdentity,
         ) = nativeQuery
         val normalizedInput = input.canonicalLookupKey()
@@ -456,7 +465,7 @@ class NativeTrieSuggestionEngine(
         val ambiguousAccents = profileCorrection?.let {
             CorrectionRanking.ambiguousAccentSpellings(normalizedInput, rankingCandidates)
         }
-        val nativeCandidates = rerank(
+        val nativeCandidates = listOfNotNull(contextualSpelling) + rerank(
             listOfNotNull(profileCorrection?.word, contraction) + completions + trieDecision.ranked,
             contextScores,
         )
@@ -464,7 +473,7 @@ class NativeTrieSuggestionEngine(
             return QueryResult(isKnownWord, false, null, emptyList(), contextIdentity)
         }
 
-        val primaryCorrection = when {
+        val primaryCorrection = contextualSpelling ?: when {
             ambiguousAccents != null -> null
             else -> profileCorrection?.word ?: contraction ?: trieDecision.replacement
         }
@@ -472,6 +481,7 @@ class NativeTrieSuggestionEngine(
         // bold. A learned or known input is a word, not a typo, and keeps its completions.
         val offered = when {
             normalizedInput in learnedKeys -> null
+            contextualSpelling != null -> null
             ambiguousAccents != null -> ambiguousAccents
             isKnownWord || profileCorrection != null || contraction != null -> null
             else -> (trieDecision.proposal as? CorrectionProposal.Suggest)?.words
@@ -504,7 +514,8 @@ class NativeTrieSuggestionEngine(
         }
         return QueryResult(
             isKnownWord = isKnownWord,
-            knownInputDominance = profileCorrection?.knownInputDominance == true,
+            knownInputDominance = contextualSpelling != null ||
+                profileCorrection?.knownInputDominance == true,
             primaryCorrection = primaryCorrection?.let(restoreCase),
             suggestions = (learnedPrefixWords + learnedNative + normalNative)
                 .take(maxResults)
@@ -577,6 +588,7 @@ class NativeTrieSuggestionEngine(
         input: String,
         maxResults: Int = 3,
         context: CorrectionContext? = null,
+        textBeforeCursor: String? = null,
     ): Long? {
         return synchronized(lock) {
             if (closed) return@synchronized null
@@ -586,6 +598,7 @@ class NativeTrieSuggestionEngine(
                 listOf(input),
                 maxResults,
                 context,
+                textBeforeCursor,
             )
             // Sending under the generation lock preserves ordering even for concurrent callers.
             check(queryRequests.trySend(request).isSuccess)
