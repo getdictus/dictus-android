@@ -88,6 +88,11 @@
     <string name="settings_theme">Th\u00e8me</string>
     <string name="settings_version">Version</string>
     <string name="settings_debug_logs">Debug Logs</string>
+    <!-- Section Développeur, versions Debug seulement (#3, iOS #460) -->
+    <string name="settings_section_developer">Développeur</string>
+    <string name="settings_debug_force_pro">Forcer Dictus Pro</string>
+    <string name="settings_debug_force_pro_off">Accorde Pro sans achat, pour tester sur l\'appareil les fonctions Pro encore cachées. Désactivé par défaut.</string>
+    <string name="settings_debug_force_pro_on">Toutes les fonctions Pro se comportent comme achetées. Rien n\'est en vente. Versions Debug seulement.</string>
     <string name="settings_export_logs">Exporter les logs de d\u00e9bogage</string>
     <string name="settings_licences">Licences</string>
     <string name="settings_github">GitHub</string>

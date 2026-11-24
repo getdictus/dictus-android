@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.premium.ProStatus
 import dev.pivisolutions.dictus.core.preferences.TranscriptionLanguage
 import dev.pivisolutions.dictus.ime.input.AutocorrectRuntimePolicy
 import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
@@ -44,11 +45,13 @@ import javax.inject.Inject
  *
  * @param dataStore Application-scoped DataStore for persistent preferences.
  * @param modelManager ModelManager to query which models are currently on disk.
+ * @param proStatus The Pro entitlement, for the Debug override switch (#3).
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val modelManager: ModelManager,
+    private val proStatus: ProStatus,
 ) : ViewModel() {
 
     /** Currently selected transcription language, one of [TranscriptionLanguage.SUPPORTED]. */
@@ -146,6 +149,17 @@ class SettingsViewModel @Inject constructor(
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.SUGGESTIONS_ENABLED] = !(prefs[PreferenceKeys.SUGGESTIONS_ENABLED] ?: true)
             }
+        }
+    }
+
+    /** Debug builds only: whether Pro is granted without a purchase (iOS #460). */
+    val debugProEntitlementForced: StateFlow<Boolean> = proStatus.debugProEntitlementForced
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** Flip the Debug override. A no-op in a release build. */
+    fun toggleDebugProEntitlementForced() {
+        viewModelScope.launch {
+            proStatus.setDebugProEntitlementForced(!debugProEntitlementForced.value)
         }
     }
 

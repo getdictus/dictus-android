@@ -88,6 +88,11 @@
     <string name="settings_theme">Theme</string>
     <string name="settings_version">Version</string>
     <string name="settings_debug_logs">Debug Logs</string>
+    <!-- Developer section, Debug builds only (#3, iOS #460) -->
+    <string name="settings_section_developer">Developer</string>
+    <string name="settings_debug_force_pro">Force Pro entitlement</string>
+    <string name="settings_debug_force_pro_off">Grants Pro without a purchase, so hidden Pro features can be tested on device. Off by default.</string>
+    <string name="settings_debug_force_pro_on">Every Pro feature behaves as if purchased. Nothing is for sale. Debug builds only.</string>
     <string name="settings_export_logs">Export debug logs</string>
     <string name="settings_licences">Licences</string>
     <string name="settings_github">GitHub</string>
