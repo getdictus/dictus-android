@@ -25,7 +25,8 @@ import org.robolectric.annotation.Config
 
 /**
  * Every point of the key grid types the nearest key, as on iOS (#400): the gaps between two keys
- * and two rows, the screen edge and a key's rounded corner. AZERTY letters on the Pixel 4 screen.
+ * and two rows, the screen edge and a key's rounded corner, and under the bottom row down to the
+ * grid's bottom edge (#401). AZERTY letters on the Pixel 4 screen.
  *
  * A key narrower or shorter than 48 dp already reaches past its drawing for a finger: Compose
  * gives it the minimum touch target. These taps sit where that does not reach, next to keys at
@@ -39,6 +40,7 @@ class KeyTouchAreaTest {
     private val typed = mutableListOf<String>()
     private lateinit var density: Density
     private var gridWidth = 0f
+    private var gridHeight = 0f
 
     @Before
     fun setKeyboard() {
@@ -53,7 +55,10 @@ class KeyTouchAreaTest {
                     onAccentSelected = {},
                     modifier = Modifier
                         .testTag(GRID)
-                        .onGloballyPositioned { gridWidth = it.size.width.toFloat() }
+                        .onGloballyPositioned {
+                            gridWidth = it.size.width.toFloat()
+                            gridHeight = it.size.height.toFloat()
+                        }
                         .height(LocalKeyboardSizing.current.keyAreaHeight),
                 )
             }
@@ -92,11 +97,19 @@ class KeyTouchAreaTest {
     }
 
     @Test
-    fun `the strip above the top row and the strip below the bottom row type nothing`() {
+    fun `the strip above the top row types nothing`() {
         tap(x = keyCentre(LETTERS, 0), y = keyTop(0) - 1.dp.px)
-        tap(x = gridWidth / 2f, y = keyBottom(3) + 1.dp.px)
 
         assertEquals(emptyList<String>(), typed)
+    }
+
+    @Test
+    fun `a tap under the bottom row, down to the grid's bottom edge, types that key`() {
+        tap(x = keyCentre(BOTTOM, 2), y = keyBottom(3) + 1.dp.px)
+        tap(x = keyCentre(BOTTOM, 2), y = gridHeight - 1f)
+        tap(x = keyCentre(BOTTOM, 3), y = gridHeight - 1f)
+
+        assertEquals(listOf("SPACE", "SPACE", "RETURN"), typed)
     }
 
     private val androidx.compose.ui.unit.Dp.px: Float get() = value * density.density
