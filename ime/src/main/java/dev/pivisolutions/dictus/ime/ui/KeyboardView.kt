@@ -59,7 +59,7 @@ fun KeyboardView(
             .background(MaterialTheme.colorScheme.background)
             .padding(top = 2.dp, bottom = 2.dp),
     ) {
-        rows.forEach { rowKeys ->
+        rows.forEachIndexed { rowIndex, rowKeys ->
             KeyRow(
                 keys = rowKeys,
                 isShifted = isShifted,
@@ -74,6 +74,8 @@ fun KeyboardView(
                 onTrackpadMove = onTrackpadMove,
                 frenchAdaptiveKeyState = frenchAdaptiveKeyState,
                 onFrenchAdaptiveVariant = onFrenchAdaptiveVariant,
+                rowIndex = rowIndex,
+                rowCount = rows.size,
             )
         }
     }
