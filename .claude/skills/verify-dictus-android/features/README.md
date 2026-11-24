@@ -55,11 +55,11 @@ Implementation details stay out of the map: only user paths, stable handles, req
 | [`diagnostics.logs`](diagnostics.logs.md) | Debug logs and diagnostics | Free | present | Yes (never « Effacer », never send) |
 | [`appearance`](appearance.md) | Appearance: theme, interface language | Free | Android-only | Pickers only |
 
-Not in the map as files, on purpose: the iOS features absent on Android (`smart-modes`, `history`, `vocabulary`, `voice-notes`, `pro.subscription`) and those that only make sense on iOS (`dictation.return-to-app`, `polish`, `live-activity`). They keep their row in the table below. `history` is the special case: implemented and unit-tested, but compiled out of every user path by `PremiumFlags.HISTORY_VISIBLE`. The debug-only `TestSurfaceScreen` is not reachable from any route and is not a feature.
+Not in the map as files, on purpose: the iOS features absent on Android (`smart-modes`, `history`, `vocabulary`, `voice-notes`, `pro.subscription`) and those that only make sense on iOS (`dictation.return-to-app`, `polish`, `live-activity`). They keep their row in the table below. `history` is the special case: implemented and unit-tested, and since #202 behind the Pro entitlement (`HistoryAvailability`): reachable in a Debug build under « Forcer Dictus Pro ». The debug-only `TestSurfaceScreen` is not reachable from any route and is not a feature.
 
 ## All IDs
 
-Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 110 sub-features, 51 screens; `kbd.numbers` and `kbd.symbols` added from iOS `develop` @ `61adacf` in #264, `typing.autocorrect-on-punctuation` added on iOS by #872), then the Android-only IDs. **Vocabulary.** *Free/Pro* is the tier: Free, Pro on iOS (absent on Android), or Pro hidden behind `PremiumFlags.HISTORY_VISIBLE`; N/A for iOS-only IDs. **Android status**: present, partial (with what is missing), absent, or iOS-only (N/A: the iOS keyboard-to-app hand-off and Full Access, return to the host app, Apple Intelligence, Dynamic Island, App Group). Statuses come from the code of `develop` at `f2b15c5`, checked on the Pixel for every screen marked "yes" in [screens.md](screens.md) (2026-10-20). **Android-only** is yes for an ID that exists only on Android, no otherwise.
+Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 110 sub-features, 51 screens; `kbd.numbers` and `kbd.symbols` added from iOS `develop` @ `61adacf` in #264, `typing.autocorrect-on-punctuation` added on iOS by #872), then the Android-only IDs. **Vocabulary.** *Free/Pro* is the tier: Free, Pro on iOS (absent on Android), or Pro (behind the entitlement, which only the Debug override grants today); N/A for iOS-only IDs. **Android status**: present, partial (with what is missing), absent, or iOS-only (N/A: the iOS keyboard-to-app hand-off and Full Access, return to the host app, Apple Intelligence, Dynamic Island, App Group). Statuses come from the code of `develop` at `f2b15c5`, checked on the Pixel for every screen marked "yes" in [screens.md](screens.md) (2026-10-20). **Android-only** is yes for an ID that exists only on Android, no otherwise.
 
 | ID | Free/Pro | Android status | Android-only |
 | --- | --- | --- | --- |
@@ -69,7 +69,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | [`models.transcription`](models.transcription.md) | Free | present | no |
 | `polish` | N/A | iOS-only (N/A) | no |
 | `smart-modes` | Pro on iOS — absent | absent | no |
-| `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete, search, clear, 200-entry cap; #202) but hidden | no |
+| `history` | Pro | partial — list, detail, delete, search, clear, 200-entry cap, switch; saved only for Pro with the switch on (#202). No locked Home hint (no paywall) | no |
 | `vocabulary` | Pro on iOS — absent | absent | no |
 | `voice-notes` | Pro on iOS — absent | absent | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
@@ -116,13 +116,13 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `smart-modes.translate` | Pro on iOS — absent | absent | no |
 | `smart-modes.pin` | Pro on iOS — absent | absent | no |
 | `smart-modes.toggle` | Pro on iOS — absent | absent | no |
-| `history.list` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden; the oldest entries are dropped beyond 200 on insertion (#202) | no |
-| `history.search` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (« Rechercher dans les transcriptions », case- and accent-insensitive, « Aucun résultat »; #202), hidden | no |
-| `history.delete` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
-| `history.detail` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (copy, share), hidden | no |
-| `history.clear` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present (« Effacer l’historique » on the History screen, not in Réglages as on iOS; confirmation « Tout supprimer » / « Annuler »; #202), hidden | no |
-| `history.toggle` | Pro on iOS — absent | absent — not in the code | no |
-| `history.home-entry` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — swipe up on Home, hidden | no |
+| `history.list` | Pro | present — the oldest entries are dropped beyond 200 on insertion (#202) | no |
+| `history.search` | Pro | present — « Rechercher dans les transcriptions », case- and accent-insensitive, « Aucun résultat » (#202) | no |
+| `history.delete` | Pro | present | no |
+| `history.detail` | Pro | present — copy, share | no |
+| `history.clear` | Pro | present — Réglages → Transcription → « Effacer l’historique » with the count, as on iOS, shown while entitled or while something is saved; also on the History screen (Android-only); confirmation « Tout supprimer » / « Annuler » (#202) | no |
+| `history.toggle` | Pro | present — at the top of the history opened from the Pro hub; off: entries kept, dimmed and locked, nothing new saved (#202) | no |
+| `history.home-entry` | Pro | present — « Balayez pour l’historique » and the swipe, for a user entitled to the history (#202); no locked hint (no paywall) | no |
 | `vocabulary.add` | Pro on iOS — absent | absent | no |
 | `vocabulary.edit` | Pro on iOS — absent | absent | no |
 | `vocabulary.delete` | Pro on iOS — absent | absent | no |
@@ -211,8 +211,8 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.whats-new` | Free | absent | no |
 | `app.home` | Free | present | no |
 | `app.recording` | Free | present | no |
-| `app.history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, route not registered | no |
-| `app.history.detail` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — code present, hidden | no |
+| `app.history` | Pro | present (#202) | no |
+| `app.history.detail` | Pro | present | no |
 | `app.models` | Free | present | no |
 | `app.models.languages` | Free | absent | no |
 | `app.models.loading` | Free | present — full-screen preparation screen in Models (#181) | no |
@@ -224,7 +224,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.settings.polish-debug` | Free | present — « Transcription debug » (#295) | no |
 | `app.pro.hub` | Pro on iOS — absent | absent | no |
 | `app.pro.smart-modes` | Pro on iOS — absent | absent | no |
-| `app.pro.history` | Pro on iOS — absent | absent | no |
+| `app.pro.history` | Pro | present — the history pushed from the hub, its switch on top (#202) | no |
 | `app.pro.vocabulary` | Pro on iOS — absent | absent | no |
 | `app.pro.vocabulary.term-editor` | Pro on iOS — absent | absent | no |
 | `app.pro.voice-notes` | Pro on iOS — absent | absent | no |
