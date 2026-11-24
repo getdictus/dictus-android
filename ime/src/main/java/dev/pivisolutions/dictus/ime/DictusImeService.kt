@@ -144,6 +144,12 @@ class DictusImeService : LifecycleInputMethodService() {
 
         /** Spaces between autocorrect tally reports — roughly one line per sentence typed. */
         private const val AUTOCORRECT_REPORT_INTERVAL = 25
+
+        /**
+         * Characters before the cursor the contextual spelling rules see: the clause and its
+         * three words before the typed one, or the end of the sentence before it.
+         */
+        private const val CONTEXTUAL_SPELLING_WINDOW = 64
     }
 
     private val entryPoint: DictusImeEntryPoint by lazy {
@@ -554,9 +560,19 @@ class DictusImeService : LifecycleInputMethodService() {
                 )
             }
         }
+        // The `a` / `à` and `il ma` rules read the clause before the word (dictus-ios #1017).
+        // Only languages that have such rules pay for the extra editor read.
+        val textBeforeCursor = activation?.profile
+            ?.takeIf { it.contextualHomographs.isNotEmpty() || it.contextOverrides.isNotEmpty() }
+            ?.let {
+                ImeServicePrivacyPolicy.readEditorContextIfEligible(isCurrentEditorSuggestionEligible, null) {
+                    currentInputConnection?.getTextBeforeCursor(CONTEXTUAL_SPELLING_WINDOW, 0)?.toString()
+                }
+            }
         latestSuggestionRequestId = dictionaryEngine.requestSuggestions(
             _currentWord.value,
             context = context,
+            textBeforeCursor = textBeforeCursor,
         )
         autocorrectCoordinator.suggestionRequested(latestSuggestionRequestId, _currentWord.value)
     }
