@@ -144,7 +144,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.autocorrect-on-punctuation` | Free | present — `, . ; : ! ?` and Return, never `'` or `-`, as iOS #872 (#268); never inside an e-mail address or a URL (#332) | no |
 | `typing.undo-correction` | Free | partial — ⌫ right after the correction; no chip in the bar | no |
 | `typing.auto-full-stop` | Free | present — same rule as iOS `AutoFullStop`; ⌫ right after turns it back into one space (Android only); never in password fields | no |
-| `typing.accents` | Free | present — long press, accent strip | no |
+| `typing.accents` | Free | present — long press, one-row strip, per-language lists in Apple's order (œ, æ, #406) | no |
 | `typing.dead-keys` | Free | absent | no |
 | `typing.autocorrect-toggle` | Free | present | no |
 | `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |
