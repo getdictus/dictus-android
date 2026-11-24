@@ -447,6 +447,109 @@ class NativeTrieSuggestionEngineTest {
             }
         }
 
+    /**
+     * #393: the whole token went to the corrector, so `j'ai` became `jais`. The fuzzy lists are
+     * what the native French trie returns for the whole token (host probe, issue #393).
+     */
+    @Test
+    fun `a correct French elision is kept whole`() = runTest(dispatcher) {
+        val engine = frenchElisionEngine()
+
+        listOf("j'ai", "J'ai", "c'est", "C'est", "l'homme", "qu'il", "l’homme").forEach { typed ->
+            assertEquals(typed, null, engine.correctionOnSpace(typed))
+        }
+    }
+
+    /** Words the dictionary holds with their apostrophe are looked up whole, never split. */
+    @Test
+    fun `dictionary words with an apostrophe stay as typed`() = runTest(dispatcher) {
+        val engine = frenchElisionEngine()
+
+        listOf("d'abord", "aujourd'hui", "jusqu'à").forEach { typed ->
+            assertEquals(typed, null, engine.correctionOnSpace(typed))
+        }
+    }
+
+    @Test
+    fun `a typo after an elision is corrected and the prefix is kept`() = runTest(dispatcher) {
+        val engine = frenchElisionEngine()
+
+        mapOf(
+            "l'hmome" to "l'homme",
+            "L'hmome" to "L'homme",
+            "l’hmome" to "l’homme",
+            "j'ao" to "j'ai",
+            "qu'ik" to "qu'il",
+            "s'ik" to "s'il",
+            "d'abird" to "d'abord",
+            "l'hotrl" to "l'hôtel",
+        ).forEach { (typed, expected) ->
+            assertEquals(typed, expected, engine.correctionOnSpace(typed))
+        }
+    }
+
+    /** dictus-ios ElisionOnsetTests: French never elides before a consonant. */
+    @Test
+    fun `a correction after an elision never starts with a consonant`() = runTest(dispatcher) {
+        val engine = frenchElisionEngine()
+
+        listOf("d'cirre", "d'vptre").forEach { typed ->
+            assertEquals(typed, null, engine.correctionOnSpace(typed))
+            assertTrue(typed, engine.suggestionResults.value.suggestions.none { it.startsWith("d'v") })
+        }
+    }
+
+    /** Only an elision prefix is split off: an English contraction typo is corrected whole. */
+    @Test
+    fun `an apostrophe word without an elision prefix is corrected whole`() = runTest(dispatcher) {
+        dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "en" }
+        val handle = FakeHandle(
+            knownWords = setOf("don't", "t", "s"),
+            fuzzyByWord = mapOf("din't" to listOf("don't"), "it'z" to listOf("it's")),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        assertEquals("don't", engine.correctionOnSpace("din't"))
+        assertEquals("it's", engine.correctionOnSpace("it'z"))
+    }
+
+    private suspend fun TestScope.frenchElisionEngine(): NativeTrieSuggestionEngine {
+        dataStore.edit { it[PreferenceKeys.KEYBOARD_LANGUAGE] = "fr" }
+        val handle = FakeHandle(
+            knownWords = setOf(
+                "ai", "est", "homme", "il", "abord", "hôtel", "d'abord", "aujourd'hui", "jusqu'à",
+            ),
+            fuzzyByWord = mapOf(
+                "j'ai" to listOf("jais"),
+                "J'ai" to listOf("jais"),
+                "c'est" to listOf("brest", "best", "test"),
+                "C'est" to listOf("brest", "best", "test"),
+                "l'homme" to listOf("homme"),
+                "l’homme" to listOf("homme"),
+                "qu'il" to listOf("quil"),
+                "hmome" to listOf("nomme", "homme", "home"),
+                "ao" to listOf("ai", "au", "a", "si"),
+                "ik" to listOf("il", "ok", "un", "on", "in"),
+                "abird" to listOf("abord", "bord", "abris"),
+                "hotrl" to listOf("hôtel", "notre", "hôte"),
+                "cirre" to listOf("votre", "vitre", "corde", "cidre", "cire", "dire"),
+                "vptre" to listOf("votre", "notre", "vitre", "vôtre", "voter", "cotre"),
+            ),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+        return engine
+    }
+
+    /** What Space writes, as AutocorrectInputCoordinator decides it: nothing for a known word. */
+    private fun NativeTrieSuggestionEngine.correctionOnSpace(typed: String): String? {
+        requireNotNull(requestSuggestions(typed))
+        dispatcher.scheduler.advanceUntilIdle()
+        val result = suggestionResults.value
+        return result.primaryCorrection.takeUnless { result.isKnownWord && !result.knownInputDominance }
+    }
+
     @Test
     fun `context score reranks only existing native candidates with deterministic bounded ties`() =
         runTest(dispatcher) {
@@ -930,6 +1033,7 @@ class NativeTrieSuggestionEngineTest {
         private val bigram: List<String> = emptyList(),
         private val trigram: List<String> = emptyList(),
         private val scores: Map<String, Map<String, Int>> = emptyMap(),
+        private val fuzzyByWord: Map<String, List<String>> = emptyMap(),
     ) : NativeTrieHandle {
         var closeCount = 0
         val requestedLimits = mutableListOf<Int>()
@@ -951,7 +1055,7 @@ class NativeTrieSuggestionEngineTest {
 
         override fun correct(word: String, maxEditDistance: Float, maxResults: Int): List<String> {
             requestedLimits += maxResults
-            return (fuzzyOverride ?: fuzzy).take(maxResults)
+            return (fuzzyOverride ?: fuzzyByWord[word] ?: fuzzy).take(maxResults)
         }
 
         override fun predictAfterWord(word: String, maxResults: Int): List<String> {
