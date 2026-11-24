@@ -12,6 +12,7 @@ import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import dev.pivisolutions.dictus.ime.language.allowsElided
 import dev.pivisolutions.dictus.ime.language.toNativeTrieLayout
 import dev.pivisolutions.dictus.trie.NativeTrie
 import dev.pivisolutions.dictus.trie.TrieCorrection
@@ -319,7 +320,14 @@ class NativeTrieSuggestionEngine(
             NativeQuery(false, null, null, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
-                val isKnownWord = live.handle.wordExists(input)
+                // After an elision only the word can be misspelled: `j'ai` is checked as `ai`, and
+                // the prefix is put back on each candidate (iOS AOSPTrieEngine.spellCheck). A word
+                // the dictionary holds whole (`aujourd'hui`) and a prefix that is not an elision
+                // (`din't`, which must still reach `don't`) are checked whole, as before.
+                val isWholeWordKnown = live.handle.wordExists(input)
+                val elision = if (isWholeWordKnown) null else ElidedWord.of(input, live.profile)
+                val isKnownWord = isWholeWordKnown ||
+                    elision?.word?.takeIf(String::isNotEmpty)?.let(live.handle::wordExists) == true
                 val profileCorrection = AccentCollapseCandidateSelector.select(
                     input = input,
                     profile = live.profile,
@@ -362,9 +370,15 @@ class NativeTrieSuggestionEngine(
                 // Ten, not the bar's six: the word meant can sit sixth (`morning` for `irning`),
                 // and it has to be there for context to lift it (iOS #997).
                 val normalized = input.canonicalLookupKey()
-                val corrections = live.handle
-                    .correctionCandidates(input, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
-                    .filter { it.word.canonicalLookupKey() != normalized }
+                val corrections = when {
+                    elision == null ->
+                        live.handle.correctionCandidates(input, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
+                    elision.word.isEmpty() -> emptyList()
+                    else -> live.handle
+                        .correctionCandidates(elision.word, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
+                        .filter { live.profile.allowsElided(it.word, elision.prefix) }
+                        .map { it.copy(word = elision.prefix + it.word) }
+                }.filter { it.word.canonicalLookupKey() != normalized }
                 val usableContext = context?.takeIf {
                     !isKnownWord &&
                         it.currentWord == input &&
@@ -470,6 +484,21 @@ class NativeTrieSuggestionEngine(
                 .map { TypedCase.applyTo(it, input, locale) },
             contextIdentity = contextIdentity,
         )
+    }
+
+    /** A word split after its elision: [prefix] keeps the apostrophe, `l'` in `l'homme`. */
+    private data class ElidedWord(val prefix: String, val word: String) {
+        companion object {
+            /** Null unless everything up to the last apostrophe is one of [profile]'s elisions. */
+            fun of(input: String, profile: LanguageProfile): ElidedWord? {
+                val prefixes = profile.elisionOnset?.prefixes ?: return null
+                val apostrophe = input.indexOfLast { it == '\'' || it == '’' }
+                if (apostrophe < 0) return null
+                val prefix = input.substring(0, apostrophe + 1)
+                if (prefix.lowercase(Locale.ROOT).replace('’', '\'') !in prefixes) return null
+                return ElidedWord(prefix, input.substring(apostrophe + 1))
+            }
+        }
     }
 
     /** A context score may improve a candidate by fewer than two original rank positions. */
