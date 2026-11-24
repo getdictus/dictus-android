@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import dev.pivisolutions.dictus.ime.input.ReturnKeyRole
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
@@ -39,6 +40,7 @@ fun KeyRow(
     onFrenchAdaptiveVariant: (String) -> Unit = {},
     rowIndex: Int = 0,
     rowCount: Int = 1,
+    returnKeyRole: ReturnKeyRole = ReturnKeyRole.NEWLINE,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -96,6 +98,7 @@ fun KeyRow(
                 onTrackpadActiveChange = onTrackpadActiveChange,
                 onTrackpadMove = onTrackpadMove,
                 touchArea = keyTouchArea(density, keyIndex, keys.size, rowIndex, rowCount),
+                returnKeyRole = returnKeyRole,
                 modifier = Modifier.weight(key.widthMultiplier),
             )
         }

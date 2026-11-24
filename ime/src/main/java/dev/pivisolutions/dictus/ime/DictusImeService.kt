@@ -72,6 +72,7 @@ import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.AutoCapitalization
 import dev.pivisolutions.dictus.ime.input.AutoFullStop
 import dev.pivisolutions.dictus.ime.input.AutoFullStopInput
+import dev.pivisolutions.dictus.ime.input.ReturnKeyStyle
 import dev.pivisolutions.dictus.ime.input.AutoCapMode
 import dev.pivisolutions.dictus.ime.input.AutoCapSignal
 import dev.pivisolutions.dictus.ime.input.AutocorrectAddressRevert
@@ -185,6 +186,8 @@ class DictusImeService : LifecycleInputMethodService() {
 
     // Transient editor-derived state only. Context text is never logged or persisted.
     private val _frenchAdaptiveKeyState = MutableStateFlow(FrenchAdaptiveKey.DEFAULT)
+    // The return key follows the field's action (iOS #1023): read from each new EditorInfo.
+    private val _returnKeyStyle = MutableStateFlow(ReturnKeyStyle.NEWLINE)
     private var isEditorSelectionCollapsed = false
     private var isCurrentEditorSuggestionEligible = false
     private var isPersonalizedLearningAllowed = false
@@ -709,6 +712,7 @@ class DictusImeService : LifecycleInputMethodService() {
             isCurrentEditorSuggestionEligible,
             isPersonalizedLearningAllowed,
         )
+        _returnKeyStyle.value = ReturnKeyStyle.forEditor(attribute?.imeOptions ?: 0)
         autocorrectCoordinator.startSession(
             autocorrectEligible = isCurrentEditorSuggestionEligible,
             personalizedLearningAllowed = isPersonalizedLearningAllowed,
@@ -956,6 +960,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val suggestionTrace by _suggestionTrace.collectAsState()
         val isCompletionPending by _completionPending.collectAsState()
         val frenchAdaptiveKeyState by _frenchAdaptiveKeyState.collectAsState()
+        val returnKeyStyle by _returnKeyStyle.collectAsState()
         val autoCapSignal by _autoCapSignal.collectAsState()
         val keyboardSession by _keyboardSession.collectAsState()
         val activeKeyboardState by _activeKeyboardState.collectAsState()
@@ -1215,6 +1220,7 @@ class DictusImeService : LifecycleInputMethodService() {
                     },
                     autoCapSignal = autoCapSignal,
                     keyboardSession = keyboardSession,
+                    returnKeyStyle = returnKeyStyle,
                 )
             }
             is DictationState.Recording -> {
@@ -1530,19 +1536,14 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     /**
-     * Sends an Enter/Return key event to the editor.
+     * Sends the return key to the editor: the field's action (send, go, search…), or Enter.
      */
     fun sendReturnKey() {
         autoFullStop.clear()
         dictationFeedback.withdraw()
         // Return ends the word before it, like a punctuation mark (#268, iOS #872).
         val sendEnter = {
-            currentInputConnection?.sendKeyEvent(
-                android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER),
-            )
-            currentInputConnection?.sendKeyEvent(
-                android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER),
-            )
+            currentInputConnection?.let { _returnKeyStyle.value.sendTo(it) }
         }
         val inputConnection = currentInputConnection
         if (inputConnection == null) {
