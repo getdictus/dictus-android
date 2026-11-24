@@ -11,6 +11,7 @@ class ContractionExpanderTest {
 
     private val dictionary = setOf(
         "est", "ai", "homme", "il", "en", "appelle", "avais", "une", "ma", "ta", "sa", "était",
+        "votre", "maison", "hôtel",
     )
 
     private fun expand(word: String, accented: (String) -> String? = { null }): String? =
@@ -88,5 +89,22 @@ class ContractionExpanderTest {
         // "quil" must reach qu' + il, not q' + uil, and "cest" must not be read as a longer prefix.
         assertEquals("qu'il", expand("quil"))
         assertEquals("c'est", expand("cest"))
+    }
+
+    @Test
+    fun `a prefix is never glued to a consonant`() {
+        // French elides before a vowel or a mute h only (dictus-ios #1035): `dvotre` is not
+        // `d'votre`, and `lmaison` is not `l'maison`.
+        assertNull(expand("dvotre"))
+        assertNull(expand("lmaison"))
+        assertNull(expand("Dvotre"))
+        assertEquals("l'homme", expand("lhomme"))
+        assertEquals("l'hôtel", expand("lhôtel"))
+    }
+
+    @Test
+    fun `an accent restored after a prefix still has to start with a vowel`() {
+        assertNull(expand("dvotre") { "votre" })
+        assertEquals("l'hôtel", expand("lhotel") { suffix -> if (suffix == "hotel") "hôtel" else null })
     }
 }
