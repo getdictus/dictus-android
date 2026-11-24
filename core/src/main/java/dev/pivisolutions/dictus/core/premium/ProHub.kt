@@ -12,9 +12,7 @@ object ProHub {
      * absent. Smart Modes (#205), vocabulary (its screen is #208) and voice notes (#204) join
      * the list as they ship.
      */
-    val listedFeatures: List<ProFeature> = ProFeature.entries.filter { it in SHIPPED }
-
-    private val SHIPPED = setOf(ProFeature.HISTORY)
+    val listedFeatures: List<ProFeature> = ProFeature.entries.filter { it == ProFeature.HISTORY }
 
     /**
      * Whether the hub says that Pro comes from the Debug override and nothing is for sale,

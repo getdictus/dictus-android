@@ -1,7 +1,6 @@
 package dev.pivisolutions.dictus.pro
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.premium.ProFeature
@@ -88,7 +88,7 @@ fun ProHubScreen(
     val context = LocalContext.current
     val termsUrl = stringResource(R.string.settings_terms_url)
     val privacyUrl = stringResource(R.string.settings_privacy_url)
-    fun open(url: String) = context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    fun open(url: String) = context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
 
     Box(
         modifier = Modifier
