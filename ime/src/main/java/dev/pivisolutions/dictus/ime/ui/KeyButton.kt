@@ -54,6 +54,7 @@ import dev.pivisolutions.dictus.ime.R
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.input.BackspaceDeletion
 import dev.pivisolutions.dictus.ime.input.BackspaceRepeatPolicy
+import dev.pivisolutions.dictus.ime.input.ReturnKeyRole
 import dev.pivisolutions.dictus.ime.input.TrackpadMotionAccumulator
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
@@ -103,6 +104,9 @@ private suspend fun AwaitPointerEventScope.awaitDeleteGestureEnd(pointerId: Poin
  * - Other keys: tap on release
  * - DELETE: custom pointer input for key-repeat (400ms delay, then every 100ms),
  *   stopped by release, pointer cancel, sliding off the key or disposal
+ *
+ * The gestures run on [touchArea], the drawn key grown into the gaps around it (#400); "the key"
+ * above is that area. The drawing, the popups and their anchors stay on the drawn key.
  */
 @Composable
 fun KeyButton(
@@ -117,6 +121,8 @@ fun KeyButton(
     labelsVisible: Boolean = true,
     onTrackpadActiveChange: (Boolean) -> Unit = {},
     onTrackpadMove: (Int) -> Unit = {},
+    touchArea: KeyTouchArea = KeyTouchArea.NONE,
+    returnKeyRole: ReturnKeyRole = ReturnKeyRole.NEWLINE,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -159,6 +165,7 @@ fun KeyButton(
         key.type == KeyType.SHIFT && isCapsLock -> DictusColors.AccentHighlight
         key.type == KeyType.SHIFT && isShifted -> DictusColors.Accent
         key.type == KeyType.CHARACTER || key.type == KeyType.SPACE -> LocalDictusColors.current.keyBackground
+        key.type == KeyType.RETURN && returnKeyRole.isAction -> LocalDictusColors.current.returnActionBackground
         else -> LocalDictusColors.current.keySpecialBackground
     }
     val keyTextColor = LocalDictusColors.current.keyText
@@ -196,7 +203,7 @@ fun KeyButton(
 
         val popupWidthPx = accents.size * accentCellWidthPx
         // Natural centered offset + clamping shift to match the popup's actual position
-        val popupLeftPx = (keyWidthPx - popupWidthPx) / 2f + accentShiftPx
+        val popupLeftPx = touchArea.left + (keyWidthPx - popupWidthPx) / 2f + accentShiftPx
         val index = ((pointerX - popupLeftPx) / accentCellWidthPx).toInt()
         return index.takeIf { it in accents.indices }
     }
@@ -412,7 +419,8 @@ fun KeyButton(
     Box(
         modifier = modifier
             .height(LocalKeyboardSizing.current.rowHeight)
-            .padding(vertical = 2.dp)
+            .padding(vertical = KEY_VERTICAL_PADDING)
+            .touchArea(touchArea, gestureModifier)
             .onSizeChanged { keyWidthPx = it.width }
             .onGloballyPositioned { coordinates ->
                 keyPositionXPx = coordinates.positionInWindow().x
@@ -422,17 +430,16 @@ fun KeyButton(
             .clip(shape)
             .background(backgroundColor)
             .then(capsLockUnderline)
-            .semantics { keyPressed = isPressed }
-            .then(gestureModifier),
+            .semantics { keyPressed = isPressed },
         contentAlignment = Alignment.Center,
     ) {
         if (key.type == KeyType.RETURN) {
-            // A fixed ↵ icon in every language, as iOS draws the SF Symbol "return" on iPhone
-            // (#280); the profile's word stays the spoken label.
+            // A glyph for the field's action in every language, as iOS draws an SF Symbol on
+            // iPhone (#280, iOS #1023): white on the blue key; the word stays the spoken label.
             Icon(
-                painter = painterResource(R.drawable.ic_keyboard_return),
+                painter = painterResource(returnKeyIcon(returnKeyRole)),
                 contentDescription = key.label,
-                tint = LocalDictusColors.current.keyText,
+                tint = if (returnKeyRole.isAction) Color.White else LocalDictusColors.current.keyText,
                 modifier = Modifier.size(22.dp).alpha(labelAlpha),
             )
         } else {
@@ -490,4 +497,14 @@ fun KeyButton(
             }
         }
     }
+}
+
+/** The glyph for each return key role, iOS `ReturnKeyStyle.symbol` in Material icons. */
+internal fun returnKeyIcon(role: ReturnKeyRole): Int = when (role) {
+    ReturnKeyRole.NEWLINE -> R.drawable.ic_keyboard_return
+    ReturnKeyRole.SEND -> R.drawable.ic_return_send
+    ReturnKeyRole.GO -> R.drawable.ic_return_go
+    ReturnKeyRole.SEARCH -> R.drawable.ic_search
+    ReturnKeyRole.DONE -> R.drawable.ic_check
+    ReturnKeyRole.NEXT -> R.drawable.ic_return_next
 }

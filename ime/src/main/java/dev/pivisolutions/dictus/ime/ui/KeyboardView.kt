@@ -6,14 +6,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyboardLayer
 import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
+import dev.pivisolutions.dictus.ime.input.ReturnKeyStyle
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
 
 /**
@@ -40,6 +41,7 @@ fun KeyboardView(
     onTrackpadMove: (Int) -> Unit = {},
     frenchAdaptiveKeyState: FrenchAdaptiveKey.State = FrenchAdaptiveKey.DEFAULT,
     onFrenchAdaptiveVariant: (String) -> Unit = {},
+    returnKeyStyle: ReturnKeyStyle = ReturnKeyStyle.NEWLINE,
     modifier: Modifier = Modifier,
 ) {
     val baseRows = when (layer) {
@@ -50,16 +52,16 @@ fun KeyboardView(
     val rows = KeyboardLayouts.localizeUtilityLabels(
         baseRows,
         languageProfile.spaceLabel,
-        languageProfile.returnLabel,
+        returnKeyStyle.label(SupportedLanguage.fromCodeOrDefault(languageProfile.code)),
     )
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(top = 2.dp, bottom = 2.dp),
+            .padding(vertical = GRID_VERTICAL_PADDING),
     ) {
-        rows.forEach { rowKeys ->
+        rows.forEachIndexed { rowIndex, rowKeys ->
             KeyRow(
                 keys = rowKeys,
                 isShifted = isShifted,
@@ -74,6 +76,9 @@ fun KeyboardView(
                 onTrackpadMove = onTrackpadMove,
                 frenchAdaptiveKeyState = frenchAdaptiveKeyState,
                 onFrenchAdaptiveVariant = onFrenchAdaptiveVariant,
+                rowIndex = rowIndex,
+                rowCount = rows.size,
+                returnKeyRole = returnKeyStyle.role,
             )
         }
     }

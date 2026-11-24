@@ -12,8 +12,11 @@ import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
+import dev.pivisolutions.dictus.ime.language.allowsElided
+import dev.pivisolutions.dictus.ime.language.contextualSpelling
 import dev.pivisolutions.dictus.ime.language.toNativeTrieLayout
 import dev.pivisolutions.dictus.trie.NativeTrie
+import dev.pivisolutions.dictus.trie.TrieCorrection
 import dev.pivisolutions.dictus.trie.TrieKeyboardLayout
 import java.io.Closeable
 import java.text.Normalizer
@@ -45,7 +48,12 @@ interface NativeTrieHandle : Closeable {
 
     fun complete(prefix: String, maxResults: Int): List<String>
 
-    fun correct(word: String, maxEditDistance: Float = 2f, maxResults: Int): List<String>
+    /** Correction candidates, best scored first, each with its edit cost and frequency. */
+    fun correctionCandidates(
+        word: String,
+        maxEditDistance: Float = 2f,
+        maxResults: Int,
+    ): List<TrieCorrection>
 
     fun predictAfterWord(word: String, maxResults: Int): List<String> = emptyList()
 
@@ -77,11 +85,11 @@ class AndroidNativeTrieOpener(private val context: Context) : NativeTrieOpener {
         override fun complete(prefix: String, maxResults: Int): List<String> =
             trie.complete(prefix, maxResults)
 
-        override fun correct(
+        override fun correctionCandidates(
             word: String,
             maxEditDistance: Float,
             maxResults: Int,
-        ): List<String> = trie.correct(word, maxEditDistance, maxResults)
+        ): List<TrieCorrection> = trie.correctionCandidates(word, maxEditDistance, maxResults)
 
         override fun predictAfterWord(word: String, maxResults: Int): List<String> =
             trie.predictAfterWord(word, maxResults).map { it.word }
@@ -125,6 +133,11 @@ class NativeTrieSuggestionEngine(
         val contextIdentity: CorrectionContextIdentity? = null,
         /** [primaryCorrection] comes from an accent rule or a contraction, not the fuzzy search. */
         val ruleCorrection: Boolean = false,
+        /**
+         * The typed word is kept and [suggestions] are corrections offered for a tap only: no
+         * slot is the one Space applies (iOS `.candidates`, #388).
+         */
+        val keepsTypedWord: Boolean = false,
     )
     class Activation internal constructor(
         val language: SupportedLanguage,
@@ -146,6 +159,7 @@ class NativeTrieSuggestionEngine(
         val words: List<String>,
         val maxResults: Int,
         val context: CorrectionContext? = null,
+        val textBeforeCursor: String? = null,
     ) {
         val input: String = words.joinToString(" ")
     }
@@ -194,7 +208,8 @@ class NativeTrieSuggestionEngine(
                 }
 
                 val result = when (request.mode) {
-                    SuggestionMode.COMPLETION -> query(request.input, request.maxResults, request.context)
+                    SuggestionMode.COMPLETION ->
+                        query(request.input, request.maxResults, request.context, request.textBeforeCursor)
                     SuggestionMode.PREDICTION -> queryPredictions(request.words, request.maxResults)
                 }
                 publishIfCurrent(request, result)
@@ -279,14 +294,16 @@ class NativeTrieSuggestionEngine(
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
         val ruleCorrection: Boolean = false,
+        val keepsTypedWord: Boolean = false,
     )
 
     private data class NativeQuery(
         val isKnownWord: Boolean,
+        val contextualSpelling: String?,
         val profileCorrection: AccentCollapseCandidateSelector.Selection?,
         val contraction: String?,
         val completions: List<String>,
-        val corrections: List<String>,
+        val corrections: List<TrieCorrection>,
         val contextScores: Map<String, Int>,
         val contextIdentity: CorrectionContextIdentity?,
     )
@@ -295,8 +312,11 @@ class NativeTrieSuggestionEngine(
         input: String,
         maxResults: Int,
         context: CorrectionContext? = null,
+        textBeforeCursor: String? = null,
     ): QueryResult {
         if (input.isBlank() || maxResults <= 0) return QueryResult(false, false, null, emptyList())
+        // An app or brand name decides before any dictionary rule (dictus-ios #1005).
+        val curated = CuratedNames.decision(input)
         val candidateLimit = maxResults
             .coerceIn(1, MAX_NATIVE_RESULTS / CANDIDATE_MULTIPLIER) * CANDIDATE_MULTIPLIER
         val learned = personalDictionary.learnedWords.value
@@ -307,11 +327,21 @@ class NativeTrieSuggestionEngine(
             live
         }
         val nativeQuery = if (live == null) {
-            NativeQuery(false, null, null, emptyList(), emptyList(), emptyMap(), null)
+            NativeQuery(false, null, null, null, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
-                val isKnownWord = live.handle.wordExists(input)
-                val profileCorrection = AccentCollapseCandidateSelector.select(
+                // After an elision only the word can be misspelled: `j'ai` is checked as `ai`, and
+                // the prefix is put back on each candidate (iOS AOSPTrieEngine.spellCheck). A word
+                // the dictionary holds whole (`aujourd'hui`) and a prefix that is not an elision
+                // (`din't`, which must still reach `don't`) are checked whole, as before.
+                val isWholeWordKnown = live.handle.wordExists(input)
+                val elision = if (isWholeWordKnown) null else ElidedWord.of(input, live.profile)
+                val isKnownWord = isWholeWordKnown ||
+                    elision?.word?.takeIf(String::isNotEmpty)?.let(live.handle::wordExists) == true
+                // Both spellings are dictionary words (`a` / `à`, `ma` / `m'a`), so only the words
+                // before can choose; the choice is applied although the typed word is known.
+                val contextualSpelling = textBeforeCursor?.let { live.profile.contextualSpelling(input, it) }
+                val profileCorrection = if (curated != null) null else AccentCollapseCandidateSelector.select(
                     input = input,
                     profile = live.profile,
                     inputKnown = isKnownWord,
@@ -327,7 +357,7 @@ class NativeTrieSuggestionEngine(
                 // prefer `c'est` over any other neighbour of `cest`. The expansion is exact —
                 // a declared prefix plus a word already in the dictionary — so it is resolved
                 // here and ranked above the fuzzy candidates.
-                val contraction = if (isKnownWord) {
+                val contraction = if (isKnownWord || curated != null) {
                     null
                 } else {
                     ContractionExpander.expand(
@@ -350,7 +380,22 @@ class NativeTrieSuggestionEngine(
                     ) { word -> live.handle.wordExists(word) }
                 }
                 val completions = live.handle.complete(input, candidateLimit)
-                val corrections = live.handle.correct(input, MAX_EDIT_DISTANCE, candidateLimit)
+                // Ten, not the bar's six: the word meant can sit sixth (`morning` for `irning`),
+                // and it has to be there for context to lift it (iOS #997).
+                val normalized = input.canonicalLookupKey()
+                val corrections = if (curated != null) {
+                    emptyList()
+                } else {
+                    when {
+                        elision == null ->
+                            live.handle.correctionCandidates(input, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
+                        elision.word.isEmpty() -> emptyList()
+                        else -> live.handle
+                            .correctionCandidates(elision.word, MAX_EDIT_DISTANCE, RANKED_CORRECTIONS)
+                            .filter { live.profile.allowsElided(it.word, elision.prefix) }
+                            .map { it.copy(word = elision.prefix + it.word) }
+                    }.filter { it.word.canonicalLookupKey() != normalized }
+                }
                 val usableContext = context?.takeIf {
                     !isKnownWord &&
                         it.currentWord == input &&
@@ -360,7 +405,7 @@ class NativeTrieSuggestionEngine(
                 val scores = if (usableContext == null) {
                     emptyMap()
                 } else {
-                    (completions + corrections)
+                    (completions + corrections.map { it.word })
                         .distinctBy { it.canonicalLookupKey() }
                         .associate { word ->
                             val key = word.canonicalLookupKey()
@@ -373,6 +418,7 @@ class NativeTrieSuggestionEngine(
                 }
                 NativeQuery(
                     isKnownWord,
+                    contextualSpelling,
                     profileCorrection,
                     contraction,
                     completions,
@@ -385,23 +431,64 @@ class NativeTrieSuggestionEngine(
             }
         }
         val (
-            isKnownWord, profileCorrection, contraction, completions, corrections,
+            isKnownWord, contextualSpelling, profileCorrection, contraction, completions, corrections,
             contextScores, contextIdentity,
         ) = nativeQuery
-        val nativeCandidates = rerank(
-            listOfNotNull(profileCorrection?.word, contraction) + completions + corrections,
+        val normalizedInput = input.canonicalLookupKey()
+        // Candidates come back in dictionary case; the user's capitals must survive (#224).
+        val locale = live?.language?.let { Locale.forLanguageTag(it.code) } ?: Locale.ROOT
+        if (curated != null) {
+            // Kept as typed, or written in its own casing, which TypedCase must not undo: the
+            // casing leads the bar's bold slot, and a known word (`whatsapp` in French) yields to it.
+            val casing = (curated as? CuratedNames.Decision.Recase)?.casing
+            val others = completions
+                .filter { it.canonicalLookupKey() != normalizedInput }
+                .map { TypedCase.applyTo(it, input, locale) }
+            return QueryResult(
+                isKnownWord = isKnownWord,
+                knownInputDominance = casing != null,
+                primaryCorrection = casing,
+                suggestions = (listOfNotNull(casing) + others).take(maxResults),
+                contextIdentity = contextIdentity,
+            )
+        }
+        // A brand among the candidates is written in its casing, not the typed case (#404):
+        // `whatsap` gives `WhatsApp`. Capitals stay capitals, as for a typed brand (`IPHONE`).
+        val restoreCase = { word: String ->
+            val typedCase = TypedCase.applyTo(word, input, locale)
+            (CuratedNames.decision(typedCase) as? CuratedNames.Decision.Recase)?.casing ?: typedCase
+        }
+        val rankingCandidates = corrections.map {
+            val key = it.word.canonicalLookupKey()
+            CorrectionCandidate(key, it.cost.toDouble(), it.frequency, contextScores[key]?.coerceAtLeast(0) ?: 0)
+        }
+        val trieDecision = CorrectionRanking.decide(rankingCandidates)
+        // Two accented spellings of the same letters, equally likely (#388, iOS #997): `reserve`
+        // is `réserve` or `réservé`. Keep what was typed, offer both.
+        val ambiguousAccents = profileCorrection?.let {
+            CorrectionRanking.ambiguousAccentSpellings(normalizedInput, rankingCandidates)
+        }
+        val nativeCandidates = listOfNotNull(contextualSpelling) + rerank(
+            listOfNotNull(profileCorrection?.word, contraction) + completions + trieDecision.ranked,
             contextScores,
         )
         if (nativeCandidates.isEmpty() && learned.isEmpty()) {
             return QueryResult(isKnownWord, false, null, emptyList(), contextIdentity)
         }
 
-        val normalizedInput = input.canonicalLookupKey()
-        val primaryCorrection = profileCorrection?.word
-            ?: contraction
-            ?: rerank(corrections, contextScores).firstOrNull {
-                it.canonicalLookupKey() != normalizedInput
-            }
+        val primaryCorrection = contextualSpelling ?: when {
+            ambiguousAccents != null -> null
+            else -> profileCorrection?.word ?: contraction ?: trieDecision.replacement
+        }
+        // A word Space keeps although the trie has readings for it: the bar offers them, none
+        // bold. A learned or known input is a word, not a typo, and keeps its completions.
+        val offered = when {
+            normalizedInput in learnedKeys -> null
+            contextualSpelling != null -> null
+            ambiguousAccents != null -> ambiguousAccents
+            isKnownWord || profileCorrection != null || contraction != null -> null
+            else -> (trieDecision.proposal as? CorrectionProposal.Suggest)?.words
+        }
         val prefixInput = normalizedInput.stripAccents()
         val seen = mutableSetOf(normalizedInput)
         val learnedPrefixWords = learned.asSequence()
@@ -418,18 +505,42 @@ class NativeTrieSuggestionEngine(
             if (normalized in learnedKeys) learnedNative += word else normalNative += word
         }
 
-        // Candidates come back in dictionary case; the user's capitals must survive (#224).
-        val locale = live?.language?.let { Locale.forLanguageTag(it.code) } ?: Locale.ROOT
+        if (offered != null) {
+            return QueryResult(
+                isKnownWord = isKnownWord,
+                knownInputDominance = profileCorrection?.knownInputDominance == true,
+                primaryCorrection = null,
+                suggestions = offered.take(maxResults).map(restoreCase),
+                contextIdentity = contextIdentity,
+                keepsTypedWord = true,
+            )
+        }
         return QueryResult(
             isKnownWord = isKnownWord,
-            knownInputDominance = profileCorrection?.knownInputDominance == true,
-            primaryCorrection = primaryCorrection?.let { TypedCase.applyTo(it, input, locale) },
+            knownInputDominance = contextualSpelling != null ||
+                profileCorrection?.knownInputDominance == true,
+            primaryCorrection = primaryCorrection?.let(restoreCase),
             suggestions = (learnedPrefixWords + learnedNative + normalNative)
                 .take(maxResults)
-                .map { TypedCase.applyTo(it, input, locale) },
+                .map(restoreCase),
             contextIdentity = contextIdentity,
             ruleCorrection = profileCorrection != null || contraction != null,
         )
+    }
+
+    /** A word split after its elision: [prefix] keeps the apostrophe, `l'` in `l'homme`. */
+    private data class ElidedWord(val prefix: String, val word: String) {
+        companion object {
+            /** Null unless everything up to the last apostrophe is one of [profile]'s elisions. */
+            fun of(input: String, profile: LanguageProfile): ElidedWord? {
+                val prefixes = profile.elisionOnset?.prefixes ?: return null
+                val apostrophe = input.indexOfLast { it == '\'' || it == '’' }
+                if (apostrophe < 0) return null
+                val prefix = input.substring(0, apostrophe + 1)
+                if (prefix.lowercase(Locale.ROOT).replace('’', '\'') !in prefixes) return null
+                return ElidedWord(prefix, input.substring(apostrophe + 1))
+            }
+        }
     }
 
     /** A context score may improve a candidate by fewer than two original rank positions. */
@@ -481,6 +592,7 @@ class NativeTrieSuggestionEngine(
         input: String,
         maxResults: Int = 3,
         context: CorrectionContext? = null,
+        textBeforeCursor: String? = null,
     ): Long? {
         return synchronized(lock) {
             if (closed) return@synchronized null
@@ -490,6 +602,7 @@ class NativeTrieSuggestionEngine(
                 listOf(input),
                 maxResults,
                 context,
+                textBeforeCursor,
             )
             // Sending under the generation lock preserves ordering even for concurrent callers.
             check(queryRequests.trySend(request).isSuccess)
@@ -531,6 +644,7 @@ class NativeTrieSuggestionEngine(
                     suggestions = result.suggestions,
                     contextIdentity = result.contextIdentity,
                     ruleCorrection = result.ruleCorrection,
+                    keepsTypedWord = result.keepsTypedWord,
                 )
             }
         }
@@ -581,6 +695,7 @@ class NativeTrieSuggestionEngine(
         const val CANDIDATE_MULTIPLIER = 2
         const val MAX_NATIVE_RESULTS = 20
         const val MAX_EDIT_DISTANCE = 2f
+        const val RANKED_CORRECTIONS = 10
         const val MAX_PREDICTION_RESULTS = 3
         const val MAX_CONTEXT_RANK_BOOST = 2.0
         const val CONTEXT_SCORE_SCALE = 1_000.0

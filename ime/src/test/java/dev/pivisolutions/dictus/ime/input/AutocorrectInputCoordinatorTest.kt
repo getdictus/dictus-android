@@ -48,6 +48,26 @@ class AutocorrectInputCoordinatorTest {
         }
     }
 
+    /**
+     * #388 (iOS #997): `arribe`, kept twice while the bar offered `arrive | arrivé`, was learned on
+     * iOS. Here Space never teaches a word: only an undo of a correction does (a bar tap is counted
+     * by the service, not here), so a kept typo stays unlearned however often it is kept.
+     */
+    @Test
+    fun `a typo space keeps is never learned`() {
+        val learned = mutableListOf<String>()
+        val coordinator = AutocorrectInputCoordinator(learned::add)
+        coordinator.startSession()
+        repeat(3) { request ->
+            val editor = FakeEditor(tokenSnapshot("arribe"))
+            coordinator.suggestionRequested(request.toLong(), "arribe")
+            coordinator.suggestionPublished(snapshot(request.toLong(), "arribe", correction = null))
+
+            assertEquals(AutocorrectSpaceResult.PLAIN_SPACE, coordinator.onSpace(editor) {})
+        }
+        assertEquals(emptyList<String>(), learned)
+    }
+
     @Test
     fun `explicit dominance evidence permits known input without weakening known guard`() {
         val coordinator = AutocorrectInputCoordinator {}
@@ -229,6 +249,25 @@ class AutocorrectInputCoordinatorTest {
         assertEquals(AutocorrectUndoResult.INDETERMINATE, coordinator.onUndoTapped(editor))
         assertTrue(learned.isEmpty())
         assertNull(coordinator.undoOffer)
+    }
+
+    @Test
+    fun `space writes a curated casing, a correction that only changes the case`() {
+        // dictus-ios #1005: `iphone` becomes `iPhone`, and the known French `whatsapp` becomes
+        // `WhatsApp`, the engine marking the curated casing as dominating the known input.
+        listOf(
+            snapshot(1L, "iphone", correction = "iPhone") to "iPhone ",
+            snapshot(1L, "whatsapp", known = true, dominant = true, correction = "WhatsApp") to "WhatsApp ",
+        ).forEach { (offered, expected) ->
+            val coordinator = AutocorrectInputCoordinator {}
+            val editor = FakeEditor(tokenSnapshot(offered.input))
+            coordinator.startSession()
+            coordinator.suggestionRequested(1L, offered.input)
+            assertTrue(coordinator.suggestionPublished(offered))
+
+            assertEquals(AutocorrectSpaceResult.CORRECTED, coordinator.onSpace(editor) {})
+            assertEquals(expected, editor.snapshotValue.text)
+        }
     }
 
     private fun publishEligible(coordinator: AutocorrectInputCoordinator) {

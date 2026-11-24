@@ -22,6 +22,13 @@ data class NgramPrediction(
     val score: Int,
 )
 
+/** One spell correction candidate: its weighted edit cost from the input and its encoded frequency. */
+data class TrieCorrection(
+    val word: String,
+    val cost: Float,
+    val frequency: Int,
+)
+
 /** Owns one native mmap-backed dictionary. Instances must be closed. */
 class NativeTrie private constructor(
     private var nativeHandle: Long,
@@ -36,7 +43,7 @@ class NativeTrie private constructor(
             "de_spellcheck.dict" to "663b8945ac8d94b4c1da322965454e4ae52fc9adac04b4206b41b96b1199a18a",
             "en_spellcheck.dict" to "2721a68a1dca369b6a23d149405c99bbff5071caa973843b896fad088912b11c",
             "es_spellcheck.dict" to "39015e063ea69282ff6ac3099e852fe06b94118f41a69a680f75582899bb9ab4",
-            "fr_spellcheck.dict" to "4f52b3cd584ff1844ad09719d21751d93ebc76e506bde0b9b958d876b886f92d",
+            "fr_spellcheck.dict" to "d4ddce646e0a709ff064b717cd88385b9032426c4bcc9c175422c4177ccd0f58",
             "de_ngrams.dict" to "889df643d4079fe8408996af53f840b58609a86aa2a205618b5b51d047cf6e6d",
             "en_ngrams.dict" to "9d1a0a1383c0cc02f2697652d58e1fcb8cd12819b1c11aa15edb807ac8ab557d",
             "es_ngrams.dict" to "bdaec24949ddeae8e7f4840d5e59de58fed227ecc62f4ffc78218e4c8981e4ed",
@@ -206,6 +213,25 @@ class NativeTrie private constructor(
         ).toList()
     }
 
+    /**
+     * The dictionary words within [maxEditDistance] weighted edits of [word], best scored first,
+     * each with its edit cost and frequency, for the correction ranking (#388). The word itself is
+     * included when it is in the dictionary.
+     */
+    @Synchronized
+    fun correctionCandidates(
+        word: String,
+        maxEditDistance: Float = 2f,
+        maxResults: Int = 10,
+    ): List<TrieCorrection> {
+        check(nativeHandle != 0L) { "Trie is closed" }
+        require(maxEditDistance > 0f && maxEditDistance <= MAX_EDIT_DISTANCE)
+        require(maxResults in 1..20)
+        val canonical = word.canonicalLookup()
+        if (canonical.isEmpty() || canonical.length > MAX_INPUT_LENGTH) return emptyList()
+        return nativeCorrectionCandidates(nativeHandle, canonical, maxEditDistance, maxResults).toList()
+    }
+
     /** Returns bounded, deterministic highest-frequency completions, excluding [prefix] itself. */
     @Synchronized
     fun complete(prefix: String, maxResults: Int = 3): List<String> {
@@ -311,6 +337,12 @@ class NativeTrie private constructor(
         maxEditDistance: Float,
         maxResults: Int,
     ): Array<String>
+    private external fun nativeCorrectionCandidates(
+        handle: Long,
+        word: String,
+        maxEditDistance: Float,
+        maxResults: Int,
+    ): Array<TrieCorrection>
     private external fun nativeComplete(
         handle: Long,
         prefix: String,

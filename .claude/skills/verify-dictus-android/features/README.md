@@ -157,6 +157,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `keyboard.default-page` | Free | retired (#288) — the keyboard always opens on letters; iOS removes it in getdictus/dictus-ios#888, not shipped yet | no |
 | `keyboard.transcription-language` | Free | present — « Suivre la langue du clavier » (default, #186), `Automatique` or a fixed language | no |
 | `keyboard.open-app` | Free | present — long press on ☰ → Settings | no |
+| `keyboard.return-key-type` | Free | partial — glyph and action per `imeOptions`; no off state (no `enablesReturnKeyAutomatically` on Android) | no |
 | `emoji.picker` | Free | present — iOS categories, bar at the bottom (#192); no skin tones | no |
 | `emoji.recents` | Free | present — « Récents » (#192) | no |
 | `emoji.search` | Free | present — French keywords, then English names (#192) | no |
@@ -193,6 +194,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `diagnostics.log-export` | Free | present | no |
 | `diagnostics.app-group-check` | N/A | iOS-only (N/A) | no |
 | `diagnostics.about` | Free | present | no |
+| `diagnostics.feedback` | Free | present (#373) | no |
 | `app.onboarding.welcome` | Free | present | no |
 | `app.onboarding.language` | Free | present (#198) | no |
 | `app.onboarding.keyboard-setup` | N/A | iOS-only (N/A) — equivalent: app.onboarding.ime-setup | no |

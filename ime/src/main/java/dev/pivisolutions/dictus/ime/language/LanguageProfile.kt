@@ -16,10 +16,20 @@ data class LanguageProfile(
     /** Intent used until the user persists an explicit autocorrect preference. */
     val autocorrectEnabledByDefault: Boolean,
     val overrides: Map<String, String>,
+    /**
+     * Must-correct map that applies only after a given previous word: lowercase previous word to
+     * (lowercase input to forced correction). For dictionary words that are never right in that
+     * place, such as French `il ma` → `il m'a`. Empty unless curated.
+     */
+    val contextOverrides: Map<String, Map<String, String>> = emptyMap(),
     val accentMap: Map<Char, List<Char>>,
     val contractionPrefixes: List<String>,
+    /** The prefixes that elide and the letters an elided word may start with. Null without elision. */
+    val elisionOnset: ElisionOnset? = null,
     val collapseRules: List<CollapseRule> = emptyList(),
     val seedBigrams: List<BigramSeed> = emptyList(),
+    /** Words with two correct spellings the words before choose between: French `a` / `à`. */
+    val contextualHomographs: List<ContextualHomograph> = emptyList(),
 )
 
 enum class KeyboardLayout(val persistedValue: String) {

@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -33,6 +34,8 @@ import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
+import dev.pivisolutions.dictus.feedback.FeedbackLogScreen
+import dev.pivisolutions.dictus.feedback.FeedbackScreen
 import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingDownloadNotice
@@ -296,6 +299,8 @@ private fun MainTabsScreen(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: AppDestination.Home.route
+    // Outside the NavHost, the owner is the activity rather than a back stack entry.
+    val activityViewModelOwner = checkNotNull(LocalViewModelStoreOwner.current)
 
     ActiveDictationRedirect(
         dictationController = dictationController,
@@ -312,6 +317,8 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.History.route &&
         currentRoute != AppDestination.Licences.route &&
         currentRoute != AppDestination.DebugLogs.route &&
+        currentRoute != AppDestination.Feedback.route &&
+        currentRoute != AppDestination.FeedbackLog.route &&
         currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
         !currentRoute.startsWith("sound_picker")
@@ -404,6 +411,24 @@ private fun MainTabsScreen(
                     onNavigateToTranscriptionDebug = {
                         navController.navigate(AppDestination.TranscriptionDebug.route)
                     },
+                    onNavigateToFeedback = {
+                        navController.navigate(AppDestination.Feedback.route)
+                    },
+                )
+            }
+            // One FeedbackViewModel for the activity: the form and its log preview share the
+            // snapshot, and what the user typed survives leaving the form (#373).
+            composable(AppDestination.Feedback.route) {
+                FeedbackScreen(
+                    viewModel = hiltViewModel(activityViewModelOwner),
+                    onBack = { navController.popBackStack() },
+                    onSeeLog = { navController.navigate(AppDestination.FeedbackLog.route) },
+                )
+            }
+            composable(AppDestination.FeedbackLog.route) {
+                FeedbackLogScreen(
+                    viewModel = hiltViewModel(activityViewModelOwner),
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(AppDestination.Licences.route) {
