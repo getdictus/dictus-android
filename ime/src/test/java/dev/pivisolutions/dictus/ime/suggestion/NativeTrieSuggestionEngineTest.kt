@@ -326,6 +326,35 @@ class NativeTrieSuggestionEngineTest {
     }
 
     @Test
+    fun `the words before replace a known word with its other spelling`() = runTest(dispatcher) {
+        // `a`, `à`, `ma` and `m'a` are all dictionary words (dictus-ios #1017).
+        val handle = FakeHandle(knownWords = setOf("a", "à", "ma", "m'a"), prefix = listOf("avec"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        fun result(input: String, textBeforeCursor: String?): NativeTrieSuggestionEngine.SuggestionResult {
+            requireNotNull(engine.requestSuggestions(input, textBeforeCursor = textBeforeCursor))
+            advanceUntilIdle()
+            return engine.suggestionResults.value
+        }
+
+        val preposition = result("a", "je vais a")
+        assertTrue(preposition.isKnownWord)
+        assertTrue(preposition.knownInputDominance)
+        assertEquals("à", preposition.primaryCorrection)
+        assertEquals("à", preposition.suggestions.first())
+
+        assertEquals("À", result("A", "A").primaryCorrection)
+        assertEquals("m'a", result("ma", "il ma").primaryCorrection)
+
+        for ((input, text) in listOf("a" to "il a", "ma" to "pour ma", "a" to null)) {
+            val kept = result(input, text)
+            assertEquals("$text", null, kept.primaryCorrection)
+            assertTrue("$text", !kept.knownInputDominance)
+        }
+    }
+
+    @Test
     fun `correction and suggestions follow the typed word's case`() = runTest(dispatcher) {
         // The dictionary stores lowercase words; the correction must not drop the typed capital.
         val handle = FakeHandle(prefix = listOf("bonjoru"), fuzzy = listOf("bonjour", "bonsoir"))
