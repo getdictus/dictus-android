@@ -9,8 +9,9 @@ data class AutocorrectSuggestionSnapshot(
     val primaryCorrection: String?,
     val isLearnedWord: Boolean,
     /**
-     * [primaryCorrection] comes from a rule (an accent rule, a contraction), not from the trie's
-     * fuzzy search: the spatial decoder (#385) leaves it alone.
+     * Space's decision comes from a rule (an app or brand name, a spelling chosen by the words
+     * before, an accent rule, a contraction), not from the trie's fuzzy search: the spatial
+     * decoder (#385) leaves it alone, whether the rule corrects the word or keeps it.
      */
     val ruleCorrection: Boolean = false,
 )

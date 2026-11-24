@@ -32,6 +32,14 @@ class AutocorrectSpatialTest {
         assertEquals(emptyList<String>(), asked)
     }
 
+    /** #386: a rule that keeps the word (Discord, Dictus, two accented spellings) keeps it. */
+    @Test
+    fun `a rule that keeps the word is never put to the decoder`() {
+        val (editor, asked) = space("Discord", correction = null, rule = true) { "Discard" }
+        assertEquals("Discord", editor.snapshotValue.text)
+        assertEquals(emptyList<String>(), asked)
+    }
+
     @Test
     fun `a learned word is never put to the decoder`() {
         val (editor, asked) = space("dictus", correction = null, learned = true) { "dicts" }

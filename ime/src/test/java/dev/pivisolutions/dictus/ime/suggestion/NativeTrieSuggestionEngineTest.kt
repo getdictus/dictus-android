@@ -1245,6 +1245,98 @@ class NativeTrieSuggestionEngineTest {
             }
         }
 
+    // #386: every rule that has the last word answers before the spatial decoder, as iOS
+    // `correctionProposal` (#1011); the decoder is then weighed against the trie alone.
+
+    private fun NativeTrieSuggestionEngine.result(input: String, textBeforeCursor: String? = null):
+        NativeTrieSuggestionEngine.SuggestionResult {
+        requireNotNull(requestSuggestions(input, textBeforeCursor = textBeforeCursor))
+        dispatcher.scheduler.advanceUntilIdle()
+        return suggestionResults.value
+    }
+
+    @Test
+    fun `the words before choosing a spelling are a rule the decoder never reads`() = runTest(dispatcher) {
+        val handle = FakeHandle(knownWords = setOf("a", "à", "ma", "m'a"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val elided = engine.result("ma", "il ma")
+        assertEquals("m'a", elided.primaryCorrection)
+        assertTrue(elided.ruleCorrection)
+        val accented = engine.result("a", "je vais a")
+        assertEquals("à", accented.primaryCorrection)
+        assertTrue(accented.ruleCorrection)
+    }
+
+    @Test
+    fun `Discord kept as typed is a rule the decoder never reads`() = runTest(dispatcher) {
+        val handle = FakeHandle(corrections = listOf(correction("discard", 0.5, 39_806)))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        listOf("discord", "Discord").forEach { typed ->
+            val result = engine.result(typed)
+            assertEquals(typed, null, result.primaryCorrection)
+            assertTrue(typed, result.ruleCorrection)
+        }
+    }
+
+    @Test
+    fun `Dictus kept or recased is a rule the decoder never reads`() = runTest(dispatcher) {
+        val handle = FakeHandle(corrections = listOf(correction("rictus", 0.4, 23_489)))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val kept = engine.result("Dictus")
+        assertEquals(null, kept.primaryCorrection)
+        assertTrue(kept.ruleCorrection)
+        val recased = engine.result("dictus")
+        assertEquals("Dictus", recased.primaryCorrection)
+        assertTrue(recased.ruleCorrection)
+    }
+
+    @Test
+    fun `an accent rule is a rule the decoder never reads, also when it keeps the word`() =
+        runTest(dispatcher) {
+            val handle = FakeHandle(
+                knownWords = setOf("très", "réserve", "réservé"),
+                frequencies = mapOf("très" to 40_000, "réserve" to 33_835, "réservé" to 31_794),
+                corrections = listOf(correction("réserve", 0.15, 33_835), correction("réservé", 0.30, 31_794)),
+            )
+            val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+            advanceUntilIdle()
+
+            val corrected = engine.result("tres")
+            assertEquals("très", corrected.primaryCorrection)
+            assertTrue(corrected.ruleCorrection)
+            val kept = engine.result("reserve")
+            assertTrue(kept.keepsTypedWord)
+            assertTrue(kept.ruleCorrection)
+        }
+
+    @Test
+    fun `a contraction is a rule the decoder never reads`() = runTest(dispatcher) {
+        val handle = FakeHandle(knownWords = setOf("est", "c'est"), fuzzy = listOf("cent"))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val result = engine.result("cest")
+        assertEquals("c'est", result.primaryCorrection)
+        assertTrue(result.ruleCorrection)
+    }
+
+    @Test
+    fun `the trie's own reading is weighed against the decoder`() = runTest(dispatcher) {
+        val handle = FakeHandle(corrections = listOf(correction("table", 1.0, 40_000)))
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        val result = engine.result("tble")
+        assertEquals("table", result.primaryCorrection)
+        assertTrue(!result.ruleCorrection)
+    }
+
     private fun createEngine(opener: NativeTrieOpener) = NativeTrieSuggestionEngine(
         dataStore = dataStore,
         coroutineScope = scope,
