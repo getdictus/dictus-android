@@ -308,11 +308,12 @@ class NativeTrieSuggestionEngine(
             NativeQuery(false, null, null, emptyList(), emptyList(), emptyMap(), null)
         } else {
             try {
-                // Only the part after the last apostrophe can be misspelled: `j'ai` is checked as
-                // `ai`, and the prefix is put back on each candidate (iOS AOSPTrieEngine.spellCheck).
-                // A word the dictionary holds whole, such as `aujourd'hui`, is never split.
+                // After an elision only the word can be misspelled: `j'ai` is checked as `ai`, and
+                // the prefix is put back on each candidate (iOS AOSPTrieEngine.spellCheck). A word
+                // the dictionary holds whole (`aujourd'hui`) and a prefix that is not an elision
+                // (`din't`, which must still reach `don't`) are checked whole, as before.
                 val isWholeWordKnown = live.handle.wordExists(input)
-                val elision = if (isWholeWordKnown) null else ElidedWord.of(input)
+                val elision = if (isWholeWordKnown) null else ElidedWord.of(input, live.profile)
                 val isKnownWord = isWholeWordKnown ||
                     elision?.word?.takeIf(String::isNotEmpty)?.let(live.handle::wordExists) == true
                 val profileCorrection = AccentCollapseCandidateSelector.select(
@@ -441,13 +442,17 @@ class NativeTrieSuggestionEngine(
         )
     }
 
-    /** A word split at its last apostrophe: [prefix] keeps the apostrophe, `l'` in `l'homme`. */
+    /** A word split after its elision: [prefix] keeps the apostrophe, `l'` in `l'homme`. */
     private data class ElidedWord(val prefix: String, val word: String) {
         companion object {
-            fun of(input: String): ElidedWord? {
+            /** Null unless everything up to the last apostrophe is one of [profile]'s elisions. */
+            fun of(input: String, profile: LanguageProfile): ElidedWord? {
+                val prefixes = profile.elisionOnset?.prefixes ?: return null
                 val apostrophe = input.indexOfLast { it == '\'' || it == '’' }
                 if (apostrophe < 0) return null
-                return ElidedWord(input.substring(0, apostrophe + 1), input.substring(apostrophe + 1))
+                val prefix = input.substring(0, apostrophe + 1)
+                if (prefix.lowercase(Locale.ROOT).replace('’', '\'') !in prefixes) return null
+                return ElidedWord(prefix, input.substring(apostrophe + 1))
             }
         }
     }
