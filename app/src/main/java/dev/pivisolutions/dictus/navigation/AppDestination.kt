@@ -28,6 +28,9 @@ sealed class AppDestination(val route: String) {
     /** Private local transcription history; content is never carried in the route. */
     data object History : AppDestination("history")
 
+    /** Custom vocabulary (#208), from Settings > Transcription, for Pro users. */
+    data object Vocabulary : AppDestination("vocabulary")
+
     /** Model management tab — download, select, and delete models. */
     data object Models : AppDestination("models")
 

@@ -60,6 +60,7 @@ import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
 import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
+import dev.pivisolutions.dictus.vocabulary.VocabularyRoute
 import kotlinx.coroutines.flow.map
 
 /**
@@ -321,6 +322,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.FeedbackLog.route &&
         currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
+        currentRoute != AppDestination.Vocabulary.route &&
         !currentRoute.startsWith("sound_picker")
 
     Scaffold(
@@ -414,7 +416,13 @@ private fun MainTabsScreen(
                     onNavigateToFeedback = {
                         navController.navigate(AppDestination.Feedback.route)
                     },
+                    onNavigateToVocabulary = {
+                        navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
+                    },
                 )
+            }
+            composable(AppDestination.Vocabulary.route) {
+                VocabularyRoute(onBack = { navController.popBackStack() })
             }
             // One FeedbackViewModel for the activity: the form and its log preview share the
             // snapshot, and what the user typed survives leaving the form (#373).

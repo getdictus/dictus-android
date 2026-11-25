@@ -89,6 +89,7 @@ fun SettingsScreen(
     onNavigateToSoundSettings: () -> Unit = {},
     onNavigateToTranscriptionDebug: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
+    onNavigateToVocabulary: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
@@ -101,6 +102,7 @@ fun SettingsScreen(
     val theme by viewModel.theme.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
     val debugProForced by viewModel.debugProEntitlementForced.collectAsState()
+    val isPro by viewModel.isPro.collectAsState()
 
     val context = LocalContext.current
 
@@ -139,6 +141,15 @@ fun SettingsScreen(
                 selected = language,
                 onSelect = { viewModel.setLanguage(it) },
             )
+            // Vocabulary (#208). iOS opens it from the Dictus Pro hub only; until the Android hub
+            // (#207) lists it, this row is the way in, shown to Pro users only.
+            if (isPro) {
+                SettingDivider()
+                SettingNavRow(
+                    label = stringResource(R.string.vocabulary_title),
+                    onClick = onNavigateToVocabulary,
+                )
+            }
         }
 
         // ---------- SECTION: Clavier ----------

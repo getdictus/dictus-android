@@ -156,6 +156,10 @@ class SettingsViewModel @Inject constructor(
     val debugProEntitlementForced: StateFlow<Boolean> = proStatus.debugProEntitlementForced
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /** Entitled to Pro, purchase or Debug override: shows the Vocabulary row (#208). */
+    val isPro: StateFlow<Boolean> = proStatus.isPro
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Flip the Debug override. A no-op in a release build. */
     fun toggleDebugProEntitlementForced() {
         viewModelScope.launch { proStatus.toggleDebugProEntitlementForced() }
