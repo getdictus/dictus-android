@@ -59,7 +59,7 @@ Not in the map as files, on purpose: the iOS features absent on Android (`smart-
 
 ## All IDs
 
-Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 110 sub-features, 51 screens; `kbd.numbers` and `kbd.symbols` added from iOS `develop` @ `61adacf` in #264, `typing.autocorrect-on-punctuation` added on iOS by #872), then the Android-only IDs. **Vocabulary.** *Free/Pro* is the tier: Free, Pro on iOS (absent on Android), or Pro (behind the entitlement, which only the Debug override grants today); N/A for iOS-only IDs. **Android status**: present, partial (with what is missing), absent, or iOS-only (N/A: the iOS keyboard-to-app hand-off and Full Access, return to the host app, Apple Intelligence, Dynamic Island, App Group). Statuses come from the code of `develop` at `f2b15c5`, checked on the Pixel for every screen marked "yes" in [screens.md](screens.md) (2026-10-20). **Android-only** is yes for an ID that exists only on Android, no otherwise.
+Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 110 sub-features, 51 screens; `kbd.numbers` and `kbd.symbols` added from iOS `develop` @ `61adacf` in #264, `typing.autocorrect-on-punctuation` added on iOS by #872, `typing.spatial-autocorrect` by iOS #1013), then the Android-only IDs. **Vocabulary.** *Free/Pro* is the tier: Free, Pro on iOS (absent on Android), or Pro (behind the entitlement, which only the Debug override grants today); N/A for iOS-only IDs. **Android status**: present, partial (with what is missing), absent, or iOS-only (N/A: the iOS keyboard-to-app hand-off and Full Access, return to the host app, Apple Intelligence, Dynamic Island, App Group). Statuses come from the code of `develop` at `f2b15c5`, checked on the Pixel for every screen marked "yes" in [screens.md](screens.md) (2026-10-20). **Android-only** is yes for an ID that exists only on Android, no otherwise.
 
 | ID | Free/Pro | Android status | Android-only |
 | --- | --- | --- | --- |
@@ -147,6 +147,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.accents` | Free | present — long press, accent strip | no |
 | `typing.dead-keys` | Free | absent | no |
 | `typing.autocorrect-toggle` | Free | present | no |
+| `typing.spatial-autocorrect` | Free | present — debug builds only, off by default (#385) | no |
 | `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |
 | `learned-words.learn` | Free | present | no |
 | `learned-words.reset` | Free | present — Réglages → Clavier, with confirmation (#194) | no |

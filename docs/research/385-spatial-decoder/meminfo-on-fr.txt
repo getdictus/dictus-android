@@ -1,0 +1,59 @@
+Applications Memory Usage (in Kilobytes):
+Uptime: 581044 Realtime: 581044
+
+** MEMINFO in pid 7966 [dev.pivisolutions.dictus] **
+                   Pss  Private  Private  SwapPss      Rss     Heap     Heap     Heap
+                 Total    Dirty    Clean    Dirty    Total     Size    Alloc     Free
+                ------   ------   ------   ------   ------   ------   ------   ------
+  Native Heap   132803   132728       48       45   133732   703164   690011     8851
+  Dalvik Heap     6581     6468       80      111     7364    11458     5729     5729
+ Dalvik Other    14051     5024        0        2    23436                           
+        Stack     1660     1660        0        0     1668                           
+       Ashmem      960      936        0        0     1628                           
+    Other dev       31        8       20        0      356                           
+     .so mmap     7869      188     3816       10    40820                           
+    .jar mmap     2928        0      756        0    44684                           
+    .apk mmap    72767      144    72372        0    74564                           
+    .ttf mmap      858        0      796        0      920                           
+    .dex mmap       11        0        0        0      832                           
+    .oat mmap       26        0        0        0     1540                           
+    .art mmap     9065     7952      148       99    23708                           
+   Other mmap     8871        4     4196        0    14928                           
+      Unknown     1117     1104        4        0     1544                           
+        TOTAL   259865   156216    82236      267   371724   714622   695740    14580
+ 
+ App Summary
+                       Pss(KB)                        Rss(KB)
+                        ------                         ------
+           Java Heap:    14568                          31072
+         Native Heap:   132728                         133732
+                Code:    78368                         181712
+               Stack:     1660                           1668
+            Graphics:        0                              0
+       Private Other:    11128
+              System:    21413
+             Unknown:                                   23540
+ 
+           TOTAL PSS:   259865            TOTAL RSS:   371724       TOTAL SWAP PSS:      267
+ 
+ Objects
+               Views:       29         ViewRootImpl:        3
+         AppContexts:        6           Activities:        0
+              Assets:       20        AssetManagers:        0
+       Local Binders:      446        Proxy Binders:       57
+       Parcel memory:       11         Parcel count:       47
+    Death Recipients:        0             WebViews:        0
+ 
+ SQL
+         MEMORY_USED:      307
+  PAGECACHE_OVERFLOW:       92          MALLOC_SIZE:       46
+ 
+ DATABASES
+      pgsz     dbsz   Lookaside(b) cache hits cache misses cache size  Dbname
+PER CONNECTION STATS
+         4      104            123    10    51    12  /data/user/0/dev.pivisolutions.dictus/no_backup/androidx.work.workdb
+         4        8                    0     0     0    (attached) temp
+         4      104             28     1    14     2  /data/user/0/dev.pivisolutions.dictus/no_backup/androidx.work.workdb (3)
+POOL STATS
+     cache hits  cache misses    cache size  Dbname
+             17           100           117  /data/user/0/dev.pivisolutions.dictus/no_backup/androidx.work.workdb

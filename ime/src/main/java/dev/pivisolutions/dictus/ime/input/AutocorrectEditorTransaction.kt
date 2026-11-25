@@ -315,7 +315,7 @@ object AutocorrectEditorTransaction {
         identityEligible: Boolean,
     ): AutocorrectTransactionResult.Rejected? = when {
         !identityEligible -> rejected(AutocorrectRejection.STALE_IDENTITY)
-        !AutocorrectToken.isLetterToken(original) || !AutocorrectToken.isLetterToken(correction) -> rejected(AutocorrectRejection.INVALID_TOKEN)
+        !AutocorrectToken.isLetterToken(original) || !AutocorrectToken.isLetterWords(correction) -> rejected(AutocorrectRejection.INVALID_TOKEN)
         original == correction -> rejected(AutocorrectRejection.SAME_CORRECTION)
         else -> null
     }
@@ -350,6 +350,11 @@ object AutocorrectEditorTransaction {
         }
         val tokenEnd = cursor - trailing.length
         var tokenStart = tokenEnd
+        if (' ' in expectedCorrectionNfc) {
+            // Two words from the spatial decoder (#385): the token walk would stop at their space.
+            tokenStart -= expectedCorrectionNfc.length
+            if (tokenStart < 0) return null
+        }
         while (tokenStart > 0) {
             val codePoint = snapshot.text.codePointBefore(tokenStart)
             if (!codePoint.isTokenCodePoint()) break
@@ -357,7 +362,7 @@ object AutocorrectEditorTransaction {
         }
         if (!snapshot.hasProvenLeftTokenBoundary(tokenStart)) return null
         val token = snapshot.text.substring(tokenStart, tokenEnd)
-        if (!AutocorrectToken.isLetterToken(token) || token.nfc() != expectedCorrectionNfc) return null
+        if (!AutocorrectToken.isLetterWords(token) || token.nfc() != expectedCorrectionNfc) return null
         return snapshot.match(snapshot.text.substring(tokenStart, cursor), tokenStart, cursor)
     }
 
