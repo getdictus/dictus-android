@@ -39,7 +39,7 @@ Implementation details stay out of the map: only user paths, stable handles, req
 
 ## Features
 
-**Tier on Android.** Nothing is sold on Android yet: there is no purchase flow (`NoPurchaseProUnlocker`). The Pro entitlement exists since #3 (`ProStatus.isPro`, the paid half or, in a Debug build only, Réglages → « Développeur » → « Forcer Dictus Pro », iOS #460) but no feature reads it yet. The visibility switch is `PremiumFlags.HISTORY_VISIBLE = false` (`core/.../premium/PremiumFlags.kt`), which hides history entirely (no entry point, no route, nothing recorded). Everything else that exists is **Free**. When iOS sells a feature Android ships free, the table says "Free (Pro on iOS)" (no such case today); iOS Pro features absent on Android say "Pro on iOS — absent".
+**Tier on Android.** Nothing is sold on Android yet: there is no purchase flow (`NoPurchaseProUnlocker`). The Pro entitlement exists since #3 (`ProStatus.isPro`, the paid half or, in a Debug build only, Réglages → « Développeur » → « Forcer Dictus Pro », iOS #460) and the shared voice notes read it (#204). The visibility switch is `PremiumFlags.HISTORY_VISIBLE = false` (`core/.../premium/PremiumFlags.kt`), which hides history entirely (no entry point, no route, nothing recorded). Everything else that exists is **Free**. When iOS sells a feature Android ships free, the table says "Free (Pro on iOS)" (no such case today); iOS Pro features absent on Android say "Pro on iOS — absent".
 
 | ID | Feature | Tier | Android status | Drivable on the Pixel |
 | --- | --- | --- | --- | --- |
@@ -51,11 +51,12 @@ Implementation details stay out of the map: only user paths, stable handles, req
 | [`keyboard.languages`](keyboard.languages.md) | Keyboard languages and layouts | Free | partial | Yes (cycle a full turn) |
 | [`keyboard.emoji`](keyboard.emoji.md) | Emoji | Free | partial | Yes |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Sounds and haptics | Free | present | Settings only; no sound or vibration captured |
+| [`voice-notes`](voice-notes.md) | Voice notes transcription | Pro | partial | Yes with « Forcer Dictus Pro » (Debug build); share a test clip, delete its card |
 | [`onboarding`](onboarding.md) | Onboarding | Free | partial | No: needs a fresh install (data wipe forbidden) |
 | [`diagnostics.logs`](diagnostics.logs.md) | Debug logs and diagnostics | Free | present | Yes (never « Effacer », never send) |
 | [`appearance`](appearance.md) | Appearance: theme, interface language | Free | Android-only | Pickers only |
 
-Not in the map as files, on purpose: the iOS features absent on Android (`smart-modes`, `history`, `vocabulary`, `voice-notes`, `pro.subscription`) and those that only make sense on iOS (`dictation.return-to-app`, `polish`, `live-activity`). They keep their row in the table below. `history` is the special case: implemented and unit-tested, but compiled out of every user path by `PremiumFlags.HISTORY_VISIBLE`. The debug-only `TestSurfaceScreen` is not reachable from any route and is not a feature.
+Not in the map as files, on purpose: the iOS features absent on Android (`smart-modes`, `history`, `vocabulary`, `pro.subscription`) and those that only make sense on iOS (`dictation.return-to-app`, `polish`, `live-activity`). They keep their row in the table below. `history` is the special case: implemented and unit-tested, but compiled out of every user path by `PremiumFlags.HISTORY_VISIBLE`. The debug-only `TestSurfaceScreen` is not reachable from any route and is not a feature.
 
 ## All IDs
 
@@ -71,7 +72,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `smart-modes` | Pro on iOS — absent | absent | no |
 | `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete, search, clear, 200-entry cap; #202) but hidden | no |
 | `vocabulary` | Pro on iOS — absent | absent | no |
-| `voice-notes` | Pro on iOS — absent | absent | no |
+| [`voice-notes`](voice-notes.md) | Pro | partial — no Smart Mode, no language choice, no keyboard reader | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
 | [`typing.learned-words`](typing.learned-words.md) | Free | present | no |
 | [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no layout picker until #191, no number row | no |
@@ -130,14 +131,14 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `vocabulary.suggestions` | Pro on iOS — absent | absent | no |
 | `vocabulary.apply` | Pro on iOS — absent | absent | no |
 | `vocabulary.toggle` | Pro on iOS — absent | absent | no |
-| `voice-notes.share-in` | Pro on iOS — absent | absent | no |
-| `voice-notes.transcribe` | Pro on iOS — absent | absent | no |
+| `voice-notes.share-in` | Pro | present — the share target exists only with Pro | no |
+| `voice-notes.transcribe` | Pro | present | no |
 | `voice-notes.after-mode` | Pro on iOS — absent | absent | no |
 | `voice-notes.language` | Pro on iOS — absent | absent | no |
 | `voice-notes.reader` | Pro on iOS — absent | absent | no |
 | `voice-notes.insert` | Pro on iOS — absent | absent | no |
-| `voice-notes.delete` | Pro on iOS — absent | absent | no |
-| `voice-notes.toggle` | Pro on iOS — absent | absent | no |
+| `voice-notes.delete` | Pro | present — in the app, not the keyboard | no |
+| `voice-notes.toggle` | Pro | present | no |
 | `voice-notes.progress-activity` | N/A | iOS-only (N/A) | no |
 | `typing.suggestions` | Free | present | no |
 | `typing.autocorrect-on-space` | Free | present | no |
@@ -228,10 +229,10 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.pro.history` | Pro on iOS — absent | absent | no |
 | `app.pro.vocabulary` | Pro on iOS — absent | absent | no |
 | `app.pro.vocabulary.term-editor` | Pro on iOS — absent | absent | no |
-| `app.pro.voice-notes` | Pro on iOS — absent | absent | no |
+| `app.pro.voice-notes` | Pro | present — the switch heads the notes list | no |
 | `app.paywall` | Pro on iOS — absent | absent | no |
 | `app.pro.trial-announcement` | Pro on iOS — absent | absent | no |
-| `app.voice-note.result` | Pro on iOS — absent | absent | no |
+| `app.voice-note.result` | Pro | present — a card in the list, not iOS's swiped stack | no |
 | `kbd.keys` | Free | present | no |
 | `kbd.no-full-access` | N/A | iOS-only (N/A) | no |
 | `kbd.dictation-error` | Free | present — « La dictée a échoué… » in the keyboard bar; no overlay (#247) | no |
@@ -244,7 +245,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `kbd.smart-mode-fan` | Pro on iOS — absent | absent | no |
 | `kbd.suggestions` | Free | present | no |
 | `sys.settings.full-access` | N/A | iOS-only (N/A) | no |
-| `share.voice-note` | Pro on iOS — absent | absent | no |
+| `share.voice-note` | Pro | present — a dialog for a refusal, nothing for an accepted file | no |
 | `widget.live-activity` | N/A | iOS-only (N/A) | no |
 | [`appearance`](appearance.md) | Free | present — theme and interface language | yes |
 | `appearance.theme` | Free | present | yes |
@@ -270,9 +271,9 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `sys.settings.ime` | Free | present | yes |
 | `sys.notification.recording` | Free | present | yes |
 
-**Count** (202 IDs: 179 iOS + 23 Android-only): present **62**, partial **13**, absent **75**, iOS-only (N/A) **29**, Android-only **23**.
+**Count** (202 IDs: 179 iOS + 23 Android-only): present **69**, partial **14**, absent **67**, iOS-only (N/A) **29**, Android-only **23**.
 
-Of the 150 iOS IDs that apply to Android: 62 present, 13 partial, 75 absent. 55 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
+Of the 150 iOS IDs that apply to Android: 69 present, 14 partial, 67 absent. 47 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
 
 ## Design gaps with iOS
 
