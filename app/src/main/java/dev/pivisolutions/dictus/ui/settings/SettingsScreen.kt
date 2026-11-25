@@ -100,6 +100,7 @@ fun SettingsScreen(
     val learnedWordCount by viewModel.learnedWordCount.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
+    val debugProForced by viewModel.debugProEntitlementForced.collectAsState()
 
     val context = LocalContext.current
 
@@ -295,6 +296,28 @@ fun SettingsScreen(
                         ).show()
                     }
                 },
+            )
+        }
+
+        // ---------- SECTION: Développeur (Debug builds only) ----------
+        // iOS SettingsView's `#if DEBUG` Developer section: the forced Pro entitlement (#460),
+        // so Pro features stay testable on a device while nothing is for sale.
+        if (BuildConfig.DEBUG) {
+            SectionHeader(text = stringResource(R.string.settings_section_developer))
+            SettingsCard {
+                SettingToggleRow(
+                    label = stringResource(R.string.settings_debug_force_pro),
+                    checked = debugProForced,
+                    onToggle = { viewModel.toggleDebugProEntitlementForced() },
+                )
+            }
+            Text(
+                text = stringResource(
+                    if (debugProForced) R.string.settings_debug_force_pro_on else R.string.settings_debug_force_pro_off,
+                ),
+                color = LocalDictusColors.current.textSecondary,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(start = 32.dp, top = 8.dp, end = 32.dp),
             )
         }
 

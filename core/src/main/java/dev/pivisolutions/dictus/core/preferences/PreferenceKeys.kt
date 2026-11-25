@@ -87,4 +87,14 @@ object PreferenceKeys {
     // --- Custom vocabulary (#203) ---
     /** The user's vocabulary entries as one JSON array, written whole by `VocabularyStore`. */
     val VOCABULARY_ENTRIES = stringPreferencesKey("vocabulary_entries")
+
+    // --- Dictus Pro (#3) ---
+    /**
+     * A purchase exists: the paid half of the Pro entitlement, iOS `SharedKeys.proActive`.
+     * Written only by a `ProUnlocker`; read through `ProStatus`, never directly.
+     */
+    val PRO_PAID = booleanPreferencesKey("pro_paid")
+
+    /** Debug builds only: grants Pro without a purchase (iOS #460). Read through `ProStatus`. */
+    val DEBUG_PRO_ENTITLEMENT_FORCED = booleanPreferencesKey("debug_pro_entitlement_forced")
 }
