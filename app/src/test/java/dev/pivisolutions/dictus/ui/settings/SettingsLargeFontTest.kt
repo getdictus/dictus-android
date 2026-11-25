@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.BuildConfig
+import dev.pivisolutions.dictus.core.premium.ProStatus
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.model.ModelManager
 import org.junit.Assert.assertEquals
@@ -92,7 +93,8 @@ class SettingsLargeFontTest {
 
     private fun setSettings(width: Dp, fontScale: Float) {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val viewModel = SettingsViewModel(FakeDataStore(), ModelManager(context))
+        val dataStore = FakeDataStore()
+        val viewModel = SettingsViewModel(dataStore, ModelManager(context), ProStatus(dataStore, debugBuild = true))
         composeRule.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {

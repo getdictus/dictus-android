@@ -39,7 +39,7 @@ Implementation details stay out of the map: only user paths, stable handles, req
 
 ## Features
 
-**Tier on Android.** Nothing is sold on Android yet: there is no purchase flow and no Pro entitlement. The only switch is `PremiumFlags.HISTORY_VISIBLE = false` (`core/.../premium/PremiumFlags.kt`), which hides history entirely (no entry point, no route, nothing recorded). Everything else that exists is **Free**. When iOS sells a feature Android ships free, the table says "Free (Pro on iOS)" (no such case today); iOS Pro features absent on Android say "Pro on iOS — absent".
+**Tier on Android.** Nothing is sold on Android yet: there is no purchase flow (`NoPurchaseProUnlocker`). The Pro entitlement exists since #3 (`ProStatus.isPro`, the paid half or, in a Debug build only, Réglages → « Développeur » → « Forcer Dictus Pro », iOS #460) but no feature reads it yet. The visibility switch is `PremiumFlags.HISTORY_VISIBLE = false` (`core/.../premium/PremiumFlags.kt`), which hides history entirely (no entry point, no route, nothing recorded). Everything else that exists is **Free**. When iOS sells a feature Android ships free, the table says "Free (Pro on iOS)" (no such case today); iOS Pro features absent on Android say "Pro on iOS — absent".
 
 | ID | Feature | Tier | Android status | Drivable on the Pixel |
 | --- | --- | --- | --- | --- |
