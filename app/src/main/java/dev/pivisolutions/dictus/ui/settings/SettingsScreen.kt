@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.UnfoldMore
@@ -33,6 +35,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -77,6 +80,11 @@ import androidx.compose.material3.MaterialTheme
  * (Sounds, Licences, Debug Logs) navigate away. Apparence has no iOS equivalent
  * (iOS follows the system) and sits between Clavier and À propos.
  *
+ * [onClose] is set only when the keyboard opened this screen (#416): the screen is then the
+ * whole task, with no bottom navigation (#86), so a back arrow and the system back gesture
+ * leave it for the app the user was typing in. iOS gets the same exit from the system's
+ * « ◀ app » link in the status bar.
+ *
  * WHY hiltViewModel() here (not parameter injection): The ViewModel is scoped to
  * this composable's lifecycle. Passing it as a parameter would require the caller
  * (AppNavHost) to know about settings internals — poor encapsulation.
@@ -89,6 +97,7 @@ fun SettingsScreen(
     onNavigateToSoundSettings: () -> Unit = {},
     onNavigateToTranscriptionDebug: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
+    onClose: (() -> Unit)? = null,
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
@@ -112,6 +121,16 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState()),
     ) {
+        if (onClose != null) {
+            BackHandler(onBack = onClose)
+            IconButton(onClick = onClose, modifier = Modifier.padding(start = 4.dp, top = 8.dp)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.settings_close_cd),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+        }
         // iOS `.navigationTitle("Settings")`, shown as a large title.
         Text(
             text = stringResource(R.string.nav_settings),
@@ -119,7 +138,7 @@ fun SettingsScreen(
             fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .padding(start = 16.dp, top = 24.dp, end = 16.dp)
+                .padding(start = 16.dp, top = if (onClose != null) 8.dp else 24.dp, end = 16.dp)
                 .semantics { heading() },
         )
 
