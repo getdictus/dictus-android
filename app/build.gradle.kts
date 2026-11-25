@@ -262,6 +262,8 @@ android {
 
     androidResources {
         generateLocaleConfig = true
+        // The spatial decoder maps its models in place from the APK (#385): stored, not deflated.
+        noCompress += "hextm"
     }
 
     compileOptions {

@@ -40,7 +40,8 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
  *
  * Displays OSS licenses in two sections:
  * 1. Auto-generated Maven dependencies from cashapp/licensee artifacts.json
- * 2. Manual entries for vendored/non-Maven dependencies (whisper.cpp, sherpa-onnx, Parakeet, Dictus)
+ * 2. Manual entries for vendored/non-Maven dependencies (whisper.cpp, sherpa-onnx, Parakeet, Hex
+ *    and the sources of its spatial autocorrect models, Dictus)
  *
  * WHY this approach: cashapp/licensee auto-discovers all transitive Maven dependencies at
  * build time and bundles artifacts.json into Android assets. This ensures the license list
@@ -165,13 +166,57 @@ fun LicencesScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Hex — the keyboard's per-language long-press accent lists, as data (#406)
+        // SCOWL's copyright file, shipped verbatim: its WordNet, VarCon and Ispell notices ask for it.
+        val scowlNotice = remember {
+            val copyright = try {
+                context.assets.open("licences/scowl-2020.12.07.txt").bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                ""
+            }
+            SCOWL_INTRO + "\n\n" + copyright
+        }
+
+        // Hex credits both the long-press accent lists (#406) and the spatial autocorrect (#385):
+        // Hex's decoder, ported code, and where its two models come from. Google Books asks for
+        // the attribution, SCOWL's notice travels with its output, and fr.hextm, derived from
+        // Grammalecte's dictionary, is offered under the MPL 2.0.
         LicenceBlock(
             name = "Hex",
             author = "Christopher Langton",
             url = "https://github.com/anomalyco/hex",
-            licenceText = "The keyboard's long-press accent lists, per language, come from Hex.\n\n" +
+            licenceText = "The keyboard's long-press accent lists, per language, and its spatial " +
+                "autocorrect decoder come from Hex.\n\n" +
                 mitLicence("Copyright (c) 2026 Christopher Langton"),
+            onLinkClick = openLink,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        LicenceBlock(
+            name = "Google Books Ngram (spatial autocorrect)",
+            author = "Google",
+            url = "https://storage.googleapis.com/books/ngrams/books/datasetsv3.html",
+            licenceText = GOOGLE_BOOKS_SPATIAL_NOTICE,
+            onLinkClick = openLink,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        LicenceBlock(
+            name = "Grammalecte (dictionnaire français)",
+            author = "Olivier R. and contributors",
+            url = "https://grammalecte.net",
+            licenceText = GRAMMALECTE_NOTICE,
+            onLinkClick = openLink,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        LicenceBlock(
+            name = "SCOWL",
+            author = "Kevin Atkinson",
+            url = "http://wordlist.aspell.net",
+            licenceText = scowlNotice,
             onLinkClick = openLink,
         )
 
@@ -290,3 +335,25 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """.trimIndent()
+
+// Legal notices stay in English, like the other licences on this screen. The same text as iOS
+// (getdictus/dictus-ios#1013), whose models these are.
+private const val GOOGLE_BOOKS_SPATIAL_NOTICE =
+    "The keyboard's spatial autocorrect models (fr.hextm, en.hextm) are built from the Google Books " +
+        "Ngram Viewer data, version 3 (2020-02-17), by Google, licensed under the Creative Commons " +
+        "Attribution 3.0 Unported License (https://creativecommons.org/licenses/by/3.0/). Word and " +
+        "word-pair counts are summed over 1980-2019 and kept only for words in the word lists below; " +
+        "the English model is Hex's, the French one Dictus's, built with Hex's script."
+
+private const val GRAMMALECTE_NOTICE =
+    "The French spatial autocorrect model (fr.hextm) keeps only the words the \"Classique\" French " +
+        "dictionary of Grammalecte accepts (LibreOffice's fr_FR dictionary, version 7.7). That " +
+        "dictionary is licensed under the Mozilla Public License, version 2.0 " +
+        "(https://mozilla.org/MPL/2.0/). Its source form is available at " +
+        "https://github.com/LibreOffice/dictionaries/tree/master/fr_FR. The model file fr.hextm, " +
+        "derived from it, is offered under the same licence; the script that builds it is " +
+        "tools/typing-model/build-typing-model.py in https://github.com/getdictus/dictus-ios."
+
+private const val SCOWL_INTRO =
+    "The English spatial autocorrect model (en.hextm) keeps only the words of SCOWL (Spell Checker " +
+        "Oriented Word Lists) and VarCon 2020.12.07, sizes up to 70. Its copyright file, verbatim:"

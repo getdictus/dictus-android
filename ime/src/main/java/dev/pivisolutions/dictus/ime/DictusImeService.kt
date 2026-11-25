@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
@@ -56,6 +57,9 @@ import dev.pivisolutions.dictus.ime.audio.KeyboardSoundPlayer
 import dev.pivisolutions.dictus.ime.di.DictusImeEntryPoint
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.haptics.InsertHaptic
+import dev.pivisolutions.dictus.ime.spatial.LocalKeyTouches
+import dev.pivisolutions.dictus.ime.spatial.SpatialAutocorrect
+import dev.pivisolutions.dictus.ime.spatial.TypingModel
 import dev.pivisolutions.dictus.ime.suggestion.AndroidNativeTrieOpener
 import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
@@ -112,6 +116,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -145,6 +150,9 @@ class DictusImeService : LifecycleInputMethodService() {
 
         /** Spaces between autocorrect tally reports — roughly one line per sentence typed. */
         private const val AUTOCORRECT_REPORT_INTERVAL = 25
+
+        /** Text read before the cursor for the spatial decoder's word before: the word, a space, the one before. */
+        private const val SPATIAL_CONTEXT_CHARS = 80
 
         /**
          * Characters before the cursor the contextual spelling rules see: the clause and its
@@ -273,8 +281,18 @@ class DictusImeService : LifecycleInputMethodService() {
             runPersonalizedLearning(PersonalizedLearningEntryPoint.AUTOCORRECT_UNDO) {
                 dictionaryEngine.personalDictionary.learnWord(word)
             }
-        }.apply { onUndoOfferChanged = { _autocorrectUndo.value = it } }
+        }.apply {
+            onUndoOfferChanged = { _autocorrectUndo.value = it }
+            spatialCorrection = { offered ->
+                spatialAutocorrect.correction(offered, _activeKeyboardState.value.language.code) {
+                    currentInputConnection?.getTextBeforeCursor(SPATIAL_CONTEXT_CHARS, 0)
+                }
+            }
+        }
     }
+    // Spatial autocorrect (#385): off unless its debug switch is on in a debuggable build.
+    private val spatialAutocorrect by lazy { SpatialAutocorrect { TypingModel.asset(assets, it) } }
+    private val _spatialEnabled = MutableStateFlow(false)
 
 
     private val serviceConnection = object : ServiceConnection {
@@ -360,6 +378,17 @@ class DictusImeService : LifecycleInputMethodService() {
                 }
         }
         bindingScope.launch {
+            val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+            entryPoint.dataStore().data
+                .map { debuggable && it[PreferenceKeys.DEBUG_SPATIAL_AUTOCORRECT] == true }
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    spatialAutocorrect.enabled = enabled
+                    _spatialEnabled.value = enabled
+                    if (debuggable) Timber.d("Spatial autocorrect: %s", if (enabled) "on" else "off")
+                }
+        }
+        bindingScope.launch {
             dictionaryEngine.suggestionResults.collect { result ->
                 val correctionContextCurrent = result.contextIdentity?.let { identity ->
                     shouldRequestSuggestions() && CorrectionContextExtractor.isCurrent(
@@ -407,6 +436,7 @@ class DictusImeService : LifecycleInputMethodService() {
                                 knownInputDominance = result.knownInputDominance,
                                 primaryCorrection = result.primaryCorrection,
                                 isLearnedWord = dictionaryEngine.personalDictionary.isLearned(result.input),
+                                ruleCorrection = result.ruleCorrection,
                             ),
                         )
                     }
@@ -437,6 +467,8 @@ class DictusImeService : LifecycleInputMethodService() {
         bindingScope.launch {
             dictionaryEngine.activation.filterNotNull().collect { activation ->
                 autocorrectCoordinator.onOtherInput()
+                // Taps made on the other language's keys are not this grid's.
+                spatialAutocorrect.clear()
                 clearSuggestionState()
                 val activeState = ActiveKeyboardState(activation.language, activation.layout)
                 _activeKeyboardState.value = activeState
@@ -519,6 +551,7 @@ class DictusImeService : LifecycleInputMethodService() {
     private fun refreshSuggestionsFromEditor() {
         if (!isCurrentEditorSuggestionEligible) {
             _currentWord.value = ""
+            spatialAutocorrect.sync("", "")
             clearSuggestionState(reason = "editor not eligible")
             return
         }
@@ -533,6 +566,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val currentWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
 
         _currentWord.value = currentWord
+        spatialAutocorrect.sync(currentWord, beforeCursor)
         if (shouldRequestSuggestions() && currentWord.isNotEmpty()) {
             requestSuggestionsForCurrentWord()
         } else {
@@ -586,6 +620,7 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     private fun requestNextWordPredictions(spaceResult: AutocorrectSpaceResult? = null) {
+        spatialAutocorrect.clear()
         configurePredictionCoordinator()
         val editor = currentInputConnection?.let(::InputConnectionAutocorrectEditor)
         val token = editor?.let {
@@ -721,6 +756,7 @@ class DictusImeService : LifecycleInputMethodService() {
         configurePredictionCoordinator()
         autocorrectCoordinator.setRuntimeEnabled(_autocorrectEnabled.value)
         _currentWord.value = ""
+        spatialAutocorrect.clear()
         clearSuggestionState()
         // EditorInfo supplies the initial selection before onUpdateSelection starts flowing.
         isEditorSelectionCollapsed = attribute != null &&
@@ -1057,7 +1093,12 @@ class DictusImeService : LifecycleInputMethodService() {
         }
 
         // Nothing covers the keyboard while the model loads, fails or is missing (#247).
-        CompositionLocalProvider(LocalKeyboardSizing provides sizing, LocalDensity provides labelDensity) {
+        val spatialEnabled by _spatialEnabled.collectAsState()
+        CompositionLocalProvider(
+            LocalKeyboardSizing provides sizing,
+            LocalDensity provides labelDensity,
+            LocalKeyTouches provides spatialAutocorrect.keyTouches.takeIf { spatialEnabled },
+        ) {
         Column(modifier = Modifier.fillMaxWidth()) {
         Box(modifier = Modifier.fillMaxWidth()) {
             // An app dictation shows the keyboard, mic disabled, never its recording UI or ✓ (#248).
@@ -1400,6 +1441,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 autocorrectCoordinator.lastSpaceDiagnosis,
                 autocorrectCoordinator.lastSpaceDetail,
             )
+            spatialAutocorrect.clear()
             clearSuggestionState()
             when (result) {
                 AutocorrectSpaceResult.CORRECTED -> true
@@ -1422,6 +1464,7 @@ class DictusImeService : LifecycleInputMethodService() {
             } else {
                 val typed = inputConnection.commitText(text, 1)
                 if (typed) {
+                    spatialAutocorrect.typed(text)
                     autocorrectCoordinator.onTextTyped(text)
                 } else {
                     autocorrectCoordinator.onOtherInput()
@@ -1497,6 +1540,7 @@ class DictusImeService : LifecycleInputMethodService() {
         } else {
             var accepted = false
             autocorrectCoordinator.onBackspace { accepted = sendBackspaceKey(inputConnection) }
+            if (accepted) spatialAutocorrect.deleted()
             Timber.d("Backspace: DEL key accepted=%b selectionCollapsed=%b", accepted, isEditorSelectionCollapsed)
         }
         refreshFrenchAdaptiveKeyState()
@@ -1560,6 +1604,7 @@ class DictusImeService : LifecycleInputMethodService() {
                 autocorrectCoordinator.lastSpaceDetail,
             )
         }
+        spatialAutocorrect.clear()
         refreshFrenchAdaptiveKeyState()
         refreshAutoCapitalization()
     }
@@ -1627,6 +1672,7 @@ class DictusImeService : LifecycleInputMethodService() {
     /** Typing, as far as the autocorrect undo chip goes, as on iOS `handleAdaptiveAccentKey`. */
     private fun onFrenchAdaptiveText(applied: Boolean, state: FrenchAdaptiveKey.State, text: String) {
         if (applied) {
+            if (state.replacesPrevious) spatialAutocorrect.replacedLast(text) else spatialAutocorrect.typed(text)
             autocorrectCoordinator.onTextTyped(text, replacingCodePoints = if (state.replacesPrevious) 1 else 0)
         } else {
             autocorrectCoordinator.onOtherInput()

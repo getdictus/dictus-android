@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +58,8 @@ import dev.pivisolutions.dictus.ime.input.ReturnKeyRole
 import dev.pivisolutions.dictus.ime.input.TrackpadMotionAccumulator
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
+import dev.pivisolutions.dictus.ime.spatial.KeyPlacement
+import dev.pivisolutions.dictus.ime.spatial.LocalKeyTouches
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -130,6 +133,15 @@ fun KeyButton(
     var isPressed by remember { mutableStateOf(false) }
     var keyWidthPx by remember { mutableStateOf(0) }
     var keyPositionXPx by remember { mutableStateOf(0f) }
+    // Where a letter key is, and where it was touched, for the spatial decoder (#385).
+    val keyTouches = LocalKeyTouches.current.takeIf { key.type == KeyType.CHARACTER }
+    val placement = remember { KeyPlacement() }
+    if (keyTouches != null) {
+        DisposableEffect(keyTouches, key.output) {
+            keyTouches.register(key.output, placement)
+            onDispose { keyTouches.unregister(key.output, placement) }
+        }
+    }
     var showAccentPopup by remember { mutableStateOf(false) }
     var highlightedAccentIndex by remember { mutableStateOf<Int?>(null) }
     val showPreviewPopup = isPressed && key.type == KeyType.CHARACTER && !showAccentPopup
@@ -191,6 +203,8 @@ fun KeyButton(
     val currentOnSound = rememberUpdatedState(onSound)
     val currentOnTrackpadActiveChange = rememberUpdatedState(onTrackpadActiveChange)
     val currentOnTrackpadMove = rememberUpdatedState(onTrackpadMove)
+    val currentKeyTouches = rememberUpdatedState(keyTouches)
+    val currentOutput = rememberUpdatedState(key.output)
 
     fun resolveAccentIndex(pointerX: Float): Int? {
         val accents = accentChars ?: return null
@@ -382,6 +396,7 @@ fun KeyButton(
                         if (selectedAccent != null) {
                             currentOnAccentSelected.value?.invoke(selectedAccent)
                         } else {
+                            currentKeyTouches.value?.touched(currentOutput.value, placement, downPosition)
                             currentOnPress.value()
                         }
                     }
@@ -418,6 +433,7 @@ fun KeyButton(
             .onSizeChanged { keyWidthPx = it.width }
             .onGloballyPositioned { coordinates ->
                 keyPositionXPx = coordinates.positionInWindow().x
+                placement.coordinates = coordinates
             }
             .shadow(elevation = 1.dp, shape = shape)
             .clip(shape)

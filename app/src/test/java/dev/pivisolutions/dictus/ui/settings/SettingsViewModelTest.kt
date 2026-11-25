@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.premium.ProStatus
 import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
@@ -62,7 +63,7 @@ class SettingsViewModelTest {
         fakeDataStore = FakeDataStore()
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         modelManager = ModelManager(context)
-        viewModel = SettingsViewModel(fakeDataStore, modelManager)
+        viewModel = SettingsViewModel(fakeDataStore, modelManager, ProStatus(fakeDataStore, debugBuild = true))
     }
 
     @After
@@ -114,13 +115,27 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `the Debug Pro override is off by default and flips on and off`() = testScope.runTest {
+        assertFalse(viewModel.debugProEntitlementForced.value)
+
+        viewModel.toggleDebugProEntitlementForced()
+        advanceUntilIdle()
+        assertTrue(viewModel.debugProEntitlementForced.value)
+        assertEquals(true, fakeDataStore.data.first()[PreferenceKeys.DEBUG_PRO_ENTITLEMENT_FORCED])
+
+        viewModel.toggleDebugProEntitlementForced()
+        advanceUntilIdle()
+        assertFalse(viewModel.debugProEntitlementForced.value)
+    }
+
+    @Test
     fun `keyboard language defaults to French and survives ViewModel restart`() = testScope.runTest {
         assertEquals("fr", viewModel.keyboardLanguage.value)
         viewModel.setKeyboardLanguage("en")
         advanceUntilIdle()
         assertEquals("en", viewModel.keyboardLanguage.value)
 
-        val restarted = SettingsViewModel(fakeDataStore, modelManager)
+        val restarted = SettingsViewModel(fakeDataStore, modelManager, ProStatus(fakeDataStore, debugBuild = true))
         advanceUntilIdle()
         assertEquals("en", restarted.keyboardLanguage.value)
     }
@@ -179,7 +194,7 @@ class SettingsViewModelTest {
 
         assertFalse(viewModel.autocorrectEnabled.value)
         assertTrue(viewModel.suggestionsEnabled.value)
-        val restarted = SettingsViewModel(fakeDataStore, modelManager)
+        val restarted = SettingsViewModel(fakeDataStore, modelManager, ProStatus(fakeDataStore, debugBuild = true))
         advanceUntilIdle()
         assertFalse(restarted.autocorrectEnabled.value)
     }
