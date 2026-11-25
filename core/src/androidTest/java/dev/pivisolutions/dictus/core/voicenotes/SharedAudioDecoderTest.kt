@@ -34,8 +34,9 @@ class SharedAudioDecoderTest {
         val middle = samples.copyOfRange(4_000, 20_000)
         val crossings = (1 until middle.size).count { (middle[it - 1] < 0f) != (middle[it] < 0f) }
         assertEquals(880.0, crossings.toDouble(), 20.0)
+        // ffmpeg's sine source has an amplitude of 1/8: its RMS is 0.125 / sqrt(2).
         val rms = sqrt(middle.sumOf { (it * it).toDouble() } / middle.size)
-        assertTrue("rms $rms", rms > 0.1)
+        assertEquals(0.125 / sqrt(2.0), rms, 0.01)
     }
 
     @Test
