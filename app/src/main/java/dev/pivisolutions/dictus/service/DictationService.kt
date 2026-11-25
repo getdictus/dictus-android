@@ -106,7 +106,6 @@ class DictationService : Service(), DictationController {
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
         private const val ENGINE_IDLE_TIMEOUT_MS = 10 * 60 * 1_000L
-        private const val VOICE_NOTE_LANGUAGE = "auto"
     }
 
     /**
@@ -540,8 +539,11 @@ class DictationService : Service(), DictationController {
      * `DictationCoordinator.transcribeVoiceNoteChunk`: same engine, same loaded model, no download,
      * and nothing a dictation shows (state, sounds, Home's card, the tally, history).
      *
-     * The language is left to the engine ("auto"), iOS's default for voice notes: a note is often
-     * someone else speaking, in a language the keyboard is not set to. Parakeet detects it anyway.
+     * The language is the dictation's (Réglages → Langue, "auto" only when the user chose it). iOS
+     * has a voice-note setting defaulting to automatic detection; on Android, Whisper left to detect
+     * the language of a mostly silent 45 s piece wrote Japanese subtitles' credits (seen on the
+     * emulator with Tiny), so the user's language wins until such a setting exists. Parakeet
+     * detects the language anyway.
      *
      * The provider slot runs one transcription at a time, so a dictation started meanwhile waits
      * for this chunk; `VoiceNoteProcessor` only starts a chunk while no dictation runs.
@@ -550,7 +552,9 @@ class DictationService : Service(), DictationController {
      *   fails, or the timeout cuts the chunk short (a partial chunk would lose words unseen).
      */
     suspend fun transcribeVoiceNoteChunk(samples: FloatArray): String? {
-        val activeModelKey = dataStore.data.first()[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY
+        val prefs = dataStore.data.first()
+        val activeModelKey = prefs[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY
+        val language = DictationLanguage.engineLanguage(prefs)
         val modelPath = modelManager.getModelPath(activeModelKey) ?: run {
             Timber.w("Voice note chunk: model=%s not on disk", activeModelKey)
             return null
@@ -562,7 +566,7 @@ class DictationService : Service(), DictationController {
         val transcript = withProviderForModel(activeModelKey, modelPath) { provider ->
             transcriptionWakeLock.acquire(timeoutMs + WhisperContext.ABORT_GRACE_MS)
             try {
-                provider.transcribe(samples, VOICE_NOTE_LANGUAGE, timeoutMs)
+                provider.transcribe(samples, language, timeoutMs)
             } finally {
                 transcriptionWakeLock.release()
             }

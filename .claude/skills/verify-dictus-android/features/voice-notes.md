@@ -4,7 +4,7 @@ A voice message or an audio file shared to Dictus from another app is transcribe
 
 - **ID:** `voice-notes`
 - **Tier:** Pro (`ProStatus.isPro`; nothing is sold on Android yet, so in practice the Debug build's « Forcer Dictus Pro »)
-- **Android status:** partial — no Smart Mode after the transcription, no language choice (always detected), no keyboard reader, no progress outside the app
+- **Android status:** partial — no Smart Mode after the transcription, no voice-note language setting (the dictation language is used), no keyboard reader, no progress outside the app
 - **Screens:** `share.voice-note`, `app.pro.voice-notes`, `app.voice-note.result` — see [screens.md](screens.md)
 
 ## Sub-features
@@ -12,7 +12,7 @@ A voice message or an audio file shared to Dictus from another app is transcribe
 - `voice-notes.share-in`: Partager → « Transcrire avec Dictus » from any app sharing `audio/*` or `application/ogg` (WhatsApp, Telegram, Signal, Fichiers), one file or up to ten. Dictus is in the share sheet only while the user has Pro (iOS lists it always and refuses inside). — present
 - `voice-notes.transcribe`: the file is decoded to 16 kHz mono (Ogg / Opus, WebM, MPEG-4 / AAC, MP3, WAV, FLAC, AMR), cut into 45 s pieces, transcribed with the active model, oldest note first; refused over 10 minutes or as a video. — present
 - `voice-notes.after-mode`: — absent (no Smart Mode on Android)
-- `voice-notes.language`: — absent (the engine detects the language, iOS's default)
+- `voice-notes.language`: — partial: the dictation language of Réglages → Langue is used (iOS has its own setting, automatic by default)
 - `voice-notes.reader`: — absent (no keyboard reader)
 - `voice-notes.insert`: — absent; « Copier » on the card instead
 - `voice-notes.delete`: the bin on a card in « Messages vocaux ». — present (in the app, not the keyboard)

@@ -72,7 +72,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `smart-modes` | Pro on iOS — absent | absent | no |
 | `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete, search, clear, 200-entry cap; #202) but hidden | no |
 | `vocabulary` | Pro on iOS — absent | absent | no |
-| [`voice-notes`](voice-notes.md) | Pro | partial — no Smart Mode, no language choice, no keyboard reader | no |
+| [`voice-notes`](voice-notes.md) | Pro | partial — no Smart Mode, no voice-note language setting, no keyboard reader | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
 | [`typing.learned-words`](typing.learned-words.md) | Free | present | no |
 | [`keyboard.languages`](keyboard.languages.md) | Free | partial — no panel, no layout picker until #191, no number row | no |
@@ -134,7 +134,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `voice-notes.share-in` | Pro | present — the share target exists only with Pro | no |
 | `voice-notes.transcribe` | Pro | present | no |
 | `voice-notes.after-mode` | Pro on iOS — absent | absent | no |
-| `voice-notes.language` | Pro on iOS — absent | absent | no |
+| `voice-notes.language` | Pro | partial — the dictation language is used, no setting of its own | no |
 | `voice-notes.reader` | Pro on iOS — absent | absent | no |
 | `voice-notes.insert` | Pro on iOS — absent | absent | no |
 | `voice-notes.delete` | Pro | present — in the app, not the keyboard | no |
@@ -271,9 +271,9 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `sys.settings.ime` | Free | present | yes |
 | `sys.notification.recording` | Free | present | yes |
 
-**Count** (202 IDs: 179 iOS + 23 Android-only): present **69**, partial **14**, absent **67**, iOS-only (N/A) **29**, Android-only **23**.
+**Count** (202 IDs: 179 iOS + 23 Android-only): present **69**, partial **15**, absent **66**, iOS-only (N/A) **29**, Android-only **23**.
 
-Of the 150 iOS IDs that apply to Android: 69 present, 14 partial, 67 absent. 47 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
+Of the 150 iOS IDs that apply to Android: 69 present, 15 partial, 66 absent. 46 of these absent IDs are iOS Pro features (Smart Modes, history, vocabulary, voice notes, subscription, with their screens); the other 20 are free on iOS.
 
 ## Design gaps with iOS
 
