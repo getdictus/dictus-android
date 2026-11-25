@@ -1,10 +1,12 @@
 # Spatial autocorrect, before and after (#385)
 
 The [keyboard measurement](../../keyboard-measurement.md) on the same runs as the
-[#382 baseline](../382-keyboard-baseline/README.md), taken 2026-11-21 on `dictus_api35`
-(Android 15, x86_64, Pixel 4 screen), with the build `1.5.0-21-ga3a222f`
-(`-Pdictus.emulatorAbi=true`): `run.sh --spatial off`, then `--spatial on`. Each language was
-replayed on its own, `dumpsys meminfo` read right after.
+[#382 baseline](../382-keyboard-baseline/README.md), taken 2026-11-25 on `dictus_api35`
+(Android 15, x86_64, Pixel 4 screen), with the branch head `c5d6f24` (develop `998de03` merged in,
+then every authoritative rule ahead of the decoder) built with `-Pdictus.emulatorAbi=true`:
+`run.sh --spatial off`, then `--spatial on`. Each language was replayed on its own,
+`dumpsys meminfo` read right after. The first measure, before the merge (2026-11-21, `a3a222f`),
+is summed up under [Before the merge](#before-the-merge).
 
 ## Files
 
@@ -16,36 +18,35 @@ replayed on its own, `dumpsys meminfo` read right after.
 
 ## Off is develop
 
-With the switch off, `texts.tsv` and `commits.tsv` are byte-identical to the #382 baseline
-(develop at `71f5ece`) in both languages, and so are the taps apart from their times.
-
-After the review fixes (`5d91f64`: the buffer also checks where the word is, a language change
-drops the taps), both "on" runs were replayed again: `texts.tsv` and `commits.tsv` came out
-byte-identical to the ones here. Their space times were 4.32 / 8.01 / 40.4 ms (fr) and
-3.90 / 7.78 / 23.4 ms (en), the same order as below.
+The same runs replayed on develop `998de03` (the merged base, its own debug build) give
+`texts.tsv` and `commits.tsv` byte-identical to the "off" runs here, in both languages. Develop
+itself moved since the first measure: the key touch areas (#400, #401) closed the dead bands, so
+the taps resolve to other letters in places, and the trie's ranking (#388) and the context rules
+(#392) changed. That is why "off" is better here than in the first measure.
 
 ## Before and after
 
 | | fr off | fr on | en off | en on |
 |---|---:|---:|---:|---:|
-| Wrong words in the final text | 21 of 152 | **20** | 25 of 157 | **21** |
-| Autocorrect: fixed | 19 | 20 | 10 | 12 |
+| Wrong words in the final text | 8 of 152 | **7** | 13 of 157 | **10** |
+| Autocorrect: fixed | 23 | 24 | 11 | 14 |
 | Autocorrect: broken | 0 | **0** | 0 | **0** |
-| Autocorrect: miscorrected | 11 | 10 | 7 | 6 |
-| Glued words split back | 0 of 1 | 0 of 1 | 0 of 3 | 1 of 3 |
+| Autocorrect: miscorrected | 3 | 3 | 3 | 1 |
+| Glued words split back | 0 of 0 | 0 of 0 | 0 of 2 | 0 of 2 |
 
-Eight words change, read one by one:
+Four words change, all for the better:
 
-| lang | intended | typed | off | on | verdict |
-|---|---|---|---|---|---|
-| fr | il | Ul | Cul | Il | better |
-| fr | arrivé | arve | larve | rave | wrong both times |
-| fr | une | ue | une | je | worse: the `n` fell in a dead band (#370) and the `u` landed low, towards `j` |
-| fr | retard | reard | regard | retard | better |
-| en | the | thw | thaw | the | better |
-| en | hour late | hourlate | hourlate | hour late | better (a glued word split back) |
-| en | been | bern | bern | been | better |
-| en | hour | bou | bout | boy | wrong both times |
+| lang | intended | typed | off | on |
+|---|---|---|---|---|
+| fr | réunion | reùion | reùion | réunion |
+| en | been | bern | bern | been |
+| en | hour | boue | blue | hour |
+| en | need | meef | meet | need |
+
+Two words of the French corpus are decided by the words before, a rule that answers before the
+decoder (#386, as iOS `correctionProposal`): sentence 4 types `a` where `à` is meant and gets `à`,
+sentence 11 keeps `elle a`; both come out the same off and on. No sentence has a curated name or
+`il ma`: the unit tests cover those.
 
 ## Cost
 
@@ -53,12 +54,12 @@ Time per keystroke, tap to text, ms (p50 / p95 / max):
 
 | | fr off | fr on | en off | en on |
 |---|---|---|---|---|
-| Letter | 1.76 / 2.38 / 129.2 | 1.79 / 2.34 / 78.0 | 1.75 / 2.08 / 62.8 | 1.76 / 2.10 / 78.0 |
-| Space | 2.15 / 3.64 / 10.8 | 4.14 / 12.42 / 43.9 | 2.12 / 3.25 / 4.9 | 3.77 / 6.48 / 22.0 |
+| Letter | 1.88 / 3.02 / 97.2 | 1.89 / 2.85 / 85.8 | 1.86 / 2.22 / 78.4 | 1.87 / 2.29 / 80.7 |
+| Space | 2.29 / 3.62 / 4.5 | 4.34 / 9.78 / 33.2 | 2.28 / 3.66 / 9.4 | 3.97 / 9.25 / 22.8 |
 
 A letter costs nothing measurable: it adds one point to a list. A space runs the decoder on
 the main thread, the trie's lookup having already run in the background: about +2 ms at the
-median, +3 to +9 ms at p95, in a debug build on the emulator. The first space of a language
+median, +6 ms at p95, in a debug build on the emulator. The first space of a language
 also maps its model.
 
 Memory, `dumpsys meminfo` (KB). The IME runs in the app's process, so these are the app's
@@ -66,21 +67,21 @@ numbers, Whisper included:
 
 | | fr off | fr on | en off | en on |
 |---|---:|---:|---:|---:|
-| TOTAL PSS | 241,051 | 261,109 | 248,806 | 227,612 |
-| Private Dirty | 40,696 * | 156,348 | 151,952 | 151,960 |
-| `.apk mmap` PSS | 60,114 | 73,038 | 69,505 | 46,789 |
+| TOTAL PSS | 254,836 | 259,865 | 248,685 | 253,289 |
+| Private Dirty | 155,644 | 156,216 | 152,640 | 152,256 |
+| `.apk mmap` PSS | 68,639 | 72,767 | 69,374 | 72,858 |
 
-\* 112,996 KB of that run was swapped out (TOTAL SWAP PSS), which hides the comparison.
+Private Dirty moves by +572 KB (fr) and -384 KB (en): no visible growth from the decoder. The
+`.apk mmap` line grows by about 3.5 to 4 MB: the model's clean pages of the APK, read in as a
+search touches them, which the system can drop under pressure.
 
-The total moves by tens of megabytes between runs with nothing to do with the decoder: the
-clean pages of the APK come and go with the page cache. Between the two English runs the whole
-process's Private Dirty moved by +8 KB, the sum of opposite moves (Dalvik Heap +3,968 KB, `.art
-mmap` -4,032 KB): no isolated measure of what the decoder allocates, only no visible growth. Its
-models are clean pages of the APK file (`.apk mmap`), 3.6 MB per language at most, read in only
-as a search touches them, and which the system can drop under pressure.
+## Before the merge
 
-APK (`app-debug.apk`, `-Pdictus.emulatorAbi=true`): 201,031,116 bytes on develop `f36e579`,
-208,353,457 on the branch, +7,322,341, of which 7,199,993 are the two stored models.
+First measure, 2026-11-21, `a3a222f` on develop `71f5ece` (replayed again on `5d91f64` with the
+same words): fr 21 → 20 wrong words, en 25 → 21, broken 0 and 0, eight words changed (five better,
+two wrong both times, one worse: `ue` → `je`, its `n` lost in a dead band that #400 has since
+closed). Space p95 3.64 → 12.42 ms (fr) and 3.25 → 6.48 ms (en). Its raw files are in git
+history at `aa236fe`.
 
 ## Limits
 
