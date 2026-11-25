@@ -39,6 +39,9 @@ import kotlin.math.roundToInt
  *   for the same reason.
  * @param recordDebugEntry appends to the transcription debug log (#295), for the same reason: one
  *   entry per take the engine returned text for, words or not.
+ * @param correctVocabulary `CustomVocabulary.corrected` (#203): the user's spellings, written over
+ *   the engine's variants. Here for the same reason again, as iOS calls it in its coordinator, on
+ *   the engine's text before any punctuation pass.
  */
 internal class DictationTranscriber(
     private val ensureModel: suspend (modelKey: String) -> String?,
@@ -51,6 +54,7 @@ internal class DictationTranscriber(
     private val lastTranscription: LastTranscriptionStore,
     private val recordTally: suspend (text: String, audioSeconds: Int) -> DictationTally.Totals?,
     private val recordDebugEntry: suspend (TranscriptionDebugEntry) -> Unit,
+    private val correctVocabulary: suspend (String) -> String,
     private val timeoutFactor: (modelKey: String) -> Double = TranscriptionTimeout::factorFor,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
@@ -126,8 +130,11 @@ internal class DictationTranscriber(
                 return TranscriptionOutcome.Failed
             }
 
-            // Drop non-speech tags (#161), then post-process (trim + punctuation)
-            val processedText = TextPostProcessor.process(NonSpeechMarkers.spokenText(transcript.text))
+            // Drop non-speech tags (#161), apply the vocabulary (#203), then post-process
+            // (trim + punctuation). The debug log keeps the engine's own text, as iOS keeps
+            // `engineRaw` beside the corrected one.
+            val spokenText = correctVocabulary(NonSpeechMarkers.spokenText(transcript.text))
+            val processedText = TextPostProcessor.process(spokenText)
             Timber.d("%s, t+=%dms", PrivacySafeLog.transcriptionProcessed(transcript.text, processedText), DictationTrace.elapsedMs())
             val timings = Timings(
                 preprocessMs = elapsedMs(startedAt, engineStartedAt),
