@@ -19,8 +19,14 @@ data class DeleteSwipeMove(val startX: Float, val x: Float, val step: Float, val
 
 /** What the slide needs from the editor. Lengths are UTF-16 units. */
 interface DeleteSwipeEditor {
-    /** The text before the cursor, as much as the editor shares; null when it shares nothing. */
+    /** The most [textBeforeCursor] returns: a shorter read is the whole text before the cursor. */
+    val readLimit: Int
+
+    /** The text before the cursor, at most [readLimit] units; null when the editor shares nothing. */
     fun textBeforeCursor(): String?
+
+    /** Where the cursor is in the whole text, or null when the editor does not say. */
+    fun cursor(): Int? = null
 
     fun deleteBefore(length: Int)
 
@@ -76,6 +82,9 @@ class DeleteWordSwipe(
 
     val deletedWordCount: Int get() = deleted.size
 
+    /** What the editor showed right after the slide's last edit, null before the first. */
+    private var lastSeen: String? = null
+
     /**
      * The finger moved: delete or restore words until their count matches how far left it is.
      * Null until the slide is active.
@@ -87,13 +96,18 @@ class DeleteWordSwipe(
             isActive = true
         }
         if (isFrozen) return Change()
-        finishPendingWord()
         var deletedWords = 0
         var restoredWords = 0
-        while (deleted.size < wanted && !isFrozen && deleteWord()) deletedWords++
+        finishPendingWord()
+        while (deleted.size < wanted && !isFrozen && deleteWord()) {
+            deletedWords++
+            // A word longer than one read is finished before the next one starts.
+            finishPendingWord()
+        }
         while (deleted.size > wanted && !isFrozen) {
             pending = null
-            restore(deleted.removeLast())
+            if (!restore(deleted.last())) break
+            deleted.removeLast()
             restoredWords++
         }
         return Change(deletedWords, restoredWords)
@@ -116,8 +130,15 @@ class DeleteWordSwipe(
     }
 
     private fun deleteWord(): Boolean {
-        val before = editor.textBeforeCursor() ?: return false
-        val span = DeleteWordBoundary.lastWord(before)?.takeIf { it.length > 0 } ?: return false
+        val before = readBeforeEdit() ?: return false
+        val span = DeleteWordBoundary.lastWord(before)?.takeIf { it.length > 0 }
+        if (span == null) {
+            // The touch-down emptied the field: its character is this step, given back on return.
+            val character = touchDownDeletion ?: return false
+            touchDownDeletion = null
+            deleted.addLast(character)
+            return true
+        }
         var text = delete(span.length, before)
         touchDownDeletion?.let {
             text += it
@@ -128,41 +149,77 @@ class DeleteWordSwipe(
         return true
     }
 
-    /** Finishes the last step's word if the editor now shares what was before it. */
+    /** Finishes the last step's word, one read at a time, while the editor shares more of it. */
     private fun finishPendingWord() {
-        val phase = pending ?: return
-        val last = deleted.lastOrNull() ?: return
-        val first = DeleteWordBoundary.graphemes(last).firstOrNull() ?: return
-        // Nothing shared: never read an empty context as the start of the document.
-        val before = editor.textBeforeCursor()?.takeIf { it.isNotEmpty() } ?: return
-        val span = DeleteWordBoundary.continuation(before, phase, first)
-        pending = span.continuesIn
-        if (span.length == 0) return
-        deleted[deleted.lastIndex] = delete(span.length, before) + last
+        while (!isFrozen) {
+            val phase = pending ?: return
+            val last = deleted.lastOrNull() ?: return
+            val first = DeleteWordBoundary.graphemes(last).firstOrNull() ?: return
+            // Nothing shared: never read an empty context as the start of the document.
+            val before = readBeforeEdit()?.takeIf { it.isNotEmpty() } ?: return
+            val span = DeleteWordBoundary.continuation(before, phase, first)
+            pending = span.continuesIn
+            if (span.length == 0) return
+            deleted[deleted.lastIndex] = delete(span.length, before) + last
+        }
     }
 
     /** Deletes the last [length] units of [before], the context just read, and returns them. */
     private fun delete(length: Int, before: String): String {
         val text = before.takeLast(length)
+        val cursor = editor.cursor()
         editor.deleteBefore(length)
-        check(expected = before.dropLast(length))
+        check(before, expected = before.dropLast(length), cursor?.minus(length))
         return text
     }
 
-    private fun restore(text: String) {
-        val before = editor.textBeforeCursor().orEmpty()
+    /** Types [text] back; false, with the slide stopped, when the editor was not as left. */
+    private fun restore(text: String): Boolean {
+        val before = readBeforeEdit() ?: return false
+        val cursor = editor.cursor()
         editor.insert(text)
-        check(expected = before + text)
+        check(before, expected = before + text, cursor?.plus(text.length))
+        return !isFrozen
     }
 
     /**
-     * Stops the slide unless the editor's text before the cursor is now [expected]. A bounded
-     * read can show more or less of the start, so the shorter of the two must end the longer.
+     * The text before the cursor, or null with the slide stopped when it is not what the last edit
+     * left: something else changed the text while the finger was down, and a word typed back
+     * would land in text it was not deleted from.
      */
-    private fun check(expected: String) {
+    private fun readBeforeEdit(): String? {
+        val text = editor.textBeforeCursor()
+        if (text == null || (lastSeen != null && text != lastSeen)) {
+            isFrozen = true
+            return null
+        }
+        return text
+    }
+
+    /**
+     * Stops the slide unless the edit just made from [before] left [expected] before the cursor,
+     * and the cursor at [expectedCursor] when the editor reported it before the edit.
+     */
+    private fun check(before: String, expected: String, expectedCursor: Int?) {
         val after = editor.textBeforeCursor()
-        val consistent = after != null && (after.endsWith(expected) || expected.endsWith(after))
-        if (!consistent) isFrozen = true
+        lastSeen = after
+        val cursorMoved = expectedCursor?.let { editor.cursor() == it }
+        if (after == null || cursorMoved == false || !consistent(before, after, expected, cursorMoved == true)) {
+            isFrozen = true
+        }
+    }
+
+    /**
+     * A whole read must match exactly, except that it may now fill the read and show only the end
+     * of [expected]. A bounded read shows more or less of the start, so the shorter of the two
+     * must end the longer. An editor that ignored the edit reads the same, which a bounded read of
+     * a repeated letter ("aaaa…") also does after a real edit: only a cursor that moved as the edit
+     * implies tells them apart, and without one an unchanged read stops the slide.
+     */
+    private fun consistent(before: String, after: String, expected: String, cursorMoved: Boolean): Boolean {
+        if (after == expected) return true
+        if (before.length < editor.readLimit) return after.length == editor.readLimit && expected.endsWith(after)
+        return (cursorMoved || after != before) && (after.endsWith(expected) || expected.endsWith(after))
     }
 
     companion object {
