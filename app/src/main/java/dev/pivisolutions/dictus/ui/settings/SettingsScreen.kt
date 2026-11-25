@@ -84,12 +84,12 @@ import androidx.compose.material3.MaterialTheme
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateToVocabulary: () -> Unit = {},
     onNavigateToLicences: () -> Unit = {},
     onNavigateToDebugLogs: () -> Unit = {},
     onNavigateToSoundSettings: () -> Unit = {},
     onNavigateToTranscriptionDebug: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
-    onNavigateToVocabulary: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()

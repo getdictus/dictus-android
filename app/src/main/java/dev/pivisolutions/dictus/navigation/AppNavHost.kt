@@ -401,6 +401,9 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.Settings.route) {
                 SettingsScreen(
+                    onNavigateToVocabulary = {
+                        navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
+                    },
                     onNavigateToLicences = {
                         navController.navigate(AppDestination.Licences.route)
                     },
@@ -416,13 +419,7 @@ private fun MainTabsScreen(
                     onNavigateToFeedback = {
                         navController.navigate(AppDestination.Feedback.route)
                     },
-                    onNavigateToVocabulary = {
-                        navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
-                    },
                 )
-            }
-            composable(AppDestination.Vocabulary.route) {
-                VocabularyRoute(onBack = { navController.popBackStack() })
             }
             // One FeedbackViewModel for the activity: the form and its log preview share the
             // snapshot, and what the user typed survives leaving the form (#373).
@@ -468,6 +465,9 @@ private fun MainTabsScreen(
                     soundType = soundType,
                     onBack = { navController.popBackStack() },
                 )
+            }
+            composable(AppDestination.Vocabulary.route) {
+                VocabularyRoute(onBack = { navController.popBackStack() })
             }
             composable(AppDestination.Recording.route) {
                 RecordingScreen(

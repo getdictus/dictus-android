@@ -217,6 +217,39 @@
     <string name="ram_warning_dialog_message">This model requires 8+ GB of RAM. Your device does not have enough memory to run it.</string>
     <string name="dialog_continue">Continue</string>
     <string name="dialog_cancel">Cancel</string>
+
+    <!-- Custom vocabulary (#203, #208), iOS VocabularyListView -->
+    <string name="vocabulary_title">Vocabulary</string>
+    <string name="vocabulary_back_cd">Back</string>
+    <string name="vocabulary_off_footer">Vocabulary is off. Your terms are kept, and replace nothing until you turn it back on.</string>
+    <string name="vocabulary_section_terms">Your terms</string>
+    <string name="vocabulary_empty">No terms yet. Add the words Dictus gets wrong.</string>
+    <string name="vocabulary_terms_footer">When Dictus writes one of these variants, it is replaced by your spelling.</string>
+    <string name="vocabulary_write_failed">Could not save. Your device may be out of storage.</string>
+    <string name="vocabulary_add">Add a term</string>
+    <string name="vocabulary_limit_reached">You have reached the limit of %1$d terms. Delete one to add another.</string>
+    <string name="vocabulary_reset">Reset vocabulary</string>
+    <string name="vocabulary_reset_title">Reset vocabulary?</string>
+    <string name="vocabulary_reset_message">Every term and every variant will be deleted. Your transcriptions will no longer be corrected.</string>
+    <string name="vocabulary_replaces">Replaces: %1$s</string>
+    <string name="vocabulary_waiting">Waiting for misspellings</string>
+    <string name="vocabulary_delete">Delete</string>
+    <string name="vocabulary_editor_new">New term</string>
+    <string name="vocabulary_editor_edit">Edit term</string>
+    <string name="vocabulary_editor_save">Save</string>
+    <string name="vocabulary_editor_term_header">The correct spelling</string>
+    <string name="vocabulary_editor_term_placeholder">Which term?</string>
+    <string name="vocabulary_editor_term_footer">The spelling Dictus should write.</string>
+    <string name="vocabulary_editor_duplicate">This term is already in your vocabulary.</string>
+    <string name="vocabulary_editor_variants_header">What Dictus writes instead</string>
+    <string name="vocabulary_editor_variants_placeholder">How does Dictus write it instead?</string>
+    <string name="vocabulary_editor_variants_optional">Optional. Without a misspelling, this term changes nothing yet. Add one when you spot it.</string>
+    <string name="vocabulary_editor_variants_footer">Separated by commas. Dictus replaces each of them with your spelling.</string>
+    <plurals name="vocabulary_reset_confirm">
+        <item quantity="one">Forget %1$d term</item>
+        <item quantity="other">Forget %1$d terms</item>
+    </plurals>
+
     <string name="dialog_ok">OK</string>
 
     <!-- ModelCard -->
@@ -387,37 +420,5 @@
     <string name="feedback_failed_rejected">The server refused this report. Share it instead.</string>
     <string name="feedback_sent">Sent. Thank you.</string>
     <string name="feedback_done">Done</string>
-
-    <!-- Custom vocabulary (#203, #208), iOS VocabularyListView -->
-    <string name="vocabulary_title">Vocabulary</string>
-    <string name="vocabulary_back_cd">Back</string>
-    <string name="vocabulary_off_footer">Vocabulary is off. Your terms are kept, and replace nothing until you turn it back on.</string>
-    <string name="vocabulary_section_terms">Your terms</string>
-    <string name="vocabulary_empty">No terms yet. Add the words Dictus gets wrong.</string>
-    <string name="vocabulary_terms_footer">When Dictus writes one of these variants, it is replaced by your spelling.</string>
-    <string name="vocabulary_write_failed">Could not save. Your device may be out of storage.</string>
-    <string name="vocabulary_add">Add a term</string>
-    <string name="vocabulary_limit_reached">You have reached the limit of %1$d terms. Delete one to add another.</string>
-    <string name="vocabulary_reset">Reset vocabulary</string>
-    <string name="vocabulary_reset_title">Reset vocabulary?</string>
-    <string name="vocabulary_reset_message">Every term and every variant will be deleted. Your transcriptions will no longer be corrected.</string>
-    <string name="vocabulary_replaces">Replaces: %1$s</string>
-    <string name="vocabulary_waiting">Waiting for misspellings</string>
-    <string name="vocabulary_delete">Delete</string>
-    <string name="vocabulary_editor_new">New term</string>
-    <string name="vocabulary_editor_edit">Edit term</string>
-    <string name="vocabulary_editor_save">Save</string>
-    <string name="vocabulary_editor_term_header">The correct spelling</string>
-    <string name="vocabulary_editor_term_placeholder">Which term?</string>
-    <string name="vocabulary_editor_term_footer">The spelling Dictus should write.</string>
-    <string name="vocabulary_editor_duplicate">This term is already in your vocabulary.</string>
-    <string name="vocabulary_editor_variants_header">What Dictus writes instead</string>
-    <string name="vocabulary_editor_variants_placeholder">How does Dictus write it instead?</string>
-    <string name="vocabulary_editor_variants_optional">Optional. Without a misspelling, this term changes nothing yet. Add one when you spot it.</string>
-    <string name="vocabulary_editor_variants_footer">Separated by commas. Dictus replaces each of them with your spelling.</string>
-    <plurals name="vocabulary_reset_confirm">
-        <item quantity="one">Forget %1$d term</item>
-        <item quantity="other">Forget %1$d terms</item>
-    </plurals>
 
 </resources>

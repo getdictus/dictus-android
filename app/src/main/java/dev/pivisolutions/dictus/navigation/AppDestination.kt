@@ -28,9 +28,6 @@ sealed class AppDestination(val route: String) {
     /** Private local transcription history; content is never carried in the route. */
     data object History : AppDestination("history")
 
-    /** Custom vocabulary (#208), from Settings > Transcription, for Pro users. */
-    data object Vocabulary : AppDestination("vocabulary")
-
     /** Model management tab — download, select, and delete models. */
     data object Models : AppDestination("models")
 
@@ -54,6 +51,9 @@ sealed class AppDestination(val route: String) {
 
     /** Hidden transcription debug log (#295) — five taps on Settings > À propos > Version. */
     data object TranscriptionDebug : AppDestination("transcription_debug")
+
+    /** Custom vocabulary (#208), from Settings > Transcription, for Pro users. */
+    data object Vocabulary : AppDestination("vocabulary")
 
     /** Sound settings — volume slider, start/stop/cancel sound pickers. */
     data object SoundSettings : AppDestination("sound_settings")
