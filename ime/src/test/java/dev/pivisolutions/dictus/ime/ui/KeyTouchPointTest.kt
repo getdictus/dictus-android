@@ -65,18 +65,18 @@ class KeyTouchPointTest {
         }
         composeRule.waitForIdle()
 
-        // The middle of `z`, the top row's second key: its touch area reaches past the drawn key
-        // on the left and at the top, by half a gap and by its row padding.
+        // The middle of `s`, the second row's second key: its touch area reaches past the drawn key
+        // on the left and at the top, by half a gap and by half the gap between two rows.
         val px = density.density
         val unit = (gridWidth - 2 * ROW_EDGE_PADDING.value * px - 9 * KEY_GAP.value * px) / 10f
         val tap = Offset(
             x = ROW_EDGE_PADDING.value * px + KEY_GAP.value * px + 1.5f * unit,
-            y = 2.dp.value * px + keyboardSizing(393f, 829f, 1f).rowHeight.value * px / 2f,
+            y = 2.dp.value * px + keyboardSizing(393f, 829f, 1f).rowHeight.value * px * 1.5f,
         )
         composeRule.onNodeWithTag(GRID).performTouchInput { click(tap) }
         composeRule.waitForIdle()
 
-        val point = keyTouches.take("z")
+        val point = keyTouches.take("s")
         assertNotNull(point)
         assertEquals((gridOrigin.x + tap.x).toDouble(), point!!.x, 0.5)
         assertEquals((gridOrigin.y + tap.y).toDouble(), point.y, 0.5)
