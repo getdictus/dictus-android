@@ -8,6 +8,12 @@ data class AutocorrectSuggestionSnapshot(
     val knownInputDominance: Boolean,
     val primaryCorrection: String?,
     val isLearnedWord: Boolean,
+    /**
+     * Space's decision comes from a rule (an app or brand name, a spelling chosen by the words
+     * before, an accent rule, a contraction), not from the trie's fuzzy search: the spatial
+     * decoder (#385) leaves it alone, whether the rule corrects the word or keeps it.
+     */
+    val ruleCorrection: Boolean = false,
 )
 
 enum class AutocorrectSpaceResult {
@@ -123,6 +129,14 @@ class AutocorrectInputCoordinator(
     val undoOffer: AutocorrectUndoOffer?
         get() = pendingUndo?.let { AutocorrectUndoOffer(it.undo.original, it.serial) }
 
+    /**
+     * The spatial decoder's correction for a word the rules did not settle (#385), or null to
+     * leave it to the trie. Asked only for a letter word that is neither learned nor an address,
+     * and whose correction, if any, is the trie's. It may replace a known word, and its
+     * correction may be two words ("je suis").
+     */
+    var spatialCorrection: (AutocorrectSuggestionSnapshot) -> String? = { null }
+
     /** Reason for the most recent Space outcome. Read by the service for one log line. */
     var lastSpaceDiagnosis: AutocorrectSpaceDiagnosis? = null
         private set
@@ -223,11 +237,16 @@ class AutocorrectInputCoordinator(
             offered != null &&
             expected.requestId == offered.requestId &&
             expected.input == offered.input
+        val spatial = offered?.takeIf {
+            identityEligible && !AddressLikeToken.matches(it.input) && AutocorrectToken.isLetterToken(it.input) &&
+                !it.isLearnedWord && !it.ruleCorrection
+        }?.let(spatialCorrection)
         val correction = offered?.primaryCorrection
         val applicable = when {
             !identityEligible || offered == null -> null
             AddressLikeToken.matches(offered.input) -> null
             !AutocorrectToken.isLetterToken(offered.input) -> null
+            spatial != null -> offered to spatial
             offered.isKnownWord && !offered.knownInputDominance -> null
             offered.isLearnedWord -> null
             correction == null || !AutocorrectToken.isLetterToken(correction) -> null
@@ -272,7 +291,7 @@ class AutocorrectInputCoordinator(
                     },
                 )
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.APPLIED
-                lastSpaceDetail = null
+                lastSpaceDetail = if (spatial != null) "SPATIAL" else null
                 AutocorrectSpaceResult.CORRECTED
             }
             is AutocorrectTransactionResult.IndeterminateMutation -> {

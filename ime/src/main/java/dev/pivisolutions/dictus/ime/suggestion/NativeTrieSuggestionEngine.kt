@@ -132,6 +132,13 @@ class NativeTrieSuggestionEngine(
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
         /**
+         * Space's decision comes from a rule that answers before the spatial decoder, as iOS
+         * `correctionProposal` (#1011): an app or brand name kept or recased ([CuratedNames]), the
+         * words before choosing a spelling (`il ma` → `m'a`, `a` → `à`), an accent rule or a
+         * contraction. Only the trie's own fuzzy reading is weighed against the decoder.
+         */
+        val ruleCorrection: Boolean = false,
+        /**
          * The typed word is kept and [suggestions] are corrections offered for a tap only: no
          * slot is the one Space applies (iOS `.candidates`, #388).
          */
@@ -291,6 +298,7 @@ class NativeTrieSuggestionEngine(
         val primaryCorrection: String?,
         val suggestions: List<String>,
         val contextIdentity: CorrectionContextIdentity? = null,
+        val ruleCorrection: Boolean = false,
         val keepsTypedWord: Boolean = false,
     )
 
@@ -447,6 +455,7 @@ class NativeTrieSuggestionEngine(
                 primaryCorrection = casing,
                 suggestions = (listOfNotNull(casing) + others).take(maxResults),
                 contextIdentity = contextIdentity,
+                ruleCorrection = true,
             )
         }
         // A brand among the candidates is written in its casing, not the typed case (#404):
@@ -510,6 +519,8 @@ class NativeTrieSuggestionEngine(
                 suggestions = offered.take(maxResults).map(restoreCase),
                 contextIdentity = contextIdentity,
                 keepsTypedWord = true,
+                // Two accented spellings keep the typed word: the accent rule's answer (#388).
+                ruleCorrection = ambiguousAccents != null,
             )
         }
         return QueryResult(
@@ -521,6 +532,7 @@ class NativeTrieSuggestionEngine(
                 .take(maxResults)
                 .map(restoreCase),
             contextIdentity = contextIdentity,
+            ruleCorrection = contextualSpelling != null || profileCorrection != null || contraction != null,
         )
     }
 
@@ -639,6 +651,7 @@ class NativeTrieSuggestionEngine(
                     primaryCorrection = result.primaryCorrection,
                     suggestions = result.suggestions,
                     contextIdentity = result.contextIdentity,
+                    ruleCorrection = result.ruleCorrection,
                     keepsTypedWord = result.keepsTypedWord,
                 )
             }

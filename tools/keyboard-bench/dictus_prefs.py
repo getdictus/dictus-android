@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-dictus_prefs.py -- Read or set one string preference of the Dictus debug build (#382).
+dictus_prefs.py -- Read or set one preference of the Dictus debug build (#382).
 
 The replay types French on the French keyboard and English on the English one, and the
 Dictus keyboard reads its language from the app's DataStore (`keyboard_language` in
@@ -9,9 +9,13 @@ every other entry byte for byte, so a shared emulator's settings stay as they we
 It needs a debuggable build (`run-as`) and stops the app first, so no process holds
 the old file in memory.
 
+A value is written as a string, or as a boolean with --bool: the spatial autocorrect switch
+(#385), `debug_spatial_autocorrect`, is one.
+
 Usage:
     python3 -I tools/keyboard-bench/dictus_prefs.py --serial emulator-5554 get keyboard_language
     python3 -I tools/keyboard-bench/dictus_prefs.py --serial emulator-5554 set keyboard_language en
+    python3 -I tools/keyboard-bench/dictus_prefs.py --serial emulator-5554 set --bool debug_spatial_autocorrect true
 """
 
 import argparse
@@ -74,17 +78,32 @@ def entries(data):
             yield name, value, raw
 
 
-def string_of(entry):
+def value_of(entry):
     value = next(v for n, v, _ in fields(entry) if n == 2)
-    return next((v.decode() for n, v, _ in fields(value) if n == 5), None)   # Value.string = 5
+    for n, v, _ in fields(value):
+        if n == 5:                              # Value.string = 5
+            return v.decode()
+        if n == 1:                              # Value.boolean = 1
+            return "true" if v else "false"
+    return None
 
 
-def string_entry(name, text):
+def preference_entry(name, value):
+    """value is the encoded Value message."""
     k = name.encode()
-    t = text.encode()
-    value = b"\x2a" + varint(len(t)) + t
     entry = b"\x0a" + varint(len(k)) + k + b"\x12" + varint(len(value)) + value
     return b"\x0a" + varint(len(entry)) + entry
+
+
+def string_value(text):
+    t = text.encode()
+    return b"\x2a" + varint(len(t)) + t
+
+
+def bool_value(text):
+    if text not in ("true", "false"):
+        raise SystemExit("a boolean is true or false")
+    return b"\x08" + (b"\x01" if text == "true" else b"\x00")
 
 
 def adb(serial, *args, data=None):
@@ -105,6 +124,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--serial", required=True)
     parser.add_argument("action", choices=["get", "set"])
+    parser.add_argument("--bool", action="store_true", help="write the value as a boolean")
     parser.add_argument("name")
     parser.add_argument("value", nargs="?")
     args = parser.parse_args()
@@ -112,14 +132,14 @@ def main():
     data = read_prefs(args.serial)
     current = {name: (entry, raw) for name, entry, raw in entries(data)}
     if args.action == "get":
-        print(string_of(current[args.name][0]) if args.name in current else "(unset)")
+        print(value_of(current[args.name][0]) if args.name in current else "(unset)")
         return
     if args.value is None:
         raise SystemExit("set needs a value")
     kept = b"".join(raw for name, (_, raw) in current.items() if name != args.name)
     adb(args.serial, "shell", "am", "force-stop", PACKAGE)
     adb(args.serial, "exec-in", "run-as", PACKAGE, "sh", "-c", f"mkdir -p {PATH.rsplit('/', 1)[0]} && cat > {PATH}",
-        data=kept + string_entry(args.name, args.value))
+        data=kept + preference_entry(args.name, (bool_value if args.bool else string_value)(args.value)))
     print(f"{args.name} = {args.value}")
 
 

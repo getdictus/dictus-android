@@ -7,6 +7,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.premium.ProStatus
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.model.ModelManager
 import kotlinx.coroutines.flow.first
@@ -35,7 +36,7 @@ class SettingsResetLearnedWordsTest {
             dataStore.edit { it[PreferenceKeys.PERSONAL_DICTIONARY] = setOf("dictus", "bonzai") }
         }
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val viewModel = SettingsViewModel(dataStore, ModelManager(context))
+        val viewModel = SettingsViewModel(dataStore, ModelManager(context), ProStatus(dataStore, debugBuild = true))
         composeRule.setContent { DictusTheme { SettingsScreen(viewModel = viewModel) } }
     }
 
