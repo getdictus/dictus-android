@@ -32,7 +32,11 @@ tools/keyboard-bench/run.sh --serial emulator-5554 --keyboard gboard --langs en 
 
 About 5 minutes per language and keyboard. `--mode probe` sweeps taps across the key
 boundaries instead. Writes `taps.tsv`, `commits.tsv`, `texts.tsv`
-and `keys.tsv` to `build/keyboard-bench/<keyboard>-<lang>/`.
+and `keys.tsv` to `build/keyboard-bench/<keyboard>-<lang>/`. `--mode map` taps 2 px apart along lines
+around the space bar, the edge keys, the top row and the bottom of the keyboard (`map.tsv`, #370),
+`--lines REGEX` to map a few; `--snap gaps|gaps,below` replays with the taps that land in no key
+area moved into the nearest one, `--rects FILE` giving the key rectangles for a keyboard whose
+nodes are its labels (Dictus).
 
 ## What the replay does
 

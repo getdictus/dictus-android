@@ -24,6 +24,9 @@ KEYBOARD=""
 LANGS="fr,en"
 MODE=replay
 SENTENCES=""
+LINES=""
+SNAP=""
+RECTS=""
 OUT="$ROOT/build/keyboard-bench"
 
 while [[ $# -gt 0 ]]; do
@@ -33,6 +36,9 @@ while [[ $# -gt 0 ]]; do
     --langs) LANGS="$2"; shift 2 ;;
     --mode) MODE="$2"; shift 2 ;;
     --sentences) SENTENCES="$2"; shift 2 ;;
+    --lines) LINES="$2"; shift 2 ;;
+    --snap) SNAP="$2"; shift 2 ;;
+    --rects) RECTS="$(cat "$2")"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
@@ -72,7 +78,11 @@ for lang in "${langs[@]}"; do
   fi
   select_ime
   extra=()
-  [[ -n "$SENTENCES" ]] && extra=(-e sentences "$SENTENCES")
+  [[ -n "$SENTENCES" ]] && extra+=(-e sentences "$SENTENCES")
+  # Quoted for the device shell, which adb hands the command to: a regex can hold | and parentheses.
+  [[ -n "$LINES" ]] && extra+=(-e lines "'$LINES'")
+  [[ -n "$SNAP" ]] && extra+=(-e snap "$SNAP")
+  [[ -n "$RECTS" ]] && extra+=(-e rects "'$RECTS'")
   log="$(adbs shell am instrument -w -e lang "$lang" -e out "$name" -e mode "$MODE" "${extra[@]}" \
     "$APP_ID.test/androidx.test.runner.AndroidJUnitRunner")"
   echo "$log" >&2
@@ -85,5 +95,7 @@ for lang in "${langs[@]}"; do
 done
 
 if [[ "$MODE" == replay ]]; then
-  python3 -I "$BENCH/score.py" "${dirs[@]}" --keyboard "$KEYBOARD, emulator replay" --commit "$COMMIT"
+  label="$KEYBOARD, emulator replay"
+  [[ -n "$SNAP" ]] && label="$label, taps moved: $SNAP"
+  python3 -I "$BENCH/score.py" "${dirs[@]}" --keyboard "$label" --commit "$COMMIT"
 fi
