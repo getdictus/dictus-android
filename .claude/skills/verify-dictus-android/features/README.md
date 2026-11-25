@@ -120,7 +120,7 @@ Every iOS ID (the 179 of the iOS « All IDs » table, same order: 18 features, 1
 | `history.search` | Pro | present — « Rechercher dans les transcriptions », case- and accent-insensitive, « Aucun résultat » (#202) | no |
 | `history.delete` | Pro | present | no |
 | `history.detail` | Pro | present — copy, share | no |
-| `history.clear` | Pro | present — Réglages → Transcription → « Effacer l’historique » with the count, as on iOS, shown while entitled or while something is saved; also on the History screen (Android-only); confirmation « Tout supprimer » / « Annuler » (#202) | no |
+| `history.clear` | Pro | present — Réglages → Transcription → « Effacer l’historique » with the count, as on iOS, shown while entitled or while something is saved, history or transcription debug log, Pro or not (iOS #906); « Tout supprimer » empties both; also on the History screen (Android-only), same two stores; confirmation « Tout supprimer » / « Annuler » (#202) | no |
 | `history.toggle` | Pro | present — at the top of the history opened from the Pro hub; off: entries kept, dimmed and locked, nothing new saved (#202) | no |
 | `history.home-entry` | Pro | present — « Balayez pour l’historique » and the swipe, for a user entitled to the history (#202); no locked hint (no paywall) | no |
 | `vocabulary.add` | Pro on iOS — absent | absent | no |

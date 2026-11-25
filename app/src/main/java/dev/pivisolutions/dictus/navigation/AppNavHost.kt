@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -312,6 +313,7 @@ private fun MainTabsScreen(
     // Settings' « Effacer l'historique » row (#202).
     val historyClearViewModel: HistoryClearViewModel = hiltViewModel(activityViewModelOwner)
     val historyCount by historyClearViewModel.count.collectAsState()
+    val hasSomethingToClear by historyClearViewModel.hasSomethingToDelete.collectAsState()
 
     ActiveDictationRedirect(
         dictationController = dictationController,
@@ -439,6 +441,12 @@ private fun MainTabsScreen(
                 ModelsScreen(dictationController = dictationController)
             }
             composable(AppDestination.Settings.route) {
+                // The debug log has no observer: read it again each time Settings is shown, the app
+                // back in front included, as iOS refreshes `hasSomethingToClear` (#906).
+                LifecycleResumeEffect(Unit) {
+                    historyClearViewModel.refresh()
+                    onPauseOrDispose {}
+                }
                 SettingsScreen(
                     onNavigateToLicences = {
                         navController.navigate(AppDestination.Licences.route)
@@ -457,8 +465,9 @@ private fun MainTabsScreen(
                     },
                     clearHistoryVisible = HistoryAvailability.clearRowIsVisible(
                         isEntitled = proState.isAvailable(ProFeature.HISTORY),
-                        hasSavedRecords = historyCount > 0,
+                        hasSavedRecords = hasSomethingToClear,
                     ),
+                    clearHistoryEnabled = hasSomethingToClear,
                     historyCount = historyCount,
                     onClearHistory = historyClearViewModel::clear,
                     proRowVisible = proState.settingsRowVisible,

@@ -38,7 +38,9 @@ object HistoryAvailability {
     /**
      * Whether Settings shows « Effacer l'historique », iOS `clearRowIsVisible`: a lapsed
      * entitlement must never stand between the user and deleting what is stored, so the row
-     * stays while there is something to delete.
+     * stays while there is something to delete. [hasSavedRecords] counts the transcription debug
+     * log too, as iOS counts the polish journal since #906: the row empties both, and the log
+     * holds dictated text for everyone, Pro or not.
      */
     fun clearRowIsVisible(isEntitled: Boolean, hasSavedRecords: Boolean): Boolean = isEntitled || hasSavedRecords
 

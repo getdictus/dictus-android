@@ -22,7 +22,7 @@ class SettingsClearHistoryTest {
 
     @get:Rule val composeRule = createComposeRule()
 
-    private fun setSettings(visible: Boolean, count: Int, onClear: () -> Unit = {}) {
+    private fun setSettings(visible: Boolean, count: Int, enabled: Boolean = count > 0, onClear: () -> Unit = {}) {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val dataStore = FakeDataStore()
         val viewModel = SettingsViewModel(dataStore, ModelManager(context), ProStatus(dataStore, debugBuild = true))
@@ -31,6 +31,7 @@ class SettingsClearHistoryTest {
                 SettingsScreen(
                     viewModel = viewModel,
                     clearHistoryVisible = visible,
+                    clearHistoryEnabled = enabled,
                     historyCount = count,
                     onClearHistory = onClear,
                 )
@@ -54,6 +55,21 @@ class SettingsClearHistoryTest {
         composeRule.onNodeWithText("Effacer l’historique ?").assertExists()
         assertEquals(0, cleared)
 
+        composeRule.onNodeWithText("Tout supprimer").performClick()
+        assertEquals(1, cleared)
+    }
+
+    /** iOS #906: no history (no Pro), but a debug log. The row deletes it, with no « 0 » beside it. */
+    @Test
+    fun `a debug log alone keeps the row usable, without a count`() {
+        var cleared = 0
+        setSettings(visible = true, count = 0, enabled = true, onClear = { cleared++ })
+
+        composeRule.onNodeWithText("0").assertDoesNotExist()
+        composeRule.onNodeWithTag("settings_clear_history").performClick()
+        composeRule.onNodeWithText(
+            "Toutes les transcriptions enregistrées sur cet appareil seront supprimées. Cette action est irréversible.",
+        ).assertExists()
         composeRule.onNodeWithText("Tout supprimer").performClick()
         assertEquals(1, cleared)
     }

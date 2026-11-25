@@ -98,6 +98,7 @@ fun SettingsScreen(
     isPro: Boolean = false,
     onNavigateToProHub: () -> Unit = {},
     clearHistoryVisible: Boolean = false,
+    clearHistoryEnabled: Boolean = false,
     historyCount: Int = 0,
     onClearHistory: () -> Unit = {},
 ) {
@@ -189,15 +190,16 @@ fun SettingsScreen(
                 onSelect = { viewModel.setLanguage(it) },
             )
             // iOS SettingsView, last row of Transcription (#202): for a user entitled to the
-            // history, and for anyone who still has saved transcriptions after losing it
-            // (`HistoryAvailability.clearRowIsVisible`). The count is a trailing detail, never
-            // inside the sentence, as iOS writes it.
+            // history, and for anyone who still has something to delete, saved transcriptions or
+            // the debug log, Pro or not (`HistoryAvailability.clearRowIsVisible`, iOS #906). The
+            // count is a trailing detail, never inside the sentence, and never « 0 » on a row
+            // that still empties the debug log.
             if (clearHistoryVisible) {
                 SettingDivider()
                 SettingRow(
                     label = { SettingLabel(stringResource(R.string.history_clear), color = DictusColors.Destructive) },
                     modifier = Modifier
-                        .clickable(enabled = historyCount > 0) { showClearHistory = true }
+                        .clickable(enabled = clearHistoryEnabled) { showClearHistory = true }
                         .testTag("settings_clear_history"),
                 ) {
                     if (historyCount > 0) {
