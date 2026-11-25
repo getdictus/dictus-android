@@ -105,4 +105,13 @@ object PreferenceKeys {
 
     /** Debug builds only: grants Pro without a purchase (iOS #460). Read through `ProStatus`. */
     val DEBUG_PRO_ENTITLEMENT_FORCED = booleanPreferencesKey("debug_pro_entitlement_forced")
+
+    /**
+     * Per-feature Pro switches (#207), iOS `ProFeature.settingsKey`. An unwritten key reads as on.
+     * Read and written only through `ProFeatureSwitches`.
+     */
+    val PRO_SMART_MODE_ENABLED = booleanPreferencesKey("pro_smart_mode_enabled")
+    val PRO_HISTORY_ENABLED = booleanPreferencesKey("pro_history_enabled")
+    val PRO_VOCABULARY_ENABLED = booleanPreferencesKey("pro_vocabulary_enabled")
+    val PRO_VOICE_NOTES_ENABLED = booleanPreferencesKey("pro_voice_notes_enabled")
 }

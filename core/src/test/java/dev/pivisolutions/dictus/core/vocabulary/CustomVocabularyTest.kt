@@ -1,11 +1,16 @@
 package dev.pivisolutions.dictus.core.vocabulary
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import dev.pivisolutions.dictus.core.premium.PremiumFlags
+import androidx.datastore.preferences.core.Preferences
+import dev.pivisolutions.dictus.core.premium.ProFeature
+import dev.pivisolutions.dictus.core.premium.ProFeatureSwitches
+import dev.pivisolutions.dictus.core.premium.ProStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -19,7 +24,10 @@ import org.robolectric.RobolectricTestRunner
 import timber.log.Timber
 import java.io.File
 
-/** The one gate (#203): off or empty means the text comes back as it went in, and the log holds counts only. */
+/**
+ * The one gate (#203): Pro and the Vocabulary switch on, as iOS `VocabularyAvailability`. Off or
+ * empty means the text comes back as it went in, and the log holds counts only.
+ */
 @RunWith(RobolectricTestRunner::class)
 class CustomVocabularyTest {
 
@@ -34,14 +42,25 @@ class CustomVocabularyTest {
         }
     }
 
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var store: VocabularyStore
+
+    /** The production gate, read from the same DataStore the store writes to. */
+    private lateinit var gated: CustomVocabulary
 
     @Before
     fun setUp() {
         Timber.plant(tree)
-        val dataStore = PreferenceDataStoreFactory.create(scope = scope) { File(folder.root, "prefs.preferences_pb") }
+        dataStore = PreferenceDataStoreFactory.create(scope = scope) { File(folder.root, "prefs.preferences_pb") }
         store = VocabularyStore(dataStore, isEntitled = { true })
+        val switches = ProFeatureSwitches(dataStore, debugBuild = true)
+        gated = CustomVocabulary(store, isEnabled = { switches.isAvailable(ProFeature.VOCABULARY).first() })
     }
+
+    private suspend fun forcePro() = ProStatus(dataStore, debugBuild = true).setDebugProEntitlementForced(true)
+
+    private suspend fun setSwitch(isOn: Boolean) =
+        ProFeatureSwitches(dataStore, debugBuild = true).set(ProFeature.VOCABULARY, isOn)
 
     @After
     fun tearDown() {
@@ -56,15 +75,37 @@ class CustomVocabularyTest {
     }
 
     @Test
-    fun `the vocabulary is hidden by default`() {
-        assertFalse(PremiumFlags.VOCABULARY)
+    fun `without Pro the text is unchanged even with entries stored`() = runTest {
+        storeKubernetes()
+        assertEquals(raw, gated.corrected(raw))
+        assertEquals(listOf("vocabularyApplied: enabled=no entries=0 replacements=0 chars=${raw.length}"), logs)
     }
 
     @Test
-    fun `with the flag off the text is unchanged even with entries stored`() = runTest {
+    fun `with Pro and the switch off nothing is replaced and nothing is deleted`() = runTest {
         storeKubernetes()
-        assertEquals(raw, CustomVocabulary(store).corrected(raw))
+        forcePro()
+        setSwitch(false)
+        assertEquals(raw, gated.corrected(raw))
+        assertEquals(listOf("Kubernetes"), store.loadEntries().map { it.term })
         assertEquals(listOf("vocabularyApplied: enabled=no entries=0 replacements=0 chars=${raw.length}"), logs)
+    }
+
+    @Test
+    fun `with Pro and the switch on, never written, the stored vocabulary is applied`() = runTest {
+        storeKubernetes()
+        forcePro()
+        assertEquals("on passe sur Kubernetes demain", gated.corrected(raw))
+    }
+
+    @Test
+    fun `switching back on applies the terms kept while it was off`() = runTest {
+        storeKubernetes()
+        forcePro()
+        setSwitch(false)
+        assertEquals(raw, gated.corrected(raw))
+        setSwitch(true)
+        assertEquals("on passe sur Kubernetes demain", gated.corrected(raw))
     }
 
     @Test

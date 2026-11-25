@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
-import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -35,14 +34,17 @@ import java.util.UUID
  * Write first, publish second comes for free: [entries] only emits what DataStore has
  * written, so a failed write publishes nothing and the call returns false.
  *
- * The flag gates growth, never removal, as on iOS: [add] refuses while the feature is
- * hidden, [update], [delete] and [resetAll] do not, so data the user can no longer see
+ * The gate covers growth, never removal, as on iOS: [add] refuses without the
+ * entitlement, [update], [delete] and [resetAll] do not, so data the user can no longer use
  * is never imprisoned.
  */
 class VocabularyStore(
     private val dataStore: DataStore<Preferences>,
-    /** Read at each call. Injected so the tests can drive both directions of the gate. */
-    private val isEntitled: () -> Boolean = { PremiumFlags.VOCABULARY },
+    /**
+     * iOS `VocabularyAvailability.isEntitled`: Pro and the Vocabulary switch on. Read at each
+     * call. Injected so the tests can drive both directions of the gate.
+     */
+    private val isEntitled: suspend () -> Boolean,
 ) {
 
     /** The stored entries, newest first. Invalid entries on disk are dropped, not trusted. */
@@ -63,7 +65,7 @@ class VocabularyStore(
         return commit { current ->
             when {
                 current.size >= MAX_ENTRIES -> null
-                current.any { it.term.lowercase() == entry.term.lowercase() } -> null
+                containsTerm(current, entry.term) -> null
                 else -> listOf(entry) + current
             }
         }
@@ -119,6 +121,16 @@ class VocabularyStore(
          * would stop correcting text with nothing on screen to say why.
          */
         const val MAX_ENTRIES = 200
+
+        /**
+         * Whether [term] is already stored, ignoring case and surrounding spaces, as iOS
+         * `VocabularyStore.contains(term:excluding:)`. [excluding] is the entry being edited,
+         * which may keep its own term.
+         */
+        fun containsTerm(entries: List<VocabularyEntry>, term: String, excluding: UUID? = null): Boolean {
+            val needle = term.trim().lowercase()
+            return entries.any { it.id != excluding && it.term.lowercase() == needle }
+        }
 
         internal fun encode(entries: List<VocabularyEntry>): String {
             val array = JSONArray()

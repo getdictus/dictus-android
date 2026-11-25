@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.pivisolutions.dictus.BuildConfig
 import dev.pivisolutions.dictus.core.premium.NoPurchaseProUnlocker
+import dev.pivisolutions.dictus.core.premium.ProFeatureSwitches
 import dev.pivisolutions.dictus.core.premium.ProStatus
 import dev.pivisolutions.dictus.core.premium.ProUnlocker
 import javax.inject.Singleton
@@ -26,6 +27,11 @@ object ProModule {
     @Singleton
     fun provideProStatus(dataStore: DataStore<Preferences>): ProStatus =
         ProStatus(dataStore, debugBuild = BuildConfig.DEBUG)
+
+    @Provides
+    @Singleton
+    fun provideProFeatureSwitches(dataStore: DataStore<Preferences>): ProFeatureSwitches =
+        ProFeatureSwitches(dataStore, debugBuild = BuildConfig.DEBUG)
 
     @Provides
     @Singleton
