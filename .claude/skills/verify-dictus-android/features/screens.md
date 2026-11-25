@@ -44,8 +44,8 @@ Captures are in [`../screens/`](../screens/), one `<screen-id>.png` each: Pixel 
 | `app.pro.hub` | — | — | pro.subscription | absent | — |
 | `app.pro.smart-modes` | — | — | smart-modes | absent | — |
 | `app.pro.history` | — | — | history | absent | — |
-| `app.pro.vocabulary` | — | — | vocabulary | absent | — |
-| `app.pro.vocabulary.term-editor` | — | — | vocabulary | absent | — |
+| `app.pro.vocabulary` | « Vocabulaire » (#208): the feature's switch, « Vos termes » (term, « Remplace : … » or « En attente d’erreurs à corriger », per-term switch, swipe left to delete), « Ajouter un terme », « Réinitialiser le vocabulaire » | Pro only: Réglages → Transcription → `Vocabulaire` (iOS: from the Dictus Pro hub) | vocabulary | empty / terms / switch off: terms dimmed and inert + « Le vocabulaire est désactivé… » / 200 terms: add disabled + limit footer / « Réinitialiser le vocabulaire ? » dialog | no — emulator captures in the #208 PR |
+| `app.pro.vocabulary.term-editor` | Bottom sheet « Nouveau terme » / « Modifier »: « Annuler », « Enregistrer », « L’orthographe correcte », « Ce que Dictus écrit à la place » | Vocabulaire → `Ajouter un terme`, or tap a term | vocabulary | empty / term only (« Facultatif… ») / duplicate (red) / « Enregistrement impossible… » | no — emulator captures in the #208 PR |
 | `app.pro.voice-notes` | — | — | voice-notes | absent | — |
 | `app.paywall` | — | — | pro.subscription | absent | — |
 | `app.pro.trial-announcement` | — | — | pro.subscription | absent | — |
