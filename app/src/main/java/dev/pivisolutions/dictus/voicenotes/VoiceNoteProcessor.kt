@@ -62,19 +62,28 @@ class VoiceNoteProcessor(
     }
 
     private suspend fun drain() {
+        // Runs are chained, so no other run is transcribing now: a note still marked as being
+        // transcribed was left so by a run whose last write failed, and waits again.
+        store.mutate { it.recoverInterrupted() }
         while (true) {
             val note = store.queue.value.next ?: return
             if (!mayTranscribe()) {
                 Timber.i("Voice notes paused: not entitled, waiting=%d", store.queue.value.notes.count { it.state == VoiceNoteState.Waiting })
                 return
             }
-            transcribe(note)
+            // Stops at the first write that fails (storage full): going on would pick the same
+            // note again and again.
+            if (!transcribe(note)) return
         }
     }
 
-    private suspend fun transcribe(note: VoiceNote) {
+    /** False when the queue could not be written, which ends the run. */
+    private suspend fun transcribe(note: VoiceNote): Boolean {
         val startedAt = System.nanoTime()
-        store.mutate { queue -> queue.update(note.id) { it.copy(state = VoiceNoteState.Transcribing(0.0)) } }
+        if (!store.mutate { queue -> queue.update(note.id) { it.copy(state = VoiceNoteState.Transcribing(0.0)) } }) {
+            Timber.w("Voice note not claimed: queue write failed, id=%s", note.id.toString().take(8))
+            return false
+        }
         val file = store.audioFile(note) ?: return fail(note, VoiceNoteFailure.UNREADABLE, "audio missing")
 
         val samples = try {
@@ -110,16 +119,22 @@ class VoiceNoteProcessor(
 
         val transcript = parts.joinToString(" ")
         if (transcript.isEmpty()) return fail(note, VoiceNoteFailure.NO_SPEECH, "empty transcript")
-        store.mutate { it.complete(note.id, transcript) }
+        if (!store.mutate { it.complete(note.id, transcript) }) {
+            // The note goes back to waiting on the next run, its audio kept: transcribed again
+            // rather than lost.
+            Timber.w("Voice note transcript not saved: queue write failed, id=%s", note.id.toString().take(8))
+            return false
+        }
         Timber.i(
             "Voice note finished: id=%s, chars=%d, elapsedMs=%d",
             note.id.toString().take(8), transcript.length, (System.nanoTime() - startedAt) / 1_000_000,
         )
+        return true
     }
 
-    private fun fail(note: VoiceNote, failure: VoiceNoteFailure, detail: String) {
-        store.mutate { it.fail(note.id, failure) }
+    private fun fail(note: VoiceNote, failure: VoiceNoteFailure, detail: String): Boolean {
         Timber.w("Voice note failed: id=%s, failure=%s, detail=%s", note.id.toString().take(8), failure, detail)
+        return store.mutate { it.fail(note.id, failure) }
     }
 
     private fun failure(error: VoiceNoteDecodeException): VoiceNoteFailure = when (error) {

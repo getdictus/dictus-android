@@ -37,8 +37,10 @@ class VoiceNoteQueueStore(private val directory: File) {
     val queue: StateFlow<VoiceNoteQueue> = _queue.asStateFlow()
 
     init {
-        // Copies a share left behind when the process died between copy and admission.
+        // Copies a share left behind when the process died between copy and admission, and audio
+        // a note stopped referring to just before the process died.
         incomingDirectory.listFiles()?.forEach { it.delete() }
+        sweepUnreferencedAudio()
     }
 
     fun audioFile(note: VoiceNote): File? = note.audioFileName?.let { File(audioDirectory, it) }
@@ -83,7 +85,11 @@ class VoiceNoteQueueStore(private val directory: File) {
         return true
     }
 
-    /** A note being transcribed is not deleted under the processor, as on iOS. */
+    /**
+     * A note being transcribed is not deleted under the processor, as on iOS. Synchronised with
+     * [mutate], so the processor cannot claim the note between the check and the removal.
+     */
+    @Synchronized
     fun delete(id: UUID): Boolean {
         val note = _queue.value.note(id) ?: return false
         if (note.state is VoiceNoteState.Transcribing) return false

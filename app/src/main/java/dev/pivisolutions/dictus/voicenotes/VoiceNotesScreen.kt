@@ -169,7 +169,7 @@ fun VoiceNotesScreen(
         }
         notes.forEach { note ->
             key(note.id) {
-                NoteCard(note, isAvailable, onRetry = { onRetry(note) }, onDelete = { onDelete(note) })
+                NoteCard(note, isAvailable, switchOn, onRetry = { onRetry(note) }, onDelete = { onDelete(note) })
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -178,7 +178,7 @@ fun VoiceNotesScreen(
 }
 
 @Composable
-private fun NoteCard(note: VoiceNote, isAvailable: Boolean, onRetry: () -> Unit, onDelete: () -> Unit) {
+private fun NoteCard(note: VoiceNote, isAvailable: Boolean, switchOn: Boolean, onRetry: () -> Unit, onDelete: () -> Unit) {
     val context = LocalContext.current
     GlassCard(
         modifier = Modifier
@@ -220,7 +220,7 @@ private fun NoteCard(note: VoiceNote, isAvailable: Boolean, onRetry: () -> Unit,
         }
         Spacer(modifier = Modifier.height(8.dp))
         when (val state = note.state) {
-            VoiceNoteState.Waiting, is VoiceNoteState.Transcribing -> Pending(state, isAvailable)
+            VoiceNoteState.Waiting, is VoiceNoteState.Transcribing -> Pending(state, isAvailable, switchOn)
             VoiceNoteState.Done -> Transcript(note.transcript.orEmpty())
             is VoiceNoteState.Failed -> Failed(state.failure, canRetry = state.failure.isRetryable && note.audioFileName != null, onRetry)
         }
@@ -228,7 +228,7 @@ private fun NoteCard(note: VoiceNote, isAvailable: Boolean, onRetry: () -> Unit,
 }
 
 @Composable
-private fun Pending(state: VoiceNoteState, isAvailable: Boolean) {
+private fun Pending(state: VoiceNoteState, isAvailable: Boolean, switchOn: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = DictusColors.Accent)
         Text(
@@ -249,9 +249,11 @@ private fun Pending(state: VoiceNoteState, isAvailable: Boolean) {
             modifier = Modifier.fillMaxWidth(),
         )
     }
+    // Why it waits: the user's own switch, or no Pro (iOS shows only the second; it has the
+    // switch on another screen).
     if (!isAvailable) {
         Spacer(modifier = Modifier.height(8.dp))
-        Caption(stringResource(R.string.voice_notes_paused))
+        Caption(stringResource(if (switchOn) R.string.voice_notes_paused else R.string.voice_notes_off_footer))
     }
 }
 

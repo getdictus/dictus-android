@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -76,9 +77,19 @@ class VoiceNotesScreenTest {
     }
 
     @Test
-    fun `switched off, the screen says the shares are not transcribed, and waiting notes say why`() {
+    fun `switched off, the screen and the waiting note say the switch is off, not that Pro is missing`() {
         show(listOf(note(VoiceNoteState.Waiting)), switchOn = false, available = false)
-        composeRule.onNodeWithText("Voice notes are off: a voice message shared to Dictus is not transcribed. Your settings are kept.").assertIsDisplayed()
+        assertEquals(
+            2,
+            composeRule.onAllNodesWithText("Voice notes are off: a voice message shared to Dictus is not transcribed. Your settings are kept.")
+                .fetchSemanticsNodes().size,
+        )
+        composeRule.onNodeWithText("Transcribing voice notes is part of Dictus Pro.", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `without Pro, a waiting note says Pro is needed`() {
+        show(listOf(note(VoiceNoteState.Waiting)), switchOn = true, available = false)
         composeRule.onNodeWithText("Transcribing voice notes is part of Dictus Pro.", substring = true).assertIsDisplayed()
     }
 }

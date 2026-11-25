@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.AlertDialog
@@ -67,7 +68,18 @@ class VoiceNoteShareActivity : ComponentActivity() {
                 }
             }
         }
-        if (savedInstanceState == null) lifecycleScope.launch { receive(sharedUris(intent)) }
+        when {
+            savedInstanceState == null -> lifecycleScope.launch { receive(sharedUris(intent)) }
+            // Recreated (a rotation) over a refusal: the dialog comes back. Recreated during the
+            // reception: the files may already be in the queue, so they are not taken twice.
+            savedInstanceState.containsKey(STATE_REFUSAL) -> refusal = savedInstanceState.getInt(STATE_REFUSAL)
+            else -> finish()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        refusal?.let { outState.putInt(STATE_REFUSAL, it) }
     }
 
     private suspend fun receive(uris: List<Uri>) {
@@ -91,14 +103,18 @@ class VoiceNoteShareActivity : ComponentActivity() {
             return
         }
         val result = withContext(Dispatchers.IO) { intake.receive(uris) }
+        val refusalMessage = when (result.refusal) {
+            null -> null
+            VoiceNoteIntake.Refusal.NOT_AUDIO -> R.string.voice_notes_share_not_audio
+            VoiceNoteIntake.Refusal.TOO_LONG -> R.string.voice_notes_failure_too_long
+            VoiceNoteIntake.Refusal.COULD_NOT_RECEIVE -> R.string.voice_notes_share_could_not_receive
+        }
         if (result.added.isEmpty()) {
-            refusal = when (result.refusal) {
-                VoiceNoteIntake.Refusal.NOT_AUDIO -> R.string.voice_notes_share_not_audio
-                VoiceNoteIntake.Refusal.TOO_LONG -> R.string.voice_notes_failure_too_long
-                else -> R.string.voice_notes_share_could_not_receive
-            }
+            refusal = refusalMessage ?: R.string.voice_notes_share_could_not_receive
             return
         }
+        // Some files were taken, others not: the queue opens, and a toast says why one is missing.
+        refusalMessage?.let { Toast.makeText(applicationContext, it, Toast.LENGTH_LONG).show() }
         processor.kick()
         startActivity(
             Intent(this, MainActivity::class.java)
@@ -109,6 +125,8 @@ class VoiceNoteShareActivity : ComponentActivity() {
     }
 
     private companion object {
+        const val STATE_REFUSAL = "refusal"
+
         /**
          * Nothing is sold on Android yet (#5): a refusal names no subscription, iOS #236. Becomes
          * `PremiumFlags.PAYWALL_VISIBLE` when #409 lands.

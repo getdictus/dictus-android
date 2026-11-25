@@ -81,16 +81,19 @@ object SharedAudioDecoder {
             }
             extractor.selectTrack(track)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: throw VoiceNoteDecodeException.NoAudioTrack()
-            codec = try {
-                MediaCodec.createDecoderByType(mime).apply {
-                    configure(format, null, null, 0)
-                    start()
-                }
+            try {
+                // Held before configure(), so the finally block releases a codec that fails there.
+                codec = MediaCodec.createDecoderByType(mime)
+                codec.configure(format, null, null, 0)
+                codec.start()
             } catch (e: Exception) {
                 throw VoiceNoteDecodeException.Unreadable("no decoder for $mime")
             }
             val output = FloatSink(limit = SharedAudioDecoding.maximumSamples(maximumSeconds))
-            drain(extractor, codec, format, output)
+            val reachedEnd = drain(extractor, codec, format, output)
+            // A container without a duration, or understating it, is caught here: a note cut at
+            // the cap would otherwise pass for the whole note.
+            if (!reachedEnd) throw VoiceNoteDecodeException.TooLong(output.size / SharedAudioDecoding.SAMPLE_RATE)
             if (output.size == 0) throw VoiceNoteDecodeException.Empty()
             return output.toFloatArray()
         } finally {
@@ -102,7 +105,8 @@ object SharedAudioDecoder {
         }
     }
 
-    private fun drain(extractor: MediaExtractor, codec: MediaCodec, inputFormat: MediaFormat, output: FloatSink) {
+    /** Decodes into [output]; true at the end of the stream, false when the cap stopped it first. */
+    private fun drain(extractor: MediaExtractor, codec: MediaCodec, inputFormat: MediaFormat, output: FloatSink): Boolean {
         val info = MediaCodec.BufferInfo()
         var channels = inputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
         var resampler = StreamingResampler(inputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE))
@@ -156,11 +160,12 @@ object SharedAudioDecoder {
                     codec.releaseOutputBuffer(outputIndex, false)
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                         resampler.flush(output)
-                        return
+                        return true
                     }
                 }
             }
         }
+        return false
     }
 
     private fun audioTrack(extractor: MediaExtractor): Int? = (0 until extractor.trackCount).firstOrNull {

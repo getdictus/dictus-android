@@ -66,4 +66,15 @@ class VoiceNoteQueueStoreTest {
         assertTrue(store.delete(note.id))
         assertFalse(store.audioFile(note)!!.exists())
     }
+
+    @Test
+    fun `audio no note refers to is deleted when the store opens`() {
+        val store = VoiceNoteQueueStore(folder.root)
+        val note = store.admit(listOf(arrival(store, 1))).single()
+        val orphan = File(folder.root, "audio/left-by-a-crash.ogg").apply { writeText("x") }
+
+        VoiceNoteQueueStore(folder.root)
+        assertFalse(orphan.exists())
+        assertTrue(store.audioFile(note)!!.exists())
+    }
 }

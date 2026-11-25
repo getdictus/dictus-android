@@ -102,4 +102,25 @@ class VoiceNoteProcessorTest {
         assertEquals(VoiceNoteState.Waiting, store.queue.value.note(note.id)!!.state)
         assertEquals(emptyList<Int>(), chunks)
     }
+
+    @Test
+    fun `a note left transcribing by a run whose write failed waits again at the next run`() = runTest {
+        val (store, note) = storeWithOneNote()
+        store.mutate { queue -> queue.update(note.id) { it.copy(state = VoiceNoteState.Transcribing(0.5)) } }
+        processor(store).kick().join()
+        assertEquals(VoiceNoteState.Done, store.queue.value.note(note.id)!!.state)
+    }
+
+    @Test
+    fun `when the queue cannot be written the run stops instead of looping on the same note`() = runTest {
+        val (store, note) = storeWithOneNote()
+        folder.root.setWritable(false)
+        try {
+            processor(store).kick().join()
+        } finally {
+            folder.root.setWritable(true)
+        }
+        assertEquals(VoiceNoteState.Waiting, store.queue.value.note(note.id)!!.state)
+        assertEquals(emptyList<Int>(), chunks)
+    }
 }
