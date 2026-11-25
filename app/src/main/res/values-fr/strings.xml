@@ -137,6 +137,34 @@
     <string name="sound_settings_cancel_sound">Annuler</string>
     <string name="sound_settings_back_cd">Retour</string>
 
+    <!-- Shared voice notes (#204), iOS DictusShare and VoiceNoteCardView -->
+    <string name="voice_notes_title">Messages vocaux</string>
+    <string name="voice_notes_back_cd">Retour</string>
+    <string name="voice_notes_share_label">Transcrire avec Dictus</string>
+    <string name="voice_notes_how_to">Partagez un message vocal ou un fichier audio vers Dictus depuis WhatsApp, Telegram, Signal ou Fichiers : son texte apparaît ici.</string>
+    <string name="voice_notes_off_footer">Les messages vocaux sont désactivés : un message vocal partagé vers Dictus n’est pas transcrit. Vos réglages sont conservés.</string>
+    <string name="voice_notes_empty">Aucun message vocal pour l’instant.</string>
+    <string name="voice_notes_waiting">En attente</string>
+    <string name="voice_notes_transcribing">Transcription…</string>
+    <string name="voice_notes_paused">La transcription des messages vocaux fait partie de Dictus Pro. Les messages en attente reprennent quand Pro est actif, et vous pouvez les supprimer à tout moment.</string>
+    <string name="voice_notes_transcript">Transcription</string>
+    <string name="voice_notes_copy">Copier</string>
+    <string name="voice_notes_copied">Copié !</string>
+    <string name="voice_notes_delete">Supprimer</string>
+    <string name="voice_notes_retry">Réessayer</string>
+    <string name="voice_notes_not_transcribed">Non transcrit</string>
+    <string name="voice_notes_failure_unreadable">Ce fichier audio n’a pas pu être lu.</string>
+    <string name="voice_notes_failure_too_long">Ce message vocal dépasse 10 minutes, la durée maximale que Dictus transcrit.</string>
+    <string name="voice_notes_failure_no_speech">Aucun mot n’a été détecté dans ce message vocal.</string>
+    <string name="voice_notes_failure_transcription">La transcription a échoué. Vérifiez qu’un modèle est installé, puis réessayez.</string>
+    <string name="voice_notes_share_refused_title">Dictus ne peut pas transcrire ce fichier</string>
+    <string name="voice_notes_share_ok">OK</string>
+    <string name="voice_notes_share_not_audio">Ce fichier n’est pas un format audio que Dictus sait lire.</string>
+    <string name="voice_notes_share_could_not_receive">Dictus n’a pas pu recevoir ce fichier.</string>
+    <string name="voice_notes_share_needs_pro">La transcription des messages vocaux fait partie de Dictus Pro. Ouvrez Dictus pour en savoir plus.</string>
+    <string name="voice_notes_share_unavailable">La transcription des messages vocaux n’est pas disponible dans cette version de Dictus.</string>
+    <string name="voice_notes_share_switched_off">Les messages vocaux sont désactivés. Réactivez-les dans Dictus, Réglages > Messages vocaux.</string>
+
     <!-- DebugLogsScreen -->
     <string name="debug_logs_title">Debug Logs</string>
     <string name="debug_logs_empty">Aucun log disponible</string>

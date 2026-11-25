@@ -60,6 +60,7 @@ import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
 import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
+import dev.pivisolutions.dictus.voicenotes.VoiceNotesRoute
 import kotlinx.coroutines.flow.map
 
 /**
@@ -87,6 +88,7 @@ import kotlinx.coroutines.flow.map
  * @param onOpenAppSettings Callback to open app details settings.
  * @param openModelsRequested Start on the Models tab: the keyboard's mic tap with no model (#247).
  * @param microphoneRequested Ask for the microphone on Home: the keyboard's refused-mic notice (#307).
+ * @param openVoiceNotesRequested Start on « Messages vocaux »: audio was just shared to Dictus (#204).
  */
 @Composable
 fun AppNavHost(
@@ -100,6 +102,7 @@ fun AppNavHost(
     openSettingsRequested: Boolean = false,
     openModelsRequested: Boolean = false,
     microphoneRequested: Boolean = false,
+    openVoiceNotesRequested: Boolean = false,
 ) {
     val hasCompletedOnboarding by dataStore.data
         .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
@@ -148,10 +151,10 @@ fun AppNavHost(
                 imeSelected = imeSelected,
                 onOpenKeyboardSettings = onOpenKeyboardSettings,
                 onOpenAppSettings = onOpenAppSettings,
-                startDestination = if (openModelsRequested) {
-                    AppDestination.Models.route
-                } else {
-                    AppDestination.Home.route
+                startDestination = when {
+                    openModelsRequested -> AppDestination.Models.route
+                    openVoiceNotesRequested -> AppDestination.VoiceNotes.route
+                    else -> AppDestination.Home.route
                 },
                 microphoneRequested = microphoneRequested,
             )
@@ -321,6 +324,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.FeedbackLog.route &&
         currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
+        currentRoute != AppDestination.VoiceNotes.route &&
         !currentRoute.startsWith("sound_picker")
 
     Scaffold(
@@ -399,6 +403,9 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.Settings.route) {
                 SettingsScreen(
+                    onNavigateToVoiceNotes = {
+                        navController.navigate(AppDestination.VoiceNotes.route) { launchSingleTop = true }
+                    },
                     onNavigateToLicences = {
                         navController.navigate(AppDestination.Licences.route)
                     },
@@ -459,6 +466,18 @@ private fun MainTabsScreen(
                 SoundPickerScreen(
                     soundType = soundType,
                     onBack = { navController.popBackStack() },
+                )
+            }
+            composable(AppDestination.VoiceNotes.route) {
+                // Opened from a share, the screen is the graph's start: back then leads Home.
+                VoiceNotesRoute(
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(AppDestination.VoiceNotes.route) { inclusive = true }
+                            }
+                        }
+                    },
                 )
             }
             composable(AppDestination.Recording.route) {

@@ -85,6 +85,7 @@ import androidx.compose.material3.MaterialTheme
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToLicences: () -> Unit = {},
+    onNavigateToVoiceNotes: () -> Unit = {},
     onNavigateToDebugLogs: () -> Unit = {},
     onNavigateToSoundSettings: () -> Unit = {},
     onNavigateToTranscriptionDebug: () -> Unit = {},
@@ -101,6 +102,7 @@ fun SettingsScreen(
     val theme by viewModel.theme.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
     val debugProForced by viewModel.debugProEntitlementForced.collectAsState()
+    val isPro by viewModel.isPro.collectAsState()
 
     val context = LocalContext.current
 
@@ -139,6 +141,15 @@ fun SettingsScreen(
                 selected = language,
                 onSelect = { viewModel.setLanguage(it) },
             )
+            // Voice notes (#204). iOS lists them in the Dictus Pro hub; until the Android hub
+            // (#207) does, this row is the way back to the transcripts, for Pro users only.
+            if (isPro) {
+                SettingDivider()
+                SettingNavRow(
+                    label = stringResource(R.string.voice_notes_title),
+                    onClick = onNavigateToVoiceNotes,
+                )
+            }
         }
 
         // ---------- SECTION: Clavier ----------
