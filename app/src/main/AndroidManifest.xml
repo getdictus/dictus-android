@@ -32,6 +32,33 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Shared voice notes (#204). The activity is not exported; the alias carries the share
+            filters and is disabled until the user has Pro (VoiceNoteShareTarget), so Dictus is in
+            the share sheet for Pro users only. iOS accepts the same containers: Ogg / Opus
+            (WhatsApp, Telegram, Signal), MPEG-4 / AAC, MP3, WAV, FLAC, AMR, WebM.
+        -->
+        <activity
+            android:name=".voicenotes.VoiceNoteShareActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity-alias
+            android:name=".voicenotes.VoiceNoteShareTarget"
+            android:targetActivity=".voicenotes.VoiceNoteShareActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/voice_notes_share_label">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/ogg" />
+            </intent-filter>
+        </activity-alias>
+
         <service
             android:name=".service.DictationService"
             android:foregroundServiceType="microphone"

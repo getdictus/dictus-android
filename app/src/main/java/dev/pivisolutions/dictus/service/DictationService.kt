@@ -38,6 +38,8 @@ import dev.pivisolutions.dictus.core.stats.DictationTally
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import dev.pivisolutions.dictus.model.ModelCatalog
+import dev.pivisolutions.dictus.whisper.WhisperContext
+import dev.pivisolutions.dictus.core.whisper.NonSpeechMarkers
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.history.TranscriptionHistoryMetadata
 import dev.pivisolutions.dictus.history.TranscriptionHistoryWriter
@@ -104,6 +106,7 @@ class DictationService : Service(), DictationController {
         const val ACTION_START = "dev.pivisolutions.dictus.action.START"
         const val ACTION_STOP = "dev.pivisolutions.dictus.action.STOP"
         private const val ENGINE_IDLE_TIMEOUT_MS = 10 * 60 * 1_000L
+        private const val VOICE_NOTE_LANGUAGE = "auto"
     }
 
     /**
@@ -530,6 +533,45 @@ class DictationService : Service(), DictationController {
             Timber.e(e, "Transcription failed")
             TranscriptionOutcome.Failed
         }
+    }
+
+    /**
+     * Transcribes one chunk of a shared voice note (#204) on the dictation engine, iOS
+     * `DictationCoordinator.transcribeVoiceNoteChunk`: same engine, same loaded model, no download,
+     * and nothing a dictation shows (state, sounds, Home's card, the tally, history).
+     *
+     * The language is left to the engine ("auto"), iOS's default for voice notes: a note is often
+     * someone else speaking, in a language the keyboard is not set to. Parakeet detects it anyway.
+     *
+     * The provider slot runs one transcription at a time, so a dictation started meanwhile waits
+     * for this chunk; `VoiceNoteProcessor` only starts a chunk while no dictation runs.
+     *
+     * @return the spoken text, empty for silence; null when no model is on disk, the engine
+     *   fails, or the timeout cuts the chunk short (a partial chunk would lose words unseen).
+     */
+    suspend fun transcribeVoiceNoteChunk(samples: FloatArray): String? {
+        val activeModelKey = dataStore.data.first()[PreferenceKeys.ACTIVE_MODEL] ?: ModelCatalog.DEFAULT_KEY
+        val modelPath = modelManager.getModelPath(activeModelKey) ?: run {
+            Timber.w("Voice note chunk: model=%s not on disk", activeModelKey)
+            return null
+        }
+        val timeoutMs = TranscriptionTimeout.timeoutMs(
+            TranscriptionTimeout.audioMs(samples.size),
+            TranscriptionTimeout.factorFor(activeModelKey),
+        )
+        val transcript = withProviderForModel(activeModelKey, modelPath) { provider ->
+            transcriptionWakeLock.acquire(timeoutMs + WhisperContext.ABORT_GRACE_MS)
+            try {
+                provider.transcribe(samples, VOICE_NOTE_LANGUAGE, timeoutMs)
+            } finally {
+                transcriptionWakeLock.release()
+            }
+        }
+        if (transcript == null || !transcript.complete) {
+            Timber.w("Voice note chunk: engine=%s returned %s", activeModelKey, if (transcript == null) "nothing" else "a partial chunk")
+            return null
+        }
+        return NonSpeechMarkers.spokenText(transcript.text).trim()
     }
 
     /** Every confirmAndTranscribe exit: back to Idle and out of the foreground. */

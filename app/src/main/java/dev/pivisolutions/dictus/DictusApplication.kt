@@ -6,16 +6,18 @@ import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.HiltAndroidApp
 import dev.pivisolutions.dictus.core.logging.TimberSetup
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
+import dev.pivisolutions.dictus.core.premium.ProStatus
 import dev.pivisolutions.dictus.ime.haptics.HapticHelper
 import dev.pivisolutions.dictus.ime.language.KeyboardLayoutPreference
 import dev.pivisolutions.dictus.ui.settings.LogExporter
+import dev.pivisolutions.dictus.voicenotes.VoiceNoteShareTarget
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
 
 /**
  * Main application entry point for Dictus.
@@ -29,6 +31,9 @@ class DictusApplication : Application() {
 
     @Inject
     lateinit var dataStore: DataStore<Preferences>
+
+    @Inject
+    lateinit var proStatus: ProStatus
 
     override fun onCreate() {
         super.onCreate()
@@ -56,5 +61,9 @@ class DictusApplication : Application() {
         // reads also resolve as if migrated, in case the keyboard reads before this lands.
         scope.launch { KeyboardLayoutPreference.migrateIfNeeded(dataStore) }
         scope.launch { RetiredPreferences.remove(dataStore) }
+        // Dictus is in the share sheet for audio only while the user has Pro (#204).
+        scope.launch {
+            proStatus.isPro.collect { VoiceNoteShareTarget.setVisible(this@DictusApplication, it) }
+        }
     }
 }
