@@ -86,6 +86,11 @@ class SettingsViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** Whether the personal dictionary shortcuts expand while typing (#424). Off by default. */
+    val textReplacementsEnabled: StateFlow<Boolean> = dataStore.data
+        .map { it[PreferenceKeys.TEXT_REPLACEMENTS_ENABLED] ?: false }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Whether haptic feedback is enabled on dictation actions. */
     val hapticsEnabled: StateFlow<Boolean> = dataStore.data
         .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
@@ -177,6 +182,15 @@ class SettingsViewModel @Inject constructor(
                     profile,
                 )
                 preferences[PreferenceKeys.AUTOCORRECT_ENABLED] = !current
+            }
+        }
+    }
+
+    /** Toggle the personal dictionary shortcuts on/off and persist the new value. */
+    fun toggleTextReplacements() {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[PreferenceKeys.TEXT_REPLACEMENTS_ENABLED] = !(prefs[PreferenceKeys.TEXT_REPLACEMENTS_ENABLED] ?: false)
             }
         }
     }

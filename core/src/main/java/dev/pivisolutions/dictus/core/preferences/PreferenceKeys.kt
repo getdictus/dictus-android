@@ -80,6 +80,12 @@ object PreferenceKeys {
     /** Whether automatic replacement on word boundaries is enabled. Independent of the bar. */
     val AUTOCORRECT_ENABLED = booleanPreferencesKey("autocorrect_enabled")
 
+    /**
+     * Whether the shortcuts of the phone's personal dictionary expand while typing (#424):
+     * `qqc` + Space gives « quelque chose », with autocorrect on or off. Off when unset.
+     */
+    val TEXT_REPLACEMENTS_ENABLED = booleanPreferencesKey("text_replacements_enabled")
+
     // --- Personal dictionary (Phase 8) ---
     /** Set of words the user has typed at least twice, persisted across restarts. */
     val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")

@@ -147,6 +147,7 @@ Every iOS ID (the 185 of the iOS « All IDs » table, same order: 18 features, 1
 | `typing.accents` | Free | present — long press, one-row strip, per-language lists in Apple's order (œ, æ, #406) | no |
 | `typing.dead-keys` | Free | absent | no |
 | `typing.autocorrect-toggle` | Free | present | no |
+| `typing.contacts-and-replacements` | Free | partial — personal dictionary shortcuts, behind « Raccourcis du dictionnaire personnel », off by default (#424); no contact names (no `READ_CONTACTS`) | no |
 | `typing.delete-swipe` | Free | present — slide left from ⌫, one word per letter-key width, back right gives them back (#408, iOS #1047) | no |
 | `typing.spatial-autocorrect` | Free | present — debug builds only, off by default (#385) | no |
 | `typing.auto-capitalization` | Free | present — shift armed at a sentence start, following the field's cap flags (behaviour of iOS `updateCapitalization`; the ID is not in the iOS map yet) | no |

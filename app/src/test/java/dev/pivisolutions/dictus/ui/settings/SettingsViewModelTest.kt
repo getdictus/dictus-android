@@ -200,6 +200,21 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `personal dictionary shortcuts are off by default and persist once on`() = testScope.runTest {
+        assertEquals("text_replacements_enabled", PreferenceKeys.TEXT_REPLACEMENTS_ENABLED.name)
+        assertFalse(viewModel.textReplacementsEnabled.value)
+
+        viewModel.toggleTextReplacements()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.textReplacementsEnabled.value)
+        assertTrue(viewModel.autocorrectEnabled.value)
+        val restarted = SettingsViewModel(fakeDataStore, modelManager, ProStatus(fakeDataStore, debugBuild = true))
+        advanceUntilIdle()
+        assertTrue(restarted.textReplacementsEnabled.value)
+    }
+
+    @Test
     fun `suggestions toggle does not change autocorrect`() = testScope.runTest {
         viewModel.toggleSuggestions()
         advanceUntilIdle()

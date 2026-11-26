@@ -102,6 +102,7 @@ fun SettingsScreen(
     val keyboardLanguage by viewModel.keyboardLanguage.collectAsState()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsState()
     val autocorrectEnabled by viewModel.autocorrectEnabled.collectAsState()
+    val textReplacementsEnabled by viewModel.textReplacementsEnabled.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
     val learnedWordCount by viewModel.learnedWordCount.collectAsState()
@@ -226,6 +227,12 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_autocorrect),
                 checked = autocorrectEnabled,
                 onToggle = { viewModel.toggleAutocorrect() },
+            )
+            SettingDivider()
+            SettingToggleRow(
+                label = stringResource(R.string.settings_text_replacements),
+                checked = textReplacementsEnabled,
+                onToggle = { viewModel.toggleTextReplacements() },
             )
             SettingDivider()
             SettingActionRow(
