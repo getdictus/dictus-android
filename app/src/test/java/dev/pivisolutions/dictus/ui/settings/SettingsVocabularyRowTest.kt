@@ -7,7 +7,6 @@ import androidx.test.core.app.ApplicationProvider
 import dev.pivisolutions.dictus.core.premium.ProStatus
 import dev.pivisolutions.dictus.core.theme.DictusTheme
 import dev.pivisolutions.dictus.model.ModelManager
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -27,11 +26,10 @@ class SettingsVocabularyRowTest {
 
     private fun show(pro: Boolean) {
         val proStatus = ProStatus(dataStore, debugBuild = true)
-        if (pro) runBlocking { proStatus.setDebugProEntitlementForced(true) }
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val viewModel = SettingsViewModel(dataStore, ModelManager(context), proStatus)
         composeRule.setContent {
-            DictusTheme { SettingsScreen(viewModel = viewModel, onNavigateToVocabulary = { opened++ }) }
+            DictusTheme { SettingsScreen(viewModel = viewModel, isPro = pro, onNavigateToVocabulary = { opened++ }) }
         }
     }
 

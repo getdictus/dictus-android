@@ -109,7 +109,6 @@ fun SettingsScreen(
     val theme by viewModel.theme.collectAsState()
     val uiLanguage by viewModel.uiLanguage.collectAsState()
     val debugProForced by viewModel.debugProEntitlementForced.collectAsState()
-    val isPro by viewModel.isPro.collectAsState()
 
     val context = LocalContext.current
 
