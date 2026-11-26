@@ -50,5 +50,6 @@ val englishLanguageProfile = LanguageProfile(
         "heres" to "here's",
     ),
     accentMap = emptyMap(),
+    longPressAccents = LongPressAccents.english,
     contractionPrefixes = emptyList(),
 )
