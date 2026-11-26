@@ -18,6 +18,8 @@ import dev.pivisolutions.dictus.ime.model.KeyType
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import dev.pivisolutions.dictus.ime.input.DeleteSwipeMove
+import dev.pivisolutions.dictus.ime.input.DeleteWordSwipe
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +42,8 @@ import java.time.Duration
 class KeyButtonDeleteRepeatTest {
     private val showKey = mutableStateOf(true)
     private var deletes = 0
+    private val swipeMoves = mutableListOf<DeleteSwipeMove>()
+    private var swipeEnds = 0
     private var keyBounds = Rect.Zero
     private lateinit var scenario: ActivityScenario<ComponentActivity>
     private lateinit var composeView: ComposeView
@@ -54,9 +58,14 @@ class KeyButtonDeleteRepeatTest {
                     DictusTheme {
                         if (showKey.value) {
                             KeyButton(
-                                key = KeyDefinition(label = "⌫", type = KeyType.DELETE),
+                                key = KeyDefinition(label = "⌫", type = KeyType.DELETE, widthMultiplier = 1.5f),
                                 isShifted = false,
                                 onPress = { deletes++ },
+                                onDeleteSwipeMove = { move ->
+                                    swipeMoves += move
+                                    DeleteWordSwipe.Change(deletedWords = 1).takeIf { move.startX - move.x >= move.step }
+                                },
+                                onDeleteSwipeEnd = { swipeEnds++ },
                                 modifier = Modifier.onGloballyPositioned { keyBounds = it.boundsInRoot() },
                             )
                         }
@@ -139,6 +148,24 @@ class KeyButtonDeleteRepeatTest {
 
         holdUntilRepeating()
         touch(MotionEvent.ACTION_UP)
+    }
+
+    /** #408: the slide takes over from the repeat and follows the finger off the key. */
+    @Test
+    fun `sliding left from a held delete hands it to the slide`() {
+        holdUntilRepeating()
+
+        touch(MotionEvent.ACTION_MOVE, x = keyBounds.left - keyBounds.width)
+
+        assertNoMoreDeletes()
+        val move = swipeMoves.last()
+        assertTrue("the slide sees the finger off the key", move.x < 0f)
+        assertTrue(move.repeatRan)
+        // A letter key's width: the delete key is 1.5 wide.
+        assertEquals(keyBounds.width / 1.5f, move.step, 1f)
+        touch(MotionEvent.ACTION_UP, x = keyBounds.left - keyBounds.width)
+        idle(0L)
+        assertEquals(1, swipeEnds)
     }
 
     private fun holdUntilRepeating() {

@@ -416,4 +416,29 @@
     <string name="feedback_sent">Sent. Thank you.</string>
     <string name="feedback_done">Done</string>
 
+
+    <!-- Dictus Pro hub and Home card (#207), iOS ProHubSections / ProBannerView -->
+    <string name="pro_title" translatable="false">Dictus Pro</string>
+    <string name="pro_hub_tagline">Your voice, unlimited</string>
+    <string name="pro_hub_close_cd">Close</string>
+    <string name="pro_feature_on">On</string>
+    <string name="pro_feature_off">Off</string>
+    <string name="pro_feature_smart_mode">Smart Mode</string>
+    <string name="pro_feature_smart_mode_description">Reformulate your text with on-device AI</string>
+    <string name="pro_feature_history">History search</string>
+    <string name="pro_feature_history_description">Find any past dictation in seconds</string>
+    <string name="pro_feature_vocabulary">Vocabulary</string>
+    <string name="pro_feature_vocabulary_description">Teach Dictus your technical terms</string>
+    <string name="pro_feature_voice_notes">Voice notes</string>
+    <string name="pro_feature_voice_notes_description">Transcribe the voice messages you receive</string>
+    <!-- Verbatim English on iOS too: Debug builds only, read by the maintainer. -->
+    <string name="pro_hub_debug_forced" translatable="false">Pro is forced on by the Developer switch in Settings. Nothing is for sale in this build. Debug builds only.</string>
+    <string name="pro_hub_terms">Terms of Service</string>
+    <string name="pro_hub_privacy">Privacy</string>
+    <string name="pro_settings_active_cd">Pro active</string>
+    <plurals name="pro_home_card_active_features">
+        <item quantity="one">%d feature on</item>
+        <item quantity="other">%d features on</item>
+    </plurals>
+    <string name="pro_home_card_all_off">All Pro features are off</string>
 </resources>

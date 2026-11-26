@@ -1,10 +1,13 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import dev.pivisolutions.dictus.ime.input.DeleteSwipeMove
+import dev.pivisolutions.dictus.ime.input.DeleteWordSwipe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
@@ -13,7 +16,9 @@ import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.ReturnKeyStyle
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.LongPressAccents
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
 
@@ -34,6 +39,8 @@ fun KeyboardView(
     languageProfile: LanguageProfile = frenchLanguageProfile,
     onKeyPress: (KeyDefinition) -> Unit,
     onDeleteWord: () -> Unit = {},
+    onDeleteSwipeMove: (DeleteSwipeMove) -> DeleteWordSwipe.Change? = { null },
+    onDeleteSwipeEnd: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
     onKeySound: (KeyType) -> Unit = {},
     labelsVisible: Boolean = true,
@@ -55,6 +62,13 @@ fun KeyboardView(
         returnKeyStyle.label(SupportedLanguage.fromCodeOrDefault(languageProfile.code)),
     )
 
+    val longPressAccents = remember(languageProfile, layout) {
+        LongPressAccents.mappings(
+            languageProfile,
+            KeyboardLayout.fromPersistedValue(layout) ?: KeyboardLayout.AZERTY,
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -68,8 +82,10 @@ fun KeyboardView(
                 isCapsLock = isCapsLock,
                 onKeyPress = onKeyPress,
                 onDeleteWord = onDeleteWord,
+                onDeleteSwipeMove = onDeleteSwipeMove,
+                onDeleteSwipeEnd = onDeleteSwipeEnd,
                 onAccentSelected = onAccentSelected,
-                accentMap = languageProfile.accentMap,
+                longPressAccents = longPressAccents,
                 onKeySound = onKeySound,
                 labelsVisible = labelsVisible,
                 onTrackpadActiveChange = onTrackpadActiveChange,
