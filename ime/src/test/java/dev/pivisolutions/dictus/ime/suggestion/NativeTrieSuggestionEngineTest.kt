@@ -1245,6 +1245,33 @@ class NativeTrieSuggestionEngineTest {
             }
         }
 
+    /**
+     * #406: no native dictionary holds œ or æ (fr has `coeur`, `soeur`, `oeil`), so a word typed
+     * with one from the long-press popup used to count as unknown, and Space wrote its nearest
+     * neighbour: `cœur` became `cour`, as on iOS before dictus-ios#1046.
+     */
+    @Test
+    fun `a word typed with a ligature is kept on Space`() = runTest(dispatcher) {
+        val handle = FakeHandle(
+            knownWords = setOf("coeur", "soeur", "oeil", "oeuvre", "cour", "sur"),
+            fuzzyByWord = mapOf(
+                "cœur" to listOf("cour"),
+                "sœur" to listOf("sur"),
+                "œuvre" to listOf("ouvre"),
+                "l'œil" to listOf("l'il"),
+                "cœurr" to listOf("cour"),
+            ),
+        )
+        val engine = createEngine(FakeOpener(mutableListOf(Result.success(handle))))
+        advanceUntilIdle()
+
+        listOf("cœur", "sœur", "œuvre", "l'œil", "coeur").forEach { typed ->
+            assertEquals(typed, null, engine.correctionOnSpace(typed))
+        }
+        // Only the spelling is recognised: a misspelled word with a ligature is still corrected.
+        assertEquals("cour", engine.correctionOnSpace("cœurr"))
+    }
+
     // #386: every rule that has the last word answers before the spatial decoder, as iOS
     // `correctionProposal` (#1011); the decoder is then weighed against the trie alone.
 

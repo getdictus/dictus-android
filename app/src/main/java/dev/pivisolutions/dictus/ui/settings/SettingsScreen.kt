@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,8 +29,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
@@ -98,6 +102,9 @@ fun SettingsScreen(
     onNavigateToTranscriptionDebug: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
     onClose: (() -> Unit)? = null,
+    proRowVisible: Boolean = false,
+    isPro: Boolean = false,
+    onNavigateToProHub: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
@@ -141,6 +148,43 @@ fun SettingsScreen(
                 .padding(start = 16.dp, top = if (onClose != null) 8.dp else 24.dp, end = 16.dp)
                 .semantics { heading() },
         )
+
+        // ---------- SECTION: Dictus Pro (#207) ----------
+        // iOS SettingsView section 0, first and on its own: shown while Pro is on sale, or in
+        // a Debug build under the forced entitlement (`ProViewModel.State.settingsRowVisible`).
+        if (proRowVisible) {
+            Spacer(modifier = Modifier.height(24.dp))
+            SettingsCard {
+                SettingRow(
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.WorkspacePremium,
+                                contentDescription = null,
+                                tint = DictusColors.Accent,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            SettingLabel(stringResource(R.string.pro_title))
+                        }
+                    },
+                    modifier = Modifier
+                        .clickable(onClick = onNavigateToProHub)
+                        .testTag("settings_pro_row"),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isPro) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = stringResource(R.string.pro_settings_active_cd),
+                                tint = DictusColors.Success,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        SettingChevron()
+                    }
+                }
+            }
+        }
 
         // ---------- SECTION: Transcription ----------
         SectionHeader(text = stringResource(R.string.settings_section_transcription))

@@ -21,5 +21,7 @@ val spanishLanguageProfile = LanguageProfile(
         'u' to listOf('ú', 'ü'),
         'n' to listOf('ñ'),
     ),
+    longPressAccents = LongPressAccents.spanish,
     contractionPrefixes = emptyList(),
+    lettersWithOwnKey = LongPressAccents.spanishLettersWithOwnKey,
 )

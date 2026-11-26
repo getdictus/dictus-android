@@ -21,6 +21,16 @@ import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 object PremiumFlags {
 
     /**
+     * Whether Dictus Pro may be sold and promoted, iOS `PremiumFlags.paywallVisible` (#207).
+     *
+     * `false` = the app looks like there is no subscription at all: no Home Pro card, no
+     * « Dictus Pro » row in Settings. Nothing is sold on Android yet (no paywall, no purchase
+     * channel), so it stays down until Play Billing (#5) ships. As on iOS, the Debug override
+     * of [ProStatus] still opens the hub from Settings, and never the Home card.
+     */
+    const val PAYWALL_VISIBLE = false
+
+    /**
      * Controls whether transcription history is visible AND recorded.
      *
      * `false` = the app behaves as if the feature did not exist: no entry point on
