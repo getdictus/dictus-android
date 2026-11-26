@@ -172,6 +172,34 @@ class KeyButtonFeedbackTest {
     }
 
     @Test
+    fun `shift flipping while an accented letter is held still ends its preview on release`() {
+        // Autocapitalization lands after the editor answers, so it can flip the shift while "e"
+        // is held: its accents change case, which restarts its gesture (#415).
+        val isShifted = mutableStateOf(true)
+        composeRule.setContent {
+            DictusTheme {
+                KeyRow(
+                    keys = listOf(KeyDefinition(label = "e")),
+                    isShifted = isShifted.value,
+                    onKeyPress = {},
+                    onAccentSelected = {},
+                    longPressAccents = mapOf('e' to listOf("é", "è")),
+                    modifier = Modifier.testTag(KEY_TAG),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(KEY_TAG).performTouchInput { down(center) }
+        composeRule.runOnIdle { isShifted.value = false }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(KEY_TAG).performTouchInput { up() }
+
+        composeRule.onAllNodesWithText("e").assertCountEquals(1)
+        composeRule.onAllNodes(SemanticsMatcher.expectValue(KeyPressedSemantics, true))
+            .assertCountEquals(0)
+    }
+
+    @Test
     fun `held delete stays one pressed keycap while repeat continues`() {
         var deletes = 0
         setKey(
