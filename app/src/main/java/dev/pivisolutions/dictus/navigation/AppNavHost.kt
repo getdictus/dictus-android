@@ -87,6 +87,8 @@ import kotlinx.coroutines.flow.map
  * @param imeSelected Whether the Dictus keyboard is selected as the default input method.
  * @param onOpenKeyboardSettings Callback to open system keyboard settings.
  * @param onOpenAppSettings Callback to open app details settings.
+ * @param openSettingsRequested Settings alone, without bottom navigation: the keyboard's ☰ long press (#86).
+ * @param onCloseSettings Leaves that Settings screen for the app the user was typing in (#416).
  * @param openModelsRequested Start on the Models tab: the keyboard's mic tap with no model (#247).
  * @param microphoneRequested Ask for the microphone on Home: the keyboard's refused-mic notice (#307).
  */
@@ -100,6 +102,7 @@ fun AppNavHost(
     onShowKeyboardPicker: () -> Unit,
     onOpenAppSettings: () -> Unit,
     openSettingsRequested: Boolean = false,
+    onCloseSettings: () -> Unit = {},
     openModelsRequested: Boolean = false,
     microphoneRequested: Boolean = false,
 ) {
@@ -119,6 +122,7 @@ fun AppNavHost(
             onOpenAppSettings = onOpenAppSettings,
             startDestination = AppDestination.Settings.route,
             showMainNavigation = false,
+            onCloseSettings = onCloseSettings,
         )
         return
     }
@@ -296,6 +300,7 @@ private fun MainTabsScreen(
     onOpenAppSettings: () -> Unit,
     startDestination: String = AppDestination.Home.route,
     showMainNavigation: Boolean = true,
+    onCloseSettings: (() -> Unit)? = null,
     microphoneRequested: Boolean = false,
 ) {
     val navController = rememberNavController()
@@ -441,6 +446,7 @@ private fun MainTabsScreen(
                     onNavigateToFeedback = {
                         navController.navigate(AppDestination.Feedback.route)
                     },
+                    onClose = onCloseSettings,
                     proRowVisible = proState.settingsRowVisible,
                     isPro = proState.isPro,
                     onNavigateToProHub = {
