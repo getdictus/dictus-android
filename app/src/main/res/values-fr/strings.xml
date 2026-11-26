@@ -77,6 +77,7 @@
     <string name="settings_keyboard_sounds">Sons du clavier</string>
     <string name="settings_suggestions">Suggestions</string>
     <string name="settings_autocorrect">Correction automatique</string>
+    <string name="settings_toolbar_paste">Bouton Coller dans la barre</string>
     <string name="settings_sounds">Sons</string>
     <string name="settings_reset_learned_words">R\u00e9initialiser les mots appris</string>
     <string name="settings_reset_learned_words_title">R\u00e9initialiser les mots appris\u00a0?</string>

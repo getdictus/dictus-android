@@ -157,6 +157,7 @@ Every iOS ID (the 184 of the iOS « All IDs » table, same order: 18 features, 1
 | `keyboard.default-page` | Free | retired (#288) — the keyboard always opens on letters; iOS removes it in getdictus/dictus-ios#888, not shipped yet | no |
 | `keyboard.transcription-language` | Free | present — « Suivre la langue du clavier » (default, #186), `Automatique` or a fixed language | no |
 | `keyboard.open-app` | Free | present — long press on ☰ → Settings | no |
+| `keyboard.toolbar-paste` | Free | present — behind « Bouton Coller dans la barre », off by default (#420); not in the iOS map yet (iOS #634) | no |
 | `keyboard.return-key-type` | Free | partial — glyph and action per `imeOptions`; no off state (no `enablesReturnKeyAutomatically` on Android) | no |
 | `emoji.picker` | Free | present — iOS categories, bar at the bottom (#192); no skin tones | no |
 | `emoji.recents` | Free | present — « Récents » (#192) | no |

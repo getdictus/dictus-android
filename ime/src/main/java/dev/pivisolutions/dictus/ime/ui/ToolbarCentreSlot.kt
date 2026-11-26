@@ -19,6 +19,9 @@ import dev.pivisolutions.dictus.ime.input.DictationNotice
  *    holding backspace on a long dictation. Right after an insertion the user has typed nothing,
  *    so the suggestions were predicted from dictated text and are worth less.
  * 3. **Suggestions**: the keyboard's core job, the autocorrect undo chip included (#276).
+ * 3a. **Paste** (#420, iOS #634): a recent copy the keyboard has not pasted yet, offered as one
+ *    tap. Below the suggestions: mid-word, the user is typing, not pasting. Above the empty bar
+ *    because it is an action with a deadline (the `ClipboardPasteOffer` freshness window).
  */
 sealed interface ToolbarCentreSlot {
 
@@ -34,16 +37,19 @@ sealed interface ToolbarCentreSlot {
     /** The suggestion slots. */
     data object Suggestions : ToolbarCentreSlot
 
+    /** One-tap Paste for a recent copy not yet pasted (#420). */
+    data object Paste : ToolbarCentreSlot
+
     /** Nothing to say: ☰ sits alone opposite the mic. */
     data object Empty : ToolbarCentreSlot
 
     /**
      * Whether this occupant needs the full width, taking ☰'s place with it. iOS: the error, the
      * recovered transcription (here the app dictation notice), the undo and the suggestions do,
-     * because they arrive mid-task and are read at a glance.
+     * because they arrive mid-task and are read at a glance. Paste shares the bar with ☰, as on iOS.
      */
     val evictsHamburger: Boolean
-        get() = this != Empty
+        get() = this != Empty && this != Paste
 
     companion object {
         fun resolve(
@@ -51,11 +57,13 @@ sealed interface ToolbarCentreSlot {
             appDictationInProgress: Boolean,
             offersDictationUndo: Boolean,
             hasSuggestions: Boolean,
+            offersPaste: Boolean = false,
         ): ToolbarCentreSlot = when {
             notice != null -> Error(notice)
             appDictationInProgress -> AppDictationInProgress
             offersDictationUndo -> DictationUndo
             hasSuggestions -> Suggestions
+            offersPaste -> Paste
             else -> Empty
         }
 

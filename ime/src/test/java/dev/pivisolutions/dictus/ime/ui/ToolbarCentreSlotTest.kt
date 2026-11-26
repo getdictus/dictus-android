@@ -13,31 +13,71 @@ class ToolbarCentreSlotTest {
     private val notices = listOf(null) + DictationNotice.Message.entries
     private val flags = listOf(false, true)
 
-    private fun forEveryCombination(check: (DictationNotice.Message?, Boolean, Boolean, Boolean) -> Unit) {
-        for (notice in notices) for (app in flags) for (undo in flags) for (suggestions in flags) {
-            check(notice, app, undo, suggestions)
+    private fun forEveryCombination(check: (DictationNotice.Message?, Boolean, Boolean, Boolean, Boolean) -> Unit) {
+        for (notice in notices) for (app in flags) for (undo in flags) for (suggestions in flags) for (paste in flags) {
+            check(notice, app, undo, suggestions, paste)
         }
     }
 
     @Test
-    fun `every combination resolves by the iOS order, error then app dictation then undo then suggestions`() {
-        forEveryCombination { notice, app, undo, suggestions ->
+    fun `every combination resolves by the iOS order, error then app dictation then undo then suggestions then paste`() {
+        forEveryCombination { notice, app, undo, suggestions, paste ->
             val expected = when {
                 notice != null -> ToolbarCentreSlot.Error(notice)
                 app -> ToolbarCentreSlot.AppDictationInProgress
                 undo -> ToolbarCentreSlot.DictationUndo
                 suggestions -> ToolbarCentreSlot.Suggestions
+                paste -> ToolbarCentreSlot.Paste
                 else -> ToolbarCentreSlot.Empty
             }
             assertEquals(
-                "notice=$notice app=$app undo=$undo suggestions=$suggestions",
+                "notice=$notice app=$app undo=$undo suggestions=$suggestions paste=$paste",
                 expected,
                 ToolbarCentreSlot.resolve(
                     notice = notice,
                     appDictationInProgress = app,
                     offersDictationUndo = undo,
                     hasSuggestions = suggestions,
+                    offersPaste = paste,
                 ),
+            )
+        }
+    }
+
+    // iOS testSuggestionsOutrankPaste: mid-word the user is typing, not pasting.
+    @Test
+    fun `suggestions outrank paste`() {
+        assertEquals(
+            ToolbarCentreSlot.Suggestions,
+            ToolbarCentreSlot.resolve(null, false, offersDictationUndo = false, hasSuggestions = true, offersPaste = true),
+        )
+    }
+
+    // iOS testUndoOutranksPaste.
+    @Test
+    fun `undo outranks paste`() {
+        assertEquals(
+            ToolbarCentreSlot.DictationUndo,
+            ToolbarCentreSlot.resolve(null, false, offersDictationUndo = true, hasSuggestions = false, offersPaste = true),
+        )
+    }
+
+    // iOS testPasteOutranksEveryIdleOccupant: here the idle bar is only the empty one.
+    @Test
+    fun `paste outranks the empty bar`() {
+        assertEquals(
+            ToolbarCentreSlot.Paste,
+            ToolbarCentreSlot.resolve(null, false, offersDictationUndo = false, hasSuggestions = false, offersPaste = true),
+        )
+    }
+
+    // With the setting off the flag is always false, and the bar resolves as before #420.
+    @Test
+    fun `without paste the bar resolves as it did before`() {
+        forEveryCombination { notice, app, undo, suggestions, _ ->
+            assertEquals(
+                ToolbarCentreSlot.resolve(notice, app, undo, suggestions),
+                ToolbarCentreSlot.resolve(notice, app, undo, suggestions, offersPaste = false),
             )
         }
     }
@@ -83,22 +123,23 @@ class ToolbarCentreSlotTest {
     }
 
     @Test
-    fun `the menu yields to every occupant but the empty slot`() {
+    fun `the menu yields to every occupant but paste and the empty slot`() {
         DictationNotice.Message.entries.forEach {
             assertTrue(ToolbarCentreSlot.Error(it).evictsHamburger)
         }
         assertTrue(ToolbarCentreSlot.AppDictationInProgress.evictsHamburger)
         assertTrue(ToolbarCentreSlot.DictationUndo.evictsHamburger)
         assertTrue(ToolbarCentreSlot.Suggestions.evictsHamburger)
+        assertFalse(ToolbarCentreSlot.Paste.evictsHamburger)
         assertFalse(ToolbarCentreSlot.Empty.evictsHamburger)
     }
 
     @Test
-    fun `the menu shows only on an empty bar, for every combination`() {
-        forEveryCombination { notice, app, undo, suggestions ->
-            val slot = ToolbarCentreSlot.resolve(notice, app, undo, suggestions)
+    fun `the menu shows only on an empty bar or beside paste, for every combination`() {
+        forEveryCombination { notice, app, undo, suggestions, paste ->
+            val slot = ToolbarCentreSlot.resolve(notice, app, undo, suggestions, paste)
             assertEquals(
-                "notice=$notice app=$app undo=$undo suggestions=$suggestions",
+                "notice=$notice app=$app undo=$undo suggestions=$suggestions paste=$paste",
                 notice == null && !app && !undo && !suggestions,
                 !slot.evictsHamburger,
             )

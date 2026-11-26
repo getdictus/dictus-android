@@ -70,6 +70,8 @@ fun KeyboardScreen(
     isAppDictationInProgress: Boolean = false,
     autocorrectUndo: AutocorrectUndoOffer? = null,
     onUndoAutocorrect: () -> Unit = {},
+    offersPaste: Boolean = false,
+    onPaste: () -> Unit = {},
     onCurrentWordSelected: () -> Unit = {},
     themeMode: ThemeMode = ThemeMode.DARK,
     onKeySound: (KeyType) -> Unit = {},
@@ -137,6 +139,8 @@ fun KeyboardScreen(
                 isAppDictationInProgress = isAppDictationInProgress,
                 autocorrectUndo = autocorrectUndo,
                 onUndoAutocorrect = onUndoAutocorrect,
+                offersPaste = offersPaste,
+                onPaste = onPaste,
             )
 
             // Emoji picker in the key area, under the toolbar, as iOS KeyboardRootView
