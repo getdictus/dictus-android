@@ -396,7 +396,12 @@ fun KeyButton(
                         if (selectedAccent != null) {
                             currentOnAccentSelected.value?.invoke(selectedAccent)
                         } else {
-                            currentKeyTouches.value?.touched(currentOutput.value, placement, downPosition)
+                            // downPosition is in the touch area's frame, placement in the drawn key's (#413).
+                            currentKeyTouches.value?.touched(
+                                currentOutput.value,
+                                placement,
+                                downPosition - Offset(touchArea.left.toFloat(), touchArea.top.toFloat()),
+                            )
                             currentOnPress.value()
                         }
                     }
