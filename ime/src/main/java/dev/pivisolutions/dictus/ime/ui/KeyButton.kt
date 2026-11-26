@@ -363,35 +363,41 @@ fun KeyButton(
                             }
                         }
 
-                        while (!released) {
-                            val event = awaitPointerEvent()
-                            val pointer = event.changes.firstOrNull()
-                            val position = pointer?.position
+                        // A change of key.type or accentChars restarts this handler mid-gesture, as
+                        // autocapitalization flipping the shift under a held accented letter does
+                        // (é becomes É, #415): the finally block ends the press then too.
+                        var selectedAccent: String? = null
+                        try {
+                            while (!released) {
+                                val event = awaitPointerEvent()
+                                val pointer = event.changes.firstOrNull()
+                                val position = pointer?.position
 
-                            if (showAccentPopup && position != null) {
-                                if (!accentTrackingActive) {
-                                    val distance = (position - downPosition).getDistance()
-                                    accentTrackingActive = distance >= selectionSlopPx
+                                if (showAccentPopup && position != null) {
+                                    if (!accentTrackingActive) {
+                                        val distance = (position - downPosition).getDistance()
+                                        accentTrackingActive = distance >= selectionSlopPx
+                                    }
+                                    highlightedAccentIndex = if (accentTrackingActive) {
+                                        resolveAccentIndex(position.x)
+                                    } else {
+                                        null
+                                    }
                                 }
-                                highlightedAccentIndex = if (accentTrackingActive) {
-                                    resolveAccentIndex(position.x)
-                                } else {
-                                    null
+
+                                if (event.type == PointerEventType.Release || pointer?.pressed == false) {
+                                    released = true
                                 }
                             }
 
-                            if (event.type == PointerEventType.Release || pointer?.pressed == false) {
-                                released = true
-                            }
+                            selectedAccent = highlightedAccentIndex
+                                ?.let { index -> accentChars?.getOrNull(index) }
+                        } finally {
+                            isPressed = false
+                            showAccentPopup = false
+                            highlightedAccentIndex = null
+                            longPressJob.cancel()
                         }
-
-                        val selectedAccent = highlightedAccentIndex
-                            ?.let { index -> accentChars?.getOrNull(index) }
-
-                        isPressed = false
-                        showAccentPopup = false
-                        highlightedAccentIndex = null
-                        longPressJob.cancel()
 
                         if (selectedAccent != null) {
                             currentOnAccentSelected.value?.invoke(selectedAccent)
