@@ -87,6 +87,7 @@ val frenchLanguageProfile = LanguageProfile(
         'u' to listOf('ù', 'û', 'ü'),
         'c' to listOf('ç'),
     ),
+    longPressAccents = LongPressAccents.french,
     contractionPrefixes = listOf("l'", "d'", "c'", "j'", "n'", "s'", "m'", "t'", "qu'"),
     // French elides before a vowel or a mute h, never before a consonant: `dvotre` must not
     // become `d'votre` (dictus-ios #1035).

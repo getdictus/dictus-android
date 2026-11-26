@@ -23,6 +23,12 @@ data class LanguageProfile(
      */
     val contextOverrides: Map<String, Map<String, String>> = emptyMap(),
     val accentMap: Map<Char, List<Char>>,
+    /**
+     * What a held letter key offers, as Apple's keyboard for this language shows it
+     * ([LongPressAccents]): variants only, lowercase, nearest the base first. Read through
+     * [LongPressAccents.mappings], which adds [lettersWithOwnKey].
+     */
+    val longPressAccents: Map<String, List<String>>,
     val contractionPrefixes: List<String>,
     /** The prefixes that elide and the letters an elided word may start with. Null without elision. */
     val elisionOnset: ElisionOnset? = null,
@@ -30,6 +36,12 @@ data class LanguageProfile(
     val seedBigrams: List<BigramSeed> = emptyList(),
     /** Words with two correct spellings the words before choose between: French `a` / `à`. */
     val contextualHomographs: List<ContextualHomograph> = emptyList(),
+    /**
+     * Letters Apple's layout for this language gives keys of their own (German ä ö ü, Spanish
+     * ñ), so [longPressAccents] leaves them out. On a layout without that key they are held
+     * first on their base letter.
+     */
+    val lettersWithOwnKey: List<String> = emptyList(),
 )
 
 enum class KeyboardLayout(val persistedValue: String) {
