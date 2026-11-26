@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
@@ -13,7 +14,9 @@ import dev.pivisolutions.dictus.ime.model.KeyboardLayouts
 import dev.pivisolutions.dictus.ime.model.KeyType
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 import dev.pivisolutions.dictus.ime.input.ReturnKeyStyle
+import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.LanguageProfile
+import dev.pivisolutions.dictus.ime.language.LongPressAccents
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.frenchLanguageProfile
 
@@ -55,6 +58,13 @@ fun KeyboardView(
         returnKeyStyle.label(SupportedLanguage.fromCodeOrDefault(languageProfile.code)),
     )
 
+    val longPressAccents = remember(languageProfile, layout) {
+        LongPressAccents.mappings(
+            languageProfile,
+            KeyboardLayout.fromPersistedValue(layout) ?: KeyboardLayout.AZERTY,
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -69,7 +79,7 @@ fun KeyboardView(
                 onKeyPress = onKeyPress,
                 onDeleteWord = onDeleteWord,
                 onAccentSelected = onAccentSelected,
-                accentMap = languageProfile.accentMap,
+                longPressAccents = longPressAccents,
                 onKeySound = onKeySound,
                 labelsVisible = labelsVisible,
                 onTrackpadActiveChange = onTrackpadActiveChange,

@@ -21,6 +21,7 @@ val germanLanguageProfile = LanguageProfile(
         'u' to listOf('ü'),
         's' to listOf('ß'),
     ),
+    longPressAccents = LongPressAccents.german,
     contractionPrefixes = emptyList(),
     collapseRules = listOf(
         CollapseRule("ae", "ä"),
@@ -28,4 +29,5 @@ val germanLanguageProfile = LanguageProfile(
         CollapseRule("ue", "ü"),
         CollapseRule("ss", "ß"),
     ),
+    lettersWithOwnKey = LongPressAccents.germanLettersWithOwnKey,
 )

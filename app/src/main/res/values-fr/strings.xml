@@ -424,4 +424,27 @@
     <string name="feedback_sent">Envoyé. Merci.</string>
     <string name="feedback_done">OK</string>
 
+
+    <!-- Hub Dictus Pro et carte de l'Accueil (#207), iOS ProHubSections / ProBannerView -->
+    <string name="pro_hub_tagline">Votre voix, sans limites</string>
+    <string name="pro_hub_close_cd">Fermer</string>
+    <string name="pro_feature_on">Activé</string>
+    <string name="pro_feature_off">Désactivé</string>
+    <string name="pro_feature_smart_mode">Mode intelligent</string>
+    <string name="pro_feature_smart_mode_description">Reformulez vos textes avec une IA embarquée</string>
+    <string name="pro_feature_history">Recherche dans l’historique</string>
+    <string name="pro_feature_history_description">Retrouvez n’importe quelle dictée en quelques secondes</string>
+    <string name="pro_feature_vocabulary">Vocabulaire</string>
+    <string name="pro_feature_vocabulary_description">Apprenez à Dictus vos termes techniques</string>
+    <string name="pro_feature_voice_notes">Messages vocaux</string>
+    <string name="pro_feature_voice_notes_description">Transcrivez les messages vocaux que vous recevez</string>
+    <string name="pro_hub_terms">Conditions d’utilisation</string>
+    <string name="pro_hub_privacy">Confidentialité</string>
+    <string name="pro_settings_active_cd">Pro actif</string>
+    <plurals name="pro_home_card_active_features">
+        <item quantity="one">%d fonctionnalité active</item>
+        <item quantity="many">%d fonctionnalités actives</item>
+        <item quantity="other">%d fonctionnalités actives</item>
+    </plurals>
+    <string name="pro_home_card_all_off">Toutes les fonctionnalités Pro sont désactivées</string>
 </resources>
