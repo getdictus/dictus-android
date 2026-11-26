@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.ime.suggestion
 
+import dev.pivisolutions.dictus.ime.input.AutocorrectToken
+
 /**
  * The shortcuts of the phone's personal dictionary (#424, port of the shortcut half of iOS
  * `SupplementaryLexicon`, dictus-ios #873 and #1022): `qqc` + Space gives « quelque chose ».
@@ -21,6 +23,9 @@ class TextReplacements(entries: List<Entry>) {
         for ((shortcut, phrase) in entries) {
             // A shortcut equal to its phrase expands to nothing new.
             if (shortcut.isEmpty() || phrase.isBlank() || shortcut.lowercase() == phrase.lowercase()) continue
+            // The editor replacement refuses these shapes (`e.g`, a phrase on two lines): such a
+            // word is left to autocorrect rather than taken as a shortcut that cannot expand.
+            if (!AutocorrectToken.isShortcutToken(shortcut) || phrase.any { it == '\n' || it == '\r' }) continue
             putIfAbsent(shortcut.lowercase(), phrase)
         }
     }

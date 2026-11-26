@@ -84,6 +84,13 @@ class TextReplacementsTest {
     }
 
     @Test
+    fun `a shortcut the editor replacement would refuse is skipped`() {
+        val odd = TextReplacements(listOf(entry("e.g", "for example"), entry("adr", "12 rue\nParis")))
+        assertTrue(odd.isEmpty)
+        assertNull(odd.expansion(ofShortcut = "e.g"))
+    }
+
+    @Test
     fun `the first entry wins on duplicate shortcuts`() {
         val duplicates = TextReplacements(listOf(entry("qqc", "quelque chose"), entry("QQC", "quoi que ce soit")))
         assertEquals("quelque chose", duplicates.expansion(ofShortcut = "qqc"))
