@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalDensity
 import dev.pivisolutions.dictus.ime.input.ReturnKeyRole
 import dev.pivisolutions.dictus.ime.model.KeyDefinition
 import dev.pivisolutions.dictus.ime.model.KeyType
+import dev.pivisolutions.dictus.ime.language.LongPressAccents
 import dev.pivisolutions.dictus.ime.model.FrenchAdaptiveKey
 
 /**
@@ -31,7 +32,7 @@ fun KeyRow(
     onKeyPress: (KeyDefinition) -> Unit,
     onDeleteWord: () -> Unit = {},
     onAccentSelected: (String) -> Unit,
-    accentMap: Map<Char, List<Char>> = emptyMap(),
+    longPressAccents: Map<Char, List<String>> = emptyMap(),
     onKeySound: (KeyType) -> Unit = {},
     labelsVisible: Boolean = true,
     onTrackpadActiveChange: (Boolean) -> Unit = {},
@@ -76,8 +77,8 @@ fun KeyRow(
                 else -> null
             }
             val accentChars = renderedKey.accents ?: displayChar?.let { character ->
-                accentMap[character.lowercaseChar()]?.map { accent ->
-                    if (character.isUpperCase()) accent.uppercase() else accent.toString()
+                longPressAccents[character.lowercaseChar()]?.map { accent ->
+                    if (character.isUpperCase()) LongPressAccents.shifted(accent) else accent
                 }
             }
 

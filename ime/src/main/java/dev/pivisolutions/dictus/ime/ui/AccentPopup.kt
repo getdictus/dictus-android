@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.pivisolutions.dictus.core.theme.DictusColors
@@ -27,6 +28,7 @@ import dev.pivisolutions.dictus.core.theme.LocalDictusColors
 fun AccentPopup(
     accents: List<String>,
     highlightedIndex: Int?,
+    cellWidth: Dp,
     onAccentSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -43,7 +45,7 @@ fun AccentPopup(
         accents.forEachIndexed { index, accent ->
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(width = cellWidth, height = 44.dp)
                     .background(
                         if (highlightedIndex == index) {
                             DictusColors.AccentHighlight.copy(alpha = 0.35f)

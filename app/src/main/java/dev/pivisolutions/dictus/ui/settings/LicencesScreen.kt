@@ -176,14 +176,17 @@ fun LicencesScreen(
             SCOWL_INTRO + "\n\n" + copyright
         }
 
-        // Spatial autocorrect (#385): Hex's decoder, ported code, and where its two models come
-        // from. Google Books asks for the attribution, SCOWL's notice travels with its output,
-        // and fr.hextm, derived from Grammalecte's dictionary, is offered under the MPL 2.0.
+        // Hex credits both the long-press accent lists (#406) and the spatial autocorrect (#385):
+        // Hex's decoder, ported code, and where its two models come from. Google Books asks for
+        // the attribution, SCOWL's notice travels with its output, and fr.hextm, derived from
+        // Grammalecte's dictionary, is offered under the MPL 2.0.
         LicenceBlock(
             name = "Hex",
             author = "Christopher Langton",
             url = "https://github.com/anomalyco/hex",
-            licenceText = mitLicence("Copyright (c) 2026 Christopher Langton"),
+            licenceText = "The keyboard's long-press accent lists, per language, and its spatial " +
+                "autocorrect decoder come from Hex.\n\n" +
+                mitLicence("Copyright (c) 2026 Christopher Langton"),
             onLinkClick = openLink,
         )
 
