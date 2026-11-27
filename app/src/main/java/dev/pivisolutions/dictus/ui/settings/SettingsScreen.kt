@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import java.text.NumberFormat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -105,6 +106,10 @@ fun SettingsScreen(
     proRowVisible: Boolean = false,
     isPro: Boolean = false,
     onNavigateToProHub: () -> Unit = {},
+    clearHistoryVisible: Boolean = false,
+    clearHistoryEnabled: Boolean = false,
+    historyCount: Int = 0,
+    onClearHistory: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
@@ -121,6 +126,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     var showResetLearnedWords by remember { mutableStateOf(false) }
+    var showClearHistory by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -202,6 +208,28 @@ fun SettingsScreen(
                 selected = language,
                 onSelect = { viewModel.setLanguage(it) },
             )
+            // iOS SettingsView, last row of Transcription (#202): for a user entitled to the
+            // history, and for anyone who still has something to delete, saved transcriptions or
+            // the debug log, Pro or not (`HistoryAvailability.clearRowIsVisible`, iOS #906). The
+            // count is a trailing detail, never inside the sentence, and never « 0 » on a row
+            // that still empties the debug log.
+            if (clearHistoryVisible) {
+                SettingDivider()
+                SettingRow(
+                    label = { SettingLabel(stringResource(R.string.history_clear), color = DictusColors.Destructive) },
+                    modifier = Modifier
+                        .clickable(enabled = clearHistoryEnabled) { showClearHistory = true }
+                        .testTag("settings_clear_history"),
+                ) {
+                    if (historyCount > 0) {
+                        Text(
+                            text = NumberFormat.getIntegerInstance().format(historyCount),
+                            color = LocalDictusColors.current.textSecondary,
+                            fontSize = 17.sp,
+                        )
+                    }
+                }
+            }
         }
 
         // ---------- SECTION: Clavier ----------
@@ -385,6 +413,25 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    if (showClearHistory) {
+        AlertDialog(
+            onDismissRequest = { showClearHistory = false },
+            title = { Text(stringResource(R.string.history_clear_title)) },
+            text = { Text(stringResource(R.string.history_clear_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearHistory()
+                        showClearHistory = false
+                    },
+                ) { Text(stringResource(R.string.history_clear_confirm), color = DictusColors.Destructive) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearHistory = false }) { Text(stringResource(R.string.dialog_cancel)) }
+            },
+        )
     }
 
     if (showResetLearnedWords) {
