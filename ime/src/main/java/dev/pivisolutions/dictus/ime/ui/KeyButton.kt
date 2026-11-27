@@ -146,6 +146,8 @@ fun KeyButton(
     val view = LocalView.current
     val density = LocalDensity.current
     var isPressed by remember { mutableStateOf(false) }
+    // The preview shows the key as it was at touch-down, like the letter a tap types (#423).
+    var previewLabel by remember { mutableStateOf("") }
     var keyWidthPx by remember { mutableStateOf(0) }
     var keyPositionXPx by remember { mutableStateOf(0f) }
     // Where a letter key is, and where it was touched, for the spatial decoder (#385).
@@ -222,6 +224,7 @@ fun KeyButton(
     val currentOnTrackpadMove = rememberUpdatedState(onTrackpadMove)
     val currentKeyTouches = rememberUpdatedState(keyTouches)
     val currentOutput = rememberUpdatedState(key.output)
+    val currentDisplayLabel = rememberUpdatedState(displayLabel)
 
     fun resolveAccentIndex(pointerX: Float): Int? {
         val accents = accentChars ?: return null
@@ -401,6 +404,7 @@ fun KeyButton(
                         var accentTrackingActive = false
                         var released = false
 
+                        previewLabel = currentDisplayLabel.value
                         isPressed = true
                         showAccentPopup = false
                         highlightedAccentIndex = null
@@ -533,7 +537,7 @@ fun KeyButton(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = displayLabel,
+                        text = previewLabel,
                         color = LocalDictusColors.current.keyText,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Medium,
