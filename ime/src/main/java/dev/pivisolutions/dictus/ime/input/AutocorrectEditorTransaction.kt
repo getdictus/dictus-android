@@ -139,9 +139,16 @@ enum class AutocorrectRejection {
     EDITOR_PRECONDITION_CHANGED,
 }
 
+/** Which editor call failed, named in the field log only. */
 enum class AutocorrectEditorOperation {
     BEGIN_BATCH,
+    /** The extracted-text path, [AutocorrectEditor.attemptVerifiedReplacement]. */
     VERIFIED_REPLACEMENT,
+    /**
+     * The cursor-relative path, [AutocorrectEditor.attemptRelativeReplacement]. It once logged
+     * VERIFIED_REPLACEMENT too, which sent #275 after the wrong path.
+     */
+    RELATIVE_REPLACEMENT,
 }
 
 /** Coordinates fail-closed autocorrect and its undo without issuing deletion calls. */
@@ -208,12 +215,12 @@ object AutocorrectEditorTransaction {
                 rejected(AutocorrectRejection.EDITOR_PRECONDITION_CHANGED)
             AutocorrectReplacementOutcome.FailedUnchanged, null ->
                 AutocorrectTransactionResult.EditorFailure(
-                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    AutocorrectEditorOperation.RELATIVE_REPLACEMENT,
                     outcome.cleanup,
                 )
             AutocorrectReplacementOutcome.IndeterminateMutation ->
                 AutocorrectTransactionResult.IndeterminateMutation(
-                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    AutocorrectEditorOperation.RELATIVE_REPLACEMENT,
                     outcome.cleanup,
                 )
         }
@@ -311,12 +318,12 @@ object AutocorrectEditorTransaction {
                 rejected(AutocorrectRejection.EDITOR_PRECONDITION_CHANGED)
             AutocorrectReplacementOutcome.FailedUnchanged, null ->
                 AutocorrectTransactionResult.EditorFailure(
-                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    AutocorrectEditorOperation.RELATIVE_REPLACEMENT,
                     outcome.cleanup,
                 )
             AutocorrectReplacementOutcome.IndeterminateMutation ->
                 AutocorrectTransactionResult.IndeterminateMutation(
-                    AutocorrectEditorOperation.VERIFIED_REPLACEMENT,
+                    AutocorrectEditorOperation.RELATIVE_REPLACEMENT,
                     outcome.cleanup,
                 )
         }

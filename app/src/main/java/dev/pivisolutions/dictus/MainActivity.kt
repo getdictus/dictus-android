@@ -169,6 +169,9 @@ class MainActivity : AppCompatActivity() {
                     onShowKeyboardPicker = { showKeyboardPicker() },
                     onOpenAppSettings = { openAppSettings() },
                     openSettingsRequested = restrictedSettingsLaunch,
+                    // Finishing, not moving the task back: the next launch from the launcher
+                    // must open the full app, not this restricted instance again (#416).
+                    onCloseSettings = { finish() },
                     openModelsRequested = intent?.action == AppLaunchContract.ACTION_OPEN_MODELS,
                     microphoneRequested = intent?.action == AppLaunchContract.ACTION_REQUEST_MICROPHONE,
                 )
