@@ -3,6 +3,8 @@ package dev.pivisolutions.dictus.pro
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.pivisolutions.dictus.core.premium.HistoryAvailability
+import dev.pivisolutions.dictus.core.premium.HistoryEntryPoint
 import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.core.premium.ProFeature
 import dev.pivisolutions.dictus.core.premium.ProFeatureSwitches
@@ -51,6 +53,10 @@ class ProViewModel @Inject constructor(
         val settingsRowVisible: Boolean get() = PremiumFlags.PAYWALL_VISIBLE || debugForced
 
         val showsDebugForcedNotice: Boolean get() = ProHub.showsDebugForcedNotice(isPro, isPaid)
+
+        /** Home's history hint (#202), iOS `HistoryAvailability.entryPoint`. */
+        val historyEntryPoint: HistoryEntryPoint
+            get() = HistoryAvailability.entryPoint(isAvailable(ProFeature.HISTORY), PremiumFlags.PAYWALL_VISIBLE)
     }
 
     val state: StateFlow<State> = combine(

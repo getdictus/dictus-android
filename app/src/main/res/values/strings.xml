@@ -77,6 +77,7 @@
     <string name="settings_keyboard_sounds">Keyboard sounds</string>
     <string name="settings_suggestions">Suggestions</string>
     <string name="settings_autocorrect">Autocorrect</string>
+    <string name="settings_toolbar_paste">Paste button in the toolbar</string>
     <string name="settings_sounds">Sounds</string>
     <string name="settings_reset_learned_words">Reset learned words</string>
     <string name="settings_reset_learned_words_title">Reset learned words?</string>
@@ -135,6 +136,7 @@
     <string name="sound_settings_start_sound">Start</string>
     <string name="sound_settings_stop_sound">End</string>
     <string name="sound_settings_cancel_sound">Cancel</string>
+    <string name="settings_close_cd">Back</string>
     <string name="sound_settings_back_cd">Back</string>
 
     <!-- Shared voice notes (#204), iOS DictusShare and VoiceNoteCardView -->
@@ -314,6 +316,7 @@
     <string name="history_clear_title">Clear history?</string>
     <string name="history_clear_body">Every transcription saved on this device will be deleted. This cannot be undone.</string>
     <string name="history_clear_confirm">Delete all</string>
+    <string name="history_switch_off_footer">History is off: new dictations are not saved. Those already saved are kept.</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">Result</string>

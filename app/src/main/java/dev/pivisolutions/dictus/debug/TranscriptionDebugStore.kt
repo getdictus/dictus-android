@@ -34,6 +34,12 @@ class TranscriptionDebugStore(
     /** Every entry of the last 7 days, oldest first, after dropping the older ones from the file. */
     fun readAll(): List<TranscriptionDebugEntry> = synchronized(lock) { purge() }
 
+    /**
+     * Whether the file holds anything, iOS `PolishEventStore.hasEntries`: a size check, no parsing,
+     * so lines past the 7 days still count until a read or « Effacer l'historique » removes them.
+     */
+    fun hasEntries(): Boolean = synchronized(lock) { file.length() > 0 }
+
     /** « Clear »: empties the log. */
     fun clear() = synchronized(lock) {
         file.delete()

@@ -49,6 +49,7 @@ object SuggestionBarTrace {
             ToolbarCentreSlot.AppDictationInProgress -> "AppDictationInProgress"
             ToolbarCentreSlot.DictationUndo -> "DictationUndo"
             ToolbarCentreSlot.Suggestions -> "Suggestions"
+            ToolbarCentreSlot.Paste -> "Paste"
             ToolbarCentreSlot.Empty -> "Empty"
         }
 }
