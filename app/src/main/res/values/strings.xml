@@ -135,6 +135,7 @@
     <string name="sound_settings_start_sound">Start</string>
     <string name="sound_settings_stop_sound">End</string>
     <string name="sound_settings_cancel_sound">Cancel</string>
+    <string name="settings_close_cd">Back</string>
     <string name="sound_settings_back_cd">Back</string>
 
     <!-- DebugLogsScreen -->
