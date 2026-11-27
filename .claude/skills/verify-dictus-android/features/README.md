@@ -51,7 +51,7 @@ Implementation details stay out of the map: only user paths, stable handles, req
 | [`keyboard.languages`](keyboard.languages.md) | Keyboard languages and layouts | Free | partial | Yes (cycle a full turn) |
 | [`keyboard.emoji`](keyboard.emoji.md) | Emoji | Free | partial | Yes |
 | [`feedback.sounds-haptics`](feedback.sounds-haptics.md) | Sounds and haptics | Free | present | Settings only; no sound or vibration captured |
-| [`vocabulary`](vocabulary.md) | Custom vocabulary | Pro | partial | Yes with « Forcer Dictus Pro » (Debug build); add a test term and delete it |
+| [`vocabulary`](vocabulary.md) | Custom vocabulary | Pro | partial | Yes with « Forcer Dictus Pro » (Debug build), from the Dictus Pro hub; add a test term and delete it |
 | [`onboarding`](onboarding.md) | Onboarding | Free | partial | No: needs a fresh install (data wipe forbidden) |
 | [`diagnostics.logs`](diagnostics.logs.md) | Debug logs and diagnostics | Free | present | Yes (never « Effacer », never send) |
 | [`appearance`](appearance.md) | Appearance: theme, interface language | Free | Android-only | Pickers only |
@@ -71,7 +71,7 @@ Every iOS ID (the 185 of the iOS « All IDs » table, same order: 18 features, 1
 | `polish` | N/A | iOS-only (N/A) | no |
 | `smart-modes` | Pro on iOS — absent | absent | no |
 | `history` | Pro (hidden: `PremiumFlags.HISTORY_VISIBLE = false`) | absent — implemented (list, detail, delete, search, clear, 200-entry cap; #202) but hidden | no |
-| [`vocabulary`](vocabulary.md) | Pro | partial — no suggestions, no Pro hub entry yet | no |
+| [`vocabulary`](vocabulary.md) | Pro | partial — no suggestions | no |
 | `voice-notes` | Pro on iOS — absent | absent | no |
 | [`typing.autocorrect`](typing.autocorrect.md) | Free | present | no |
 | [`typing.learned-words`](typing.learned-words.md) | Free | present | no |
@@ -186,7 +186,7 @@ Every iOS ID (the 185 of the iOS « All IDs » table, same order: 18 features, 1
 | `onboarding.completion` | Free | present | no |
 | `onboarding.resume` | Free | partial — survives process death, not a force stop | no |
 | `onboarding.whats-new` | Free | absent | no |
-| `pro.hub` | Pro | partial — hub for a Pro user: history card, Debug notice, legal links; no membership card or trial block (no purchase channel, no trial) (#207). Reached from Réglages → `Dictus Pro` in a Debug build under « Forcer Dictus Pro » | no |
+| `pro.hub` | Pro | partial — hub for a Pro user: history and vocabulary cards (iOS also lists Smart Modes first, absent here, #205), Debug notice, legal links; no membership card or trial block (no purchase channel, no trial) (#207). Reached from Réglages → `Dictus Pro` in a Debug build under « Forcer Dictus Pro » | no |
 | `pro.paywall` | Pro on iOS — absent | absent | no |
 | `pro.restore` | Pro on iOS — absent | absent | no |
 | `pro.trial` | Pro on iOS — absent | absent | no |
@@ -228,7 +228,7 @@ Every iOS ID (the 185 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.pro.hub` | Pro | partial — see `pro.hub` (#207) | no |
 | `app.pro.smart-modes` | Pro on iOS — absent | absent | no |
 | `app.pro.history` | Pro on iOS — absent | absent | no |
-| `app.pro.vocabulary` | Pro | present — from Réglages, not yet from the Pro hub | no |
+| `app.pro.vocabulary` | Pro | present — from the Pro hub, as on iOS | no |
 | `app.pro.vocabulary.term-editor` | Pro | present | no |
 | `app.pro.voice-notes` | Pro on iOS — absent | absent | no |
 | `app.paywall` | Pro on iOS — absent | absent | no |

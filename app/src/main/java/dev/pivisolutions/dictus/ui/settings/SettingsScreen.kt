@@ -88,7 +88,6 @@ import androidx.compose.material3.MaterialTheme
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onNavigateToVocabulary: () -> Unit = {},
     onNavigateToLicences: () -> Unit = {},
     onNavigateToDebugLogs: () -> Unit = {},
     onNavigateToSoundSettings: () -> Unit = {},
@@ -184,15 +183,6 @@ fun SettingsScreen(
                 selected = language,
                 onSelect = { viewModel.setLanguage(it) },
             )
-            // Vocabulary (#208). iOS opens it from the Dictus Pro hub only; until the Android hub
-            // (#207) lists it, this row is the way in, shown to Pro users only.
-            if (isPro) {
-                SettingDivider()
-                SettingNavRow(
-                    label = stringResource(R.string.vocabulary_title),
-                    onClick = onNavigateToVocabulary,
-                )
-            }
         }
 
         // ---------- SECTION: Clavier ----------

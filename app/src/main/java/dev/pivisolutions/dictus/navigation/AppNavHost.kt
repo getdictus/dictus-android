@@ -416,8 +416,10 @@ private fun MainTabsScreen(
                         when (feature) {
                             ProFeature.HISTORY ->
                                 navController.navigate(AppDestination.History.route) { launchSingleTop = true }
+                            ProFeature.VOCABULARY ->
+                                navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
                             // Not listed by the hub until they ship (`ProHub.listedFeatures`).
-                            ProFeature.SMART_MODE, ProFeature.VOCABULARY, ProFeature.VOICE_NOTES -> Unit
+                            ProFeature.SMART_MODE, ProFeature.VOICE_NOTES -> Unit
                         }
                     },
                     viewModel = proViewModel,
@@ -428,9 +430,6 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.Settings.route) {
                 SettingsScreen(
-                    onNavigateToVocabulary = {
-                        navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
-                    },
                     onNavigateToLicences = {
                         navController.navigate(AppDestination.Licences.route)
                     },

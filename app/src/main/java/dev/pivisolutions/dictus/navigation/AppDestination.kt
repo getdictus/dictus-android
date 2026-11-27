@@ -55,7 +55,7 @@ sealed class AppDestination(val route: String) {
     /** Hidden transcription debug log (#295) — five taps on Settings > À propos > Version. */
     data object TranscriptionDebug : AppDestination("transcription_debug")
 
-    /** Custom vocabulary (#208), from Settings > Transcription, for Pro users. */
+    /** Custom vocabulary (#208), from the Dictus Pro hub, as on iOS. */
     data object Vocabulary : AppDestination("vocabulary")
 
     /** Sound settings — volume slider, start/stop/cancel sound pickers. */

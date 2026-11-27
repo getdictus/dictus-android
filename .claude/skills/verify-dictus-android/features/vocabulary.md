@@ -4,7 +4,7 @@ The user teaches Dictus how a term is spelled and how the engine mishears it; ev
 
 - **ID:** `vocabulary`
 - **Tier:** Pro (`ProStatus.isPro`; nothing is sold on Android yet, so in practice the Debug build's « Forcer Dictus Pro »)
-- **Android status:** partial — no « Analyser mes transcriptions » suggestions, no onboarding scene, no Dictus Pro hub entry yet (#207)
+- **Android status:** partial — no « Analyser mes transcriptions » suggestions, no onboarding scene
 - **Screens:** `app.pro.vocabulary`, `app.pro.vocabulary.term-editor` — see [screens.md](screens.md)
 
 ## Sub-features
@@ -20,7 +20,7 @@ The user teaches Dictus how a term is spelled and how the engine mishears it; ev
 
 ## How to get to it (user POV)
 
-1. With Pro: Dictus → Réglages → Transcription → « Vocabulaire ». (iOS: Réglages → Dictus Pro → Vocabulaire; the Android hub does not list it yet.)
+1. With Pro: Dictus → Réglages → « Dictus Pro » → « Vocabulaire », as on iOS. Réglages has no Vocabulaire row of its own.
 2. « Ajouter un terme », type the spelling and how Dictus writes it, « Enregistrer ».
 3. Dictate the misheard form: the inserted text carries the spelling.
 
@@ -28,8 +28,8 @@ The user teaches Dictus how a term is spelled and how the engine mishears it; ev
 
 Preconditions: Launch and Doctor OK, a Debug build. Note whether « Forcer Dictus Pro » is on: it must be the same at the end.
 
-- **Pro.** Réglages → scroll → « Développeur » → `Forcer Dictus Pro` on. → Réglages → « Transcription » shows a `Vocabulaire` row.
-- **Open.** Tap `Vocabulaire`. → the switch `Vocabulaire`, « Vos termes », `Ajouter un terme` (`screen.sh app.pro.vocabulary`).
+- **Pro.** Réglages → scroll → « Développeur » → `Forcer Dictus Pro` on. → Réglages shows the `Dictus Pro` row at the top.
+- **Open.** Tap `Dictus Pro`, then the `Vocabulaire` card (`pro_hub_feature_vocabulary`). → the switch `Vocabulaire`, « Vos termes », `Ajouter un terme` (`screen.sh app.pro.vocabulary`).
 - **Add.** Tap `Ajouter un terme`, type the term and a variant, tap `Enregistrer`. → the row with « Remplace : … » (`screen.sh app.pro.vocabulary.term-editor` before saving).
 - **Apply.** Dictate the variant from Accueil → `Nouvelle dictée`: the result carries the term. The log line `vocabularyApplied: enabled=yes entries=N replacements=1` (counts only) proves the pass ran.
 - **Clean up.** Delete the term by swiping it left, put « Forcer Dictus Pro » back.
@@ -38,5 +38,5 @@ Preconditions: Launch and Doctor OK, a Debug build. Note whether « Forcer Dictu
 ## Gotchas
 
 - Pierre's Pixel holds no vocabulary: add only a test term and delete it before leaving.
-- Without Pro the Réglages row is absent; with Pro and the switch off, the screen shows the terms dimmed and `vocabularyApplied: enabled=no`.
+- Without Pro the hub and its card are out of reach; with Pro and the switch off, the screen shows the terms dimmed and `vocabularyApplied: enabled=no`.
 - The emulator proves `vocabulary.apply` with the French clip `fixtures/audio/fr-beau-paris.wav` (« Il fait beau aujourd'hui à Paris. »): the term `Lutèce` with the variant `Paris` turns the result into « … à Lutèce. ».
