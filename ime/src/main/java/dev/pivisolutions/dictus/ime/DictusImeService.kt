@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.ime
 
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -77,6 +78,8 @@ import dev.pivisolutions.dictus.ime.ui.RecordingScreen
 import dev.pivisolutions.dictus.ime.ui.TranscribingScreen
 import dev.pivisolutions.dictus.ime.input.AutoCapitalization
 import dev.pivisolutions.dictus.ime.input.AutoFullStop
+import dev.pivisolutions.dictus.ime.input.ClipboardPasteOffer
+import dev.pivisolutions.dictus.ime.input.ClipboardSnapshot
 import dev.pivisolutions.dictus.ime.input.AutoFullStopInput
 import dev.pivisolutions.dictus.ime.input.ReturnKeyStyle
 import dev.pivisolutions.dictus.ime.input.AutoCapMode
@@ -121,6 +124,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -162,6 +166,8 @@ class DictusImeService : LifecycleInputMethodService() {
 
         /** Text read before the cursor for the spatial decoder's word before: the word, a space, the one before. */
         private const val SPATIAL_CONTEXT_CHARS = 80
+        // The expiry refresh lands just past the window, as iOS adds 0.5 s.
+        private const val PASTE_EXPIRY_SLACK_MS = 500L
 
         /**
          * Characters before the cursor the contextual spelling rules see: the clause and its
@@ -317,6 +323,17 @@ class DictusImeService : LifecycleInputMethodService() {
     private val spatialAutocorrect by lazy { SpatialAutocorrect { TypingModel.asset(assets, it) } }
     private val _spatialEnabled = MutableStateFlow(false)
 
+    // One-tap Paste (#420): off unless its setting is on. Only markers and a time are kept, in
+    // [clipboardOffer]; the clip's text is read on the tap alone, and never logged.
+    private val clipboardOffer by lazy { ClipboardPasteOffer.create(this) }
+    private val clipboardManager by lazy { getSystemService(ClipboardManager::class.java) }
+    private val _pasteOfferEnabled = MutableStateFlow(false)
+    private val _offersPaste = MutableStateFlow(false)
+    private var pasteOfferExpiryJob: Job? = null
+    // A copy made in the app under the keyboard, with the keyboard on screen (iOS
+    // `UIPasteboard.changedNotification`). Only a refresh trigger: the marker is the clip's own.
+    private val clipChangedListener = ClipboardManager.OnPrimaryClipChangedListener { refreshPasteOffer() }
+
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -421,6 +438,16 @@ class DictusImeService : LifecycleInputMethodService() {
                 }
         }
         bindingScope.launch {
+            entryPoint.dataStore().data
+                .map { it[PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED] == true }
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    _pasteOfferEnabled.value = enabled
+                    refreshPasteOffer()
+                }
+        }
+        clipboardManager.addPrimaryClipChangedListener(clipChangedListener)
+        bindingScope.launch {
             dictionaryEngine.suggestionResults.collect { result ->
                 val correctionContextCurrent = result.contextIdentity?.let { identity ->
                     shouldRequestSuggestions() && CorrectionContextExtractor.isCurrent(
@@ -515,6 +542,7 @@ class DictusImeService : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
+        clipboardManager.removePrimaryClipChangedListener(clipChangedListener)
         stateCollectionJob?.cancel()
         engineCollectionJob?.cancel()
         if (isBound) {
@@ -867,6 +895,8 @@ class DictusImeService : LifecycleInputMethodService() {
         refreshAutoCapitalization(force = true)
         // onStartInput emptied the bar; a word already before the cursor gets its suggestions back.
         refreshSuggestionsFromEditor()
+        // Another app, or another field: a copy made there is offered here (#420).
+        refreshPasteOffer()
         // A shortcut added in the system settings since the last opening expands from now on.
         if (!restarting) reloadTextReplacements()
         // WHY (#112): "did the user ever open the Dictus keyboard?" was unanswerable from an export.
@@ -1064,6 +1094,7 @@ class DictusImeService : LifecycleInputMethodService() {
         val autoCapSignal by _autoCapSignal.collectAsState()
         val keyboardSession by _keyboardSession.collectAsState()
         val activeKeyboardState by _activeKeyboardState.collectAsState()
+        val offersPaste by _offersPaste.collectAsState()
         val activeLanguage = activeKeyboardState.language
         val activeLayout = activeKeyboardState.layout
         val usesFrenchAdaptiveKey = KeyboardPreferenceResolver.usesFrenchAdaptiveKey(
@@ -1178,6 +1209,7 @@ class DictusImeService : LifecycleInputMethodService() {
                             autocorrectUndo,
                             ToolbarCentreSlot.pendingWord(isCompletionPending, suggestionMode, currentWord),
                         ),
+                        offersPaste = offersPaste,
                     ),
                     trace = suggestionTrace,
                     mode = suggestionMode,
@@ -1222,6 +1254,8 @@ class DictusImeService : LifecycleInputMethodService() {
                     isAppDictationInProgress = appDictationActive,
                     autocorrectUndo = autocorrectUndo,
                     onUndoAutocorrect = { undoAutocorrect() },
+                    offersPaste = offersPaste,
+                    onPaste = { pasteClipboard() },
                     onSuggestionSelected = { suggestion, renderedPredictionToken ->
                         autocorrectCoordinator.onOtherInput()
                         dictationFeedback.withdraw()
@@ -1561,6 +1595,56 @@ class DictusImeService : LifecycleInputMethodService() {
         val committed = commitText(text)
         dictationUndo.recordInsertion(text, cursorAfter)
         return committed
+    }
+
+    /**
+     * Whether the toolbar offers Paste now (#420), and when that offer is to be taken down on a
+     * keyboard nobody touches. Reads the clip's description only, and nothing with the setting off.
+     */
+    private fun refreshPasteOffer() {
+        val now = System.currentTimeMillis()
+        val offered = clipboardOffer.isOffered(
+            enabled = _pasteOfferEnabled.value,
+            clipboard = { ClipboardSnapshot.of(clipboardManager.primaryClipDescription) },
+            now = now,
+        )
+        _offersPaste.value = offered
+        pasteOfferExpiryJob?.cancel()
+        val expiry = clipboardOffer.expiry()
+        pasteOfferExpiryJob = if (offered && expiry != null) {
+            bindingScope.launch {
+                delay(expiry - now + PASTE_EXPIRY_SLACK_MS)
+                refreshPasteOffer()
+            }
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Inserts the clipboard's text from the toolbar's Paste (#420, iOS `pasteClipboard`). The clip
+     * is read here, after the tap and only then, and goes straight to the editor: it is never
+     * logged, stored or kept. A clip that yields no text leaves the editor untouched and the
+     * offer in place.
+     */
+    private fun pasteClipboard() {
+        val inputConnection = currentInputConnection
+        val clip = clipboardManager.primaryClip
+        val text = clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+        if (inputConnection != null && clip != null && !text.isNullOrEmpty()) {
+            // Not typing: like a dictation, a paste closes the autocorrect undo.
+            autocorrectCoordinator.onOtherInput()
+            dictationFeedback.withdraw()
+            autoFullStop.clear()
+            clearSuggestionState()
+            if (inputConnection.commitText(text, 1)) {
+                clipboardOffer.notePasted(clip.description.timestamp)
+                Timber.d("Clipboard pasted from the toolbar")
+            }
+            refreshFrenchAdaptiveKeyState()
+            refreshAutoCapitalization()
+        }
+        refreshPasteOffer()
     }
 
     /**

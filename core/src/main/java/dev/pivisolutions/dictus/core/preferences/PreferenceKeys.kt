@@ -81,6 +81,12 @@ object PreferenceKeys {
     val AUTOCORRECT_ENABLED = booleanPreferencesKey("autocorrect_enabled")
 
     /**
+     * One-tap Paste in the keyboard toolbar for a recent copy (#420, iOS #634). Off when unset:
+     * a new visible feature ships behind a switch that is off by default (Pierre, 26/11).
+     */
+    val KEYBOARD_PASTE_OFFER_ENABLED = booleanPreferencesKey("keyboard_paste_offer_enabled")
+
+    /**
      * Whether the shortcuts of the phone's personal dictionary expand while typing (#424):
      * `qqc` + Space gives « quelque chose », with autocorrect on or off. Off when unset.
      */

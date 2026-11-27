@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -33,9 +34,12 @@ import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
 import dev.pivisolutions.dictus.core.service.DictationController
 import androidx.compose.material3.MaterialTheme
 import dev.pivisolutions.dictus.home.HomeScreen
+import dev.pivisolutions.dictus.core.premium.HistoryAvailability
+import dev.pivisolutions.dictus.core.premium.HistoryEntryPoint
 import dev.pivisolutions.dictus.core.premium.ProFeature
 import dev.pivisolutions.dictus.feedback.FeedbackLogScreen
 import dev.pivisolutions.dictus.feedback.FeedbackScreen
+import dev.pivisolutions.dictus.history.HistoryClearViewModel
 import dev.pivisolutions.dictus.history.HistoryRoute
 import dev.pivisolutions.dictus.models.ModelsScreen
 import dev.pivisolutions.dictus.onboarding.OnboardingDownloadNotice
@@ -311,6 +315,10 @@ private fun MainTabsScreen(
     // One Pro state for Home's card, Settings' row and the hub (#207).
     val proViewModel: ProViewModel = hiltViewModel(activityViewModelOwner)
     val proState by proViewModel.state.collectAsState()
+    // Settings' « Effacer l'historique » row (#202).
+    val historyClearViewModel: HistoryClearViewModel = hiltViewModel(activityViewModelOwner)
+    val historyCount by historyClearViewModel.count.collectAsState()
+    val hasSomethingToClear by historyClearViewModel.hasSomethingToDelete.collectAsState()
 
     ActiveDictationRedirect(
         dictationController = dictationController,
@@ -389,14 +397,15 @@ private fun MainTabsScreen(
                         navController.navigate(AppDestination.History.route) { launchSingleTop = true }
                     },
                     installState = modelInstaller::state,
+                    historyEnabled = proState.historyEntryPoint == HistoryEntryPoint.OPEN,
                     proCard = proState.homeCard,
                     onOpenProHub = { navController.navigate(AppDestination.ProHub.route) { launchSingleTop = true } },
                 )
             }
-            // History is a Pro feature. Its route is reached from Home's hint, drawn only while
-            // `PremiumFlags.HISTORY_VISIBLE` is on, and from the Pro hub's card, reachable only
-            // with Pro (#207). The route is always registered: a graph rebuilt on an entitlement
-            // change would reset the back stack under the user.
+            // History is a Pro feature (#202). Its route is reached from Home's hint, drawn only
+            // for a user entitled to it, and from the Pro hub's card, reachable only with Pro
+            // (#207). The route is always registered: a graph rebuilt on an entitlement change
+            // would reset the back stack under the user.
             composable(
                 route = AppDestination.History.route,
                 enterTransition = { slideInVertically(initialOffsetY = { it }) },
@@ -404,7 +413,14 @@ private fun MainTabsScreen(
                 popEnterTransition = { slideInVertically(initialOffsetY = { -it }) },
                 popExitTransition = { slideOutVertically(targetOffsetY = { it }) },
             ) {
-                HistoryRoute(onBack = { navController.popBackStack() })
+                // Opened from the hub, the screen carries the History switch at its top (iOS
+                // `HistoryView(isPushed: true)`); from Home it does not.
+                val fromHub = navController.previousBackStackEntry?.destination?.route == AppDestination.ProHub.route
+                HistoryRoute(
+                    onBack = { navController.popBackStack() },
+                    historySwitch = if (fromHub) proState.switches[ProFeature.HISTORY] ?: true else null,
+                    onHistorySwitchChange = { proViewModel.setSwitch(ProFeature.HISTORY, it) },
+                )
             }
             composable(
                 route = AppDestination.ProHub.route,
@@ -430,6 +446,12 @@ private fun MainTabsScreen(
                 ModelsScreen(dictationController = dictationController)
             }
             composable(AppDestination.Settings.route) {
+                // The debug log has no observer: read it again each time Settings is shown, the app
+                // back in front included, as iOS refreshes `hasSomethingToClear` (#906).
+                LifecycleResumeEffect(Unit) {
+                    historyClearViewModel.refresh()
+                    onPauseOrDispose {}
+                }
                 SettingsScreen(
                     onNavigateToLicences = {
                         navController.navigate(AppDestination.Licences.route)
@@ -447,6 +469,13 @@ private fun MainTabsScreen(
                         navController.navigate(AppDestination.Feedback.route)
                     },
                     onClose = onCloseSettings,
+                    clearHistoryVisible = HistoryAvailability.clearRowIsVisible(
+                        isEntitled = proState.isAvailable(ProFeature.HISTORY),
+                        hasSavedRecords = hasSomethingToClear,
+                    ),
+                    clearHistoryEnabled = hasSomethingToClear,
+                    historyCount = historyCount,
+                    onClearHistory = historyClearViewModel::clear,
                     proRowVisible = proState.settingsRowVisible,
                     isPro = proState.isPro,
                     onNavigateToProHub = {

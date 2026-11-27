@@ -69,7 +69,8 @@ import kotlin.math.PI
 /**
  * The keyboard's single top bar (#139), iOS `ToolbarView.dictationBar`: ☰ on the left, one
  * centre slot, the mic pill on the right. The centre slot holds the dictation notice, the undo
- * pill or the suggestions, by [ToolbarCentreSlot]'s priority; each of them takes ☰'s place.
+ * pill, the suggestions or the Paste pill, by [ToolbarCentreSlot]'s priority; all but Paste take
+ * ☰'s place.
  *
  * ☰ keeps the Android actions of the language control it replaces until #209 and #191 land: a
  * tap cycles Dictus's correction language, a hold opens Dictus Settings. The active language
@@ -105,6 +106,8 @@ fun KeyboardToolbar(
     isAppDictationInProgress: Boolean = false,
     autocorrectUndo: AutocorrectUndoOffer? = null,
     onUndoAutocorrect: () -> Unit = {},
+    offersPaste: Boolean = false,
+    onPaste: () -> Unit = {},
 ) {
     val view = LocalView.current
     val micInteraction = remember { MutableInteractionSource() }
@@ -150,6 +153,7 @@ fun KeyboardToolbar(
             autocorrectUndo,
             pendingWord = ToolbarCentreSlot.pendingWord(isCompletionPending, suggestionMode, currentWord),
         ),
+        offersPaste = offersPaste,
     )
 
     Row(
@@ -249,6 +253,17 @@ fun KeyboardToolbar(
                 onUndoAutocorrect = onUndoAutocorrect,
                 modifier = Modifier.weight(1f),
             )
+            ToolbarCentreSlot.Paste -> {
+                // iOS `ToolbarView.pasteButton` (#634) is the system UIPasteControl, icon and title;
+                // Android has no such control, so it is the bar's own pill, as the undo.
+                ToolbarAccentPill(
+                    text = stringResource(R.string.ime_paste),
+                    description = stringResource(R.string.ime_paste_description),
+                    iconRes = R.drawable.ic_paste,
+                    onClick = onPaste,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+            }
             ToolbarCentreSlot.Empty -> Spacer(modifier = Modifier.weight(1f))
         }
 
