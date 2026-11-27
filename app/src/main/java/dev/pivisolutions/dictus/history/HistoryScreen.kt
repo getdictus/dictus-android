@@ -1,6 +1,14 @@
 package dev.pivisolutions.dictus.history
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.semantics.Role
+import dev.pivisolutions.dictus.ui.settings.DictusToggle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,6 +85,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun HistoryRoute(
     onBack: () -> Unit,
+    historySwitch: Boolean? = null,
+    onHistorySwitchChange: (Boolean) -> Unit = {},
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -95,6 +105,8 @@ fun HistoryRoute(
         onCopy = historyActions::copy,
         onShare = historyActions::share,
         onFailureShown = viewModel::consumeFailure,
+        historySwitch = historySwitch,
+        onHistorySwitchChange = onHistorySwitchChange,
     )
 }
 
@@ -113,6 +125,8 @@ fun HistoryScreen(
     onCopy: (String) -> Unit = {},
     onShare: (String) -> Unit = {},
     onFailureShown: () -> Unit = {},
+    historySwitch: Boolean? = null,
+    onHistorySwitchChange: (Boolean) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     // Screen-local like iOS HistoryView's `@State query`; saveable so it survives the detail screen.
@@ -194,7 +208,13 @@ fun HistoryScreen(
         }
     }
 
+    // Switched off from the hub (#202), the saved entries stay on screen, dimmed and locked,
+    // under the switch: iOS `proFeatureContent(isAvailable:)`. Nothing is deleted.
+    val isLocked = historySwitch == false
     val hasEntries = !state.isLoading && state.failure != HistoryFailure.LOAD && state.entries.isNotEmpty()
+    val canEdit = hasEntries && !isLocked
+    // A query left in place when the switch goes off would keep filtering a locked list (iOS).
+    LaunchedEffect(isLocked) { if (isLocked) query = "" }
     val visibleEntries = remember(state.entries, query) { TranscriptionSearch.filter(state.entries, query) }
 
     val selectedEntry = state.selectedEntryId?.let { selectedId ->
@@ -235,14 +255,18 @@ fun HistoryScreen(
                     fontWeight = FontWeight.Bold,
                 )
                 // Search and clear only make sense over a list that has something in it.
-                if (hasEntries) {
+                if (canEdit) {
                     TextButton(onClick = onRequestClear, modifier = Modifier.testTag("history_clear")) {
                         Text(stringResource(R.string.history_clear), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
 
-            if (hasEntries) {
+            if (historySwitch != null) {
+                HistorySwitchSection(isOn = historySwitch, onChange = onHistorySwitchChange)
+            }
+
+            if (canEdit) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -299,7 +323,10 @@ fun HistoryScreen(
                     )
                 }
                 else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().testTag("history_list"),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (isLocked) Modifier.alpha(LockedAlpha).lockedContent() else Modifier)
+                        .testTag("history_list"),
                     state = listState,
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -485,4 +512,53 @@ private fun historyMetadata(entry: TranscriptionHistoryEntry): String {
     val seconds = (entry.durationMillis.coerceAtLeast(0L) / 1000.0).roundToInt()
     val duration = pluralStringResource(R.plurals.history_duration_seconds, seconds, seconds)
     return stringResource(R.string.history_metadata, dateTime, language, duration)
+}
+
+/**
+ * The History switch at the top of the screen the hub opens (#202), iOS `ProFeatureSwitchSection`
+ * for `.history`: the switch, and while it is off, why the list is locked and that nothing was
+ * deleted.
+ */
+@Composable
+private fun HistorySwitchSection(isOn: Boolean, onChange: (Boolean) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .toggleable(value = isOn, role = Role.Switch, onValueChange = onChange)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .testTag("history_switch"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.pro_feature_history),
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 17.sp,
+                modifier = Modifier.weight(1f),
+            )
+            DictusToggle(checked = isOn, onToggle = { onChange(!isOn) })
+        }
+        if (!isOn) {
+            Text(
+                text = stringResource(R.string.history_switch_off_footer),
+                color = LocalDictusColors.current.textSecondary,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp),
+            )
+        }
+    }
+}
+
+/** How far a switched-off history fades, iOS `ProFeatureDimming.opacity`. */
+private const val LockedAlpha = 0.45f
+
+/** Swallows every touch: a locked list is visible, never editable (iOS `allowsHitTesting(false)`). */
+private fun Modifier.lockedContent(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+        }
+    }
 }

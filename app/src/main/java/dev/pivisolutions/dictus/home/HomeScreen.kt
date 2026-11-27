@@ -54,7 +54,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dev.pivisolutions.dictus.R
 import dev.pivisolutions.dictus.core.preferences.PreferenceKeys
-import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import dev.pivisolutions.dictus.core.premium.ProHomeCardContent
 import dev.pivisolutions.dictus.core.theme.DictusColors
 import dev.pivisolutions.dictus.core.theme.LocalDictusColors
@@ -81,8 +80,8 @@ import kotlinx.coroutines.flow.map
  * @param dataStore Application DataStore for reading active model preference.
  * @param onNewDictation Callback for the "Nouvelle dictée" CTA.
  * @param onOpenHistory Callback for the history entry point (swipe up or tap the hint).
- * @param historyEnabled Whether the history entry point exists at all. Defaults to the
- *   premium flag; tests override it to exercise the gated behaviour both ways.
+ * @param historyEnabled Whether the history entry point exists at all: the hint and the swipe,
+ *   for a user entitled to the history (`HistoryEntryPoint.OPEN`, #202).
  * @param isModelDownloaded Whether every file of a model is on disk. Defaults to
  *   [ModelManager.isDownloaded]; tests answer it themselves instead of writing model files.
  * @param proCard What the Home Pro card shows (#207), `ProHomeCardContent.Hidden` for nothing.
@@ -95,7 +94,7 @@ fun HomeScreen(
     dataStore: DataStore<Preferences>,
     onNewDictation: () -> Unit,
     onOpenHistory: () -> Unit = {},
-    historyEnabled: Boolean = PremiumFlags.HISTORY_VISIBLE,
+    historyEnabled: Boolean = false,
     isModelDownloaded: (modelKey: String) -> Boolean = rememberModelDownloadCheck(),
     installState: (modelKey: String) -> Flow<ModelInstallState> = { emptyFlow() },
     proCard: ProHomeCardContent = ProHomeCardContent.Hidden,

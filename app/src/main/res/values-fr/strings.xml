@@ -77,6 +77,7 @@
     <string name="settings_keyboard_sounds">Sons du clavier</string>
     <string name="settings_suggestions">Suggestions</string>
     <string name="settings_autocorrect">Correction automatique</string>
+    <string name="settings_toolbar_paste">Bouton Coller dans la barre</string>
     <string name="settings_sounds">Sons</string>
     <string name="settings_reset_learned_words">R\u00e9initialiser les mots appris</string>
     <string name="settings_reset_learned_words_title">R\u00e9initialiser les mots appris\u00a0?</string>
@@ -290,6 +291,7 @@
     <string name="history_clear_title">Effacer l\u2019historique\u00a0?</string>
     <string name="history_clear_body">Toutes les transcriptions enregistr\u00e9es sur cet appareil seront supprim\u00e9es. Cette action est irr\u00e9versible.</string>
     <string name="history_clear_confirm">Tout supprimer</string>
+    <string name="history_switch_off_footer">L’historique est désactivé : les nouvelles dictées ne sont plus enregistrées. Celles déjà enregistrées sont conservées.</string>
 
     <!-- RecordingScreen -->
     <string name="recording_result_title">R\u00e9sultat</string>
