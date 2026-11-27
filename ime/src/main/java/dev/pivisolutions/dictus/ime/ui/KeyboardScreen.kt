@@ -1,5 +1,7 @@
 package dev.pivisolutions.dictus.ime.ui
 
+import dev.pivisolutions.dictus.ime.input.DeleteSwipeMove
+import dev.pivisolutions.dictus.ime.input.DeleteWordSwipe
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,6 +48,8 @@ fun KeyboardScreen(
     onCommitText: (String) -> Unit,
     onDeleteBackward: () -> Unit,
     onDeleteWordBackward: () -> Unit = onDeleteBackward,
+    onDeleteSwipeMove: (DeleteSwipeMove) -> DeleteWordSwipe.Change? = { null },
+    onDeleteSwipeEnd: () -> Unit = {},
     onSendReturn: () -> Unit,
     languageProfile: LanguageProfile = frenchLanguageProfile,
     onCycleLanguage: () -> Unit = {},
@@ -166,6 +170,8 @@ fun KeyboardScreen(
                     layout = currentLayout,
                     languageProfile = languageProfile,
                     onDeleteWord = onDeleteWordBackward,
+                    onDeleteSwipeMove = onDeleteSwipeMove,
+                    onDeleteSwipeEnd = onDeleteSwipeEnd,
                     onKeySound = onKeySound,
                     labelsVisible = !isTrackpadActive,
                     onTrackpadActiveChange = { isTrackpadActive = it },
