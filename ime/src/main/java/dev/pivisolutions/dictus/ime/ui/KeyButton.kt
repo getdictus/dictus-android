@@ -233,6 +233,10 @@ fun KeyButton(
         val index = ((pointerX - popupLeftPx) / accentCellWidthPx).toInt()
         return index.takeIf { it in accents.indices }
     }
+    // The letter gesture outlives a change of case (#423): it reads the accents and their
+    // geometry as they are now, not as they were when it started.
+    val currentAccentChars = rememberUpdatedState(accentChars)
+    val currentResolveAccentIndex = rememberUpdatedState(::resolveAccentIndex)
 
     // Choose the right gesture modifier based on key type.
     // DELETE uses custom key-repeat logic; other keys use detectTapGestures.
@@ -377,7 +381,9 @@ fun KeyButton(
             }
         }
     } else {
-        Modifier.pointerInput(key.type, accentChars) {
+        // Keyed on the type only: autocapitalization flipping the case under a held letter
+        // changes accentChars (é becomes É), and restarting here dropped the letter (#423).
+        Modifier.pointerInput(key.type) {
             coroutineScope {
                 while (isActive) {
                     awaitPointerEventScope {
@@ -387,7 +393,10 @@ fun KeyButton(
 
                         val supportsAccentPopup =
                             (key.type == KeyType.CHARACTER || key.type == KeyType.ACCENT_ADAPTIVE) &&
-                                !accentChars.isNullOrEmpty()
+                                !currentAccentChars.value.isNullOrEmpty()
+                        // The key as drawn at touch-down is what a tap types, as iOS's activeKey:
+                        // a case flip during the press does not change the letter.
+                        val onPressAtDown = currentOnPress.value
                         val downPosition = down.changes.firstOrNull()?.position ?: Offset.Zero
                         var accentTrackingActive = false
                         var released = false
@@ -416,7 +425,7 @@ fun KeyButton(
                                     accentTrackingActive = distance >= selectionSlopPx
                                 }
                                 highlightedAccentIndex = if (accentTrackingActive) {
-                                    resolveAccentIndex(position.x)
+                                    currentResolveAccentIndex.value(position.x)
                                 } else {
                                     null
                                 }
@@ -428,7 +437,7 @@ fun KeyButton(
                         }
 
                         val selectedAccent = highlightedAccentIndex
-                            ?.let { index -> accentChars?.getOrNull(index) }
+                            ?.let { index -> currentAccentChars.value?.getOrNull(index) }
 
                         isPressed = false
                         showAccentPopup = false
@@ -444,7 +453,7 @@ fun KeyButton(
                                 placement,
                                 downPosition - Offset(touchArea.left.toFloat(), touchArea.top.toFloat()),
                             )
-                            currentOnPress.value()
+                            onPressAtDown()
                         }
                     }
                 }
