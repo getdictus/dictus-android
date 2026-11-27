@@ -31,6 +31,8 @@
     <string name="ime_emoji_category_flags">Drapeaux</string>
     <string name="ime_undo_dictation">Annuler</string>
     <string name="ime_undo_dictation_description">Annuler l\u2019insertion de la dict\u00e9e</string>
+    <string name="ime_paste">Coller</string>
+    <string name="ime_paste_description">Coller le texte copi\u00e9</string>
     <string name="ime_undo_autocorrect_description">Annuler la correction, r\u00e9tablir \u00ab\u00a0%1$s\u00a0\u00bb</string>
     <string name="ime_menu_description">Menu du clavier</string>
     <string name="ime_language_key_cycle_action">Changer la langue du clavier</string>

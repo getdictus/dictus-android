@@ -116,6 +116,7 @@ fun SettingsScreen(
     val keyboardLanguage by viewModel.keyboardLanguage.collectAsState()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsState()
     val autocorrectEnabled by viewModel.autocorrectEnabled.collectAsState()
+    val pasteOfferEnabled by viewModel.pasteOfferEnabled.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
     val learnedWordCount by viewModel.learnedWordCount.collectAsState()
@@ -273,6 +274,13 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_autocorrect),
                 checked = autocorrectEnabled,
                 onToggle = { viewModel.toggleAutocorrect() },
+            )
+            SettingDivider()
+            // iOS shows Paste whenever Full Access is on; here it waits for this switch (#420).
+            SettingToggleRow(
+                label = stringResource(R.string.settings_toolbar_paste),
+                checked = pasteOfferEnabled,
+                onToggle = { viewModel.togglePasteOffer() },
             )
             SettingDivider()
             SettingActionRow(
