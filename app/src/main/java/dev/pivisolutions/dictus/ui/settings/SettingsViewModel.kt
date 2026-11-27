@@ -86,6 +86,11 @@ class SettingsViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** Whether the keyboard toolbar offers a one-tap Paste for a recent copy (#420). Off by default. */
+    val pasteOfferEnabled: StateFlow<Boolean> = dataStore.data
+        .map { it[PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED] == true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Whether haptic feedback is enabled on dictation actions. */
     val hapticsEnabled: StateFlow<Boolean> = dataStore.data
         .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
@@ -177,6 +182,16 @@ class SettingsViewModel @Inject constructor(
                     profile,
                 )
                 preferences[PreferenceKeys.AUTOCORRECT_ENABLED] = !current
+            }
+        }
+    }
+
+    /** Toggle the toolbar's Paste offer and persist the new value. */
+    fun togglePasteOffer() {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED] =
+                    prefs[PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED] != true
             }
         }
     }

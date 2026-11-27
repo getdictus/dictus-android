@@ -80,6 +80,12 @@ object PreferenceKeys {
     /** Whether automatic replacement on word boundaries is enabled. Independent of the bar. */
     val AUTOCORRECT_ENABLED = booleanPreferencesKey("autocorrect_enabled")
 
+    /**
+     * One-tap Paste in the keyboard toolbar for a recent copy (#420, iOS #634). Off when unset:
+     * a new visible feature ships behind a switch that is off by default (Pierre, 26/11).
+     */
+    val KEYBOARD_PASTE_OFFER_ENABLED = booleanPreferencesKey("keyboard_paste_offer_enabled")
+
     // --- Personal dictionary (Phase 8) ---
     /** Set of words the user has typed at least twice, persisted across restarts. */
     val PERSONAL_DICTIONARY = stringSetPreferencesKey("personal_dictionary")

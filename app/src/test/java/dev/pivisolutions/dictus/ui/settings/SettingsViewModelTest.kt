@@ -200,6 +200,20 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `the toolbar paste offer is off by default and persists once switched on`() = testScope.runTest {
+        assertEquals("keyboard_paste_offer_enabled", PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED.name)
+        assertFalse(viewModel.pasteOfferEnabled.value)
+
+        viewModel.togglePasteOffer()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.pasteOfferEnabled.value)
+        val restarted = SettingsViewModel(fakeDataStore, modelManager, ProStatus(fakeDataStore, debugBuild = true))
+        advanceUntilIdle()
+        assertTrue(restarted.pasteOfferEnabled.value)
+    }
+
+    @Test
     fun `suggestions toggle does not change autocorrect`() = testScope.runTest {
         viewModel.toggleSuggestions()
         advanceUntilIdle()

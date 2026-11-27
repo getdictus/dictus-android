@@ -1,5 +1,6 @@
 package dev.pivisolutions.dictus.history
 
+import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,11 +18,18 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
+
+    @get:Rule val folder = TemporaryFolder()
+    private val debugLog by lazy { File(folder.root, TranscriptionDebugStore.FILE_NAME) }
+    private val debugStore by lazy { TranscriptionDebugStore(debugLog) }
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
@@ -29,7 +37,7 @@ class HistoryViewModelTest {
     @Test
     fun `loading remains distinct until first empty emission`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.isLoading)
         assertTrue(viewModel.uiState.value.entries.isEmpty())
@@ -43,7 +51,7 @@ class HistoryViewModelTest {
     @Test
     fun `entries are deterministically newest first`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(listOf(entry(1, 100), entry(2, 200), entry(3, 200)))
         advanceUntilIdle()
         assertEquals(listOf(3L, 2L, 1L), viewModel.uiState.value.entries.map { it.id })
@@ -52,7 +60,7 @@ class HistoryViewModelTest {
     @Test
     fun `entries follow insertion order even when the last one has an earlier date`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(listOf(entry(2, 100), entry(1, 500)))
         advanceUntilIdle()
         assertEquals(listOf(2L, 1L), viewModel.uiState.value.entries.map { it.id })
@@ -63,7 +71,7 @@ class HistoryViewModelTest {
         val repository = FakeRepository().apply {
             loadFailure = IllegalStateException("private detail")
         }
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.isLoading)
@@ -79,7 +87,7 @@ class HistoryViewModelTest {
         val repository = FakeRepository().apply {
             loadFailure = CancellationException("private detail")
         }
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.isLoading)
@@ -89,7 +97,7 @@ class HistoryViewModelTest {
     @Test
     fun `delete confirmation cancellation and stable id deletion`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(listOf(entry(10, 100), entry(20, 200)))
         advanceUntilIdle()
 
@@ -108,7 +116,7 @@ class HistoryViewModelTest {
     @Test
     fun `unknown id is not offered for deletion`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(listOf(entry(1, 1)))
         advanceUntilIdle()
         viewModel.requestDelete(999)
@@ -118,7 +126,7 @@ class HistoryViewModelTest {
     @Test
     fun `detail selection accepts only a current entry and closes when entry disappears`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(listOf(entry(1, 1), entry(2, 2)))
         advanceUntilIdle()
 
@@ -140,7 +148,7 @@ class HistoryViewModelTest {
     @Test
     fun `delete failure is generic and cancellation does not become failure`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(listOf(entry(1, 1)))
         advanceUntilIdle()
 
@@ -169,7 +177,7 @@ class HistoryViewModelTest {
     @Test
     fun `confirmed clear empties history and cancelled clear changes nothing`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(listOf(entry(1, 100), entry(2, 200)))
         advanceUntilIdle()
 
@@ -189,10 +197,26 @@ class HistoryViewModelTest {
         assertTrue(viewModel.uiState.value.entries.isEmpty())
     }
 
+    /** The same « Tout supprimer » as Settings' row, so the debug log goes too (iOS #906). */
+    @Test
+    fun `confirmed clear empties the debug log too`() = runTest(dispatcher) {
+        val repository = FakeRepository()
+        debugLog.writeText("{}\n")
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
+        repository.emit(listOf(entry(1, 100)))
+        advanceUntilIdle()
+
+        viewModel.requestClear()
+        viewModel.confirmClear()
+        advanceUntilIdle()
+
+        assertFalse(debugStore.hasEntries())
+    }
+
     @Test
     fun `clear is not offered over an empty history and failure is generic`() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = HistoryViewModel(repository)
+        val viewModel = HistoryViewModel(repository, debugStore, dispatcher)
         repository.emit(emptyList())
         advanceUntilIdle()
         viewModel.requestClear()

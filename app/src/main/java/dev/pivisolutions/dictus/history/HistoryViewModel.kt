@@ -3,12 +3,16 @@ package dev.pivisolutions.dictus.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 data class HistoryUiState(
@@ -23,9 +27,17 @@ data class HistoryUiState(
 enum class HistoryFailure { LOAD, DELETE }
 
 @HiltViewModel
-class HistoryViewModel @Inject constructor(
+class HistoryViewModel(
     private val repository: TranscriptionHistoryRepository,
+    private val debugStore: TranscriptionDebugStore,
+    private val io: CoroutineDispatcher,
 ) : ViewModel() {
+
+    @Inject constructor(
+        repository: TranscriptionHistoryRepository,
+        debugStore: TranscriptionDebugStore,
+    ) : this(repository, debugStore, Dispatchers.IO)
+
     private val _uiState = MutableStateFlow(HistoryUiState())
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
@@ -105,7 +117,9 @@ class HistoryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(isClearPending = false)
         viewModelScope.launch {
             try {
+                // Same sentence as Settings' row, so the same two stores (iOS `ClearHistory.run`, #906).
                 repository.clear()
+                withContext(io) { debugStore.clear() }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {

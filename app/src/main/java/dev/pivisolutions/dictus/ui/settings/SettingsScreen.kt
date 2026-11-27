@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import java.text.NumberFormat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
@@ -36,6 +39,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -81,6 +85,11 @@ import androidx.compose.material3.MaterialTheme
  * (Sounds, Licences, Debug Logs) navigate away. Apparence has no iOS equivalent
  * (iOS follows the system) and sits between Clavier and À propos.
  *
+ * [onClose] is set only when the keyboard opened this screen (#416): the screen is then the
+ * whole task, with no bottom navigation (#86), so a back arrow and the system back gesture
+ * leave it for the app the user was typing in. iOS gets the same exit from the system's
+ * « ◀ app » link in the status bar.
+ *
  * WHY hiltViewModel() here (not parameter injection): The ViewModel is scoped to
  * this composable's lifecycle. Passing it as a parameter would require the caller
  * (AppNavHost) to know about settings internals — poor encapsulation.
@@ -93,15 +102,21 @@ fun SettingsScreen(
     onNavigateToSoundSettings: () -> Unit = {},
     onNavigateToTranscriptionDebug: () -> Unit = {},
     onNavigateToFeedback: () -> Unit = {},
+    onClose: (() -> Unit)? = null,
     proRowVisible: Boolean = false,
     isPro: Boolean = false,
     onNavigateToProHub: () -> Unit = {},
+    clearHistoryVisible: Boolean = false,
+    clearHistoryEnabled: Boolean = false,
+    historyCount: Int = 0,
+    onClearHistory: () -> Unit = {},
 ) {
     val language by viewModel.language.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
     val keyboardLanguage by viewModel.keyboardLanguage.collectAsState()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsState()
     val autocorrectEnabled by viewModel.autocorrectEnabled.collectAsState()
+    val pasteOfferEnabled by viewModel.pasteOfferEnabled.collectAsState()
     val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val keySoundsEnabled by viewModel.keySoundsEnabled.collectAsState()
     val learnedWordCount by viewModel.learnedWordCount.collectAsState()
@@ -112,6 +127,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     var showResetLearnedWords by remember { mutableStateOf(false) }
+    var showClearHistory by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -119,6 +135,16 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState()),
     ) {
+        if (onClose != null) {
+            BackHandler(onBack = onClose)
+            IconButton(onClick = onClose, modifier = Modifier.padding(start = 4.dp, top = 8.dp)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.settings_close_cd),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+        }
         // iOS `.navigationTitle("Settings")`, shown as a large title.
         Text(
             text = stringResource(R.string.nav_settings),
@@ -126,7 +152,7 @@ fun SettingsScreen(
             fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .padding(start = 16.dp, top = 24.dp, end = 16.dp)
+                .padding(start = 16.dp, top = if (onClose != null) 8.dp else 24.dp, end = 16.dp)
                 .semantics { heading() },
         )
 
@@ -183,6 +209,28 @@ fun SettingsScreen(
                 selected = language,
                 onSelect = { viewModel.setLanguage(it) },
             )
+            // iOS SettingsView, last row of Transcription (#202): for a user entitled to the
+            // history, and for anyone who still has something to delete, saved transcriptions or
+            // the debug log, Pro or not (`HistoryAvailability.clearRowIsVisible`, iOS #906). The
+            // count is a trailing detail, never inside the sentence, and never « 0 » on a row
+            // that still empties the debug log.
+            if (clearHistoryVisible) {
+                SettingDivider()
+                SettingRow(
+                    label = { SettingLabel(stringResource(R.string.history_clear), color = DictusColors.Destructive) },
+                    modifier = Modifier
+                        .clickable(enabled = clearHistoryEnabled) { showClearHistory = true }
+                        .testTag("settings_clear_history"),
+                ) {
+                    if (historyCount > 0) {
+                        Text(
+                            text = NumberFormat.getIntegerInstance().format(historyCount),
+                            color = LocalDictusColors.current.textSecondary,
+                            fontSize = 17.sp,
+                        )
+                    }
+                }
+            }
         }
 
         // ---------- SECTION: Clavier ----------
@@ -226,6 +274,13 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_autocorrect),
                 checked = autocorrectEnabled,
                 onToggle = { viewModel.toggleAutocorrect() },
+            )
+            SettingDivider()
+            // iOS shows Paste whenever Full Access is on; here it waits for this switch (#420).
+            SettingToggleRow(
+                label = stringResource(R.string.settings_toolbar_paste),
+                checked = pasteOfferEnabled,
+                onToggle = { viewModel.togglePasteOffer() },
             )
             SettingDivider()
             SettingActionRow(
@@ -366,6 +421,25 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    if (showClearHistory) {
+        AlertDialog(
+            onDismissRequest = { showClearHistory = false },
+            title = { Text(stringResource(R.string.history_clear_title)) },
+            text = { Text(stringResource(R.string.history_clear_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearHistory()
+                        showClearHistory = false
+                    },
+                ) { Text(stringResource(R.string.history_clear_confirm), color = DictusColors.Destructive) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearHistory = false }) { Text(stringResource(R.string.dialog_cancel)) }
+            },
+        )
     }
 
     if (showResetLearnedWords) {

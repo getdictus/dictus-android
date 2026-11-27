@@ -294,6 +294,40 @@ class HistoryScreenTest {
         assertEquals(1, confirmed)
     }
 
+    @Test
+    fun `opened from the hub, the History switch sits on top and locks the list when off`() {
+        var switchedTo: Boolean? = null
+        var isOn by mutableStateOf(true)
+        val state = HistoryUiState(isLoading = false, entries = listOf(entry(1, "Bonjour")))
+        composeRule.setContent {
+            DictusTheme {
+                HistoryScreen(
+                    state, {}, {}, {}, {},
+                    historySwitch = isOn,
+                    onHistorySwitchChange = { switchedTo = it; isOn = it },
+                )
+            }
+        }
+        composeRule.onNodeWithTag("history_switch").assertIsDisplayed()
+        composeRule.onNodeWithTag("history_search").assertIsDisplayed()
+
+        composeRule.onNodeWithTag("history_switch").performClick()
+        assertEquals(false, switchedTo)
+        composeRule.onNodeWithText("History is off", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithTag("history_search").assertDoesNotExist()
+        composeRule.onNodeWithTag("history_clear").assertDoesNotExist()
+        // The saved entries stay, dimmed: nothing was deleted.
+        composeRule.onNodeWithText("Bonjour").assertExists()
+    }
+
+    @Test
+    fun `opened from Home, the screen has no switch`() {
+        val state = HistoryUiState(isLoading = false, entries = listOf(entry(1, "Bonjour")))
+        composeRule.setContent { DictusTheme { HistoryScreen(state, {}, {}, {}, {}) } }
+        composeRule.onNodeWithTag("history_switch").assertDoesNotExist()
+        composeRule.onNodeWithTag("history_search").assertIsDisplayed()
+    }
+
     private fun entry(id: Long, text: String) = TranscriptionHistoryEntry(
         id = id,
         text = text,
