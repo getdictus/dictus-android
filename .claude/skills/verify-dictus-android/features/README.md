@@ -186,7 +186,7 @@ Every iOS ID (the 185 of the iOS « All IDs » table, same order: 18 features, 1
 | `onboarding.completion` | Free | present | no |
 | `onboarding.resume` | Free | partial — survives process death, not a force stop | no |
 | `onboarding.whats-new` | Free | absent | no |
-| `pro.hub` | Pro | partial — hub for a Pro user: history card, Debug notice, legal links; no membership card or trial block (no purchase channel, no trial) (#207). Reached from Réglages → `Dictus Pro` in a Debug build under « Forcer Dictus Pro » | no |
+| `pro.hub` | Pro | partial — hub for a Pro user: history and voice notes cards (iOS also lists Smart Modes first, absent here, #205), Debug notice, legal links; no membership card or trial block (no purchase channel, no trial) (#207). Reached from Réglages → `Dictus Pro` in a Debug build under « Forcer Dictus Pro » | no |
 | `pro.paywall` | Pro on iOS — absent | absent | no |
 | `pro.restore` | Pro on iOS — absent | absent | no |
 | `pro.trial` | Pro on iOS — absent | absent | no |
@@ -230,7 +230,7 @@ Every iOS ID (the 185 of the iOS « All IDs » table, same order: 18 features, 1
 | `app.pro.history` | Pro on iOS — absent | absent | no |
 | `app.pro.vocabulary` | Pro on iOS — absent | absent | no |
 | `app.pro.vocabulary.term-editor` | Pro on iOS — absent | absent | no |
-| `app.pro.voice-notes` | Pro | present — the switch heads the notes list | no |
+| `app.pro.voice-notes` | Pro | present — from the Pro hub, as on iOS; the switch heads the notes list | no |
 | `app.paywall` | Pro on iOS — absent | absent | no |
 | `app.pro.trial-announcement` | Pro on iOS — absent | absent | no |
 | `app.voice-note.result` | Pro | present — a card in the list, not iOS's swiped stack | no |

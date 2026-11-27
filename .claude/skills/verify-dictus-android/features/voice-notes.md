@@ -23,13 +23,13 @@ A voice message or an audio file shared to Dictus from another app is transcribe
 
 1. With Pro, in WhatsApp (or Files), share a voice message → « Transcrire avec Dictus ».
 2. Dictus opens on « Messages vocaux »: the note waits, transcribes with its progress, then shows its text and « Copier ».
-3. Later: Réglages → Transcription → « Messages vocaux ».
+3. Later: Réglages → « Dictus Pro » → « Messages vocaux », as on iOS. Réglages has no Messages vocaux row of its own.
 
 ## Driving it with Argent
 
 Preconditions: Launch and Doctor OK, a Debug build, a model on disk. Note whether « Forcer Dictus Pro » is on: it must be the same at the end.
 
-- **Pro.** Réglages → « Développeur » → `Forcer Dictus Pro` on. → Réglages → Transcription shows `Messages vocaux`.
+- **Pro.** Réglages → « Développeur » → `Forcer Dictus Pro` on. → Réglages → `Dictus Pro` lists the `Messages vocaux` card (`pro_hub_feature_voice_notes`).
 - **Share.** Push a clip and share it with an explicit intent (no messaging app needed):
   `adb push fr-beau-paris.ogg /sdcard/Download/` then `adb shell am start -a android.intent.action.SEND -t audio/ogg --eu android.intent.extra.STREAM file:///sdcard/Download/fr-beau-paris.ogg --grant-read-uri-permission` and pick « Transcrire avec Dictus » in the chooser. A `file://` URI needs the storage permission Dictus does not have: share from Files (`content://`) when that fails.
 - **Result.** « Messages vocaux » opens; wait for the card's text. The log lines `Voice note started: … chunks=N` and `Voice note finished: … chars=N` (counts only) prove the run.

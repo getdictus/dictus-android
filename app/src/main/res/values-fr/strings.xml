@@ -163,7 +163,7 @@
     <string name="voice_notes_share_could_not_receive">Dictus n’a pas pu recevoir ce fichier.</string>
     <string name="voice_notes_share_needs_pro">La transcription des messages vocaux fait partie de Dictus Pro. Ouvrez Dictus pour en savoir plus.</string>
     <string name="voice_notes_share_unavailable">La transcription des messages vocaux n’est pas disponible dans cette version de Dictus.</string>
-    <string name="voice_notes_share_switched_off">Les messages vocaux sont désactivés. Réactivez-les dans Dictus, Réglages > Messages vocaux.</string>
+    <string name="voice_notes_share_switched_off">Les messages vocaux sont désactivés. Réactivez-les dans Dictus, rubrique Dictus Pro.</string>
 
     <!-- DebugLogsScreen -->
     <string name="debug_logs_title">Debug Logs</string>

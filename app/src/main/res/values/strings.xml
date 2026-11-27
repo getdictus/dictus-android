@@ -163,7 +163,7 @@
     <string name="voice_notes_share_could_not_receive">Dictus could not receive this file.</string>
     <string name="voice_notes_share_needs_pro">Transcribing voice notes is part of Dictus Pro. Open Dictus to find out more.</string>
     <string name="voice_notes_share_unavailable">Transcribing voice notes is not available in this version of Dictus.</string>
-    <string name="voice_notes_share_switched_off">Voice notes are switched off. Turn them back on in Dictus, under Settings > Voice notes.</string>
+    <string name="voice_notes_share_switched_off">Voice notes are switched off. Turn them back on in Dictus, under Dictus Pro.</string>
 
     <!-- DebugLogsScreen -->
     <string name="debug_logs_title">Debug Logs</string>

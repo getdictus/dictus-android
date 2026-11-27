@@ -55,7 +55,7 @@ sealed class AppDestination(val route: String) {
     /** Hidden transcription debug log (#295) — five taps on Settings > À propos > Version. */
     data object TranscriptionDebug : AppDestination("transcription_debug")
 
-    /** Shared voice notes (#204): from the share target, and Settings > Transcription for Pro users. */
+    /** Shared voice notes (#204): from the share target, and the Dictus Pro hub as on iOS. */
     data object VoiceNotes : AppDestination("voice_notes")
 
     /** Sound settings — volume slider, start/stop/cancel sound pickers. */
