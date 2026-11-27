@@ -96,7 +96,25 @@ class AutocorrectSpaceDiagnosisTest {
         coordinator.onSpace(BlindEditor) {}
 
         assertEquals(AutocorrectSpaceDiagnosis.EDITOR_REFUSED, coordinator.lastSpaceDiagnosis)
-        assertEquals("FAILED_VERIFIED_REPLACEMENT", coordinator.lastSpaceDetail)
+        assertEquals("FAILED_RELATIVE_REPLACEMENT", coordinator.lastSpaceDetail)
+    }
+
+    @Test
+    fun `an indeterminate relative replacement names the relative path (#275)`() {
+        val coordinator = coordinatorWith(snapshot())
+        coordinator.onSpace(IndeterminateEditor(hasSnapshot = false)) {}
+
+        assertEquals(AutocorrectSpaceDiagnosis.EDITOR_INDETERMINATE, coordinator.lastSpaceDiagnosis)
+        assertEquals("INDETERMINATE_RELATIVE_REPLACEMENT", coordinator.lastSpaceDetail)
+    }
+
+    @Test
+    fun `an indeterminate verified replacement keeps the verified path's name`() {
+        val coordinator = coordinatorWith(snapshot())
+        coordinator.onSpace(IndeterminateEditor(hasSnapshot = true)) {}
+
+        assertEquals(AutocorrectSpaceDiagnosis.EDITOR_INDETERMINATE, coordinator.lastSpaceDiagnosis)
+        assertEquals("INDETERMINATE_VERIFIED_REPLACEMENT", coordinator.lastSpaceDetail)
     }
 
     @Test
@@ -143,6 +161,20 @@ class AutocorrectSpaceDiagnosisTest {
         coordinator.onSpace(ApplyingEditor()) {}
 
         assertEquals(AutocorrectSpaceDiagnosis.APPLIED, coordinator.lastSpaceDiagnosis)
+    }
+
+    /**
+     * Cannot prove the outcome of either path. With [hasSnapshot] autocorrect takes the
+     * extracted-text path, without it the relative one.
+     */
+    private class IndeterminateEditor(private val hasSnapshot: Boolean) : AutocorrectEditor {
+        override fun snapshot() = if (hasSnapshot) RefusingEditor.snapshot() else null
+        override fun beginBatchEdit() = true
+        override fun endBatchEdit() = true
+        override fun attemptVerifiedReplacement(request: AutocorrectReplacement) =
+            AutocorrectReplacementOutcome.IndeterminateMutation
+        override fun attemptRelativeReplacement(original: String, replacement: String) =
+            AutocorrectReplacementOutcome.IndeterminateMutation
     }
 
     /** Refuses every replacement while proving the editor unchanged. */
