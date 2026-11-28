@@ -58,6 +58,9 @@ sealed class AppDestination(val route: String) {
     /** Custom vocabulary (#208), from the Dictus Pro hub, as on iOS. */
     data object Vocabulary : AppDestination("vocabulary")
 
+    /** Shared voice notes (#204): from the share target, and the Dictus Pro hub as on iOS. */
+    data object VoiceNotes : AppDestination("voice_notes")
+
     /** Sound settings — volume slider, start/stop/cancel sound pickers. */
     data object SoundSettings : AppDestination("sound_settings")
 

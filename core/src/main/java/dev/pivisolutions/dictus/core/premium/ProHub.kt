@@ -9,11 +9,11 @@ object ProHub {
     /**
      * The features the hub lists, in iOS order, skipping those Android does not have yet: a card
      * opens its feature's screen, and a card with no screen behind it would promise something
-     * absent. Vocabulary opens from here only, as on iOS (#208). Smart Modes (#205) and voice
-     * notes (#204) join the list as they ship.
+     * absent. Vocabulary (#208) and voice notes (#204) open from here only, as on iOS. Smart
+     * Modes (#205) join the list as they ship.
      */
     val listedFeatures: List<ProFeature> = ProFeature.entries.filter {
-        it == ProFeature.HISTORY || it == ProFeature.VOCABULARY
+        it == ProFeature.HISTORY || it == ProFeature.VOCABULARY || it == ProFeature.VOICE_NOTES
     }
 
     /**

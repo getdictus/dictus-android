@@ -10,7 +10,10 @@ class ProHubTest {
 
     @Test
     fun `the hub lists only the features Android has, in iOS order`() {
-        assertEquals(listOf(ProFeature.HISTORY, ProFeature.VOCABULARY), ProHub.listedFeatures)
+        assertEquals(
+            listOf(ProFeature.HISTORY, ProFeature.VOCABULARY, ProFeature.VOICE_NOTES),
+            ProHub.listedFeatures,
+        )
     }
 
     @Test

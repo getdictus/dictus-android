@@ -67,6 +67,7 @@ import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
 import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
 import dev.pivisolutions.dictus.vocabulary.VocabularyRoute
+import dev.pivisolutions.dictus.voicenotes.VoiceNotesRoute
 import kotlinx.coroutines.flow.map
 
 /**
@@ -96,6 +97,7 @@ import kotlinx.coroutines.flow.map
  * @param onCloseSettings Leaves that Settings screen for the app the user was typing in (#416).
  * @param openModelsRequested Start on the Models tab: the keyboard's mic tap with no model (#247).
  * @param microphoneRequested Ask for the microphone on Home: the keyboard's refused-mic notice (#307).
+ * @param openVoiceNotesRequested Start on « Messages vocaux »: audio was just shared to Dictus (#204).
  */
 @Composable
 fun AppNavHost(
@@ -110,6 +112,7 @@ fun AppNavHost(
     onCloseSettings: () -> Unit = {},
     openModelsRequested: Boolean = false,
     microphoneRequested: Boolean = false,
+    openVoiceNotesRequested: Boolean = false,
 ) {
     val hasCompletedOnboarding by dataStore.data
         .map { it[PreferenceKeys.HAS_COMPLETED_ONBOARDING] ?: false }
@@ -159,10 +162,10 @@ fun AppNavHost(
                 imeSelected = imeSelected,
                 onOpenKeyboardSettings = onOpenKeyboardSettings,
                 onOpenAppSettings = onOpenAppSettings,
-                startDestination = if (openModelsRequested) {
-                    AppDestination.Models.route
-                } else {
-                    AppDestination.Home.route
+                startDestination = when {
+                    openModelsRequested -> AppDestination.Models.route
+                    openVoiceNotesRequested -> AppDestination.VoiceNotes.route
+                    else -> AppDestination.Home.route
                 },
                 microphoneRequested = microphoneRequested,
             )
@@ -342,6 +345,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
         currentRoute != AppDestination.Vocabulary.route &&
+        currentRoute != AppDestination.VoiceNotes.route &&
         !currentRoute.startsWith("sound_picker")
 
     Scaffold(
@@ -439,8 +443,10 @@ private fun MainTabsScreen(
                                 navController.navigate(AppDestination.History.route) { launchSingleTop = true }
                             ProFeature.VOCABULARY ->
                                 navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
-                            // Not listed by the hub until they ship (`ProHub.listedFeatures`).
-                            ProFeature.SMART_MODE, ProFeature.VOICE_NOTES -> Unit
+                            ProFeature.VOICE_NOTES ->
+                                navController.navigate(AppDestination.VoiceNotes.route) { launchSingleTop = true }
+                            // Not listed by the hub until it ships (`ProHub.listedFeatures`).
+                            ProFeature.SMART_MODE -> Unit
                         }
                     },
                     viewModel = proViewModel,
@@ -534,6 +540,18 @@ private fun MainTabsScreen(
             }
             composable(AppDestination.Vocabulary.route) {
                 VocabularyRoute(onBack = { navController.popBackStack() })
+            }
+            composable(AppDestination.VoiceNotes.route) {
+                // Opened from a share, the screen is the graph's start: back then leads Home.
+                VoiceNotesRoute(
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(AppDestination.Home.route) {
+                                popUpTo(AppDestination.VoiceNotes.route) { inclusive = true }
+                            }
+                        }
+                    },
+                )
             }
             composable(AppDestination.Recording.route) {
                 RecordingScreen(

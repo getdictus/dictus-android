@@ -18,6 +18,12 @@ object AppLaunchContract {
      * shows Android's own prompt.
      */
     const val ACTION_REQUEST_MICROPHONE = "dev.pivisolutions.dictus.action.REQUEST_MICROPHONE"
+
+    /**
+     * Opens « Messages vocaux », from the share target once audio joined the queue (#204). No
+     * authorization: the screen only shows the queue, and onboarding still runs first when incomplete.
+     */
+    const val ACTION_OPEN_VOICE_NOTES = "dev.pivisolutions.dictus.action.OPEN_VOICE_NOTES"
     const val EXTRA_AUTHORIZATION = "dev.pivisolutions.dictus.extra.SETTINGS_AUTHORIZATION"
     const val MAIN_ACTIVITY_CLASS = "dev.pivisolutions.dictus.MainActivity"
 }
