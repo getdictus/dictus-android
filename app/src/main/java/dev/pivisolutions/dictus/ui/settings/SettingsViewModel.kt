@@ -91,6 +91,11 @@ class SettingsViewModel @Inject constructor(
         .map { it[PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED] == true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /** Whether the personal dictionary shortcuts expand while typing (#424). Off by default. */
+    val textReplacementsEnabled: StateFlow<Boolean> = dataStore.data
+        .map { it[PreferenceKeys.TEXT_REPLACEMENTS_ENABLED] ?: false }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Whether haptic feedback is enabled on dictation actions. */
     val hapticsEnabled: StateFlow<Boolean> = dataStore.data
         .map { it[PreferenceKeys.HAPTICS_ENABLED] ?: true }
@@ -192,6 +197,15 @@ class SettingsViewModel @Inject constructor(
             dataStore.edit { prefs ->
                 prefs[PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED] =
                     prefs[PreferenceKeys.KEYBOARD_PASTE_OFFER_ENABLED] != true
+            }
+        }
+    }
+
+    /** Toggle the personal dictionary shortcuts on/off and persist the new value. */
+    fun toggleTextReplacements() {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[PreferenceKeys.TEXT_REPLACEMENTS_ENABLED] = !(prefs[PreferenceKeys.TEXT_REPLACEMENTS_ENABLED] ?: false)
             }
         }
     }
