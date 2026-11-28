@@ -24,14 +24,15 @@ class ProHubScreenTest {
     private val forced = ProViewModel.State(isPro = true, isPaid = false, debugForced = true)
 
     @Test
-    fun `the hub shows the hero, the history and voice notes cards on, the Debug notice and the legal links`() {
+    fun `the hub shows the hero, the history, vocabulary and voice notes cards on, the Debug notice and the legal links`() {
         composeRule.setContent { DictusTheme { ProHubScreen(forced, onClose = {}, onOpenFeature = {}) } }
 
         composeRule.onNodeWithText("Dictus Pro").assertIsDisplayed()
         composeRule.onNodeWithText("Your voice, unlimited").assertIsDisplayed()
         composeRule.onNodeWithText("History search").assertIsDisplayed()
+        composeRule.onNodeWithText("Vocabulary").assertIsDisplayed()
         composeRule.onNodeWithText("Voice notes").assertIsDisplayed()
-        assertEquals(2, composeRule.onAllNodesWithText("On").fetchSemanticsNodes().size)
+        assertEquals(3, composeRule.onAllNodesWithText("On").fetchSemanticsNodes().size)
         composeRule.onNodeWithText("Pro is forced on", substring = true).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Terms of Service").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Smart Mode").assertDoesNotExist()
@@ -46,6 +47,15 @@ class ProHubScreenTest {
         composeRule.onNodeWithText("Off").assertIsDisplayed()
         composeRule.onNodeWithTag("pro_hub_feature_history").performClick()
         assertEquals(ProFeature.HISTORY, opened)
+    }
+
+    @Test
+    fun `the vocabulary card opens the vocabulary`() {
+        var opened: ProFeature? = null
+        composeRule.setContent { DictusTheme { ProHubScreen(forced, onClose = {}, onOpenFeature = { opened = it }) } }
+
+        composeRule.onNodeWithTag("pro_hub_feature_vocabulary").performClick()
+        assertEquals(ProFeature.VOCABULARY, opened)
     }
 
     @Test

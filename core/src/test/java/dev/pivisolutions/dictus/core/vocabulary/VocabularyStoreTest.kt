@@ -143,7 +143,7 @@ class VocabularyStoreTest {
     fun `an unreadable value is an empty vocabulary`() = runTest {
         val dataStore = dataStore()
         dataStore.edit { it[PreferenceKeys.VOCABULARY_ENTRIES] = "{not json" }
-        assertEquals(emptyList<VocabularyEntry>(), VocabularyStore(dataStore).loadEntries())
+        assertEquals(emptyList<VocabularyEntry>(), VocabularyStore(dataStore, isEntitled = { true }).loadEntries())
     }
 
     @Test
@@ -152,6 +152,14 @@ class VocabularyStoreTest {
         val good = entry("Kubernetes", "cubernetes")
         val overLong = good.copy(id = java.util.UUID.randomUUID(), term = "x".repeat(101))
         dataStore.edit { it[PreferenceKeys.VOCABULARY_ENTRIES] = VocabularyStore.encode(listOf(overLong, good)) }
-        assertEquals(listOf(good), VocabularyStore(dataStore).loadEntries())
+        assertEquals(listOf(good), VocabularyStore(dataStore, isEntitled = { true }).loadEntries())
+    }
+
+    @Test
+    fun `containsTerm ignores case and spaces, and lets an entry keep its own term`() {
+        val kubernetes = entry("Kubernetes", "cubernetes")
+        assertTrue(VocabularyStore.containsTerm(listOf(kubernetes), " kubernetes "))
+        assertFalse(VocabularyStore.containsTerm(listOf(kubernetes), "kubernetes", excluding = kubernetes.id))
+        assertFalse(VocabularyStore.containsTerm(listOf(kubernetes), "Claude"))
     }
 }

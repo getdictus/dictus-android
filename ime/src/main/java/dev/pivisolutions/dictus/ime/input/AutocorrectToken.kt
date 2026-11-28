@@ -51,6 +51,13 @@ internal object AutocorrectToken {
     fun isLetterWords(text: String): Boolean = text.split(' ').all(::isLetterToken)
 
     /**
+     * Whether [text] is a shape a personal dictionary shortcut may have (#424): a letter token
+     * that may also hold digits (`adr1`, `tel2`), as iOS #1022. Only a shortcut is replaced with it.
+     */
+    fun isShortcutToken(text: String): Boolean =
+        isLetterToken(text.map { if (it.isDigit()) 'a' else it }.joinToString(""))
+
+    /**
      * Apostrophes and hyphens that join two halves of one word.
      *
      * Both apostrophe shapes are accepted because the editor holds whatever the host app or an

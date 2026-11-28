@@ -13,7 +13,8 @@ import java.util.UUID
  *
  * Where it runs: at the consumer of the engine's transcript, before any punctuation or
  * formatting pass, so a spoken punctuation command inside a term cannot split it before
- * it is matched. On Android that is `DictationTranscriber`, wired in a follow-up PR.
+ * it is matched. On Android that is `DictationTranscriber`, after the non-speech tags are
+ * dropped and before `TextPostProcessor`.
  *
  * WHY graphemes: Swift's `Character` is a user-perceived character. Matching on UTF-16
  * units would let a needle end in the middle of a Thai vowel sign or a decomposed accent,

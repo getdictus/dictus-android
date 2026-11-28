@@ -137,6 +137,15 @@ class AutocorrectInputCoordinator(
      */
     var spatialCorrection: (AutocorrectSuggestionSnapshot) -> String? = { null }
 
+    /**
+     * The personal dictionary shortcut before the cursor and its phrase (#424), or null. Asked
+     * first at every word end of an eligible field, before the suggestion evidence and whatever
+     * the autocorrect switch says, as iOS #1022: a shortcut expands with autocorrect off, with a
+     * digit, and after its expansion was undone. The shortcut is the whole text after the last space,
+     * so the end of an address (`a.qqc`) is none. Null leaves the word end as it was before #424.
+     */
+    var textReplacementAtCursor: () -> Pair<String, String>? = { null }
+
     /** Reason for the most recent Space outcome. Read by the service for one log line. */
     var lastSpaceDiagnosis: AutocorrectSpaceDiagnosis? = null
         private set
@@ -231,6 +240,13 @@ class AutocorrectInputCoordinator(
         val offered = suggestionSnapshot
         expectedSuggestion = null
         suggestionSnapshot = null
+        val shortcut = if (sessionActive && autocorrectEligible) textReplacementAtCursor() else null
+        if (shortcut != null) {
+            return replaceWord(
+                editor, shortcut.first, shortcut.second, trailing, commitPlain,
+                detail = "TEXT_REPLACEMENT", textReplacement = true,
+            )
+        }
         val identityEligible = sessionActive && autocorrectEligible && runtimeEnabled &&
             expected != null &&
             expected.session == session &&
@@ -268,14 +284,30 @@ class AutocorrectInputCoordinator(
             return AutocorrectSpaceResult.PLAIN_SPACE
         }
         val (evidence, candidate) = applicable
+        return replaceWord(
+            editor, evidence.input, candidate, trailing, commitPlain,
+            detail = if (spatial != null) "SPATIAL" else null,
+        )
+    }
 
+    /** Writes [candidate] in place of [original], or [commitPlain] when the editor refuses it. */
+    private fun replaceWord(
+        editor: AutocorrectEditor,
+        original: String,
+        candidate: String,
+        trailing: String,
+        commitPlain: () -> Unit,
+        detail: String?,
+        textReplacement: Boolean = false,
+    ): AutocorrectSpaceResult {
         return when (
             val result = AutocorrectEditorTransaction.apply(
                 editor = editor,
-                original = evidence.input,
+                original = original,
                 correction = candidate,
                 identityEligible = true,
                 trailing = trailing,
+                textReplacement = textReplacement,
             )
         ) {
             is AutocorrectTransactionResult.Applied -> {
@@ -291,7 +323,7 @@ class AutocorrectInputCoordinator(
                     },
                 )
                 lastSpaceDiagnosis = AutocorrectSpaceDiagnosis.APPLIED
-                lastSpaceDetail = if (spatial != null) "SPATIAL" else null
+                lastSpaceDetail = detail
                 AutocorrectSpaceResult.CORRECTED
             }
             is AutocorrectTransactionResult.IndeterminateMutation -> {
@@ -426,8 +458,9 @@ class AutocorrectInputCoordinator(
             )
         ) {
             is AutocorrectTransactionResult.Restored -> {
-                // A host with no refusal memory learns on the tap, as iOS does there (#872).
-                if (pending.personalizedLearningAllowed) {
+                // A host with no refusal memory learns on the tap, as iOS does there (#872). A
+                // shortcut is not a word to learn, and expands again when typed again (iOS #1022).
+                if (pending.personalizedLearningAllowed && !pending.undo.textReplacement) {
                     learnRejectedWord(pending.undo.original)
                 }
                 AutocorrectUndoResult.RESTORED

@@ -68,6 +68,7 @@ class DictationLogPrivacyTest {
                 PreferenceDataStoreFactory.create(produceFile = { folder.newFile("tally.preferences_pb") }),
             )::record,
             recordDebugEntry = {},
+            correctVocabulary = { it },
         )
 
         val outcome = transcriber.transcribe(FloatArray(16_000), "tiny", fixed("fr"))

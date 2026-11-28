@@ -63,6 +63,8 @@ import dev.pivisolutions.dictus.ime.spatial.SpatialAutocorrect
 import dev.pivisolutions.dictus.ime.spatial.TypingModel
 import dev.pivisolutions.dictus.ime.suggestion.AndroidNativeTrieOpener
 import dev.pivisolutions.dictus.ime.suggestion.NativeTrieSuggestionEngine
+import dev.pivisolutions.dictus.ime.suggestion.TextReplacements
+import dev.pivisolutions.dictus.ime.suggestion.UserDictionaryShortcuts
 import dev.pivisolutions.dictus.ime.ui.KeyboardScreen
 import dev.pivisolutions.dictus.ime.ui.LocalKeyboardSizing
 import dev.pivisolutions.dictus.ime.ui.keyboardSizing
@@ -118,6 +120,7 @@ import dev.pivisolutions.dictus.ime.language.KeyboardLayout
 import dev.pivisolutions.dictus.ime.language.KeyboardPreferenceResolver
 import dev.pivisolutions.dictus.ime.language.SupportedLanguage
 import dev.pivisolutions.dictus.ime.language.cycleKeyboardLanguage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -127,6 +130,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import timber.log.Timber
 
@@ -170,6 +174,9 @@ class DictusImeService : LifecycleInputMethodService() {
          * three words before the typed one, or the end of the sentence before it.
          */
         private const val CONTEXTUAL_SPELLING_WINDOW = 64
+
+        /** Characters before the cursor read for a personal dictionary shortcut (#424). */
+        private const val TEXT_REPLACEMENT_WINDOW = 64
     }
 
     private val entryPoint: DictusImeEntryPoint by lazy {
@@ -300,6 +307,7 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         }.apply {
             onUndoOfferChanged = { _autocorrectUndo.value = it }
+            textReplacementAtCursor = ::textReplacementAtCursor
             spatialCorrection = { offered ->
                 spatialAutocorrect.correction(offered, _activeKeyboardState.value.language.code) {
                     currentInputConnection?.getTextBeforeCursor(SPATIAL_CONTEXT_CHARS, 0)
@@ -307,6 +315,10 @@ class DictusImeService : LifecycleInputMethodService() {
             }
         }
     }
+    // Personal dictionary shortcuts (#424): off by default; read again at each keyboard opening.
+    private var textReplacementsEnabled = false
+    private var textReplacements = TextReplacements.EMPTY
+    private var textReplacementsJob: Job? = null
     // Spatial autocorrect (#385): off unless its debug switch is on in a debuggable build.
     private val spatialAutocorrect by lazy { SpatialAutocorrect { TypingModel.asset(assets, it) } }
     private val _spatialEnabled = MutableStateFlow(false)
@@ -403,6 +415,15 @@ class DictusImeService : LifecycleInputMethodService() {
                     if (shouldRequestSuggestions() && _currentWord.value.isNotEmpty()) {
                         requestSuggestionsForCurrentWord()
                     }
+                }
+        }
+        bindingScope.launch {
+            entryPoint.dataStore().data
+                .map { it[PreferenceKeys.TEXT_REPLACEMENTS_ENABLED] == true }
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    textReplacementsEnabled = enabled
+                    reloadTextReplacements()
                 }
         }
         bindingScope.launch {
@@ -611,6 +632,36 @@ class DictusImeService : LifecycleInputMethodService() {
         } else {
             clearSuggestionState(reason = if (currentWord.isEmpty()) "no word" else "suggestions off")
         }
+    }
+
+    /**
+     * Reads the personal dictionary shortcuts off the main thread while the switch is on (#424).
+     * Off, nothing is read and nothing expands: typing is the same as before #424.
+     */
+    private fun reloadTextReplacements() {
+        textReplacementsJob?.cancel()
+        if (!textReplacementsEnabled) {
+            textReplacements = TextReplacements.EMPTY
+            return
+        }
+        textReplacementsJob = bindingScope.launch {
+            textReplacements = withContext(Dispatchers.IO) { UserDictionaryShortcuts.read(contentResolver) }
+            Timber.d("Personal dictionary shortcuts: %d", textReplacements.size)
+        }
+    }
+
+    /**
+     * The shortcut that ends the text before the cursor and its phrase, or null (#424). The word is
+     * isolated as [refreshSuggestionsFromEditor] does; the replacement verifies it in the editor.
+     */
+    private fun textReplacementAtCursor(): Pair<String, String>? {
+        val replacements = textReplacements
+        if (!textReplacementsEnabled || replacements.isEmpty) return null
+        val beforeCursor = currentInputConnection?.getTextBeforeCursor(TEXT_REPLACEMENT_WINDOW, 0)?.toString()
+            ?: return null
+        val word = beforeCursor.split(" ", "\n").last()
+        if (word.isEmpty()) return null
+        return replacements.expansion(ofShortcut = word)?.let { word to it }
     }
 
     /** Starts a request-identified lookup and immediately invalidates the previous snapshot. */
@@ -846,6 +897,8 @@ class DictusImeService : LifecycleInputMethodService() {
         refreshSuggestionsFromEditor()
         // Another app, or another field: a copy made there is offered here (#420).
         refreshPasteOffer()
+        // A shortcut added in the system settings since the last opening expands from now on.
+        if (!restarting) reloadTextReplacements()
         // WHY (#112): "did the user ever open the Dictus keyboard?" was unanswerable from an export.
         Timber.d("Keyboard shown: package=%s, restarting=%b", info?.packageName ?: "unknown", restarting)
     }

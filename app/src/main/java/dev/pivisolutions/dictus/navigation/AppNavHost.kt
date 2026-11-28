@@ -66,6 +66,7 @@ import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
 import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
+import dev.pivisolutions.dictus.vocabulary.VocabularyRoute
 import dev.pivisolutions.dictus.voicenotes.VoiceNotesRoute
 import kotlinx.coroutines.flow.map
 
@@ -343,6 +344,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.FeedbackLog.route &&
         currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
+        currentRoute != AppDestination.Vocabulary.route &&
         currentRoute != AppDestination.VoiceNotes.route &&
         !currentRoute.startsWith("sound_picker")
 
@@ -439,10 +441,12 @@ private fun MainTabsScreen(
                         when (feature) {
                             ProFeature.HISTORY ->
                                 navController.navigate(AppDestination.History.route) { launchSingleTop = true }
+                            ProFeature.VOCABULARY ->
+                                navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
                             ProFeature.VOICE_NOTES ->
                                 navController.navigate(AppDestination.VoiceNotes.route) { launchSingleTop = true }
-                            // Not listed by the hub until they ship (`ProHub.listedFeatures`).
-                            ProFeature.SMART_MODE, ProFeature.VOCABULARY -> Unit
+                            // Not listed by the hub until it ships (`ProHub.listedFeatures`).
+                            ProFeature.SMART_MODE -> Unit
                         }
                     },
                     viewModel = proViewModel,
@@ -533,6 +537,9 @@ private fun MainTabsScreen(
                     soundType = soundType,
                     onBack = { navController.popBackStack() },
                 )
+            }
+            composable(AppDestination.Vocabulary.route) {
+                VocabularyRoute(onBack = { navController.popBackStack() })
             }
             composable(AppDestination.VoiceNotes.route) {
                 // Opened from a share, the screen is the graph's start: back then leads Home.

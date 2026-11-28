@@ -36,6 +36,7 @@ import dev.pivisolutions.dictus.core.service.TranscriptionOutcome
 import dev.pivisolutions.dictus.core.service.TranscriptionProgress
 import dev.pivisolutions.dictus.core.service.TranscriptionRetention
 import dev.pivisolutions.dictus.core.stats.DictationTally
+import dev.pivisolutions.dictus.core.vocabulary.CustomVocabulary
 import dev.pivisolutions.dictus.core.stt.SttProvider
 import dev.pivisolutions.dictus.debug.TranscriptionDebugStore
 import dev.pivisolutions.dictus.model.ModelCatalog
@@ -97,6 +98,7 @@ interface DictationServiceEntryPoint {
     fun dataStore(): DataStore<Preferences>
     fun transcriptionHistoryWriter(): TranscriptionHistoryWriter
     fun transcriptionDebugStore(): TranscriptionDebugStore
+    fun customVocabulary(): CustomVocabulary
 }
 
 class DictationService : Service(), DictationController {
@@ -140,6 +142,7 @@ class DictationService : Service(), DictationController {
             lastTranscription = LastTranscriptionStore.instance,
             recordTally = DictationTally(dataStore)::record,
             recordDebugEntry = { entry -> withContext(Dispatchers.IO) { transcriptionDebugStore.append(entry) } },
+            correctVocabulary = customVocabulary::corrected,
         )
     }
     private val transcriptionDebugStore: TranscriptionDebugStore by lazy {
@@ -147,6 +150,12 @@ class DictationService : Service(), DictationController {
             applicationContext,
             DictationServiceEntryPoint::class.java,
         ).transcriptionDebugStore()
+    }
+    private val customVocabulary: CustomVocabulary by lazy {
+        EntryPointAccessors.fromApplication(
+            applicationContext,
+            DictationServiceEntryPoint::class.java,
+        ).customVocabulary()
     }
     private val transcriptionWakeLock by lazy { PowerManagerTranscriptionWakeLock(applicationContext) }
 
