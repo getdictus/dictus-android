@@ -2,9 +2,11 @@ package dev.pivisolutions.dictus.pro
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import dev.pivisolutions.dictus.core.premium.ProFeature
 import dev.pivisolutions.dictus.core.premium.ProHomeCardContent
 import dev.pivisolutions.dictus.core.theme.DictusTheme
@@ -22,15 +24,16 @@ class ProHubScreenTest {
     private val forced = ProViewModel.State(isPro = true, isPaid = false, debugForced = true)
 
     @Test
-    fun `the hub shows the hero, the history card on, the Debug notice and the legal links`() {
+    fun `the hub shows the hero, the history and vocabulary cards on, the Debug notice and the legal links`() {
         composeRule.setContent { DictusTheme { ProHubScreen(forced, onClose = {}, onOpenFeature = {}) } }
 
         composeRule.onNodeWithText("Dictus Pro").assertIsDisplayed()
         composeRule.onNodeWithText("Your voice, unlimited").assertIsDisplayed()
         composeRule.onNodeWithText("History search").assertIsDisplayed()
-        composeRule.onNodeWithText("On").assertIsDisplayed()
-        composeRule.onNodeWithText("Pro is forced on", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("Terms of Service").assertIsDisplayed()
+        composeRule.onNodeWithText("Vocabulary").assertIsDisplayed()
+        assertEquals(2, composeRule.onAllNodesWithText("On").fetchSemanticsNodes().size)
+        composeRule.onNodeWithText("Pro is forced on", substring = true).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Terms of Service").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Smart Mode").assertDoesNotExist()
     }
 
@@ -43,6 +46,15 @@ class ProHubScreenTest {
         composeRule.onNodeWithText("Off").assertIsDisplayed()
         composeRule.onNodeWithTag("pro_hub_feature_history").performClick()
         assertEquals(ProFeature.HISTORY, opened)
+    }
+
+    @Test
+    fun `the vocabulary card opens the vocabulary`() {
+        var opened: ProFeature? = null
+        composeRule.setContent { DictusTheme { ProHubScreen(forced, onClose = {}, onOpenFeature = { opened = it }) } }
+
+        composeRule.onNodeWithTag("pro_hub_feature_vocabulary").performClick()
+        assertEquals(ProFeature.VOCABULARY, opened)
     }
 
     @Test

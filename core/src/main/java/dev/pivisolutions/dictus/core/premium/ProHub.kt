@@ -9,10 +9,12 @@ object ProHub {
     /**
      * The features the hub lists, in iOS order, skipping those Android does not have yet: a card
      * opens its feature's screen, and a card with no screen behind it would promise something
-     * absent. Smart Modes (#205), vocabulary (its screen is #208) and voice notes (#204) join
-     * the list as they ship.
+     * absent. Vocabulary opens from here only, as on iOS (#208). Smart Modes (#205) and voice
+     * notes (#204) join the list as they ship.
      */
-    val listedFeatures: List<ProFeature> = ProFeature.entries.filter { it == ProFeature.HISTORY }
+    val listedFeatures: List<ProFeature> = ProFeature.entries.filter {
+        it == ProFeature.HISTORY || it == ProFeature.VOCABULARY
+    }
 
     /**
      * Whether the hub says that Pro comes from the Debug override and nothing is for sale,

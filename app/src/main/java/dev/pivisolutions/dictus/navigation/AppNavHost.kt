@@ -66,6 +66,7 @@ import dev.pivisolutions.dictus.ui.settings.SettingsScreen
 import dev.pivisolutions.dictus.ui.settings.SoundPickerScreen
 import dev.pivisolutions.dictus.ui.settings.SoundSettingsScreen
 import dev.pivisolutions.dictus.ui.settings.TranscriptionDebugScreen
+import dev.pivisolutions.dictus.vocabulary.VocabularyRoute
 import kotlinx.coroutines.flow.map
 
 /**
@@ -340,6 +341,7 @@ private fun MainTabsScreen(
         currentRoute != AppDestination.FeedbackLog.route &&
         currentRoute != AppDestination.TranscriptionDebug.route &&
         currentRoute != AppDestination.SoundSettings.route &&
+        currentRoute != AppDestination.Vocabulary.route &&
         !currentRoute.startsWith("sound_picker")
 
     Scaffold(
@@ -435,8 +437,10 @@ private fun MainTabsScreen(
                         when (feature) {
                             ProFeature.HISTORY ->
                                 navController.navigate(AppDestination.History.route) { launchSingleTop = true }
+                            ProFeature.VOCABULARY ->
+                                navController.navigate(AppDestination.Vocabulary.route) { launchSingleTop = true }
                             // Not listed by the hub until they ship (`ProHub.listedFeatures`).
-                            ProFeature.SMART_MODE, ProFeature.VOCABULARY, ProFeature.VOICE_NOTES -> Unit
+                            ProFeature.SMART_MODE, ProFeature.VOICE_NOTES -> Unit
                         }
                     },
                     viewModel = proViewModel,
@@ -527,6 +531,9 @@ private fun MainTabsScreen(
                     soundType = soundType,
                     onBack = { navController.popBackStack() },
                 )
+            }
+            composable(AppDestination.Vocabulary.route) {
+                VocabularyRoute(onBack = { navController.popBackStack() })
             }
             composable(AppDestination.Recording.route) {
                 RecordingScreen(

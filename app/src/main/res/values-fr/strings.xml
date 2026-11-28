@@ -223,6 +223,39 @@
     <string name="ram_warning_dialog_message">Ce mod\u00e8le n\u00e9cessite 8\u00a0Go de RAM ou plus. Votre appareil n\u2019a pas assez de m\u00e9moire.</string>
     <string name="dialog_continue">Continuer</string>
     <string name="dialog_cancel">Annuler</string>
+
+    <!-- Custom vocabulary (#203, #208), iOS VocabularyListView -->
+    <string name="vocabulary_title">Vocabulaire</string>
+    <string name="vocabulary_back_cd">Retour</string>
+    <string name="vocabulary_off_footer">Le vocabulaire est désactivé. Vos termes sont conservés et ne remplacent plus rien jusqu’à ce que vous le réactiviez.</string>
+    <string name="vocabulary_section_terms">Vos termes</string>
+    <string name="vocabulary_empty">Aucun terme pour l’instant. Ajoutez les mots que Dictus écrit mal.</string>
+    <string name="vocabulary_terms_footer">Quand Dictus écrit l’une de ces variantes, elle est remplacée par votre orthographe.</string>
+    <string name="vocabulary_write_failed">Enregistrement impossible. Votre appareil manque peut-être d’espace.</string>
+    <string name="vocabulary_add">Ajouter un terme</string>
+    <string name="vocabulary_limit_reached">Vous avez atteint la limite de %1$d termes. Supprimez-en un pour en ajouter un autre.</string>
+    <string name="vocabulary_reset">Réinitialiser le vocabulaire</string>
+    <string name="vocabulary_reset_title">Réinitialiser le vocabulaire ?</string>
+    <string name="vocabulary_reset_message">Tous les termes et toutes les variantes seront supprimés. Vos transcriptions ne seront plus corrigées.</string>
+    <string name="vocabulary_replaces">Remplace : %1$s</string>
+    <string name="vocabulary_waiting">En attente d’erreurs à corriger</string>
+    <string name="vocabulary_delete">Supprimer</string>
+    <string name="vocabulary_editor_new">Nouveau terme</string>
+    <string name="vocabulary_editor_edit">Modifier</string>
+    <string name="vocabulary_editor_save">Enregistrer</string>
+    <string name="vocabulary_editor_term_header">L’orthographe correcte</string>
+    <string name="vocabulary_editor_term_placeholder">Quel terme ?</string>
+    <string name="vocabulary_editor_term_footer">L’orthographe que Dictus doit écrire.</string>
+    <string name="vocabulary_editor_duplicate">Ce terme est déjà dans votre vocabulaire.</string>
+    <string name="vocabulary_editor_variants_header">Ce que Dictus écrit à la place</string>
+    <string name="vocabulary_editor_variants_placeholder">Comment Dictus l’écrit-il à la place ?</string>
+    <string name="vocabulary_editor_variants_optional">Facultatif. Sans erreur à corriger, ce terme ne change rien pour l’instant. Ajoutez-en une dès que vous la repérez.</string>
+    <string name="vocabulary_editor_variants_footer">Séparées par des virgules. Dictus remplace chacune par votre orthographe.</string>
+    <plurals name="vocabulary_reset_confirm">
+        <item quantity="one">Oublier %1$d terme</item>
+        <item quantity="other">Oublier %1$d termes</item>
+    </plurals>
+
     <string name="dialog_ok">OK</string>
 
     <!-- ModelCard -->

@@ -26,13 +26,4 @@ object PremiumFlags {
      * of [ProStatus] still opens the hub from Settings, and never the Home card.
      */
     const val PAYWALL_VISIBLE = false
-
-    /**
-     * Controls whether custom vocabulary (#203) rewrites transcripts.
-     *
-     * `false` = `CustomVocabulary` returns every transcript unchanged without reading the
-     * store, and `VocabularyStore.add` refuses. Removal stays possible either way. Whether
-     * vocabulary ends up free or behind the Pro tier is decided when it ships.
-     */
-    const val VOCABULARY = false
 }

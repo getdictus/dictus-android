@@ -47,6 +47,7 @@ class DictationTranscriberTest {
         // What a segmented engine (Whisper) has decoded when the timeout fires; null: plain engine.
         atTimeout: SttTranscript? = null,
         providerId: String = "fake",
+        correctVocabulary: suspend (String) -> String = { it },
     ) = DictationTranscriber(
         ensureModel = { modelPath },
         withProvider = { _, _, use ->
@@ -63,6 +64,7 @@ class DictationTranscriberTest {
             if (debugLogFails) throw IOException("disk full")
             debugEntries += entry
         },
+        correctVocabulary = correctVocabulary,
         now = { NOW_MS },
     )
 
@@ -91,6 +93,26 @@ class DictationTranscriberTest {
         transcriber(modelPath = null).transcribe(halfSecond, "tiny", fixed("fr"))
 
         assertNull(lastTranscription.text.value)
+    }
+
+    // --- Custom vocabulary (#203) ---
+
+    @Test
+    fun `the vocabulary rewrites the spoken text before the punctuation pass, and the debug log keeps the engine's`() = runTest {
+        var seen: String? = null
+        val outcome = transcriber(
+            engine = { _, _ -> " on passe sur cubernetes [Musique]" },
+            correctVocabulary = { text ->
+                seen = text
+                text.replace("cubernetes", "Kubernetes")
+            },
+        ).transcribe(halfSecond, "tiny", fixed("fr"))
+
+        // Non-speech tags are gone before the vocabulary sees the text; the full stop comes after.
+        assertEquals("on passe sur cubernetes", seen?.trim())
+        assertEquals(TranscriptionOutcome.Text("on passe sur Kubernetes. "), outcome)
+        assertEquals("on passe sur Kubernetes. ", lastTranscription.text.value)
+        assertEquals(" on passe sur cubernetes [Musique]", debugEntries.single().raw)
     }
 
     // --- Dictation tally (#201) ---
@@ -329,6 +351,7 @@ class DictationTranscriberTest {
             lastTranscription = lastTranscription,
             recordTally = { _, _ -> null },
             recordDebugEntry = {},
+            correctVocabulary = { it },
         ).transcribe(threeMinutes, "small", fixed("fr"))
 
         assertEquals(324_000L, seenTimeoutMs)

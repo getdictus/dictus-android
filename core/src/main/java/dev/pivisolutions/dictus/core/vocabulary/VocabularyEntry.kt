@@ -51,6 +51,10 @@ data class VocabularyEntry internal constructor(
     fun withEnabled(newValue: Boolean): VocabularyEntry =
         create(term, variants, newValue, id, dateAdded) ?: this
 
+    /** The variants as the editor's single field shows them, iOS `variantsLine`. */
+    val variantsLine: String
+        get() = variants.joinToString(", ")
+
     companion object {
 
         /**
@@ -91,6 +95,12 @@ data class VocabularyEntry internal constructor(
             }
             return VocabularyEntry(id, cleanTerm, cleanVariants, isEnabled, dateAdded)
         }
+
+        /**
+         * The editor's field split on commas, iOS `variants(fromLine:)`. Pieces are not
+         * cleaned here: [create] trims, drops empties and de-duplicates.
+         */
+        fun variantsFromLine(line: String): List<String> = line.split(",")
 
         private fun graphemeCount(text: String): Int = VocabularyReplacer.graphemes(text).size
     }

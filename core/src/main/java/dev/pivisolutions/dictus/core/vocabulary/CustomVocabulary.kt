@@ -1,7 +1,6 @@
 package dev.pivisolutions.dictus.core.vocabulary
 
 import dev.pivisolutions.dictus.core.logging.PrivacySafeLog
-import dev.pivisolutions.dictus.core.premium.PremiumFlags
 import timber.log.Timber
 
 /**
@@ -13,15 +12,14 @@ import timber.log.Timber
  * where the engine's transcript is received (`DictationTranscriber`), before any other
  * text pass.
  *
- * WHY [isEnabled] is a lambda defaulting to [PremiumFlags.VOCABULARY] rather than a read
- * of the constant: the constant is `false`, so code reading it directly has an enabled
- * branch no test can reach. Production callers pass nothing and stay bound to the flag;
- * the tests pass `{ true }`. It is read at each call, as iOS reads its entitlement, so a
- * future runtime toggle or Pro check slots in without changing callers.
+ * [isEnabled] is iOS `VocabularyAvailability.isEntitled`: Pro **and** the Vocabulary switch
+ * on (`ProFeatureSwitches.isAvailable`). The app binds it; the tests pass a constant. It is
+ * read at each call, so switching the feature off stops the next dictation's replacements
+ * while the store keeps every entry.
  */
 class CustomVocabulary(
     private val store: VocabularyStore,
-    private val isEnabled: () -> Boolean = { PremiumFlags.VOCABULARY },
+    private val isEnabled: suspend () -> Boolean,
 ) {
 
     /**
