@@ -31,7 +31,7 @@ class ProHubScreenTest {
         composeRule.onNodeWithText("Your voice, unlimited").assertIsDisplayed()
         composeRule.onNodeWithText("History search").assertIsDisplayed()
         composeRule.onNodeWithText("Vocabulary").assertIsDisplayed()
-        composeRule.onNodeWithText("Voice notes").assertIsDisplayed()
+        composeRule.onNodeWithText("Voice notes").performScrollTo().assertIsDisplayed()
         assertEquals(3, composeRule.onAllNodesWithText("On").fetchSemanticsNodes().size)
         composeRule.onNodeWithText("Pro is forced on", substring = true).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Terms of Service").performScrollTo().assertIsDisplayed()
@@ -63,7 +63,7 @@ class ProHubScreenTest {
         var opened: ProFeature? = null
         composeRule.setContent { DictusTheme { ProHubScreen(forced, onClose = {}, onOpenFeature = { opened = it }) } }
 
-        composeRule.onNodeWithTag("pro_hub_feature_voice_notes").performClick()
+        composeRule.onNodeWithTag("pro_hub_feature_voice_notes").performScrollTo().performClick()
         assertEquals(ProFeature.VOICE_NOTES, opened)
     }
 
